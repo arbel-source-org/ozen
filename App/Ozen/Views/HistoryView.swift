@@ -41,8 +41,16 @@ struct HistoryView: View {
             }
         }
         .searchable(text: $query, prompt: "חיפוש במה שנאמר")
-        .onChange(of: query) { _, _ in reload() }
-        .onAppear(perform: reload)
+        .task(id: query) {
+            // Every search reads every saved conversation from disk. Wait
+            // for a pause in typing, then do it off the main thread, so a
+            // year of history doesn't freeze the keyboard.
+            if !query.isEmpty {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled else { return }
+            }
+            await reloadInBackground()
+        }
         .navigationTitle("היסטוריה")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -65,8 +73,19 @@ struct HistoryView: View {
     }
 
     private func reload() {
-        sessions = query.isEmpty ? viewModel.historyStore.listSummaries() : viewModel.historyStore.search(query)
-        totalSize = viewModel.historyStore.totalSizeOnDisk()
+        Task { await reloadInBackground() }
+    }
+
+    private func reloadInBackground() async {
+        let store = viewModel.historyStore
+        let text = query
+        let (found, size) = await Task.detached(priority: .userInitiated) {
+            (text.isEmpty ? store.listSummaries() : store.search(text), store.totalSizeOnDisk())
+        }.value
+        // A newer search may have finished first; only the current one wins.
+        guard text == query else { return }
+        sessions = found
+        totalSize = size
     }
 }
 
@@ -85,6 +104,11 @@ private struct SessionRow: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+            }
+            if !session.speakerNames.isEmpty {
+                Label(session.speakerNames.prefix(3).joined(separator: ", ") + (session.speakerNames.count > 3 ? " ועוד" : ""), systemImage: "person.2")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Text(session.preview)
                 .font(.body)

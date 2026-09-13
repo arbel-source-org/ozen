@@ -131,6 +131,10 @@ public struct TranscriptSessionSummary: Sendable, Equatable, Identifiable {
     public var segmentCount: Int
     public var preview: String
     public var engine: TranscriptionEngineKind
+    /// The real names that took part, in order of first appearance.
+    /// Generic labels ("דובר 2") say nothing about who was there and are
+    /// left out.
+    public var speakerNames: [String]
 
     public init(
         id: UUID,
@@ -138,7 +142,8 @@ public struct TranscriptSessionSummary: Sendable, Equatable, Identifiable {
         endedAt: TimeInterval?,
         segmentCount: Int,
         preview: String,
-        engine: TranscriptionEngineKind
+        engine: TranscriptionEngineKind,
+        speakerNames: [String] = []
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -146,6 +151,7 @@ public struct TranscriptSessionSummary: Sendable, Equatable, Identifiable {
         self.segmentCount = segmentCount
         self.preview = preview
         self.engine = engine
+        self.speakerNames = speakerNames
     }
 
     public var durationSeconds: TimeInterval? {
@@ -170,8 +176,31 @@ extension TranscriptSessionSummary {
             endedAt: record.endedAt,
             segmentCount: record.segments.count,
             preview: Self.truncated(firstNonEmpty?.text ?? ""),
-            engine: record.engine
+            engine: record.engine,
+            speakerNames: Self.realNames(in: record.segments)
         )
+    }
+
+    static func realNames(in segments: [SavedSegment]) -> [String] {
+        var seen = Set<String>()
+        var names: [String] = []
+        for segment in segments {
+            guard let name = segment.speakerName?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !name.isEmpty, !isGenericLabel(name), !seen.contains(name)
+            else { continue }
+            seen.insert(name)
+            names.append(name)
+        }
+        return names
+    }
+
+    /// "דובר 3", "דובר לא ידוע", and the English labels older builds saved.
+    static func isGenericLabel(_ name: String) -> Bool {
+        if name == EmbeddingClusterer.unknownSpeakerName || name == "Unknown speaker" { return true }
+        for prefix in ["דובר ", "Speaker "] where name.hasPrefix(prefix) {
+            if Int(name.dropFirst(prefix.count)) != nil { return true }
+        }
+        return false
     }
 
     private static func truncated(_ text: String) -> String {

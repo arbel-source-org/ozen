@@ -324,4 +324,16 @@ struct TranscriptHistoryTests {
         #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "[04:00:00] בוקר")
         #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: -2 * 3_600) == "[23:00:00] בוקר")
     }
+
+    @Test("the summary lists the real names that took part, once each, without generic labels")
+    func summarySpeakerNames() {
+        func line(_ name: String?) -> SavedSegment {
+            SavedSegment(id: UUID(), text: "שלום", speakerName: name, speakerClusterID: nil, startTimestamp: 0, isCommitted: true)
+        }
+        let names = TranscriptSessionSummary.realNames(in: [
+            line("דובר 2"), line("רותי"), line(nil), line("אבי"), line("רותי"),
+            line("דובר לא ידוע"), line("Speaker 3"), line("Unknown speaker"), line("דובר חדש"),
+        ])
+        #expect(names == ["רותי", "אבי", "דובר חדש"])
+    }
 }
