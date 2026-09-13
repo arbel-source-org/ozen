@@ -22,9 +22,9 @@ struct WhisperResultFilterTests {
 
     @Test("known silence hallucinations are dropped regardless of punctuation or brackets")
     func knownHallucinationsDropped() {
-        #expect(!filter.accepts(segment("תודה רבה.")))
-        #expect(!filter.accepts(segment("[תודה רבה]")))
-        #expect(!filter.accepts(segment("  תודה   רבה!  ")))
+        #expect(!filter.accepts(segment("תודה שצפיתם.")))
+        #expect(!filter.accepts(segment("[תודה על הצפייה]")))
+        #expect(!filter.accepts(segment("  תודה   שצפיתם!  ")))
         #expect(!filter.accepts(segment("Thank you for watching")))
         #expect(!filter.accepts(segment("Subtitles by the Amara.org community")))
         #expect(!filter.accepts(segment("[מוזיקה]")))
@@ -58,7 +58,8 @@ struct WhisperResultFilterTests {
     func joinsSurvivors() {
         let text = filter.acceptedText(from: [
             segment("בוקר טוב"),
-            segment("תודה רבה"),
+            // Invented on a noisy stretch: the model barely heard it.
+            segment("תודה רבה", noSpeech: 0.5, logprob: -0.4),
             segment("איך ישנת", noSpeech: 0.2),
         ])
         #expect(text == "בוקר טוב איך ישנת")
@@ -104,5 +105,18 @@ struct WhisperResultFilterTests {
         #expect(filter.isKnownHallucination("כתוביות בבקשה") == false)
         #expect(filter.isKnownHallucination("תרגום לאנגלית בבקשה") == false)
         #expect(filter.isKnownHallucination("הפקה של הצגה בבית הספר") == false)
+    }
+
+    @Test("a clearly heard 'תודה רבה' is real conversation and is kept")
+    func clearThanksKept() {
+        #expect(filter.accepts(segment("תודה רבה.", noSpeech: 0.05, logprob: -0.35)))
+        #expect(filter.accepts(segment("תודה!", noSpeech: 0.1, logprob: -0.5)))
+    }
+
+    @Test("'תודה רבה' that the model barely heard or guessed at is dropped as invented")
+    func doubtfulThanksDropped() {
+        #expect(!filter.accepts(segment("תודה רבה.", noSpeech: 0.45, logprob: -0.4)))
+        #expect(!filter.accepts(segment("[תודה רבה]", noSpeech: 0.1, logprob: -1.0)))
+        #expect(!filter.accepts(segment("Thank you.", noSpeech: 0.6, logprob: -0.3)))
     }
 }

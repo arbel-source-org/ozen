@@ -35,6 +35,17 @@ public struct WhisperResultFilter: Sendable, Equatable {
     public var logprobThreshold: Float
     public var compressionRatioThreshold: Float
     public var knownHallucinations: Set<String>
+    /// Phrases Whisper invents on noise that people also genuinely say in
+    /// conversation ("תודה", "תודה רבה"). Dropped only when the segment's
+    /// own statistics look like noise, never when the model heard them
+    /// clearly: missing a real "thank you" is its own kind of wrong.
+    public var ambiguousHallucinations: Set<String>
+    /// Above this no-speech probability an ambiguous phrase is treated as
+    /// invented. Real short speech sits far below it.
+    public var ambiguousNoSpeechThreshold: Float
+    /// Below this mean log-probability an ambiguous phrase is treated as
+    /// a guess.
+    public var ambiguousLogprobThreshold: Float
     /// Openings of the credit lines Whisper invents on silence, which come
     /// with an arbitrary name attached ("כתוביות על ידי <name>"), so an
     /// exact-phrase list can't catch them.
@@ -56,15 +67,20 @@ public struct WhisperResultFilter: Sendable, Equatable {
         "כתוביות", "תרגום", "תמלול", "הפקה", "עריכה", "subtitles", "translation", "captions",
     ]
 
+    /// Nobody says these to someone across a dinner table: they are
+    /// broadcast credits and sound tags, always dropped.
     public static let defaultKnownHallucinations: Set<String> = [
-        // Hebrew — what Whisper emits on silence when told the language is Hebrew.
-        "תודה", "תודה רבה", "תודה לכם", "תודה שצפיתם", "תודה על הצפייה", "תודה על הצפיה",
+        "תודה שצפיתם", "תודה על הצפייה", "תודה על הצפיה", "תודה שהאזנתם",
         "כתוביות", "תרגום", "תרגום וכתוביות", "כתוביות על ידי", "תרגום על ידי",
         "מוזיקה", "שירה", "צחוק", "מחיאות כפיים",
-        // English — leaks through even with language forced, on pure silence.
-        "thank you", "thanks for watching", "thank you for watching",
+        // English leaks through even with the language forced to Hebrew.
+        "thanks for watching", "thank you for watching",
         "subtitles by the amara.org community", "subtitles by", "you",
         "music", "applause", "laughter",
+    ]
+
+    public static let defaultAmbiguousHallucinations: Set<String> = [
+        "תודה", "תודה רבה", "תודה לכם", "thank you",
     ]
 
     public init(
@@ -72,11 +88,17 @@ public struct WhisperResultFilter: Sendable, Equatable {
         logprobThreshold: Float = -1.0,
         compressionRatioThreshold: Float = 2.4,
         knownHallucinations: Set<String> = WhisperResultFilter.defaultKnownHallucinations,
+        ambiguousHallucinations: Set<String> = WhisperResultFilter.defaultAmbiguousHallucinations,
+        ambiguousNoSpeechThreshold: Float = 0.25,
+        ambiguousLogprobThreshold: Float = -0.9,
         hallucinatedCreditPrefixes: [String] = WhisperResultFilter.defaultCreditPrefixes,
         hallucinatedCreditLabels: [String] = WhisperResultFilter.defaultCreditLabels,
         maximumCreditLineWords: Int = 7
     ) {
         self.hallucinatedCreditLabels = hallucinatedCreditLabels.map { $0.lowercased() }
+        self.ambiguousHallucinations = Set(ambiguousHallucinations.map(Self.normalize))
+        self.ambiguousNoSpeechThreshold = ambiguousNoSpeechThreshold
+        self.ambiguousLogprobThreshold = ambiguousLogprobThreshold
         self.hallucinatedCreditPrefixes = hallucinatedCreditPrefixes.map(Self.normalize)
         self.maximumCreditLineWords = maximumCreditLineWords
         self.noSpeechThreshold = noSpeechThreshold
@@ -106,6 +128,10 @@ public struct WhisperResultFilter: Sendable, Equatable {
         let text = Self.stripSpecialTokens(segment.text).trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return false }
         if isKnownHallucination(text) { return false }
+        if ambiguousHallucinations.contains(Self.normalize(text)),
+           segment.noSpeechProb > ambiguousNoSpeechThreshold || segment.avgLogprob < ambiguousLogprobThreshold {
+            return false
+        }
         // The reference implementation only treats "no speech" as decisive
         // when the model was *also* unsure of its tokens; a confident
         // transcript in a window the VAD thought was quiet is kept.
