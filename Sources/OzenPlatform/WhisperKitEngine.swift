@@ -1,5 +1,11 @@
 import Foundation
-import WhisperKit
+// WhisperKit itself isn't audited/marked Sendable upstream, so under Swift
+// 6's strict concurrency checking, constructing and storing it inside this
+// actor is flagged even though it's actually used safely (never shared
+// outside this actor). `@preconcurrency` is the standard, documented way
+// to consume a dependency that hasn't done its own Sendable audit yet,
+// rather than turning off strict concurrency for this file entirely.
+@preconcurrency import WhisperKit
 import OzenKit
 
 /// Wraps Argmax's WhisperKit (open-source, on-device Whisper via CoreML)
