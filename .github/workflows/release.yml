@@ -1,0 +1,64 @@
+name: Build sideloadable IPA
+
+# Manual only - this is heavier than the per-push CI build (it also has to
+# link WhisperKit for a real device architecture, not just the simulator)
+# and is only needed when there's actually a new build to put on a phone.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ipa:
+    name: Build unsigned device IPA
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build for a real device, unsigned
+        # No code signing here on purpose: this machine has no Apple
+        # Developer credentials, and doesn't need any. SideStore/AltStore
+        # re-sign the app locally on the phone with the owner's own free
+        # Apple ID - that's the whole point of that tool. Building with
+        # signing turned off is the standard way to produce an IPA meant
+        # to be sideloaded rather than distributed through the App Store.
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ozen.xcodeproj \
+            -scheme Ozen \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            2>&1 | tee xcodebuild-release.log | xcpretty
+      - name: Package as an .ipa
+        run: |
+          set -euo pipefail
+          APP_PATH="build/Build/Products/Release-iphoneos/Ozen.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Expected app bundle not found at $APP_PATH" >&2
+            find build/Build/Products -maxdepth 2 >&2 || true
+            exit 1
+          fi
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          zip -r -q Ozen.ipa Payload
+          ls -la Ozen.ipa
+      - name: Publish as a GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="build-${{ github.run_number }}"
+          gh release create "$TAG" Ozen.ipa \
+            --title "Ozen build ${{ github.run_number }}" \
+            --notes "Unsigned device build for sideloading via SideStore/AltStore (they re-sign it locally with your own Apple ID - this file is not code-signed and won't install any other way). Built from commit ${{ github.sha }}."
