@@ -90,4 +90,18 @@ struct CaptionStabilizerTests {
         let result = stabilizer.commitStale(now: 100)
         #expect(result.isEmpty)
     }
+
+    @Test("an empty update never erases text already shown; an empty final still commits it")
+    func emptyUpdateKeepsText() {
+        var stabilizer = CaptionStabilizer()
+        let id = UUID()
+        stabilizer.ingest(TranscriptToken(utteranceID: id, text: "שלום", isFinal: false, timestamp: 1))
+        let afterEmpty = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "", isFinal: false, timestamp: 2))
+        #expect(afterEmpty.text == "שלום")
+        #expect(afterEmpty.lastUpdateTimestamp == 2)
+
+        let final = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "  ", isFinal: true, timestamp: 3))
+        #expect(final.text == "שלום")
+        #expect(final.isCommitted)
+    }
 }

@@ -36,7 +36,12 @@ public struct CaptionStabilizer: Sendable {
     @discardableResult
     public mutating func ingest(_ token: TranscriptToken) -> TranscriptSegment {
         if let index = segments.firstIndex(where: { $0.id == token.utteranceID }) {
-            segments[index].text = token.text
+            // An engine can send an empty update (Apple's recognizer does
+            // when a request ends on silence). Text the reader has already
+            // seen must never vanish because of it.
+            if !token.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                segments[index].text = token.text
+            }
             segments[index].lastUpdateTimestamp = token.timestamp
             if let clusterID = token.speakerClusterID {
                 segments[index].speakerClusterID = clusterID
