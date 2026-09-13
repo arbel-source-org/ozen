@@ -1,4 +1,5 @@
 import SwiftUI
+import AppIntents
 import OzenKit
 
 struct SettingsView: View {
@@ -23,6 +24,7 @@ struct SettingsView: View {
                 speakersSection
                 behaviourSection
                 historySection
+                siriSection
                 maintenanceSection
                 aboutSection
             }
@@ -338,6 +340,25 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Siri
+
+    private var siriSection: some View {
+        Section {
+            SiriTipView(intent: StartCaptionsIntent())
+            VStack(alignment: .leading, spacing: 6) {
+                Text("״היי סירי, התחל כתוביות באוזן״")
+                Text("״היי סירי, עצור כתוביות באוזן״")
+                Text("״היי סירי, תגיד באוזן שאני כבר באה״")
+            }
+            .font(.callout)
+            ShortcutsLink()
+        } header: {
+            Text("סירי וקיצורי דרך")
+        } footer: {
+            Text("הפקודות עובדות גם מהמסך הנעול, וגם באוטומציות של אפליקציית קיצורי דרך.")
+        }
+    }
+
     // MARK: - Maintenance
 
     private var maintenanceSection: some View {
@@ -346,6 +367,11 @@ struct SettingsView: View {
                 DiagnosticsView(viewModel: viewModel)
             } label: {
                 Label("אבחון", systemImage: "stethoscope")
+            }
+            Button {
+                viewModel.showOnboardingAgain()
+            } label: {
+                Label("להציג שוב את ההסבר הראשוני", systemImage: "questionmark.circle")
             }
             Button(role: .destructive) {
                 confirmingClear = true

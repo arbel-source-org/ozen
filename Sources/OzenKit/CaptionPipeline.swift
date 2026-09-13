@@ -96,6 +96,13 @@ public final class CaptionPipeline {
 
     // MARK: - Lifecycle
 
+    /// Asks for the microphone up front (the onboarding walkthrough does
+    /// this on its own page, with an explanation, instead of the system
+    /// prompt ambushing the user on top of a black screen).
+    public func requestMicrophonePermission() async -> AudioPermission {
+        await audio.requestPermission()
+    }
+
     public func start(settings: AppSettings) async {
         guard !phase.isListening, !phase.isTransitioning else { return }
         let run = UUID()

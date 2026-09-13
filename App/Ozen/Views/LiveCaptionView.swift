@@ -63,7 +63,20 @@ struct LiveCaptionView: View {
             .padding(.top, 8)
         }
         .preferredColorScheme(theme.colorScheme)
-        .task { await viewModel.start() }
+        .task {
+            // A Siri "start captions" that launched the app is the same as
+            // the automatic start; a "stop" or "say" must run after it.
+            let pending = PendingAppAction.shared.take()
+            if pending == .startCaptions || pending == nil {
+                await viewModel.start()
+            } else if let pending {
+                await viewModel.perform(pending)
+            }
+        }
+        .task(id: PendingAppAction.shared.serial) {
+            guard let pending = PendingAppAction.shared.take() else { return }
+            await viewModel.perform(pending)
+        }
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
             guard let alert = viewModel.soundAlerts.last else { return }
             withAnimation { visibleSoundAlert = alert }

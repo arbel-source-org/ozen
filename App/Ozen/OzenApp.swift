@@ -15,8 +15,15 @@ struct OzenApp: App {
 
     var body: some Scene {
         WindowGroup {
-            LiveCaptionView(viewModel: viewModel)
-                .environment(\.layoutDirection, .rightToLeft)
+            Group {
+                if viewModel.hasCompletedOnboarding {
+                    LiveCaptionView(viewModel: viewModel)
+                } else {
+                    OnboardingView(viewModel: viewModel)
+                }
+            }
+            .animation(.default, value: viewModel.hasCompletedOnboarding)
+            .environment(\.layoutDirection, .rightToLeft)
         }
     }
 }

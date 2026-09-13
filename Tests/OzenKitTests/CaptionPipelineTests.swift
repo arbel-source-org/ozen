@@ -829,3 +829,19 @@ struct CaptionPipelineVocabularyTests {
         #expect(engine.vocabularySeen == [[]])
     }
 }
+
+@Suite("CaptionPipeline permission pre-check")
+@MainActor
+struct CaptionPipelinePermissionTests {
+    @Test("asking for the microphone up front does not start anything")
+    func permissionOnly() async {
+        let audio = FakeAudioCapturer()
+        audio.permissionAnswer = .denied
+        let (pipeline, _, log) = makePipeline(audio: audio)
+        let answer = await pipeline.requestMicrophonePermission()
+        #expect(answer == .denied)
+        #expect(pipeline.phase == .idle)
+        #expect(log.calls == 0)
+        #expect(audio.calls == ["requestPermission"])
+    }
+}

@@ -109,6 +109,46 @@ public final class LiveCaptionViewModel {
         availableInputs.first { $0.uid == selectedInputUID }
     }
 
+    // MARK: - Onboarding
+
+    public var hasCompletedOnboarding: Bool { settings.hasCompletedOnboarding }
+
+    public func completeOnboarding() {
+        settings.hasCompletedOnboarding = true
+        persist()
+    }
+
+    public func showOnboardingAgain() {
+        settings.hasCompletedOnboarding = false
+        persist()
+    }
+
+    public func requestMicrophonePermission() async -> AudioPermission {
+        await pipeline.requestMicrophonePermission()
+    }
+
+    // MARK: - App actions (Siri, Shortcuts)
+
+    /// Something asked for from outside the UI — a Siri phrase, a
+    /// Shortcuts automation — carried out as if the matching button had
+    /// been tapped.
+    public func perform(_ action: AppAction) async {
+        switch action {
+        case .startCaptions:
+            if pipeline.phase == .paused {
+                await pipeline.resume()
+            } else if !pipeline.phase.isListening && !pipeline.phase.isTransitioning {
+                await pipeline.start(settings: settings)
+            }
+            historySessionDidChangePhase()
+        case .stopCaptions:
+            pipeline.stop()
+            historySessionDidChangePhase()
+        case .speak(let text):
+            speak(text)
+        }
+    }
+
     // MARK: - Lifecycle
 
     public func start() async {
@@ -468,4 +508,11 @@ public final class LiveCaptionViewModel {
     private func persist() {
         try? settingsStore.save(settings)
     }
+}
+
+/// What the outside world (Siri, Shortcuts, a URL) can ask the app to do.
+public enum AppAction: Equatable, Sendable {
+    case startCaptions
+    case stopCaptions
+    case speak(String)
 }

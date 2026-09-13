@@ -86,6 +86,7 @@ struct AppSettingsTests {
         #expect(decoded.quickPhrases == AppSettings.defaultQuickPhrases)
         #expect(decoded.speechRate == 0.45)
         #expect(decoded.vocabulary.isEmpty)
+        #expect(decoded.hasCompletedOnboarding == false)
         // The credit line is owned by the build, not the file.
         #expect(decoded.creditLine == "Made by Arbel")
     }
@@ -110,6 +111,7 @@ struct AppSettingsTests {
         settings.quickPhrases = ["כן", "לא"]
         settings.speechRate = 0.6
         settings.vocabulary = ["אבי", "רותי"]
+        settings.hasCompletedOnboarding = true
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(AppSettings.self, from: data)

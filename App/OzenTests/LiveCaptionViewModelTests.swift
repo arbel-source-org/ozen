@@ -287,3 +287,54 @@ struct LiveCaptionViewModelVocabularyTests {
         #expect(viewModel.vocabulary == ["אבי", "רותי"])
     }
 }
+
+@Suite("LiveCaptionViewModel onboarding and app actions")
+@MainActor
+struct LiveCaptionViewModelOnboardingTests {
+    private func makeViewModel() -> (LiveCaptionViewModel, URL) {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-onboarding-\(UUID()).json")
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in FakeEngine(kind: settings.engine) },
+            embedder: FakeEmbedder()
+        )
+        return (LiveCaptionViewModel(settingsStore: SettingsStore(fileURL: file), pipeline: pipeline), file)
+    }
+
+    @Test("a fresh install shows onboarding; finishing it is remembered on disk")
+    func onboardingPersists() {
+        let (viewModel, file) = makeViewModel()
+        #expect(viewModel.hasCompletedOnboarding == false)
+        viewModel.completeOnboarding()
+        #expect(viewModel.hasCompletedOnboarding)
+        #expect(SettingsStore(fileURL: file).load().hasCompletedOnboarding)
+        viewModel.showOnboardingAgain()
+        #expect(SettingsStore(fileURL: file).load().hasCompletedOnboarding == false)
+    }
+
+    @Test("a Siri start / stop drives the pipeline like the buttons do")
+    func appActions() async {
+        let (viewModel, _) = makeViewModel()
+        await viewModel.perform(.startCaptions)
+        #expect(viewModel.phase.isListening)
+        // Starting again while listening is a no-op, not a restart.
+        await viewModel.perform(.startCaptions)
+        #expect(viewModel.phase.isListening)
+        await viewModel.perform(.stopCaptions)
+        #expect(viewModel.phase == .idle)
+        // Without a synthesizer wired in, "say" is harmless.
+        await viewModel.perform(.speak("שלום"))
+        #expect(viewModel.phase == .idle)
+    }
+
+    @Test("the pending-action mailbox hands each action over exactly once")
+    func mailbox() {
+        let box = PendingAppAction.shared
+        _ = box.take()
+        let before = box.serial
+        box.post(.stopCaptions)
+        #expect(box.serial == before + 1)
+        #expect(box.take() == .stopCaptions)
+        #expect(box.take() == nil)
+    }
+}
