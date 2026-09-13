@@ -35,6 +35,26 @@ public struct WhisperResultFilter: Sendable, Equatable {
     public var logprobThreshold: Float
     public var compressionRatioThreshold: Float
     public var knownHallucinations: Set<String>
+    /// Openings of the credit lines Whisper invents on silence, which come
+    /// with an arbitrary name attached ("כתוביות על ידי <name>"), so an
+    /// exact-phrase list can't catch them.
+    public var hallucinatedCreditPrefixes: [String]
+    /// A credit prefix only condemns a short segment; a long one that
+    /// happens to start the same way is someone actually talking.
+    public var maximumCreditLineWords: Int
+
+    /// Bare labels ("כתוביות", "תרגום") are ordinary words too, so they
+    /// only count as a credit when a colon follows, as in "תרגום: מיכל".
+    public var hallucinatedCreditLabels: [String]
+
+    public static let defaultCreditPrefixes: [String] = [
+        "כתוביות על ידי", "תורגם על ידי", "תרגום על ידי", "תמלול על ידי", "תוכתב על ידי",
+        "subtitles by", "subtitled by", "translated by", "transcribed by", "captions by",
+    ]
+
+    public static let defaultCreditLabels: [String] = [
+        "כתוביות", "תרגום", "תמלול", "הפקה", "עריכה", "subtitles", "translation", "captions",
+    ]
 
     public static let defaultKnownHallucinations: Set<String> = [
         // Hebrew — what Whisper emits on silence when told the language is Hebrew.
@@ -51,8 +71,14 @@ public struct WhisperResultFilter: Sendable, Equatable {
         noSpeechThreshold: Float = 0.6,
         logprobThreshold: Float = -1.0,
         compressionRatioThreshold: Float = 2.4,
-        knownHallucinations: Set<String> = WhisperResultFilter.defaultKnownHallucinations
+        knownHallucinations: Set<String> = WhisperResultFilter.defaultKnownHallucinations,
+        hallucinatedCreditPrefixes: [String] = WhisperResultFilter.defaultCreditPrefixes,
+        hallucinatedCreditLabels: [String] = WhisperResultFilter.defaultCreditLabels,
+        maximumCreditLineWords: Int = 7
     ) {
+        self.hallucinatedCreditLabels = hallucinatedCreditLabels.map { $0.lowercased() }
+        self.hallucinatedCreditPrefixes = hallucinatedCreditPrefixes.map(Self.normalize)
+        self.maximumCreditLineWords = maximumCreditLineWords
         self.noSpeechThreshold = noSpeechThreshold
         self.logprobThreshold = logprobThreshold
         self.compressionRatioThreshold = compressionRatioThreshold
@@ -93,7 +119,31 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// Case-, punctuation- and bracket-insensitive lookup, so "[תודה רבה]",
     /// "תודה רבה." and "תודה רבה!" all match one entry.
     public func isKnownHallucination(_ text: String) -> Bool {
-        knownHallucinations.contains(Self.normalize(text))
+        let normalized = Self.normalize(text)
+        if knownHallucinations.contains(normalized) { return true }
+        return isCreditLine(raw: text, normalized: normalized)
+    }
+
+    /// "כתוביות: ישראל ישראלי", "Subtitles by XYZ": a short segment that
+    /// opens with a credit phrase, followed by a separator (the
+    /// normalizer already turned ":" into nothing) or a name. Whole words
+    /// only, so "כתוביותיים" or "תרגומים" never match.
+    func isCreditLine(raw: String, normalized: String) -> Bool {
+        let words = normalized.split(separator: " ")
+        guard !words.isEmpty, words.count <= maximumCreditLineWords else { return false }
+        let byPhrase = hallucinatedCreditPrefixes.contains { prefix in
+            let prefixWords = prefix.split(separator: " ")
+            return words.count >= prefixWords.count && Array(words.prefix(prefixWords.count)) == prefixWords
+        }
+        if byPhrase { return true }
+
+        let opening = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "[](){}<>\"'״-–—")))
+            .lowercased()
+        return hallucinatedCreditLabels.contains { label in
+            guard opening.hasPrefix(label) else { return false }
+            return opening.dropFirst(label.count).drop(while: \.isWhitespace).first == ":"
+        }
     }
 
     /// Removes Whisper's control tokens (`<|startoftranscript|>`,

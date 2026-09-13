@@ -79,4 +79,30 @@ struct WhisperResultFilterTests {
         #expect(WhisperResultFilter.normalize("  Thank You!!  ") == "thank you")
         #expect(WhisperResultFilter.normalize("♪ תודה ♪") == "תודה")
     }
+
+    @Test("invented credit lines with a name attached are dropped")
+    func creditLines() {
+        let filter = WhisperResultFilter()
+        #expect(filter.isKnownHallucination("כתוביות על ידי ישראל ישראלי"))
+        #expect(filter.isKnownHallucination("כתוביות: אבי כהן"))
+        #expect(filter.isKnownHallucination("תורגם על ידי: קהילת עמרה"))
+        #expect(filter.isKnownHallucination("Subtitles by Jane Doe."))
+        #expect(filter.isKnownHallucination("[תרגום: מיכל]"))
+    }
+
+    @Test("real speech that merely starts with a credit word passes")
+    func creditWordsInRealSpeech() {
+        let filter = WhisperResultFilter()
+        // Longer than a credit line: somebody is talking.
+        #expect(filter.isKnownHallucination("תרגום של הספר הזה לקח לה שלוש שנים שלמות בערך") == false)
+        // The word is inside the sentence, not opening it.
+        #expect(filter.isKnownHallucination("אני צריכה כתוביות בטלוויזיה") == false)
+        // A different word that shares letters.
+        #expect(filter.isKnownHallucination("תרגומים חדשים") == false)
+        #expect(filter.isKnownHallucination("תרגומים: חדשים") == false)
+        // Bare labels are ordinary words without a colon.
+        #expect(filter.isKnownHallucination("כתוביות בבקשה") == false)
+        #expect(filter.isKnownHallucination("תרגום לאנגלית בבקשה") == false)
+        #expect(filter.isKnownHallucination("הפקה של הצגה בבית הספר") == false)
+    }
 }
