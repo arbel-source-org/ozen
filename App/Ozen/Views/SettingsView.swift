@@ -6,6 +6,8 @@ struct SettingsView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var showingEnrollment = false
     @State private var confirmingClear = false
+    @State private var renamingProfile: SpeakerProfile?
+    @State private var renameText = ""
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -37,6 +39,21 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingEnrollment) {
                 SpeakerEnrollmentView(viewModel: viewModel)
+            }
+            .alert(
+                "שינוי שם",
+                isPresented: Binding(get: { renamingProfile != nil }, set: { if !$0 { renamingProfile = nil } })
+            ) {
+                TextField("שם", text: $renameText)
+                Button("שמירה") {
+                    if let profile = renamingProfile {
+                        viewModel.renameProfile(id: profile.id, to: renameText)
+                    }
+                    renamingProfile = nil
+                }
+                Button("ביטול", role: .cancel) { renamingProfile = nil }
+            } message: {
+                Text("השם החדש יופיע גם על השורות שכבר בכתוביות.")
             }
             .confirmationDialog("למחוק את כל הכתוביות מהמסך?", isPresented: $confirmingClear, titleVisibility: .visible) {
                 Button("מחיקה", role: .destructive) { viewModel.clearTranscript() }
@@ -288,7 +305,19 @@ struct SettingsView: View {
     private var speakersSection: some View {
         Section {
             ForEach(viewModel.settings.speakerProfiles) { profile in
-                Label(profile.name, systemImage: "person.wave.2")
+                Button {
+                    renameText = profile.name
+                    renamingProfile = profile
+                } label: {
+                    HStack {
+                        Label(profile.name, systemImage: "person.wave.2")
+                        Spacer()
+                        Image(systemName: "pencil")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .foregroundStyle(.primary)
+                .accessibilityHint("הקישו כדי לשנות את השם")
             }
             .onDelete { offsets in
                 // Resolve ids before removing anything: each removal shifts

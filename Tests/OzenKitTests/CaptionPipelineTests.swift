@@ -869,3 +869,31 @@ struct CaptionPipelinePermissionTests {
         #expect(audio.calls == ["requestPermission"])
     }
 }
+
+@Suite("CaptionPipeline speaker names")
+@MainActor
+struct CaptionPipelineSpeakerNameTests {
+    @Test("renaming and forgetting a saved speaker updates the lines already on screen")
+    func renameAndForget() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        pipeline.enroll(profile: SpeakerProfile(name: "אבי", embedding: [1, 0, 0]))
+        await pipeline.start(settings: .default)
+
+        // The line must exist before its audio window is embedded, and a
+        // positive-led window is FakeEmbedder's [1, 0, 0] voice.
+        let id = UUID()
+        engine.emit(token(id, "שלום", at: 1_000))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.segments.first?.speakerClusterID != nil })
+        let segment = pipeline.segments[0]
+        #expect(pipeline.displayName(for: segment) == "אבי")
+
+        pipeline.renameSpeakers(named: "אבי", to: "אביגדור")
+        #expect(pipeline.displayName(for: segment) == "אביגדור")
+
+        pipeline.forgetSpeakerName("אביגדור")
+        #expect(pipeline.displayName(for: segment).hasPrefix("דובר "))
+    }
+}

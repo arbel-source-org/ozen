@@ -437,3 +437,49 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.phase.isListening)
     }
 }
+
+@Suite("LiveCaptionViewModel saved speakers")
+@MainActor
+struct LiveCaptionViewModelSpeakerTests {
+    private func makeViewModel() -> (LiveCaptionViewModel, URL) {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-speakers-\(UUID()).json")
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in FakeEngine(kind: settings.engine) },
+            embedder: FakeEmbedder()
+        )
+        return (LiveCaptionViewModel(settingsStore: SettingsStore(fileURL: file), pipeline: pipeline), file)
+    }
+
+    @Test("renaming a speaker updates the profile on disk, the names list and the live label")
+    func rename() {
+        let (viewModel, file) = makeViewModel()
+        #expect(viewModel.enroll(name: "אבי", samples: [Float](repeating: 0.3, count: 16_000)))
+        viewModel.addVocabularyTerm("אבי")
+        let id = viewModel.settings.speakerProfiles[0].id
+
+        viewModel.renameProfile(id: id, to: "  אביגדור ")
+        #expect(viewModel.settings.speakerProfiles[0].name == "אביגדור")
+        #expect(viewModel.vocabulary == ["אביגדור"])
+        #expect(SettingsStore(fileURL: file).load().speakerProfiles.first?.name == "אביגדור")
+        #expect(viewModel.pipeline.speakerClusters.contains { $0.name == "אביגדור" })
+        #expect(viewModel.pipeline.speakerClusters.contains { $0.name == "אבי" } == false)
+    }
+
+    @Test("a blank new name is ignored")
+    func blankRename() {
+        let (viewModel, _) = makeViewModel()
+        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.3, count: 16_000)))
+        viewModel.renameProfile(id: viewModel.settings.speakerProfiles[0].id, to: "   ")
+        #expect(viewModel.settings.speakerProfiles[0].name == "רותי")
+    }
+
+    @Test("deleting a speaker stops their name from labeling lines")
+    func deleteForgets() {
+        let (viewModel, _) = makeViewModel()
+        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.3, count: 16_000)))
+        viewModel.removeProfile(id: viewModel.settings.speakerProfiles[0].id)
+        #expect(viewModel.settings.speakerProfiles.isEmpty)
+        #expect(viewModel.pipeline.speakerClusters.contains { $0.name == "רותי" } == false)
+    }
+}

@@ -2,7 +2,7 @@ import Foundation
 
 /// One inferred (or enrolled) speaker. `name` is nil until either the user
 /// enrolls a real profile ahead of time or tags this cluster after the
-/// fact — until then the UI shows "Speaker \(id + 1)".
+/// fact — until then the UI shows "דובר \(id + 1)".
 public struct SpeakerCluster: Sendable, Equatable, Identifiable {
     public let id: Int
     public var centroid: [Float]
@@ -52,11 +52,35 @@ public struct EmbeddingClusterer: Sendable {
         clusters[index].name = name
     }
 
+    /// Hebrew, because this is exactly what the caption rows and the saved
+    /// history show.
+    public static let unknownSpeakerName = "דובר לא ידוע"
+
+    public static func genericName(forClusterID id: Int) -> String {
+        "דובר \(id + 1)"
+    }
+
     public func displayName(forClusterID id: Int?) -> String {
         guard let id, let cluster = clusters.first(where: { $0.id == id }) else {
-            return "Unknown speaker"
+            return Self.unknownSpeakerName
         }
-        return cluster.name ?? "Speaker \(id + 1)"
+        return cluster.name ?? Self.genericName(forClusterID: id)
+    }
+
+    /// A saved profile was renamed: every cluster showing the old name
+    /// shows the new one from now on.
+    public mutating func renameClusters(named oldName: String, to newName: String) {
+        for index in clusters.indices where clusters[index].name == oldName {
+            clusters[index].name = newName
+        }
+    }
+
+    /// A saved profile was deleted: clusters labeled with its name go back
+    /// to a generic label instead of naming someone who was removed.
+    public mutating func forgetName(_ name: String) {
+        for index in clusters.indices where clusters[index].name == name {
+            clusters[index].name = nil
+        }
     }
 
     private func bestMatch(for embedding: [Float]) -> (index: Int, similarity: Float)? {

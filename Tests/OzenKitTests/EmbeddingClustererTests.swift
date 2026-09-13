@@ -10,7 +10,7 @@ struct EmbeddingClustererTests {
         let id = clusterer.assign(embedding: [1, 0, 0])
         #expect(id == 0)
         #expect(clusterer.clusters.count == 1)
-        #expect(clusterer.displayName(forClusterID: id) == "Speaker 1")
+        #expect(clusterer.displayName(forClusterID: id) == "דובר 1")
     }
 
     @Test("near-identical embeddings join the same cluster instead of opening a new one")
@@ -45,7 +45,7 @@ struct EmbeddingClustererTests {
     func tagAfterTheFact() {
         var clusterer = EmbeddingClusterer()
         let id = clusterer.assign(embedding: [1, 0, 0])
-        #expect(clusterer.displayName(forClusterID: id) == "Speaker 1")
+        #expect(clusterer.displayName(forClusterID: id) == "דובר 1")
 
         clusterer.nameCluster(id: id, name: "דנה")
         #expect(clusterer.displayName(forClusterID: id) == "דנה")
@@ -54,8 +54,8 @@ struct EmbeddingClustererTests {
     @Test("an unknown or nil cluster id reports as an unknown speaker rather than crashing")
     func unknownClusterIsSafe() {
         let clusterer = EmbeddingClusterer()
-        #expect(clusterer.displayName(forClusterID: nil) == "Unknown speaker")
-        #expect(clusterer.displayName(forClusterID: 99) == "Unknown speaker")
+        #expect(clusterer.displayName(forClusterID: nil) == EmbeddingClusterer.unknownSpeakerName)
+        #expect(clusterer.displayName(forClusterID: 99) == EmbeddingClusterer.unknownSpeakerName)
     }
 
     @Test("cosine similarity of a vector with itself is 1")
@@ -73,5 +73,27 @@ struct EmbeddingClustererTests {
     func cosineSimilarityMismatchedIsSafe() {
         #expect(cosineSimilarity([1, 0], [1, 0, 0]) == 0)
         #expect(cosineSimilarity([], []) == 0)
+    }
+
+    @Test("generic labels are Hebrew, because that is what the caption screen shows")
+    func hebrewLabels() {
+        var clusterer = EmbeddingClusterer()
+        let id = clusterer.assign(embedding: [1, 0, 0])
+        #expect(clusterer.displayName(forClusterID: id) == "דובר 1")
+        #expect(clusterer.displayName(forClusterID: nil) == "דובר לא ידוע")
+    }
+
+    @Test("renaming a profile relabels its clusters, and forgetting it returns them to a generic label")
+    func renameAndForget() {
+        var clusterer = EmbeddingClusterer()
+        let avi = clusterer.enroll(name: "אבי", embedding: [1, 0, 0])
+        let ruti = clusterer.enroll(name: "רותי", embedding: [0, 1, 0])
+        clusterer.renameClusters(named: "אבי", to: "אביגדור")
+        #expect(clusterer.displayName(forClusterID: avi) == "אביגדור")
+        #expect(clusterer.displayName(forClusterID: ruti) == "רותי")
+
+        clusterer.forgetName("אביגדור")
+        #expect(clusterer.displayName(forClusterID: avi) == EmbeddingClusterer.genericName(forClusterID: avi))
+        #expect(clusterer.displayName(forClusterID: ruti) == "רותי")
     }
 }

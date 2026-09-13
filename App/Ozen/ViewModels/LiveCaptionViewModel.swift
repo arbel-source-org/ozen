@@ -500,8 +500,34 @@ public final class LiveCaptionViewModel {
     }
 
     public func removeProfile(id: UUID) {
+        guard let removed = settings.speakerProfiles.first(where: { $0.id == id }) else { return }
         settings.speakerProfiles.removeAll { $0.id == id }
         persist()
+        // Another saved profile may share the name; only forget it when
+        // nobody by that name is left.
+        if !settings.speakerProfiles.contains(where: { $0.name == removed.name }) {
+            pipeline.forgetSpeakerName(removed.name)
+        }
+    }
+
+    /// Fixes a misspelled or changed name: the saved profile, the lines on
+    /// screen, and the names list all follow.
+    public func renameProfile(id: UUID, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let index = settings.speakerProfiles.firstIndex(where: { $0.id == id }),
+              settings.speakerProfiles[index].name != trimmed
+        else { return }
+        let oldName = settings.speakerProfiles[index].name
+        settings.speakerProfiles[index].name = trimmed
+        if let term = settings.vocabulary.firstIndex(of: oldName) {
+            settings.vocabulary[term] = trimmed
+            settings.vocabulary = VocabularyHints.normalized(settings.vocabulary)
+            vocabularyChanged()
+        } else {
+            persist()
+        }
+        pipeline.renameSpeakers(named: oldName, to: trimmed)
     }
 
     public func displayName(for segment: TranscriptSegment) -> String {

@@ -405,6 +405,18 @@ public final class CaptionPipeline {
         clusterer.displayName(forClusterID: segment.speakerClusterID)
     }
 
+    /// A saved speaker was renamed; lines already on screen follow.
+    public func renameSpeakers(named oldName: String, to newName: String) {
+        clusterer.renameClusters(named: oldName, to: newName)
+        speakerClusters = clusterer.clusters
+    }
+
+    /// A saved speaker was deleted; lines stop showing the name.
+    public func forgetSpeakerName(_ name: String) {
+        clusterer.forgetName(name)
+        speakerClusters = clusterer.clusters
+    }
+
     public func setSpeakerSimilarityThreshold(_ threshold: Float) {
         clusterer.similarityThreshold = threshold
     }
