@@ -19,6 +19,7 @@ struct LiveCaptionView: View {
     @State private var visibleSoundAlert: SoundAlert?
     @State private var visibleKeywordHit: KeywordHit?
     @State private var hasLaunched = false
+    @State private var battery = BatteryMonitor()
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
@@ -49,6 +50,12 @@ struct LiveCaptionView: View {
         }
         .overlay(alignment: .top) {
             VStack(spacing: 8) {
+                if let notice = battery.notice {
+                    BatteryBanner(notice: notice) {
+                        withAnimation { battery.dismiss() }
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 if let alert = visibleSoundAlert {
                     SoundAlertBanner(alert: alert) {
                         withAnimation { visibleSoundAlert = nil }
@@ -118,7 +125,10 @@ struct LiveCaptionView: View {
         }
         .onChange(of: viewModel.isListening, initial: true) { _, listening in
             UIApplication.shared.isIdleTimerDisabled = listening && viewModel.display.keepScreenAwake
+            battery.setActive(listening)
         }
+        .sensoryFeedback(.warning, trigger: battery.notice?.id)
+        .animation(.default, value: battery.notice)
         .onChange(of: viewModel.display.keepScreenAwake) { _, keep in
             UIApplication.shared.isIdleTimerDisabled = viewModel.isListening && keep
         }
