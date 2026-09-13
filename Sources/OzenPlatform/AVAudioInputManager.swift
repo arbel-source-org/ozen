@@ -115,14 +115,21 @@ public final class AVAudioInputManager {
     }
 
     private func observeRouteChanges() {
+        // `queue: .main` guarantees this runs on the main thread at
+        // runtime, but the closure's own type is still plain, nonisolated
+        // `(Notification) -> Void` as far as the compiler is concerned, so
+        // calling into this @MainActor type's methods needs an explicit
+        // hop rather than an implicit one the type system can't verify.
         routeChangeObserver = NotificationCenter.default.addObserver(
             forName: AVAudioSession.routeChangeNotification,
             object: session,
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            self.refreshAvailableInputs()
-            try? self.applySelection()
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.refreshAvailableInputs()
+                try? self.applySelection()
+            }
         }
     }
 
