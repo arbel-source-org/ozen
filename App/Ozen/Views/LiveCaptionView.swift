@@ -220,28 +220,28 @@ struct LiveCaptionView: View {
     }
 
     private var statusControl: some View {
-        let presentation = presentation
+        let current = presentation
         return Button {
-            perform(presentation.action)
+            perform(current.action)
         } label: {
             VStack(spacing: 4) {
                 HStack(spacing: 6) {
-                    if presentation.isBusy {
+                    if current.isBusy {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(presentation.tint)
+                            .tint(current.tint)
                     } else {
-                        Image(systemName: presentation.systemImage)
+                        Image(systemName: current.systemImage)
                     }
-                    Text(presentation.title)
+                    Text(current.title)
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(2)
                         .minimumScaleFactor(0.75)
                         .multilineTextAlignment(.center)
                 }
-                .foregroundStyle(presentation.tint)
+                .foregroundStyle(current.tint)
 
-                if let detail = presentation.detail {
+                if let detail = current.detail {
                     Text(detail)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -250,9 +250,9 @@ struct LiveCaptionView: View {
                         .multilineTextAlignment(.center)
                 }
 
-                if let progress = presentation.progress {
+                if let progress = current.progress {
                     ProgressView(value: progress)
-                        .tint(presentation.tint)
+                        .tint(current.tint)
                         .frame(maxWidth: 160)
                 }
             }
@@ -260,9 +260,9 @@ struct LiveCaptionView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(presentation.action == .none)
-        .accessibilityLabel(presentation.title)
-        .accessibilityHint(presentation.detail ?? "")
+        .disabled(current.action == .none)
+        .accessibilityLabel(current.title)
+        .accessibilityHint(current.detail ?? "")
     }
 
     private func perform(_ action: PhasePresentation.Action) {

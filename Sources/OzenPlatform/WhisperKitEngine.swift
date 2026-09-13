@@ -145,8 +145,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
         }
         defer { intakeTask.cancel() }
 
-        let live = liveOptions(languageCode: languageCode)
-        let final = finalOptions(languageCode: languageCode)
+        let livePass = liveOptions(languageCode: languageCode)
+        let finalPass = finalOptions(languageCode: languageCode)
         let pauseSamples = Int(pauseSeconds * sampleRate)
         let padSamples = Int(trailingPadSeconds * sampleRate)
         let keepSamples = Int(leadingKeepSeconds * sampleRate)
@@ -189,7 +189,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
             let results: [TranscriptionResult] = try await pipe.transcribe(
                 audioArray: window,
-                decodeOptions: isFinal ? final : live
+                decodeOptions: isFinal ? finalPass : livePass
             )
             let segments = results.flatMap(\.segments)
             let text = filter.acceptedText(from: segments.map {

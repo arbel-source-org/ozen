@@ -34,8 +34,6 @@ struct CaptionTheme {
         }
     }
 
-    var displayName: String { "" }
-
     static func name(for theme: DisplayPreferences.Theme) -> String {
         switch theme {
         case .dark: return "לבן על שחור"

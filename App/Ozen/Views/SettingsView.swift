@@ -181,8 +181,11 @@ struct SettingsView: View {
                 Label(profile.name, systemImage: "person.wave.2")
             }
             .onDelete { offsets in
-                for offset in offsets {
-                    viewModel.removeProfile(id: viewModel.settings.speakerProfiles[offset].id)
+                // Resolve ids before removing anything: each removal shifts
+                // the indices the remaining offsets refer to.
+                let ids = offsets.map { viewModel.settings.speakerProfiles[$0].id }
+                for id in ids {
+                    viewModel.removeProfile(id: id)
                 }
             }
             Button {

@@ -205,8 +205,12 @@ public final class AVAudioInputManager: AudioCapturing {
         observers.add(center.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main
         ) { [weak self] notification in
+            // Only the identity of the engine that changed crosses into
+            // the main-actor hop: the notification (and the engine it
+            // carries) aren't Sendable, an ObjectIdentifier is.
+            let changedEngine = (notification.object as AnyObject?).map(ObjectIdentifier.init)
             Task { @MainActor [weak self] in
-                guard let self, (notification.object as? AVAudioEngine) === self.engine else { return }
+                guard let self, changedEngine == ObjectIdentifier(self.engine) else { return }
                 self.recoverFromConfigurationChange()
             }
         })
