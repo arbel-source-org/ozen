@@ -52,9 +52,10 @@ swift build && swift test
 ```
 
 The full app (anything touching WhisperKit/Speech/AVFoundation/SwiftUI)
-only builds on macOS/iOS and is built and tested by CI
-(`.github/workflows/ci.yml`) on GitHub's free macOS runners. To build it
-yourself on a Mac:
+only builds on iOS — `AVAudioSession` in particular doesn't exist on macOS
+at all, so this half is built and tested by CI
+(`.github/workflows/ci.yml`) against the iOS Simulator on GitHub's free
+macOS runners, not a plain macOS build. To build it yourself on a Mac:
 
 ```bash
 brew install xcodegen

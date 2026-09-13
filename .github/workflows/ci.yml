@@ -16,19 +16,6 @@ jobs:
       - run: swift build
       - run: swift test
 
-  ozenkit-macos:
-    # OzenKit only, deliberately: OzenPlatform depends on AVAudioSession,
-    # which doesn't exist under the native macOS SDK at all (it's iOS-only)
-    # — a plain `swift build` here would try and fail to compile it. The
-    # `app` job below builds and tests OzenPlatform for real, against the
-    # iOS Simulator SDK via xcodebuild, where AVAudioSession is valid.
-    name: OzenKit (macOS toolchain)
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - run: swift build --target OzenKit
-      - run: swift test --filter OzenKitTests
-
   app:
     name: Ozen app (iOS Simulator)
     runs-on: macos-15
