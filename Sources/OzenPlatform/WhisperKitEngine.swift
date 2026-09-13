@@ -39,9 +39,9 @@ public actor WhisperKitEngine: TranscriptionEngine {
     /// under so the audio's own tokens never get squeezed.
     private let maxPromptTokens = 120
 
-    /// Re-run the model at most this often per utterance — often enough to
-    /// feel live, not so often that inference dominates the CPU.
-    private let minSecondsBetweenPasses = 0.6
+    // How often the live preview re-runs is decided per pass by
+    // `InferenceCadence` (0.6 s on a cool phone, slower when hot, in Low
+    // Power Mode, or when the last pass was itself slow).
     /// A gap this long with no speech ends the current utterance.
     private let pauseSeconds = 1.0
     /// Audio kept after the last detected speech when finalizing, so a
@@ -201,7 +201,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
         let padSamples = Int(trailingPadSeconds * sampleRate)
         let keepSamples = Int(leadingKeepSeconds * sampleRate)
         let maxSamples = Int(maxUtteranceSeconds * sampleRate)
-        let minNewSamples = Int(minSecondsBetweenPasses * sampleRate)
+        var lastLivePassSeconds: Double?
 
         var utteranceID = UUID()
         var samplesAtLastPass = 0
@@ -227,7 +227,12 @@ public actor WhisperKitEngine: TranscriptionEngine {
             let pauseReached = total - speechEnd >= pauseSamples
             let tooLong = total >= maxSamples
             let isFinal = pauseReached || tooLong || snapshot.finished
-            let enoughNewAudio = total - samplesAtLastPass >= minNewSamples
+            let interval = InferenceCadence.secondsBetweenLivePasses(
+                heat: Self.currentHeat(),
+                lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
+                lastPassSeconds: lastLivePassSeconds
+            )
+            let enoughNewAudio = total - samplesAtLastPass >= Int(interval * sampleRate)
             if !isFinal && !enoughNewAudio {
                 try await Task.sleep(for: .milliseconds(50))
                 continue
@@ -239,10 +244,17 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
             var options = isFinal ? finalPass : livePass
             options.promptTokens = promptTokens(using: pipe)
+            let passStarted = ContinuousClock.now
             let results: [TranscriptionResult] = try await pipe.transcribe(
                 audioArray: window,
                 decodeOptions: options
             )
+            if !isFinal {
+                // Only live passes: a final pass may retry at higher
+                // temperatures and would overstate how slow the phone is.
+                let elapsed = ContinuousClock.now - passStarted
+                lastLivePassSeconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+            }
             let segments = results.flatMap(\.segments)
             let text = filter.acceptedText(from: segments.map {
                 WhisperSegmentSummary(
@@ -275,6 +287,16 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 lastShownText = ""
                 if snapshot.finished && total - end == 0 { break }
             }
+        }
+    }
+
+    private static func currentHeat() -> DeviceHeat {
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal: return .nominal
+        case .fair: return .fair
+        case .serious: return .serious
+        case .critical: return .critical
+        @unknown default: return .serious
         }
     }
 
