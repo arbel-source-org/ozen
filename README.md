@@ -46,6 +46,37 @@ things, for Hebrew conversation, entirely on-device.
   from phone-call interruptions and route changes (AirPods in/out, USB mic
   unplugged), Whisper-hallucination filtering on silence, no model runs on
   pure silence at all.
+- **Recovers by itself.** A recognizer that drops out mid-conversation,
+  an audio session that fails, or a model download that hit a dead Wi-Fi
+  is retried automatically with growing delays, and the status line says
+  so. Failures only a person can fix (a denied permission) never are.
+  Retries wait out a phone call instead of burning attempts during it.
+- **Downloads that can't get stuck.** A cut-off model download is told
+  apart from a whole model and simply continues from where it stopped,
+  instead of failing to load on every launch.
+- **Type to speak.** The other half of a conversation: type a reply, or
+  tap one of the ready-made phrases ("רגע, לא הבנתי", "אפשר לחזור על
+  זה?"), and the phone says it in Hebrew. Captions pause while the phone
+  talks, so it doesn't caption itself, and come back on their own.
+- **Names and words list.** Family names, the doctor, the medicines.
+  Both engines are primed with the list (Apple's recognizer via
+  contextual strings, Whisper via a decoder prompt), edits apply from the
+  next sentence, and Whisper output that is just the list read back is
+  dropped.
+- **Keyword alerts.** Her name, or any word she picks, buzzes the phone
+  and highlights the line, matching through Hebrew's attached prefixes
+  ("ולרותי" still matches "רותי").
+- **Sound alerts.** Doorbell, knocking, a baby crying, a smoke alarm, a
+  civil-defence siren and about 45 more, recognized on the phone by
+  Apple's sound classifier and shown as a banner, with per-sound muting.
+- **Conversation history.** Conversations are saved as they happen,
+  searchable, shareable as text, with a summary at the top: length, how
+  much each person said, speaking pace, longest turn.
+- **First-launch walkthrough** in large type that explains the engines and
+  the one-time model download before it happens, and asks for the
+  microphone with a reason.
+- **Siri and Shortcuts.** "היי סירי, התחל כתוביות באוזן", "עצור כתוביות",
+  and "תגיד באוזן ..." to have the phone say something aloud.
 - **Diagnostics screen** with every pipeline counter (audio chunks, tokens,
   caption lag, restarts, speaker clusters) and one-tap copy for asking for
   help.
@@ -96,10 +127,13 @@ the three things that were broken along the way, in
 
 The whole pipeline — permission, session, input listing, engine
 preparation with progress, capture, tokens → segments, speaker clustering,
-engine hot-swap, pause/resume, every failure path — lives in `OzenKit` as
-`CaptionPipeline` and is unit tested on Linux against fakes (90 tests).
-The platform layer (WhisperKit/Speech engines, real audio capture, the
-speaker embedder) compiles and its DSP is tested on CI's iOS Simulator.
+engine hot-swap, pause/resume, automatic recovery, every failure path —
+lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
+against fakes, along with the alert matching, history, statistics,
+vocabulary and model-download logic (188 tests). The platform layer
+(WhisperKit/Speech engines, real audio capture, the speaker embedder) and
+the app's view model are built and tested on CI's iOS Simulator, with the
+view model driven end to end by the same fakes (another 28 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
