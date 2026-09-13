@@ -25,12 +25,28 @@ jobs:
         run: brew install xcodegen
       - name: Generate Xcode project
         run: xcodegen generate
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.app
+      - name: Find an available iOS Simulator
+        id: sim
+        # Not hardcoded on purpose: a pinned device name (e.g. "iPhone 16")
+        # broke the very first time this ran, because the runner's default
+        # Xcode didn't have that particular simulator registered. Ask the
+        # machine what it actually has instead of guessing a name that
+        # will just as easily go stale on the next runner image update.
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j \
+            | jq -r '.devices | to_entries[] | .value[] | select(.name | test("iPhone")) | .name' \
+            | head -n1)
+          if [ -z "$DEVICE" ]; then
+            echo "No available iPhone simulator found" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "Using simulator: $DEVICE"
+          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
       - name: Build and test
         run: |
           xcodebuild test \
             -project Ozen.xcodeproj \
             -scheme Ozen \
-            -destination "platform=iOS Simulator,name=iPhone 16" \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
             | xcpretty && exit ${PIPESTATUS[0]}
