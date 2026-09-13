@@ -43,6 +43,8 @@ public final class CaptionPipeline {
     /// The settings the running (or last-run) session was started with.
     /// Engine/model/language changes need a restart; input changes don't.
     public private(set) var activeSettings: AppSettings?
+    /// Set while a failure is waiting to be retried automatically.
+    public private(set) var scheduledRetry: ScheduledRetry?
 
     public var inputLevel: Float { audio.inputLevel }
 
@@ -68,6 +70,13 @@ public final class CaptionPipeline {
     /// earlier run (a progress callback arriving after a restart, say)
     /// compare against it and drop themselves instead of clobbering state.
     private var runID = UUID()
+    private var recovery: AutoRecoveryPolicy
+    private var retryTask: Task<Void, Never>?
+    private var retryToken: UUID?
+    private var listeningSince: TimeInterval?
+    /// A phone call (or another app) holds the audio session. Retrying
+    /// then would only use up attempts; recovery waits for it to end.
+    private var systemInterrupted = false
 
     private static let embeddingWindowSeconds = 1.5
     private static let sampleRate = 16_000.0
@@ -82,8 +91,10 @@ public final class CaptionPipeline {
         soundPolicy: SoundEventPolicy = SoundEventPolicy(),
         clusterer: EmbeddingClusterer = EmbeddingClusterer(),
         stabilizer: CaptionStabilizer = CaptionStabilizer(),
+        recovery: AutoRecoveryPolicy = AutoRecoveryPolicy(),
         now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSince1970 }
     ) {
+        self.recovery = recovery
         self.audio = audio
         self.engineFactory = engineFactory
         self.embedder = embedder
@@ -105,6 +116,7 @@ public final class CaptionPipeline {
 
     public func start(settings: AppSettings) async {
         guard !phase.isListening, !phase.isTransitioning else { return }
+        cancelScheduledRetry()
         let run = UUID()
         runID = run
         activeSettings = settings
@@ -168,6 +180,7 @@ public final class CaptionPipeline {
 
         stats.sessionStartedAt = now()
         phase = .listening
+        listeningSince = now()
 
         embeddingTask = Task { [weak self] in
             await self?.consumeEmbeddings(embedderAudio, run: run)
@@ -211,12 +224,16 @@ public final class CaptionPipeline {
     }
 
     public func stop() {
+        cancelScheduledRetry()
+        recovery.reset()
+        listeningSince = nil
         tearDownSession()
         phase = .idle
     }
 
     public func pause() {
         guard phase.isListening else { return }
+        listeningSince = nil
         tearDownSession()
         phase = .paused
     }
@@ -231,6 +248,8 @@ public final class CaptionPipeline {
     /// language changed. The transcript is kept; a switch mid-conversation
     /// shouldn't wipe what was already read.
     public func restart(settings: AppSettings) async {
+        cancelScheduledRetry()
+        recovery.reset()
         tearDownSession()
         phase = .idle
         stats.engineRestarts += 1
@@ -240,6 +259,7 @@ public final class CaptionPipeline {
     /// For the retry button after a failure.
     public func retry() async {
         guard let activeSettings else { return }
+        cancelScheduledRetry()
         tearDownSession()
         phase = .idle
         await start(settings: activeSettings)
@@ -484,7 +504,55 @@ public final class CaptionPipeline {
 
     private func fail(_ kind: PipelineFailure.Kind, detail: String, engineUnavailability: EngineUnavailability? = nil) {
         tearDownSession()
-        phase = .failed(PipelineFailure(kind: kind, detail: detail, engineUnavailability: engineUnavailability))
+        let failure = PipelineFailure(kind: kind, detail: detail, engineUnavailability: engineUnavailability)
+        phase = .failed(failure)
+        scheduleAutoRecovery(for: failure)
+    }
+
+    // MARK: - Automatic recovery
+
+    /// Tells the pipeline a phone call (or another app) took or released
+    /// the audio session. While it's held no retry runs; when it's
+    /// released a failed pipeline gets a fresh set of attempts.
+    public func systemInterruptionChanged(active: Bool) {
+        systemInterrupted = active
+        if active {
+            cancelScheduledRetry()
+        } else if let failure = phase.failure {
+            recovery.reset()
+            scheduleAutoRecovery(for: failure)
+        }
+    }
+
+    private func scheduleAutoRecovery(for failure: PipelineFailure) {
+        if let since = listeningSince, now() - since >= recovery.healthyListeningSeconds {
+            recovery.reset()
+        }
+        listeningSince = nil
+        cancelScheduledRetry()
+        guard !systemInterrupted, let delay = recovery.nextDelay(for: failure) else { return }
+
+        let token = UUID()
+        retryToken = token
+        scheduledRetry = ScheduledRetry(at: now() + delay, attempt: recovery.attempts)
+        retryTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard let self, !Task.isCancelled, self.retryToken == token, case .failed = self.phase else { return }
+            // Detach from this task before retrying: `retry` cancels any
+            // scheduled retry, and cancelling the task it's running on
+            // would cancel the model download it's about to start.
+            self.retryTask = nil
+            self.retryToken = nil
+            self.scheduledRetry = nil
+            await self.retry()
+        }
+    }
+
+    private func cancelScheduledRetry() {
+        retryTask?.cancel()
+        retryTask = nil
+        retryToken = nil
+        scheduledRetry = nil
     }
 
     private func tearDownSession() {

@@ -182,6 +182,7 @@ private func makePipeline(
     audio: FakeAudioCapturer = FakeAudioCapturer(),
     engines: [TranscriptionEngineKind: FakeEngine] = [.whisperKit: FakeEngine()],
     soundDetector: FakeSoundDetector? = nil,
+    recovery: AutoRecoveryPolicy = .disabled,
     now: @escaping @Sendable () -> TimeInterval = { 1_000 }
 ) -> (CaptionPipeline, FakeAudioCapturer, FactoryLog) {
     let log = FactoryLog()
@@ -193,6 +194,7 @@ private func makePipeline(
         },
         embedder: FakeEmbedder(),
         soundDetector: soundDetector,
+        recovery: recovery,
         now: now
     )
     return (pipeline, audio, log)

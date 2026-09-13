@@ -86,6 +86,7 @@ public final class LiveCaptionViewModel {
         }
         audioManager?.onInterruption = { [weak self] began in
             self?.isInterruptedBySystem = began
+            self?.pipeline.systemInterruptionChanged(active: began)
         }
         synthesizer?.onSpeakingChanged = { [weak self] speaking in
             self?.speakingDidChange(speaking)

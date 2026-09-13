@@ -28,7 +28,8 @@ struct LiveCaptionView: View {
         PhasePresentation(
             phase: viewModel.phase,
             engine: viewModel.pipeline.activeEngineKind,
-            interruptedBySystem: viewModel.isInterruptedBySystem
+            interruptedBySystem: viewModel.isInterruptedBySystem,
+            scheduledRetry: viewModel.pipeline.scheduledRetry
         )
     }
 

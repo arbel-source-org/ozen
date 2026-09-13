@@ -26,7 +26,12 @@ struct PhasePresentation {
     let isBusy: Bool
     let action: Action
 
-    init(phase: PipelinePhase, engine: TranscriptionEngineKind?, interruptedBySystem: Bool) {
+    init(
+        phase: PipelinePhase,
+        engine: TranscriptionEngineKind?,
+        interruptedBySystem: Bool,
+        scheduledRetry: ScheduledRetry? = nil
+    ) {
         if interruptedBySystem {
             self.init(
                 title: "הכתוביות מושהות בגלל שיחה",
@@ -59,6 +64,18 @@ struct PhasePresentation {
 
         case .failed(let failure):
             self.init(failure: failure, engine: engine)
+            if scheduledRetry != nil {
+                // The pipeline is already on it. Say so, calmly, and keep
+                // the tap as "try right now" rather than the only way out.
+                self = PhasePresentation(
+                    title: title,
+                    detail: "מנסה שוב לבד · הקישו כדי לנסות עכשיו",
+                    systemImage: "arrow.clockwise",
+                    tint: .orange,
+                    isBusy: true,
+                    action: .retry
+                )
+            }
         }
     }
 
