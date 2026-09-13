@@ -23,6 +23,9 @@ struct OzenApp: App {
                 }
             }
             .animation(.default, value: viewModel.hasCompletedOnboarding)
+            // Hebrew first, whatever the phone's language. Under this,
+            // SwiftUI's `.leading` is the right edge: Hebrew text and a
+            // row's icon go on `.leading`, never `.trailing` (the left).
             .environment(\.layoutDirection, .rightToLeft)
         }
     }

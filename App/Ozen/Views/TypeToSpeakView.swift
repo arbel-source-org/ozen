@@ -63,7 +63,7 @@ struct TypeToSpeakView: View {
     }
 
     private var composer: some View {
-        VStack(alignment: .trailing, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             TextField("הקלידו מה להגיד…", text: $text, axis: .vertical)
                 .font(.title2)
                 .lineLimit(1...4)

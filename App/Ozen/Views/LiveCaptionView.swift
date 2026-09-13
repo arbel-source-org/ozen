@@ -202,7 +202,7 @@ struct LiveCaptionView: View {
     private var transcript: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .trailing, spacing: max(12, liveDisplay.fontSize * 0.6)) {
+                LazyVStack(alignment: .leading, spacing: max(12, liveDisplay.fontSize * 0.6)) {
                     if viewModel.segments.isEmpty {
                         emptyState
                     }
@@ -237,7 +237,7 @@ struct LiveCaptionView: View {
     }
 
     private var emptyState: some View {
-        VStack(alignment: .trailing, spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(viewModel.isListening ? "מקשיב." : "הכתוביות יופיעו כאן.")
                 .font(.system(size: liveDisplay.fontSize, weight: .medium))
                 .foregroundStyle(theme.text)
@@ -248,7 +248,7 @@ struct LiveCaptionView: View {
                 .foregroundStyle(theme.pendingText)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 40)
     }
 
@@ -434,7 +434,7 @@ private struct CaptionRow: View {
     let isKeywordHit: Bool
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
             if let speakerName {
                 HStack(spacing: 6) {
                     Text(speakerName)
@@ -449,7 +449,7 @@ private struct CaptionRow: View {
                 .font(.system(size: display.fontSize, weight: weight))
                 .italic(!segment.isCommitted)
                 .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
-                .multilineTextAlignment(.trailing)
+                .multilineTextAlignment(.leading)
                 .lineSpacing(display.fontSize * 0.15)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, isKeywordHit ? 8 : 0)
@@ -462,7 +462,7 @@ private struct CaptionRow: View {
                     in: RoundedRectangle(cornerRadius: 8)
                 )
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityHint(isKeywordHit ? "מכיל מילה חשובה" : "")
     }

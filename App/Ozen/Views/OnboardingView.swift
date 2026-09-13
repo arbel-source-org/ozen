@@ -87,7 +87,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.green)
                     .font(.title3.weight(.semibold))
             case .denied:
-                VStack(alignment: .trailing, spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     Label("המיקרופון חסום", systemImage: "xmark.circle.fill")
                         .foregroundStyle(.red)
                         .font(.title3.weight(.semibold))
@@ -181,7 +181,7 @@ private struct OnboardingPage<Content: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .trailing, spacing: 20) {
+            VStack(alignment: .leading, spacing: 20) {
                 Image(systemName: symbol)
                     .font(.system(size: 72, weight: .light))
                     .foregroundStyle(.tint)
@@ -193,8 +193,8 @@ private struct OnboardingPage<Content: View>: View {
                     .padding(.bottom, 8)
                 content
                     .font(.title3)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 28)
             .padding(.bottom, 48)
@@ -208,12 +208,12 @@ private struct OnboardingRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            Text(text)
-                .frame(maxWidth: .infinity, alignment: .trailing)
             Image(systemName: symbol)
                 .font(.title2)
                 .foregroundStyle(.tint)
                 .frame(width: 32)
+            Text(text)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -228,18 +228,18 @@ private struct EngineCard: View {
     var body: some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .trailing, spacing: 6) {
+                Image(systemName: selected ? "checkmark.circle.fill" : symbol)
+                    .font(.title)
+                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                    .frame(width: 36)
+                VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.title3.weight(.semibold))
                     Text(subtitle)
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                Image(systemName: selected ? "checkmark.circle.fill" : symbol)
-                    .font(.title)
-                    .foregroundStyle(selected ? Color.accentColor : Color.secondary)
-                    .frame(width: 36)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(16)
             .background(

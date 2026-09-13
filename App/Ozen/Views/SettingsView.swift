@@ -159,7 +159,7 @@ struct SettingsView: View {
                 }
                 Text("שלום סבתא, מה שלומך היום?")
                     .font(.system(size: viewModel.display.fontSize, weight: viewModel.display.boldText ? .bold : .medium))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
                     .background(CaptionTheme(viewModel.display.theme).background, in: RoundedRectangle(cornerRadius: 10))
                     .foregroundStyle(CaptionTheme(viewModel.display.theme).text)
