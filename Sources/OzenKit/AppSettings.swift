@@ -57,6 +57,14 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
 
     public static let `default` = DisplayPreferences()
 
+    /// The text size a pinch of `scale` lands on: clamped to the readable
+    /// range and rounded to whole points, so a pinch never leaves the
+    /// setting at 31.847 or pushes it off either end.
+    public static func fontSize(_ base: Double, scaledBy scale: Double) -> Double {
+        guard scale.isFinite, scale > 0 else { return min(max(base, minimumFontSize), maximumFontSize) }
+        return min(max((base * scale).rounded(), minimumFontSize), maximumFontSize)
+    }
+
     private enum CodingKeys: String, CodingKey {
         case fontSize, theme, boldText, showSpeakerNames, keepScreenAwake
     }

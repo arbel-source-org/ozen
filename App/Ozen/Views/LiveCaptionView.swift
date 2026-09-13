@@ -19,11 +19,35 @@ struct LiveCaptionView: View {
     @State private var visibleSoundAlert: SoundAlert?
     @State private var visibleKeywordHit: KeywordHit?
     @State private var hasLaunched = false
+    @State private var fontSizeTrigger = 0
     @State private var battery = BatteryMonitor()
+    /// Live scale while a pinch is in progress; 1 otherwise.
+    @GestureState private var pinchScale: Double = 1
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
     private var theme: CaptionTheme { CaptionTheme(viewModel.display.theme) }
+
+    /// The saved display settings with a pinch in progress applied, so the
+    /// text grows under the fingers and only the final size is saved.
+    private var liveDisplay: DisplayPreferences {
+        var display = viewModel.display
+        display.fontSize = DisplayPreferences.fontSize(display.fontSize, scaledBy: pinchScale)
+        return display
+    }
+
+    private var pinchToResize: some Gesture {
+        MagnifyGesture()
+            .updating($pinchScale) { value, state, _ in
+                state = value.magnification
+            }
+            .onEnded { value in
+                let size = DisplayPreferences.fontSize(viewModel.display.fontSize, scaledBy: value.magnification)
+                guard size != viewModel.display.fontSize else { return }
+                viewModel.display.fontSize = size
+                fontSizeTrigger += 1
+            }
+    }
 
     private var presentation: PhasePresentation {
         PhasePresentation(
@@ -39,6 +63,19 @@ struct LiveCaptionView: View {
             theme.background.ignoresSafeArea()
 
             transcript
+                .simultaneousGesture(pinchToResize)
+
+            if pinchScale != 1 {
+                Text("גודל טקסט \(Int(liveDisplay.fontSize))")
+                    .font(.headline.monospacedDigit())
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .foregroundStyle(theme.chrome)
+                    .frame(maxHeight: .infinity, alignment: .center)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
 
             if !isPinnedToBottom && !viewModel.segments.isEmpty {
                 jumpToLatestPill
@@ -128,6 +165,7 @@ struct LiveCaptionView: View {
             battery.setActive(listening)
         }
         .sensoryFeedback(.warning, trigger: battery.notice?.id)
+        .sensoryFeedback(.selection, trigger: fontSizeTrigger)
         .animation(.default, value: battery.notice)
         .onChange(of: viewModel.display.keepScreenAwake) { _, keep in
             UIApplication.shared.isIdleTimerDisabled = viewModel.isListening && keep
@@ -164,7 +202,7 @@ struct LiveCaptionView: View {
     private var transcript: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .trailing, spacing: max(12, viewModel.display.fontSize * 0.6)) {
+                LazyVStack(alignment: .trailing, spacing: max(12, liveDisplay.fontSize * 0.6)) {
                     if viewModel.segments.isEmpty {
                         emptyState
                     }
@@ -172,7 +210,7 @@ struct LiveCaptionView: View {
                         CaptionRow(
                             segment: segment,
                             speakerName: viewModel.display.showSpeakerNames ? viewModel.displayName(for: segment) : nil,
-                            display: viewModel.display,
+                            display: liveDisplay,
                             theme: theme,
                             isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id)
                         )
@@ -201,12 +239,12 @@ struct LiveCaptionView: View {
     private var emptyState: some View {
         VStack(alignment: .trailing, spacing: 12) {
             Text(viewModel.isListening ? "מקשיב." : "הכתוביות יופיעו כאן.")
-                .font(.system(size: viewModel.display.fontSize, weight: .medium))
+                .font(.system(size: liveDisplay.fontSize, weight: .medium))
                 .foregroundStyle(theme.text)
             Text(viewModel.isListening
-                 ? "כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. הקישו על שורה כדי לתת שם לדובר."
+                 ? "כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. הקישו על שורה כדי לתת שם לדובר, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט."
                  : "אפשר לבחור מיקרופון בכפתור למטה מימין ולשנות מנוע תמלול בהגדרות.")
-                .font(.system(size: max(17, viewModel.display.fontSize * 0.6)))
+                .font(.system(size: max(17, liveDisplay.fontSize * 0.6)))
                 .foregroundStyle(theme.pendingText)
                 .fixedSize(horizontal: false, vertical: true)
         }

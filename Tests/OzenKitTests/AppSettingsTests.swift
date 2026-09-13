@@ -133,4 +133,14 @@ struct AppSettingsTests {
         let huge = try JSONDecoder().decode(DisplayPreferences.self, from: Data(#"{"fontSize":400}"#.utf8))
         #expect(huge.fontSize == DisplayPreferences.maximumFontSize)
     }
+
+    @Test("a pinch lands on a whole-point size inside the readable range")
+    func pinchFontSize() {
+        #expect(DisplayPreferences.fontSize(30, scaledBy: 1.2) == 36)
+        #expect(DisplayPreferences.fontSize(30, scaledBy: 1.017) == 31)
+        #expect(DisplayPreferences.fontSize(30, scaledBy: 10) == DisplayPreferences.maximumFontSize)
+        #expect(DisplayPreferences.fontSize(30, scaledBy: 0.1) == DisplayPreferences.minimumFontSize)
+        #expect(DisplayPreferences.fontSize(30, scaledBy: 0) == 30)
+        #expect(DisplayPreferences.fontSize(30, scaledBy: .nan) == 30)
+    }
 }
