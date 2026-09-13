@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import OzenKit
+import OzenPlatform
 
 /// The numbers behind "it went quiet". Every counter the pipeline keeps,
 /// plus device/app facts, with one button that copies it all as text so
@@ -52,7 +53,22 @@ struct DiagnosticsView: View {
                 }
             }
 
+            Section("התאוששות") {
+                LabeledContent("ניסיון חוזר אוטומטי", value: retryText)
+                LabeledContent("שיחת טלפון תופסת את האודיו", value: viewModel.isInterruptedBySystem ? "כן" : "לא")
+            }
+
+            Section("מודל ומילים") {
+                LabeledContent("מצב המודל", value: Self.describe(modelState))
+                LabeledContent("טוקנייזר שמור", value: store.hasCachedTokenizer() ? "כן" : "לא (צריך אינטרנט פעם אחת)")
+                LabeledContent("שמות ומילים", value: "\(viewModel.vocabulary.count)")
+                LabeledContent("התראות מילים", value: "\(viewModel.settings.keywordAlerts.filter(\.isEnabled).count)")
+            }
+
             Section("מכשיר") {
+                LabeledContent("חום", value: Self.describe(ProcessInfo.processInfo.thermalState))
+                LabeledContent("מצב חיסכון בסוללה", value: ProcessInfo.processInfo.isLowPowerModeEnabled ? "פעיל" : "כבוי")
+                LabeledContent("סוללה", value: Self.batteryText)
                 LabeledContent("דגם", value: UIDevice.current.model)
                 LabeledContent("iOS", value: UIDevice.current.systemVersion)
                 LabeledContent("אפליקציה", value: SettingsView.versionString)
@@ -71,6 +87,44 @@ struct DiagnosticsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    private let store = WhisperModelStore()
+
+    private var modelState: ModelFolderState {
+        store.state(of: viewModel.settings.whisperModelVariant)
+    }
+
+    private var retryText: String {
+        guard let retry = viewModel.pipeline.scheduledRetry else { return "—" }
+        let seconds = max(0, Int((retry.at - Date().timeIntervalSince1970).rounded()))
+        return "ניסיון \(retry.attempt), בעוד \(seconds) שנ׳"
+    }
+
+    private static var batteryText: String {
+        let device = UIDevice.current
+        guard device.isBatteryMonitoringEnabled, device.batteryLevel >= 0 else { return "—" }
+        let plugged = device.batteryState == .charging || device.batteryState == .full
+        return "\(Int((device.batteryLevel * 100).rounded()))%\(plugged ? " · בטעינה" : "")"
+    }
+
+    static func describe(_ state: ModelFolderState) -> String {
+        switch state {
+        case .missing: return "לא הורד"
+        case .partial: return "הורדה נקטעה"
+        case .unverified: return "מותקן (לא אומת)"
+        case .verified: return "מותקן"
+        }
+    }
+
+    static func describe(_ thermal: ProcessInfo.ThermalState) -> String {
+        switch thermal {
+        case .nominal: return "רגיל"
+        case .fair: return "חמים"
+        case .serious: return "חם · הכתוביות מאטות"
+        case .critical: return "חם מאוד · הכתוביות מאטות מאוד"
+        @unknown default: return "לא ידוע"
+        }
+    }
+
     private var report: String {
         let stats = viewModel.stats
         return """
@@ -82,6 +136,9 @@ struct DiagnosticsView: View {
         audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges)
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
+        retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem)
+        model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
+        thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText)
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString)
         """
     }
