@@ -133,15 +133,8 @@ private final class RecognitionSession: @unchecked Sendable {
     private var lastTextByUtterance: [UUID: String] = [:]
     private var consecutiveFailures = 0
 
-    private static let sampleRate = 16_000
-    /// A pause this long after speech ends the utterance.
-    private static let pauseSamples = Int(1.2 * Double(sampleRate))
-    /// Requests are rolled over before Apple's own limits bite and so a
-    /// single runaway utterance can't grow without bound.
-    private static let maxRequestSamples = 45 * sampleRate
-    /// Pure silence for this long restarts the request quietly, so the
-    /// recognizer never times out with "no speech detected".
-    private static let idleRestartSamples = 8 * sampleRate
+    // When to end a request and what an error means are decided by
+    // `RecognitionRequestPolicy` (OzenKit, tested).
 
     init(
         recognizer: SFSpeechRecognizer,
@@ -200,10 +193,11 @@ private final class RecognitionSession: @unchecked Sendable {
             request.append(buffer)
         }
 
-        let pausedAfterSpeech = requestHasSpeech && samplesSinceSpeech >= Self.pauseSamples
-        let tooLong = samplesInRequest >= Self.maxRequestSamples
-        let idleTooLong = !requestHasSpeech && samplesInRequest >= Self.idleRestartSamples
-        if pausedAfterSpeech || tooLong || idleTooLong {
+        if RecognitionRequestPolicy.rollover(
+            samplesInRequest: samplesInRequest,
+            samplesSinceSpeech: samplesSinceSpeech,
+            requestHasSpeech: requestHasSpeech
+        ) != nil {
             rollOverLocked()
         }
     }
@@ -247,18 +241,24 @@ private final class RecognitionSession: @unchecked Sendable {
         guard !stopped else { return }
 
         if let error {
-            // A request that was ended on purpose reports the end as an
-            // error (cancelled / no speech detected); those are expected.
-            // Only the *current* request dying is worth reacting to, and
-            // even then one restart usually clears it.
-            guard isCurrent else { return }
             lock.lock()
-            consecutiveFailures += 1
-            let failures = consecutiveFailures
-            if failures < 3 {
+            let response = RecognitionRequestPolicy.respond(
+                isCurrentRequest: isCurrent && id == utteranceID,
+                requestHadSpeech: requestHasSpeech,
+                requestAudioSeconds: Double(samplesInRequest) / Double(RecognitionRequestPolicy.sampleRate),
+                consecutiveFailures: consecutiveFailures
+            )
+            switch response {
+            case .ignore:
+                lock.unlock()
+            case .restartQuietly:
                 rollOverLocked()
                 lock.unlock()
-            } else {
+            case .restartCounting:
+                consecutiveFailures += 1
+                rollOverLocked()
+                lock.unlock()
+            case .giveUp:
                 lock.unlock()
                 continuation.finish(throwing: AppleSpeechEngine.EngineError.recognizerKeepsFailing(String(describing: error)))
             }
@@ -300,7 +300,7 @@ private final class RecognitionSession: @unchecked Sendable {
     }
 
     private static func pcmBuffer(from samples: [Float]) -> AVAudioPCMBuffer? {
-        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: Double(sampleRate), channels: 1, interleaved: false),
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: Double(RecognitionRequestPolicy.sampleRate), channels: 1, interleaved: false),
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)),
               let channelData = buffer.floatChannelData
         else {
