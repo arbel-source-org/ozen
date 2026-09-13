@@ -8,6 +8,8 @@ import OzenPlatform
 struct ModelManagerView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var installed: Set<String> = []
+    /// Downloads that were cut off: files on disk, not yet a model.
+    @State private var partial: Set<String> = []
     @State private var sizesOnDisk: [String: Int64] = [:]
     @State private var totalOnDisk: Int64 = 0
     @State private var pendingDelete: WhisperModelOption?
@@ -53,6 +55,7 @@ struct ModelManagerView: View {
     private func row(for option: WhisperModelOption) -> some View {
         let isSelected = option.variant == viewModel.settings.whisperModelVariant
         let isInstalled = installed.contains(option.variant)
+        let isPartial = partial.contains(option.variant)
         let downloadProgress = downloadProgress(for: option)
 
         return Button {
@@ -96,6 +99,12 @@ struct ModelManagerView: View {
                         if let size = sizesOnDisk[option.variant] {
                             Text("· \(Self.format(bytes: size)) בפועל")
                         }
+                    } else if isPartial {
+                        Image(systemName: "exclamationmark.arrow.circlepath")
+                        Text("ההורדה נקטעה · תימשך מאיפה שנעצרה בבחירה")
+                        if let size = sizesOnDisk[option.variant] {
+                            Text("· \(Self.format(bytes: size)) כבר ירדו")
+                        }
                     } else {
                         Image(systemName: "icloud.and.arrow.down")
                         Text("יורד בבחירה")
@@ -112,7 +121,7 @@ struct ModelManagerView: View {
         }
         .foregroundStyle(.primary)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if isInstalled && !(isSelected && viewModel.isListening) {
+            if (isInstalled || isPartial) && !(isSelected && (viewModel.isListening || viewModel.phase.isTransitioning)) {
                 Button(role: .destructive) {
                     pendingDelete = option
                 } label: {
@@ -149,7 +158,13 @@ struct ModelManagerView: View {
 
     private func refresh() {
         installed = Set(store.installedVariants())
-        sizesOnDisk = Dictionary(uniqueKeysWithValues: installed.map { ($0, store.sizeOnDisk(of: $0)) })
+        // Skip the variant being downloaded right now: mid-download is
+        // expected to be incomplete and already shows its progress.
+        let downloading = viewModel.phase.preparationProgress.flatMap { $0.stage == .downloadingModel ? $0.detail : nil }
+        partial = Set(WhisperModelCatalog.options.map(\.variant).filter { variant in
+            variant != downloading && store.state(of: variant) == .partial
+        })
+        sizesOnDisk = Dictionary(uniqueKeysWithValues: installed.union(partial).map { ($0, store.sizeOnDisk(of: $0)) })
         totalOnDisk = store.totalSizeOnDisk()
     }
 

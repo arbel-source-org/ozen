@@ -37,17 +37,39 @@ public struct WhisperModelStore: Sendable {
         modelsRoot.appendingPathComponent(WhisperModelCatalog.folderName(for: variant), isDirectory: true)
     }
 
-    /// The folder for `variant` if a complete model is on disk. "Complete"
-    /// means the three compiled CoreML bundles the loader looks for exist;
-    /// a half-finished download has a folder but fails this check and is
-    /// simply re-downloaded (HubApi resumes what's already there).
+    /// See `ModelFolderInspector` for what "complete" means and why the
+    /// bundle directories alone don't prove it.
+    public func state(of variant: String) -> ModelFolderState {
+        ModelFolderInspector.state(of: folder(for: variant))
+    }
+
+    /// The folder for `variant` if a usable model is on disk. A cut-off
+    /// download fails this and is simply downloaded again; the hub skips
+    /// every file that already arrived, so only the rest is fetched.
     public func installedFolder(for variant: String) -> URL? {
-        let folder = folder(for: variant)
-        let required = ["MelSpectrogram.mlmodelc", "AudioEncoder.mlmodelc", "TextDecoder.mlmodelc"]
-        let complete = required.allSatisfy { name in
-            FileManager.default.fileExists(atPath: folder.appendingPathComponent(name).path)
+        state(of: variant).isUsable ? folder(for: variant) : nil
+    }
+
+    /// Where the tokenizer is cached. It comes from a different hub repo
+    /// than the model and is fetched on the first load, so this lives
+    /// beside the models: excluded from backup, same base folder.
+    public var tokenizerBase: URL { downloadBase }
+
+    /// Whether any Whisper tokenizer has been cached yet. Without one the
+    /// first model load needs the internet, which is worth saying plainly
+    /// when it fails offline.
+    public func hasCachedTokenizer() -> Bool {
+        let openai = downloadBase
+            .appendingPathComponent("models", isDirectory: true)
+            .appendingPathComponent("openai", isDirectory: true)
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: openai.path) else { return false }
+        return names.contains { name in
+            FileManager.default.fileExists(atPath: openai.appendingPathComponent(name).appendingPathComponent("tokenizer.json").path)
         }
-        return complete ? folder : nil
+    }
+
+    public func markComplete(variant: String) {
+        try? ModelFolderInspector.markComplete(folder(for: variant))
     }
 
     public func isInstalled(_ variant: String) -> Bool {
@@ -92,6 +114,9 @@ public struct WhisperModelStore: Sendable {
                 progress(downloadProgress.fractionCompleted)
             }
         )
+        // Only reached when every file arrived: this is the one moment the
+        // folder is known to be whole.
+        try? ModelFolderInspector.markComplete(folder)
         return folder
     }
 

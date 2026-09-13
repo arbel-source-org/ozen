@@ -79,16 +79,22 @@ public actor WhisperKitEngine: TranscriptionEngine {
     ) async -> EngineAvailability {
         if pipe != nil { return .available }
 
-        let folder: URL
+        let variant = modelVariant
+        let downloadAndReport: @Sendable () async throws -> URL = { [store] in
+            progress(EnginePreparationProgress(stage: .downloadingModel, fraction: 0, detail: variant))
+            return try await store.download(variant: variant) { fraction in
+                progress(EnginePreparationProgress(stage: .downloadingModel, fraction: fraction, detail: variant))
+            }
+        }
+
+        var folder: URL
+        var fetchedThisTime = false
         if let installed = store.installedFolder(for: modelVariant) {
             folder = installed
         } else {
-            progress(EnginePreparationProgress(stage: .downloadingModel, fraction: 0, detail: modelVariant))
             do {
-                let variant = modelVariant
-                folder = try await store.download(variant: variant) { fraction in
-                    progress(EnginePreparationProgress(stage: .downloadingModel, fraction: fraction, detail: variant))
-                }
+                folder = try await downloadAndReport()
+                fetchedThisTime = true
             } catch {
                 return .unavailable(.modelDownloadFailed, "\(modelVariant): \(error)")
             }
@@ -96,15 +102,24 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
         progress(EnginePreparationProgress(stage: .loadingModel, detail: modelVariant))
         do {
-            let config = WhisperKitConfig(
-                modelFolder: folder.path,
-                verbose: false,
-                logLevel: .none,
-                prewarm: true,
-                load: true,
-                download: false
-            )
-            let loaded = try await WhisperKit(config)
+            let loaded: WhisperKit
+            do {
+                loaded = try await load(folder: folder)
+            } catch {
+                // A folder no download ever vouched for may be a cut-off
+                // download that happened to pass the file checks. Ask the
+                // hub for whatever is missing (it skips what's there) and
+                // try once more before calling the model broken.
+                guard !fetchedThisTime, store.state(of: variant) == .unverified else { throw error }
+                do {
+                    folder = try await downloadAndReport()
+                } catch let downloadError {
+                    return .unavailable(.modelDownloadFailed, "\(variant): load failed (\(error)); repair download failed: \(downloadError)")
+                }
+                progress(EnginePreparationProgress(stage: .loadingModel, detail: variant))
+                loaded = try await load(folder: folder)
+            }
+            store.markComplete(variant: variant)
 
             // One throwaway pass over a second of silence: CoreML pays its
             // first-run specialization cost here rather than on the first
@@ -119,8 +134,27 @@ public actor WhisperKitEngine: TranscriptionEngine {
             pipe = loaded
             return .available
         } catch {
+            // The tokenizer is fetched from the internet on the very first
+            // load. Offline at that moment is a connection problem, and
+            // saying "model broken" would send the user the wrong way.
+            if !store.hasCachedTokenizer() {
+                return .unavailable(.modelDownloadFailed, "\(modelVariant): first load needs the internet once to fetch the tokenizer: \(error)")
+            }
             return .unavailable(.modelLoadFailed, "\(modelVariant): \(error)")
         }
+    }
+
+    private func load(folder: URL) async throws -> WhisperKit {
+        let config = WhisperKitConfig(
+            modelFolder: folder.path,
+            tokenizerFolder: store.tokenizerBase,
+            verbose: false,
+            logLevel: .none,
+            prewarm: true,
+            load: true,
+            download: false
+        )
+        return try await WhisperKit(config)
     }
 
     public nonisolated func stream(
