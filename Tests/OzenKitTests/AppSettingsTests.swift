@@ -80,6 +80,9 @@ struct AppSettingsTests {
         #expect(decoded.display == .default)
         #expect(decoded.hapticOnSpeechResume == true)
         #expect(decoded.speakerSimilarityThreshold == 0.75)
+        #expect(decoded.keywordAlerts.isEmpty)
+        #expect(decoded.soundAlerts == .default)
+        #expect(decoded.saveHistory == true)
         // The credit line is owned by the build, not the file.
         #expect(decoded.creditLine == "Made by Arbel")
     }
@@ -98,6 +101,9 @@ struct AppSettingsTests {
         settings.display = DisplayPreferences(fontSize: 44, theme: .highContrast, boldText: true, showSpeakerNames: false, keepScreenAwake: false)
         settings.hapticOnSpeechResume = false
         settings.speakerSimilarityThreshold = 0.6
+        settings.keywordAlerts = [KeywordAlert(phrase: "סבתא"), KeywordAlert(phrase: "תרופה", isEnabled: false)]
+        settings.soundAlerts = SoundAlertPreferences(isEnabled: true, minimumImportance: .high, mutedIdentifiers: ["music"])
+        settings.saveHistory = false
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(AppSettings.self, from: data)

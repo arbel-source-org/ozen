@@ -103,6 +103,12 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// Cosine-similarity threshold for the speaker clusterer; lower merges
     /// more aggressively (fewer phantom "Speaker 3"s), higher splits more.
     public var speakerSimilarityThreshold: Float
+    /// Words and names that buzz and highlight when spoken.
+    public var keywordAlerts: [KeywordAlert]
+    /// Doorbell, siren, kettle... shown as banners; see `SoundEventCatalog`.
+    public var soundAlerts: SoundAlertPreferences
+    /// Keep past conversations on the phone for later reading and search.
+    public var saveHistory: Bool
 
     public init(
         engine: TranscriptionEngineKind,
@@ -114,7 +120,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
         allowServerFallbackForAppleSpeech: Bool = false,
         display: DisplayPreferences = .default,
         hapticOnSpeechResume: Bool = true,
-        speakerSimilarityThreshold: Float = 0.75
+        speakerSimilarityThreshold: Float = 0.75,
+        keywordAlerts: [KeywordAlert] = [],
+        soundAlerts: SoundAlertPreferences = .default,
+        saveHistory: Bool = true
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -126,6 +135,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.display = display
         self.hapticOnSpeechResume = hapticOnSpeechResume
         self.speakerSimilarityThreshold = speakerSimilarityThreshold
+        self.keywordAlerts = keywordAlerts
+        self.soundAlerts = soundAlerts
+        self.saveHistory = saveHistory
     }
 
     public static let `default` = AppSettings(
@@ -140,6 +152,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case engine, languageCode, preferredInputUID, speakerProfiles, creditLine
         case whisperModelVariant, allowServerFallbackForAppleSpeech, display
         case hapticOnSpeechResume, speakerSimilarityThreshold
+        case keywordAlerts, soundAlerts, saveHistory
     }
 
     public init(from decoder: any Decoder) throws {
@@ -157,6 +170,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
         display = try container.decodeIfPresent(DisplayPreferences.self, forKey: .display) ?? defaults.display
         hapticOnSpeechResume = try container.decodeIfPresent(Bool.self, forKey: .hapticOnSpeechResume) ?? defaults.hapticOnSpeechResume
         speakerSimilarityThreshold = try container.decodeIfPresent(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold
+        keywordAlerts = try container.decodeIfPresent([KeywordAlert].self, forKey: .keywordAlerts) ?? defaults.keywordAlerts
+        soundAlerts = try container.decodeIfPresent(SoundAlertPreferences.self, forKey: .soundAlerts) ?? defaults.soundAlerts
+        saveHistory = try container.decodeIfPresent(Bool.self, forKey: .saveHistory) ?? defaults.saveHistory
     }
 }
 

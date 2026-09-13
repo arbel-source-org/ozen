@@ -27,6 +27,19 @@ public final class CaptionPipeline {
     public private(set) var speakerClusters: [SpeakerCluster] = []
     public private(set) var stats = PipelineStats()
 
+    /// Keywords the reader asked to be told about, as they're spotted in
+    /// captions. Each entry fires once per utterance (partial updates of
+    /// the same sentence don't re-fire), newest last, capped so a long
+    /// evening never grows this without bound.
+    public private(set) var keywordHits: [KeywordHit] = []
+    /// Segments that contain at least one keyword hit, for highlighting.
+    public private(set) var keywordHitSegmentIDs: Set<UUID> = []
+    /// Doorbell/siren/kettle alerts that passed `soundPolicy`, newest last.
+    public private(set) var soundAlerts: [SoundAlert] = []
+
+    /// Tunable from Settings without a restart.
+    public var soundPolicy: SoundEventPolicy
+
     /// The settings the running (or last-run) session was started with.
     /// Engine/model/language changes need a restart; input changes don't.
     public private(set) var activeSettings: AppSettings?
@@ -36,6 +49,9 @@ public final class CaptionPipeline {
     private let audio: any AudioCapturing
     private let engineFactory: @MainActor (AppSettings) -> any TranscriptionEngine
     private let embedder: any SpeakerEmbedding
+    private let soundDetector: (any SoundEventDetecting)?
+    private var keywordMatcher = KeywordAlertMatcher(alerts: [])
+    private var keywordDeduplicator = KeywordAlertDeduplicator()
     private let now: @Sendable () -> TimeInterval
     private var clusterer: EmbeddingClusterer
     private var stabilizer: CaptionStabilizer
@@ -43,6 +59,7 @@ public final class CaptionPipeline {
     private var fanOut: AudioFanOut?
     private var streamTask: Task<Void, Never>?
     private var embeddingTask: Task<Void, Never>?
+    private var soundTask: Task<Void, Never>?
     private var staleCommitTask: Task<Void, Never>?
     private var utteranceClusterAssignments: [UUID: Int] = [:]
     /// Every `start()` gets a fresh run id; async continuations from an
@@ -52,11 +69,15 @@ public final class CaptionPipeline {
 
     private static let embeddingWindowSeconds = 1.5
     private static let sampleRate = 16_000.0
+    private static let maxKeywordHits = 50
+    private static let maxSoundAlerts = 30
 
     public init(
         audio: any AudioCapturing,
         engineFactory: @escaping @MainActor (AppSettings) -> any TranscriptionEngine,
         embedder: any SpeakerEmbedding,
+        soundDetector: (any SoundEventDetecting)? = nil,
+        soundPolicy: SoundEventPolicy = SoundEventPolicy(),
         clusterer: EmbeddingClusterer = EmbeddingClusterer(),
         stabilizer: CaptionStabilizer = CaptionStabilizer(),
         now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSince1970 }
@@ -64,6 +85,8 @@ public final class CaptionPipeline {
         self.audio = audio
         self.engineFactory = engineFactory
         self.embedder = embedder
+        self.soundDetector = soundDetector
+        self.soundPolicy = soundPolicy
         self.clusterer = clusterer
         self.stabilizer = stabilizer
         self.now = now
@@ -77,6 +100,8 @@ public final class CaptionPipeline {
         runID = run
         activeSettings = settings
         clusterer.similarityThreshold = settings.speakerSimilarityThreshold
+        keywordMatcher = KeywordAlertMatcher(alerts: settings.keywordAlerts)
+        soundPolicy.preferences = settings.soundAlerts
 
         phase = .requestingMicrophonePermission
         let permission = await audio.requestPermission()
@@ -123,16 +148,26 @@ public final class CaptionPipeline {
             return
         }
 
-        let fan = AudioFanOut(source: source, count: 2)
+        let fan = AudioFanOut(source: source, count: soundDetector == nil ? 2 : 3)
         fanOut = fan
         let tokens = engine.stream(languageCode: settings.languageCode, audio: fan.outputs[0])
         let embedderAudio = fan.outputs[1]
+        let soundObservations = soundDetector.map { $0.observations(audio: fan.outputs[2]) }
 
         stats.sessionStartedAt = now()
         phase = .listening
 
         embeddingTask = Task { [weak self] in
             await self?.consumeEmbeddings(embedderAudio, run: run)
+        }
+
+        if let soundObservations {
+            soundTask = Task { [weak self] in
+                for await observation in soundObservations {
+                    guard let self, self.runID == run else { return }
+                    self.handle(soundObservation: observation)
+                }
+            }
         }
 
         streamTask = Task { [weak self] in
@@ -202,6 +237,47 @@ public final class CaptionPipeline {
         segments = []
         stabilizer = CaptionStabilizer(silenceCommitThreshold: stabilizer.silenceCommitThreshold)
         utteranceClusterAssignments = [:]
+        keywordHits = []
+        keywordHitSegmentIDs = []
+        keywordDeduplicator.forgetAll()
+    }
+
+    // MARK: - Alerts
+
+    /// Replaces the keyword list without a restart; the deduplicator is
+    /// reset so a newly added word can fire on a sentence still pending.
+    public func setKeywordAlerts(_ alerts: [KeywordAlert]) {
+        keywordMatcher = KeywordAlertMatcher(alerts: alerts)
+        keywordDeduplicator.forgetAll()
+    }
+
+    public func dismissSoundAlert(id: UUID) {
+        soundAlerts.removeAll { $0.id == id }
+    }
+
+    public func clearSoundAlerts() {
+        soundAlerts = []
+    }
+
+    private func handle(soundObservation observation: SoundObservation) {
+        guard let alert = soundPolicy.evaluate(observation) else { return }
+        soundAlerts.append(alert)
+        if soundAlerts.count > Self.maxSoundAlerts {
+            soundAlerts.removeFirst(soundAlerts.count - Self.maxSoundAlerts)
+        }
+    }
+
+    private func scanForKeywords(in segment: TranscriptSegment) {
+        let matches = keywordMatcher.matches(in: segment.text)
+        guard !matches.isEmpty else { return }
+        let fresh = keywordDeduplicator.newMatches(utteranceID: segment.id, matches: matches)
+        guard !fresh.isEmpty else { return }
+        let timestamp = now()
+        keywordHits.append(contentsOf: fresh.map { KeywordHit(segmentID: segment.id, match: $0, timestamp: timestamp) })
+        if keywordHits.count > Self.maxKeywordHits {
+            keywordHits.removeFirst(keywordHits.count - Self.maxKeywordHits)
+        }
+        keywordHitSegmentIDs.insert(segment.id)
     }
 
     // MARK: - Inputs
@@ -333,6 +409,7 @@ public final class CaptionPipeline {
             stats.segmentsCommitted += 1
         }
         upsert(segment)
+        scanForKeywords(in: segment)
     }
 
     private func consumeEmbeddings(_ audioStream: AsyncStream<[Float]>, run: UUID) async {
@@ -394,10 +471,27 @@ public final class CaptionPipeline {
         streamTask = nil
         embeddingTask?.cancel()
         embeddingTask = nil
+        soundTask?.cancel()
+        soundTask = nil
         staleCommitTask?.cancel()
         staleCommitTask = nil
         fanOut?.cancel()
         fanOut = nil
         audio.stopCapture()
+    }
+}
+
+/// One keyword spotted in one caption line, as shown in the alert strip.
+public struct KeywordHit: Sendable, Equatable, Identifiable {
+    public let id: UUID
+    public let segmentID: UUID
+    public let match: KeywordMatch
+    public let timestamp: TimeInterval
+
+    public init(id: UUID = UUID(), segmentID: UUID, match: KeywordMatch, timestamp: TimeInterval) {
+        self.id = id
+        self.segmentID = segmentID
+        self.match = match
+        self.timestamp = timestamp
     }
 }

@@ -145,12 +145,36 @@ struct FakeEmbedder: SpeakerEmbedding {
 
 struct TestError: Error {}
 
+/// Scripted sound classifier: the test pushes observations by hand.
+final class FakeSoundDetector: SoundEventDetecting, @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: AsyncStream<SoundObservation>.Continuation?
+    private(set) var chunksSeen = 0
+
+    func observations(audio: AsyncStream<[Float]>) -> AsyncStream<SoundObservation> {
+        AsyncStream { continuation in
+            lock.withLock { self.continuation = continuation }
+            Task {
+                for await _ in audio {
+                    self.lock.withLock { self.chunksSeen += 1 }
+                }
+                continuation.finish()
+            }
+        }
+    }
+
+    func push(_ observation: SoundObservation) {
+        lock.withLock { continuation }?.yield(observation)
+    }
+}
+
 // MARK: - Helpers
 
 @MainActor
 private func makePipeline(
     audio: FakeAudioCapturer = FakeAudioCapturer(),
     engines: [TranscriptionEngineKind: FakeEngine] = [.whisperKit: FakeEngine()],
+    soundDetector: FakeSoundDetector? = nil,
     now: @escaping @Sendable () -> TimeInterval = { 1_000 }
 ) -> (CaptionPipeline, FakeAudioCapturer, FactoryLog) {
     let log = FactoryLog()
@@ -161,6 +185,7 @@ private func makePipeline(
             return engines[settings.engine] ?? FakeEngine(kind: settings.engine)
         },
         embedder: FakeEmbedder(),
+        soundDetector: soundDetector,
         now: now
     )
     return (pipeline, audio, log)
@@ -654,5 +679,108 @@ struct CaptionPipelineEnrollmentTests {
         #expect(await eventually { pipeline.segments.count == 1 })
         #expect(pipeline.segments.first?.text == "ממשי")
         #expect(pipeline.stats.tokensReceived == 2)
+    }
+}
+
+@Suite("CaptionPipeline alerts")
+@MainActor
+struct CaptionPipelineAlertTests {
+    @Test("a keyword in a caption fires once per utterance and marks the segment")
+    func keywordFiresOncePerUtterance() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.keywordAlerts = [KeywordAlert(phrase: "סבתא")]
+        await pipeline.start(settings: settings)
+        let id = UUID()
+
+        engine.emit(token(id, "היום"))
+        engine.emit(token(id, "היום לסבתא"))
+        engine.emit(token(id, "היום לסבתא יש"))
+        engine.emit(token(id, "היום לסבתא יש אורחים", final: true))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+
+        #expect(pipeline.keywordHits.count == 1)
+        #expect(pipeline.keywordHits.first?.match.matchedText == "לסבתא")
+        #expect(pipeline.keywordHits.first?.segmentID == id)
+        #expect(pipeline.keywordHitSegmentIDs == [id])
+
+        let id2 = UUID()
+        engine.emit(token(id2, "סבתא שוב"))
+        #expect(await eventually { pipeline.keywordHits.count == 2 })
+    }
+
+    @Test("changing the keyword list takes effect without a restart, and clearing the transcript clears hits")
+    func keywordListChanges() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        engine.emit(token(UUID(), "דנה הגיעה"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.keywordHits.isEmpty)
+
+        pipeline.setKeywordAlerts([KeywordAlert(phrase: "דנה")])
+        engine.emit(token(UUID(), "ודנה יצאה"))
+        #expect(await eventually { pipeline.keywordHits.count == 1 })
+        #expect(audio.calls.filter { $0 == "startCapture" }.count == 1)
+
+        pipeline.clearTranscript()
+        #expect(pipeline.keywordHits.isEmpty)
+        #expect(pipeline.keywordHitSegmentIDs.isEmpty)
+    }
+
+    @Test("sound observations become alerts through the policy, and audio reaches the detector")
+    func soundAlerts() async {
+        let detector = FakeSoundDetector()
+        let (pipeline, audio, _) = makePipeline(soundDetector: detector)
+        await pipeline.start(settings: .default)
+
+        audio.push([Float](repeating: 0.1, count: 1_024))
+        #expect(await eventually { detector.chunksSeen == 1 })
+
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: 100))
+        #expect(await eventually { pipeline.soundAlerts.count == 1 })
+        #expect(pipeline.soundAlerts.first?.event.name == "פעמון דלת")
+
+        // Same sound inside the cooldown: no second banner.
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.95, timestamp: 105))
+        detector.push(SoundObservation(identifier: "speech", confidence: 0.99, timestamp: 106))
+        detector.push(SoundObservation(identifier: "cough", confidence: 0.2, timestamp: 107))
+        detector.push(SoundObservation(identifier: "smoke_detector", confidence: 0.8, timestamp: 108))
+        #expect(await eventually { pipeline.soundAlerts.count == 2 })
+        #expect(pipeline.soundAlerts.last?.event.identifier == "smoke_detector")
+
+        pipeline.dismissSoundAlert(id: pipeline.soundAlerts[0].id)
+        #expect(pipeline.soundAlerts.count == 1)
+        pipeline.clearSoundAlerts()
+        #expect(pipeline.soundAlerts.isEmpty)
+    }
+
+    @Test("sound preferences from settings are applied at start")
+    func soundPreferencesApplied() async {
+        let detector = FakeSoundDetector()
+        let (pipeline, _, _) = makePipeline(soundDetector: detector)
+        var settings = AppSettings.default
+        settings.soundAlerts = SoundAlertPreferences(isEnabled: false)
+        await pipeline.start(settings: settings)
+
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: 100))
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(pipeline.soundAlerts.isEmpty)
+
+        pipeline.soundPolicy.preferences.isEnabled = true
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: 101))
+        #expect(await eventually { pipeline.soundAlerts.count == 1 })
+    }
+
+    @Test("without a detector the pipeline still runs with two audio consumers")
+    func noDetector() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.1, count: 1_024))
+        #expect(await eventually { engine.chunksSeen == 1 })
+        #expect(pipeline.phase == .listening)
+        #expect(pipeline.soundAlerts.isEmpty)
     }
 }
