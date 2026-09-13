@@ -1,0 +1,58 @@
+name: Ozen
+options:
+  bundleIdPrefix: com.arbelonson.ozen
+  deploymentTarget:
+    iOS: "17.0"
+
+packages:
+  OzenKit:
+    path: .
+
+targets:
+  Ozen:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/Ozen
+    dependencies:
+      - package: OzenKit
+        product: OzenKit
+      - package: OzenKit
+        product: OzenKit
+        # OzenPlatform is a target inside the same local package, not a
+        # separate product declaration — xcodegen resolves it via the
+        # package's own target graph.
+    info:
+      path: App/Ozen/Info.plist
+      properties:
+        NSMicrophoneUsageDescription: "Ozen needs the microphone to caption conversation live."
+        NSSpeechRecognitionUsageDescription: "Ozen uses on-device speech recognition to caption conversation live. Nothing is sent off the phone."
+        UILaunchScreen: {}
+        CFBundleDevelopmentRegion: he
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+
+  OzenTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: App/OzenTests
+    dependencies:
+      - target: Ozen
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+
+schemes:
+  Ozen:
+    build:
+      targets:
+        Ozen: all
+        OzenTests: [test]
+    test:
+      targets:
+        - OzenTests
