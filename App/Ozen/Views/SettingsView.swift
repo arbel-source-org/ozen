@@ -18,6 +18,7 @@ struct SettingsView: View {
                 }
                 displaySection
                 alertsSection
+                speechSection
                 speakersSection
                 behaviourSection
                 historySection
@@ -203,6 +204,44 @@ struct SettingsView: View {
             Text("התראות")
         } footer: {
             Text("רטט והדגשה כשנאמרת מילה חשובה; כרזה כשנשמע פעמון דלת, טלפון, אזעקה ועוד.")
+        }
+    }
+
+    // MARK: - Speech
+
+    private var speechSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("מהירות דיבור")
+                    Spacer()
+                    Text(String(format: "%.2f", viewModel.speechRate))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                Slider(value: $viewModel.speechRate, in: 0.2...0.7, step: 0.05)
+                HStack {
+                    Text("לאט")
+                    Spacer()
+                    Text("מהר")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Button {
+                viewModel.speak("שלום, זה קול הטלפון. ככה אני נשמע.")
+            } label: {
+                Label("להשמיע דוגמה", systemImage: "speaker.wave.2")
+            }
+            if !viewModel.hasHebrewVoice {
+                Text("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר → נגישות → תוכן מדובר → קולות → עברית.")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("להגיד משהו (הקלדה לדיבור)")
+        } footer: {
+            Text("הכתוביות מושהות בזמן שהטלפון מדבר, ומתחדשות לבד.")
         }
     }
 

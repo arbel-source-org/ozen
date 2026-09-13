@@ -11,6 +11,7 @@ struct LiveCaptionView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var showingMicPicker = false
     @State private var showingSettings = false
+    @State private var showingTypeToSpeak = false
     @State private var namingSegment: TranscriptSegment?
     @State private var isPinnedToBottom = true
     @State private var hapticTrigger = 0
@@ -120,6 +121,9 @@ struct LiveCaptionView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView(viewModel: viewModel)
         }
+        .sheet(isPresented: $showingTypeToSpeak) {
+            TypeToSpeakView(viewModel: viewModel)
+        }
         .sheet(item: $namingSegment) { segment in
             NameSpeakerSheet(segment: segment, viewModel: viewModel)
         }
@@ -225,10 +229,11 @@ struct LiveCaptionView: View {
     // MARK: - Control bar
 
     private var controlBar: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 8) {
             micButton
             statusControl
                 .frame(maxWidth: .infinity)
+            typeToSpeakButton
             settingsButton
         }
         .padding(.horizontal, 16)
@@ -249,10 +254,26 @@ struct LiveCaptionView: View {
                     .font(.caption2)
                     .lineLimit(1)
             }
-            .frame(width: 64)
+            .frame(width: 56)
         }
         .buttonStyle(.bordered)
         .accessibilityLabel("בחירת מיקרופון")
+    }
+
+    private var typeToSpeakButton: some View {
+        Button {
+            showingTypeToSpeak = true
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: viewModel.isSpeaking ? "speaker.wave.3.fill" : "keyboard")
+                    .font(.title2)
+                Text("להגיד")
+                    .font(.caption2)
+            }
+            .frame(width: 56)
+        }
+        .buttonStyle(.bordered)
+        .accessibilityLabel("להגיד משהו בקול")
     }
 
     private var settingsButton: some View {
@@ -265,7 +286,7 @@ struct LiveCaptionView: View {
                 Text("הגדרות")
                     .font(.caption2)
             }
-            .frame(width: 64)
+            .frame(width: 56)
         }
         .buttonStyle(.bordered)
         .accessibilityLabel("הגדרות")

@@ -25,6 +25,10 @@ public final class LiveCaptionViewModel {
 
     private let settingsStore: SettingsStore
     private let audioManager: AVAudioInputManager?
+    private let synthesizer: SpeechSynthesizer?
+    /// True when captions were paused *by us* to let the phone talk, so
+    /// only that pause gets auto-resumed.
+    private var pausedForSpeaking = false
     private var historySessionID = UUID()
     private var historySessionStartedAt: TimeInterval?
     private var autosaveTask: Task<Void, Never>?
@@ -54,7 +58,8 @@ public final class LiveCaptionViewModel {
             pipeline: pipeline,
             historyStore: TranscriptHistoryStore(directoryURL: support.appendingPathComponent("ozen-history", isDirectory: true)),
             knownSoundIdentifiers: SoundAnalysisDetector.knownIdentifiers(),
-            audioManager: audio
+            audioManager: audio,
+            synthesizer: SpeechSynthesizer()
         )
     }
 
@@ -64,7 +69,8 @@ public final class LiveCaptionViewModel {
         pipeline: CaptionPipeline,
         historyStore: TranscriptHistoryStore? = nil,
         knownSoundIdentifiers: Set<String>? = nil,
-        audioManager: AVAudioInputManager? = nil
+        audioManager: AVAudioInputManager? = nil,
+        synthesizer: SpeechSynthesizer? = nil
     ) {
         self.settingsStore = settingsStore
         self.pipeline = pipeline
@@ -73,12 +79,16 @@ public final class LiveCaptionViewModel {
         )
         self.knownSoundIdentifiers = knownSoundIdentifiers
         self.audioManager = audioManager
+        self.synthesizer = synthesizer
         self.settings = settingsStore.load()
         for profile in settings.speakerProfiles {
             pipeline.enroll(profile: profile)
         }
         audioManager?.onInterruption = { [weak self] began in
             self?.isInterruptedBySystem = began
+        }
+        synthesizer?.onSpeakingChanged = { [weak self] speaking in
+            self?.speakingDidChange(speaking)
         }
     }
 
@@ -271,6 +281,67 @@ public final class LiveCaptionViewModel {
 
     public func dismissSoundAlert(id: UUID) {
         pipeline.dismissSoundAlert(id: id)
+    }
+
+    // MARK: - Type to speak
+
+    public var isSpeaking: Bool { synthesizer?.isSpeaking ?? false }
+    public var hasHebrewVoice: Bool { synthesizer?.hasHebrewVoice ?? false }
+
+    public var speechRate: Float {
+        get { settings.speechRate }
+        set {
+            settings.speechRate = newValue
+            persist()
+        }
+    }
+
+    /// Says `text` aloud. Captions pause while the phone talks so the
+    /// microphone doesn't caption the phone's own voice, and resume by
+    /// themselves when it's done.
+    public func speak(_ text: String) {
+        guard let synthesizer else { return }
+        if pipeline.phase.isListening {
+            pipeline.pause()
+            pausedForSpeaking = true
+        }
+        synthesizer.speak(text, rate: settings.speechRate)
+    }
+
+    public func stopSpeaking() {
+        synthesizer?.stop()
+    }
+
+    private func speakingDidChange(_ speaking: Bool) {
+        guard !speaking, pausedForSpeaking else { return }
+        pausedForSpeaking = false
+        Task { [weak self] in
+            guard let self, self.pipeline.phase == .paused else { return }
+            await self.pipeline.resume()
+            self.historySessionDidChangePhase()
+        }
+    }
+
+    public func addQuickPhrase(_ phrase: String) {
+        let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !settings.quickPhrases.contains(trimmed) else { return }
+        settings.quickPhrases.append(trimmed)
+        persist()
+    }
+
+    public func removeQuickPhrases(at offsets: IndexSet) {
+        settings.quickPhrases.remove(atOffsets: offsets)
+        persist()
+    }
+
+    public func moveQuickPhrases(from source: IndexSet, to destination: Int) {
+        settings.quickPhrases.move(fromOffsets: source, toOffset: destination)
+        persist()
+    }
+
+    public func resetQuickPhrases() {
+        settings.quickPhrases = AppSettings.defaultQuickPhrases
+        persist()
     }
 
     // MARK: - Speakers

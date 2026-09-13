@@ -109,6 +109,11 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var soundAlerts: SoundAlertPreferences
     /// Keep past conversations on the phone for later reading and search.
     public var saveHistory: Bool
+    /// Type-to-speak: ready-made replies the reader can tap instead of
+    /// typing, and how fast the phone reads them out.
+    public var quickPhrases: [String]
+    /// 0...1 as AVSpeechUtterance understands it; 0.45 is a calm pace.
+    public var speechRate: Float
 
     public init(
         engine: TranscriptionEngineKind,
@@ -123,7 +128,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
         speakerSimilarityThreshold: Float = 0.75,
         keywordAlerts: [KeywordAlert] = [],
         soundAlerts: SoundAlertPreferences = .default,
-        saveHistory: Bool = true
+        saveHistory: Bool = true,
+        quickPhrases: [String] = AppSettings.defaultQuickPhrases,
+        speechRate: Float = 0.45
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -138,7 +145,22 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.keywordAlerts = keywordAlerts
         self.soundAlerts = soundAlerts
         self.saveHistory = saveHistory
+        self.quickPhrases = quickPhrases
+        self.speechRate = speechRate
     }
+
+    /// The phrases a hard-of-hearing person needs most often in
+    /// conversation, ready before she has typed anything.
+    public static let defaultQuickPhrases: [String] = [
+        "רגע, לא הבנתי",
+        "אפשר לחזור על זה?",
+        "לאט יותר בבקשה",
+        "אני קוראת את הכתוביות, תנו לי רגע",
+        "כן",
+        "לא",
+        "תודה",
+        "בואו נדבר אחד אחד",
+    ]
 
     public static let `default` = AppSettings(
         engine: .whisperKit,
@@ -153,6 +175,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case whisperModelVariant, allowServerFallbackForAppleSpeech, display
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
+        case quickPhrases, speechRate
     }
 
     public init(from decoder: any Decoder) throws {
@@ -173,6 +196,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
         keywordAlerts = try container.decodeIfPresent([KeywordAlert].self, forKey: .keywordAlerts) ?? defaults.keywordAlerts
         soundAlerts = try container.decodeIfPresent(SoundAlertPreferences.self, forKey: .soundAlerts) ?? defaults.soundAlerts
         saveHistory = try container.decodeIfPresent(Bool.self, forKey: .saveHistory) ?? defaults.saveHistory
+        quickPhrases = try container.decodeIfPresent([String].self, forKey: .quickPhrases) ?? defaults.quickPhrases
+        speechRate = try container.decodeIfPresent(Float.self, forKey: .speechRate) ?? defaults.speechRate
+        speechRate = min(max(speechRate, 0.2), 0.7)
     }
 }
 

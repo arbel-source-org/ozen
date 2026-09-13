@@ -83,6 +83,8 @@ struct AppSettingsTests {
         #expect(decoded.keywordAlerts.isEmpty)
         #expect(decoded.soundAlerts == .default)
         #expect(decoded.saveHistory == true)
+        #expect(decoded.quickPhrases == AppSettings.defaultQuickPhrases)
+        #expect(decoded.speechRate == 0.45)
         // The credit line is owned by the build, not the file.
         #expect(decoded.creditLine == "Made by Arbel")
     }
@@ -104,10 +106,20 @@ struct AppSettingsTests {
         settings.keywordAlerts = [KeywordAlert(phrase: "סבתא"), KeywordAlert(phrase: "תרופה", isEnabled: false)]
         settings.soundAlerts = SoundAlertPreferences(isEnabled: true, minimumImportance: .high, mutedIdentifiers: ["music"])
         settings.saveHistory = false
+        settings.quickPhrases = ["כן", "לא"]
+        settings.speechRate = 0.6
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(AppSettings.self, from: data)
         #expect(decoded == settings)
+    }
+
+    @Test("an out-of-range speech rate is clamped so the voice stays intelligible")
+    func speechRateClamped() throws {
+        let fast = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"speechRate":5}"#.utf8))
+        #expect(fast.speechRate == 0.7)
+        let slow = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"speechRate":0}"#.utf8))
+        #expect(slow.speechRate == 0.2)
     }
 
     @Test("an out-of-range saved font size is clamped on load rather than rendering unreadable text")
