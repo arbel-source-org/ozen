@@ -14,11 +14,6 @@ final class AlertNotifier {
         (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
-    func isAuthorized() async -> Bool {
-        let settings = await center.notificationSettings()
-        return settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
-    }
-
     func post(_ content: AlertNotificationContent) {
         let body = UNMutableNotificationContent()
         body.title = content.title
