@@ -26,12 +26,20 @@ targets:
         NSSpeechRecognitionUsageDescription: "Ozen uses on-device speech recognition to caption conversation live. Nothing is sent off the phone."
         UILaunchScreen: {}
         CFBundleDevelopmentRegion: he
+        CFBundleDisplayName: "אוזן"
+        CFBundleLocalizations: [he, en]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UIBackgroundModes: [audio]
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         SWIFT_VERSION: "6.0"
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_APPROACHABLE_CONCURRENCY: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "0.2.0"
+        CURRENT_PROJECT_VERSION: "2"
 
   OzenTests:
     type: bundle.unit-test

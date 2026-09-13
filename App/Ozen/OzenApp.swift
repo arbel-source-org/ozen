@@ -17,7 +17,6 @@ struct OzenApp: App {
         WindowGroup {
             LiveCaptionView(viewModel: viewModel)
                 .environment(\.layoutDirection, .rightToLeft)
-                .preferredColorScheme(.dark)
         }
     }
 }
