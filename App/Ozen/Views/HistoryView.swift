@@ -109,6 +109,7 @@ struct HistoryDetailView: View {
     let sessionID: UUID
     let onDelete: () -> Void
     @State private var record: TranscriptSessionRecord?
+    @State private var stats: ConversationStats?
     @State private var confirmingDelete = false
     @Environment(\.dismiss) private var dismiss
 
@@ -116,6 +117,9 @@ struct HistoryDetailView: View {
         Group {
             if let record {
                 List {
+                    if let stats, stats.totalWords > 0 {
+                        ConversationSummarySection(stats: stats)
+                    }
                     Section {
                         ForEach(record.segments) { segment in
                             VStack(alignment: .leading, spacing: 2) {
@@ -168,6 +172,52 @@ struct HistoryDetailView: View {
             }
             Button("ביטול", role: .cancel) {}
         }
-        .onAppear { record = viewModel.historyStore.load(id: sessionID) }
+        .onAppear {
+            // Loaded and summarised once; a long conversation's word count
+            // shouldn't be redone on every redraw.
+            let loaded = viewModel.historyStore.load(id: sessionID)
+            record = loaded
+            stats = loaded.map(ConversationStats.compute(from:))
+        }
+    }
+}
+
+/// Who said how much, at the top of a saved conversation.
+private struct ConversationSummarySection: View {
+    let stats: ConversationStats
+
+    var body: some View {
+        Section {
+            Text(stats.hebrewSummary)
+                .font(.headline)
+
+            ForEach(stats.speakers) { speaker in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(speaker.name)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text("\(ConversationStats.wordsText(speaker.words)) · \(Int((stats.wordFraction(of: speaker) * 100).rounded()))%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    ProgressView(value: stats.wordFraction(of: speaker))
+                        .tint(SpeakerColor.color(forClusterID: speaker.clusterID))
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+            }
+
+            if stats.wordsPerMinute > 0 {
+                LabeledContent("קצב דיבור", value: "\(Int(stats.wordsPerMinute.rounded())) מילים לדקה")
+            }
+            LabeledContent("חילופי דוברים", value: "\(stats.totalTurns)")
+            if let longest = stats.longestTurn, stats.speakers.count > 1 {
+                LabeledContent("הדיבור הארוך ביותר", value: "\(longest.speakerName) · \(ConversationStats.wordsText(longest.words))")
+            }
+        } header: {
+            Text("סיכום")
+        }
     }
 }
