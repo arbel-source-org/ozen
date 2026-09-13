@@ -90,7 +90,7 @@ struct OnboardingView: View {
                 Text("ועוד דבר אחד: כשהטלפון בכיס או נעול, אוזן יכולה להודיע על צלצול בדלת, אזעקה או השם שלך.")
                 if let notificationsAllowed {
                     Label(notificationsAllowed ? "ההתראות מאושרות" : "בלי התראות. אפשר לשנות בהגדרות.", systemImage: notificationsAllowed ? "checkmark.circle.fill" : "bell.slash")
-                        .foregroundStyle(notificationsAllowed ? .green : .secondary)
+                        .foregroundStyle(notificationsAllowed ? Color.green : Color.secondary)
                 } else {
                     Button {
                         Task { notificationsAllowed = await AlertNotifier.shared.requestAuthorization() }
