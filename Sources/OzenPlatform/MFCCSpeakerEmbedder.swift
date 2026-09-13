@@ -2,16 +2,6 @@ import Foundation
 import Accelerate
 import OzenKit
 
-/// Produces a fixed-length embedding vector for a chunk of audio, for
-/// `EmbeddingClusterer` (OzenKit) to cluster by speaker. Kept as a small
-/// protocol specifically so the v1 implementation below can be swapped for
-/// a deep CoreML speaker-embedding model later without touching the
-/// clustering logic or anything upstream of it.
-public protocol SpeakerEmbedding: Sendable {
-    /// Returns nil if `samples` is too short to extract even one frame.
-    func embed(samples: [Float], sampleRate: Double) -> [Float]?
-}
-
 /// v1 embedder: classic MFCC features (via Accelerate/vDSP), averaged over
 /// the utterance into one vector. This is **not** a deep speaker-embedding
 /// model — that's the named v2 upgrade path — but it requires no training

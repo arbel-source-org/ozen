@@ -1,42 +1,98 @@
 import Foundation
 import AVFoundation
+import Observation
 import OzenKit
 
-/// Owns the real `AVAudioSession`/`AVAudioEngine` plumbing: enumerating
-/// inputs, reacting to route changes, and producing the rolling 16kHz mono
-/// Float chunks both `TranscriptionEngine` implementations and the speaker
-/// embedder expect. `AudioRoutePolicy` (OzenKit, unit tested) makes the
-/// actual selection decision — this type is the thin, honestly-hard-to-
-/// unit-test layer that talks to real hardware and calls it.
+/// Owns the real `AVAudioSession`/`AVAudioEngine` plumbing: permission,
+/// enumerating inputs, reacting to route changes and interruptions, and
+/// producing the rolling 16 kHz mono Float chunks both engines and the
+/// speaker embedder expect. `AudioRoutePolicy` (OzenKit, unit tested) makes
+/// the actual selection decision; `CaptionPipeline` (OzenKit, unit tested
+/// against a fake of this protocol) decides when each step happens. This
+/// type is the thin, honestly-hard-to-unit-test layer that talks to real
+/// hardware.
 @MainActor
-public final class AVAudioInputManager {
+@Observable
+public final class AVAudioInputManager: AudioCapturing {
     public private(set) var availableInputs: [AudioInputDescriptor] = []
     public private(set) var selectedInputUID: String?
+    public private(set) var inputLevel: Float = 0
+    public var onInputsChanged: (@MainActor () -> Void)?
+    /// `true` when the system took the session away (an incoming call),
+    /// `false` when it came back and capture resumed on its own.
+    public var onInterruption: (@MainActor (Bool) -> Void)?
+
+    public enum CaptureError: Error {
+        case sessionNotPrepared
+        case invalidInputFormat
+        case converterUnavailable
+    }
 
     private let session = AVAudioSession.sharedInstance()
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
     private var preferredInputUID: String?
-    private var routeChangeObserver: NSObjectProtocol?
+    private let observers = NotificationObserverBag()
+    private var sessionPrepared = false
+    private var activeTap: TapState?
 
     public init() {}
 
-    public func start(preferredInputUID: String?) throws {
-        self.preferredInputUID = preferredInputUID
-        try session.setCategory(.record, mode: .measurement, options: [.allowBluetooth, .allowBluetoothA2DP])
-        try session.setActive(true)
-        refreshAvailableInputs()
-        try applySelection()
-        observeRouteChanges()
+    // MARK: - AudioCapturing
+
+    public func requestPermission() async -> AudioPermission {
+        await AVAudioApplication.requestRecordPermission() ? .granted : .denied
     }
 
-    public func stop() {
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
-        try? session.setActive(false, options: .notifyOthersOnDeactivation)
-        if let routeChangeObserver {
-            NotificationCenter.default.removeObserver(routeChangeObserver)
-            self.routeChangeObserver = nil
+    public func prepareSession(preferredInputUID: String?) throws {
+        self.preferredInputUID = preferredInputUID
+        // `.playAndRecord` rather than `.record` so the type-to-speak
+        // feature can play synthesized speech without tearing the session
+        // down; `.measurement` turns off the system's voice processing so
+        // Whisper gets the raw signal it was trained on; `.allowBluetooth`
+        // is what makes an AirPods *microphone* (HFP) selectable at all.
+        try session.setCategory(
+            .playAndRecord,
+            mode: .measurement,
+            options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
+        )
+        try session.setActive(true)
+        sessionPrepared = true
+        refreshAvailableInputs()
+        try applySelection()
+        observeNotificationsIfNeeded()
+    }
+
+    public func startCapture() throws -> AsyncStream<[Float]> {
+        guard sessionPrepared else { throw CaptureError.sessionNotPrepared }
+        stopCapture()
+
+        // A fresh engine per capture: after a route change the old
+        // engine's input node can report a stale format, and rebuilding is
+        // cheaper than reasoning about which of its states survived.
+        engine = AVAudioEngine()
+        let (stream, continuation) = AsyncStream<[Float]>.makeStream()
+        let tap = try TapState(
+            inputFormat: engine.inputNode.outputFormat(forBus: 0),
+            continuation: continuation,
+            onLevel: { [weak self] level in
+                Task { @MainActor [weak self] in self?.inputLevel = level }
+            }
+        )
+        activeTap = tap
+        installTap(tap)
+        engine.prepare()
+        try engine.start()
+        return stream
+    }
+
+    public func stopCapture() {
+        if engine.isRunning || activeTap != nil {
+            engine.inputNode.removeTap(onBus: 0)
+            engine.stop()
         }
+        activeTap?.finish()
+        activeTap = nil
+        inputLevel = 0
     }
 
     /// Selects a specific input by UID (from the mic picker UI), re-running
@@ -47,50 +103,32 @@ public final class AVAudioInputManager {
         try applySelection()
     }
 
-    /// Streams rolling mono Float32 chunks at 16kHz regardless of the
-    /// physical input's native sample rate/channel count.
-    public func audioChunks() -> AsyncStream<[Float]> {
-        AsyncStream { continuation in
-            let inputNode = engine.inputNode
-            let inputFormat = inputNode.outputFormat(forBus: 0)
-            guard let targetFormat = AVAudioFormat(
-                commonFormat: .pcmFormatFloat32,
-                sampleRate: 16_000,
-                channels: 1,
-                interleaved: false
-            ), let converter = AVAudioConverter(from: inputFormat, to: targetFormat) else {
-                continuation.finish()
-                return
-            }
+    // MARK: - Session plumbing
 
-            inputNode.installTap(onBus: 0, bufferSize: 1_024, format: inputFormat) { buffer, _ in
-                let ratio = targetFormat.sampleRate / inputFormat.sampleRate
-                let outputCapacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 16
-                guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outputCapacity) else { return }
-
-                var conversionError: NSError?
-                let status = converter.convert(to: outputBuffer, error: &conversionError) { _, inputStatus in
-                    inputStatus.pointee = .haveData
-                    return buffer
-                }
-                guard status != .error, let channelData = outputBuffer.floatChannelData else { return }
-
-                let samples = Array(UnsafeBufferPointer(start: channelData[0], count: Int(outputBuffer.frameLength)))
-                continuation.yield(samples)
-            }
-
-            do {
-                try engine.start()
-            } catch {
-                continuation.finish()
-            }
-
-            // Deliberately no `onTermination` cleanup here: `AVAudioInputNode`
-            // isn't Sendable, and capturing it in this `@Sendable` closure
-            // doesn't compile under strict concurrency. `stop()` already
-            // removes the tap and is the documented way callers end capture
-            // (paired 1:1 with `start()`), so nothing is actually lost.
+    private func installTap(_ tap: TapState) {
+        // 2048 frames at 48 kHz is ~43 ms per callback: small enough to
+        // feel live, large enough that the converter isn't called
+        // hundreds of times a second.
+        engine.inputNode.installTap(onBus: 0, bufferSize: 2_048, format: tap.inputFormat) { buffer, _ in
+            tap.process(buffer)
         }
+    }
+
+    /// After the engine reconfigures itself (a route change swapped the
+    /// input's native format), the old tap is bound to the old format.
+    /// Rebuild the converter and re-install, keeping the same output
+    /// stream so the pipeline above never notices.
+    private func recoverFromConfigurationChange() {
+        guard let old = activeTap else { return }
+        engine.inputNode.removeTap(onBus: 0)
+        let newFormat = engine.inputNode.outputFormat(forBus: 0)
+        guard let tap = try? TapState(inputFormat: newFormat, continuation: old.continuation, onLevel: old.onLevel) else {
+            return
+        }
+        activeTap = tap
+        installTap(tap)
+        engine.prepare()
+        try? engine.start()
     }
 
     private func refreshAvailableInputs() {
@@ -114,23 +152,64 @@ public final class AVAudioInputManager {
         try session.setPreferredInput(port)
     }
 
-    private func observeRouteChanges() {
-        // `queue: .main` guarantees this runs on the main thread at
-        // runtime, but the closure's own type is still plain, nonisolated
+    private func observeNotificationsIfNeeded() {
+        guard observers.isEmpty else { return }
+        let center = NotificationCenter.default
+        // Observer closures capture `self` weakly, so this bag is only about
+        // not leaving dead registrations behind if the manager ever goes
+        // away; it lives outside the actor so its own deinit can do the
+        // removal without touching isolated state.
+
+        // `queue: .main` guarantees these run on the main thread at
+        // runtime, but each closure's own type is still plain, nonisolated
         // `(Notification) -> Void` as far as the compiler is concerned, so
         // calling into this @MainActor type's methods needs an explicit
         // hop rather than an implicit one the type system can't verify.
-        routeChangeObserver = NotificationCenter.default.addObserver(
-            forName: AVAudioSession.routeChangeNotification,
-            object: session,
-            queue: .main
+        observers.add(center.addObserver(
+            forName: AVAudioSession.routeChangeNotification, object: session, queue: .main
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.refreshAvailableInputs()
                 try? self.applySelection()
+                self.onInputsChanged?()
             }
-        }
+        })
+
+        observers.add(center.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: session, queue: .main
+        ) { [weak self] notification in
+            let info = notification.userInfo ?? [:]
+            let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt ?? 0
+            let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                switch AVAudioSession.InterruptionType(rawValue: typeValue) {
+                case .began:
+                    self.onInterruption?(true)
+                case .ended:
+                    let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                    if options.contains(.shouldResume) || self.activeTap != nil {
+                        try? self.session.setActive(true)
+                        if self.activeTap != nil, !self.engine.isRunning {
+                            try? self.engine.start()
+                        }
+                    }
+                    self.onInterruption?(false)
+                default:
+                    break
+                }
+            }
+        })
+
+        observers.add(center.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor [weak self] in
+                guard let self, (notification.object as? AVAudioEngine) === self.engine else { return }
+                self.recoverFromConfigurationChange()
+            }
+        })
     }
 
     /// Maps a real `AVAudioSession.Port` to Ozen's own category. Note:
@@ -142,15 +221,104 @@ public final class AVAudioInputManager {
     /// treat it as informational labeling only, not a functional switch.
     static func portType(for port: AVAudioSessionPortDescription) -> AudioPortType {
         let name = port.portName.lowercased()
-        if name.contains("hearing") || name.contains("roger") {
+        if name.contains("hearing") || name.contains("roger") || name.contains("phonak") || name.contains("oticon") {
             return .hearingAid
         }
         switch port.portType {
         case .builtInMic: return .builtInMic
         case .bluetoothHFP, .bluetoothLE, .bluetoothA2DP: return .bluetooth
-        case .headsetMic: return .wired
+        case .headsetMic, .lineIn: return .wired
         case .usbAudio: return .usb
         default: return .other
         }
+    }
+}
+
+/// Holds `NotificationCenter` observer tokens and removes them when it goes
+/// away. Deliberately not actor-isolated: a `@MainActor` class's `deinit`
+/// can't touch its own isolated storage under Swift 6, but a plain
+/// lock-free bag owned by it can clean up in its own `deinit`.
+private final class NotificationObserverBag: @unchecked Sendable {
+    private var tokens: [NSObjectProtocol] = []
+
+    var isEmpty: Bool { tokens.isEmpty }
+
+    func add(_ token: NSObjectProtocol) {
+        tokens.append(token)
+    }
+
+    deinit {
+        for token in tokens {
+            NotificationCenter.default.removeObserver(token)
+        }
+    }
+}
+
+/// Everything the audio-thread tap callback touches, bundled into one
+/// reference the callback can capture safely under strict concurrency.
+/// The converter is owned here (not by the manager) because it's bound to
+/// one specific input format and must be rebuilt when that changes.
+private final class TapState: @unchecked Sendable {
+    let inputFormat: AVAudioFormat
+    let continuation: AsyncStream<[Float]>.Continuation
+    let onLevel: @Sendable (Float) -> Void
+    private let converter: AVAudioConverter
+    private let targetFormat: AVAudioFormat
+    private var lastLevelPost: CFAbsoluteTime = 0
+
+    init(
+        inputFormat: AVAudioFormat,
+        continuation: AsyncStream<[Float]>.Continuation,
+        onLevel: @escaping @Sendable (Float) -> Void
+    ) throws {
+        guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
+            throw AVAudioInputManager.CaptureError.invalidInputFormat
+        }
+        guard let target = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false),
+              let converter = AVAudioConverter(from: inputFormat, to: target)
+        else {
+            throw AVAudioInputManager.CaptureError.converterUnavailable
+        }
+        self.inputFormat = inputFormat
+        self.continuation = continuation
+        self.onLevel = onLevel
+        self.converter = converter
+        self.targetFormat = target
+    }
+
+    func process(_ buffer: AVAudioPCMBuffer) {
+        let ratio = targetFormat.sampleRate / inputFormat.sampleRate
+        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 32
+        guard let output = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
+
+        // The converter may ask for input more than once per call when it
+        // resamples. Handing it the same buffer twice would duplicate
+        // audio, so it gets the buffer exactly once and "no more for now"
+        // after that.
+        var supplied = false
+        var conversionError: NSError?
+        let status = converter.convert(to: output, error: &conversionError) { _, inputStatus in
+            if supplied {
+                inputStatus.pointee = .noDataNow
+                return nil
+            }
+            supplied = true
+            inputStatus.pointee = .haveData
+            return buffer
+        }
+        guard status != .error, output.frameLength > 0, let channelData = output.floatChannelData else { return }
+
+        let samples = Array(UnsafeBufferPointer(start: channelData[0], count: Int(output.frameLength)))
+        continuation.yield(samples)
+
+        let now = CFAbsoluteTimeGetCurrent()
+        if now - lastLevelPost >= 0.05 {
+            lastLevelPost = now
+            onLevel(EnergyVoiceDetector.meterLevel(forRMS: EnergyVoiceDetector.rms(samples)))
+        }
+    }
+
+    func finish() {
+        continuation.finish()
     }
 }
