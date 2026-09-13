@@ -45,8 +45,28 @@ jobs:
           echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
       - name: Build and test
         run: |
+          set -o pipefail
           xcodebuild test \
             -project Ozen.xcodeproj \
             -scheme Ozen \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
-            | xcpretty && exit ${PIPESTATUS[0]}
+            2>&1 | tee xcodebuild-raw.log | xcpretty
+      - name: Verify tests actually ran (don't just trust a green exit code)
+        # xcpretty's filtered output showed no per-test lines at all on an
+        # earlier run, which turned out to hide a real gap (OzenPlatform's
+        # own test target wasn't wired into any scheme, so its tests
+        # silently never ran anywhere). Checking the raw, unfiltered
+        # xcodebuild log for the classic "Executed N tests" line is what
+        # actually confirms N > 0, rather than trusting a bare success exit.
+        run: |
+          # Two different test reporters can appear here depending on how
+          # Xcode's test host surfaces results (classic XCTest-style
+          # "Executed N tests", or swift-testing's own "Test run with N
+          # tests" summary) - accept either, but require an actual
+          # positive count from at least one of them.
+          if ! grep -qE "Executed [1-9][0-9]* test|Test run with [1-9][0-9]* test" xcodebuild-raw.log; then
+            echo "No tests were actually executed - failing rather than trusting a green checkmark." >&2
+            grep -iE "executed|test suite|test run" xcodebuild-raw.log || true
+            exit 1
+          fi
+          grep -E "Executed [0-9]+ test|Test run with [0-9]+ test|Test Suite '(OzenKitTests|OzenPlatformTests|OzenTests|All tests)'" xcodebuild-raw.log

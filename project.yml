@@ -36,10 +36,23 @@ targets:
   OzenTests:
     type: bundle.unit-test
     platform: iOS
+    # OzenKitTests/OzenPlatformTests are compiled straight into this bundle
+    # (rather than relying on Xcode auto-generating a scheme for the local
+    # SPM package's own test targets, which isn't guaranteed to exist in a
+    # headless `xcodebuild` invocation) so every test in the repo actually
+    # runs somewhere real: the ones that need Apple frameworks get an
+    # actual iOS Simulator to run on, which plain `swift test` can't give
+    # them on macOS (AVAudioSession, Accelerate specifics, etc.).
     sources:
       - path: App/OzenTests
+      - path: Tests/OzenKitTests
+      - path: Tests/OzenPlatformTests
     dependencies:
       - target: Ozen
+      - package: OzenKit
+        product: OzenKit
+      - package: OzenKit
+        product: OzenPlatform
     settings:
       base:
         SWIFT_VERSION: "6.0"
