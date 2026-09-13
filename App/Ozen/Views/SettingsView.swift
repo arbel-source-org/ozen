@@ -17,8 +17,10 @@ struct SettingsView: View {
                     appleSpeechSection
                 }
                 displaySection
+                alertsSection
                 speakersSection
                 behaviourSection
+                historySection
                 maintenanceSection
                 aboutSection
             }
@@ -170,6 +172,53 @@ struct SettingsView: View {
             Toggle("המסך לא נכבה בזמן האזנה", isOn: $viewModel.display.keepScreenAwake)
         } header: {
             Text("תצוגה")
+        }
+    }
+
+    // MARK: - Alerts
+
+    private var alertsSection: some View {
+        Section {
+            NavigationLink {
+                KeywordAlertsView(viewModel: viewModel)
+            } label: {
+                LabeledContent {
+                    Text(viewModel.keywordAlerts.isEmpty ? "אין" : "\(viewModel.keywordAlerts.filter(\.isEnabled).count)")
+                        .foregroundStyle(.secondary)
+                } label: {
+                    Label("מילים חשובות", systemImage: "text.badge.star")
+                }
+            }
+            NavigationLink {
+                SoundAlertsView(viewModel: viewModel)
+            } label: {
+                LabeledContent {
+                    Text(viewModel.soundAlertPreferences.isEnabled ? SoundAlertsView.floorName(viewModel.soundAlertPreferences.minimumImportance) : "כבוי")
+                        .foregroundStyle(.secondary)
+                } label: {
+                    Label("צלילים בבית", systemImage: "bell.badge")
+                }
+            }
+        } header: {
+            Text("התראות")
+        } footer: {
+            Text("רטט והדגשה כשנאמרת מילה חשובה; כרזה כשנשמע פעמון דלת, טלפון, אזעקה ועוד.")
+        }
+    }
+
+    // MARK: - History
+
+    private var historySection: some View {
+        Section {
+            NavigationLink {
+                HistoryView(viewModel: viewModel)
+            } label: {
+                Label("שיחות קודמות", systemImage: "clock.arrow.circlepath")
+            }
+        } header: {
+            Text("היסטוריה")
+        } footer: {
+            Text(viewModel.saveHistory ? "השיחות נשמרות בטלפון בלבד." : "שמירת שיחות כבויה.")
         }
     }
 

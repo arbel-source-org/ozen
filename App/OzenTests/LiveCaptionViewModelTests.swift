@@ -138,3 +138,102 @@ struct LiveCaptionViewModelTests {
         #expect(viewModel.isListening)
     }
 }
+
+@Suite("LiveCaptionViewModel alerts and history")
+@MainActor
+struct LiveCaptionViewModelAlertTests {
+    private func temporaryURL(_ name: String) -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("ozen-\(name)-\(UUID())")
+    }
+
+    @Test("keyword alerts round-trip through settings and reach the pipeline without a restart")
+    func keywordAlertsCRUD() async {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline)
+        await viewModel.start()
+
+        viewModel.addKeywordAlert(phrase: " סבתא ")
+        viewModel.addKeywordAlert(phrase: "סבתא")   // duplicate, ignored
+        #expect(viewModel.keywordAlerts.count == 1)
+        #expect(store.load().keywordAlerts.first?.phrase == "סבתא")
+        #expect(viewModel.stats.engineRestarts == 0)
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום לסבתא", isFinal: false, timestamp: 1))
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.keywordHits.isEmpty && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(viewModel.keywordHits.count == 1)
+
+        let id = viewModel.keywordAlerts[0].id
+        viewModel.setKeywordAlert(id: id, enabled: false)
+        #expect(store.load().keywordAlerts.first?.isEnabled == false)
+        viewModel.removeKeywordAlert(id: id)
+        #expect(store.load().keywordAlerts.isEmpty)
+    }
+
+    @Test("sound preferences persist and unsupported sounds are reported as such")
+    func soundPreferences() {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, knownSoundIdentifiers: ["door_bell"])
+
+        viewModel.setSoundEvent("dog_bark", muted: true)
+        viewModel.soundAlertPreferences.minimumImportance = .high
+        #expect(store.load().soundAlerts.mutedIdentifiers == ["dog_bark"])
+        #expect(store.load().soundAlerts.minimumImportance == .high)
+        #expect(pipeline.soundPolicy.preferences.mutedIdentifiers == ["dog_bark"])
+        #expect(viewModel.isSoundEventSupported("door_bell"))
+        #expect(!viewModel.isSoundEventSupported("knock"))
+    }
+
+    @Test("a conversation is saved to history when listening stops, and clearing starts a new session")
+    func historySaved() async {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: 1))
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+
+        await viewModel.togglePause()
+        let sessions = history.listSummaries()
+        #expect(sessions.count == 1)
+        #expect(sessions.first?.preview == "בוקר טוב")
+        #expect(sessions.first?.endedAt != nil)
+
+        await viewModel.togglePause()
+        viewModel.clearTranscript()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: 2))
+        let deadline2 = ContinuousClock.now + .seconds(2)
+        while viewModel.segments.isEmpty && ContinuousClock.now < deadline2 {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        viewModel.persistHistory(ended: true)
+        #expect(history.listSummaries().count == 2)
+    }
+
+    @Test("history is not written when saving is switched off")
+    func historyOff() async {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        viewModel.saveHistory = false
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "לא לשמור", isFinal: true, timestamp: 1))
+        try? await Task.sleep(for: .milliseconds(50))
+        await viewModel.togglePause()
+
+        #expect(history.listSummaries().isEmpty)
+    }
+}

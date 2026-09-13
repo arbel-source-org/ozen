@@ -15,6 +15,8 @@ struct LiveCaptionView: View {
     @State private var isPinnedToBottom = true
     @State private var hapticTrigger = 0
     @State private var lastSegmentUpdate: TimeInterval = 0
+    @State private var visibleSoundAlert: SoundAlert?
+    @State private var visibleKeywordHit: KeywordHit?
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
@@ -42,8 +44,54 @@ struct LiveCaptionView: View {
 
             controlBar
         }
+        .overlay(alignment: .top) {
+            VStack(spacing: 8) {
+                if let alert = visibleSoundAlert {
+                    SoundAlertBanner(alert: alert) {
+                        withAnimation { visibleSoundAlert = nil }
+                        viewModel.dismissSoundAlert(id: alert.id)
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if let hit = visibleKeywordHit {
+                    KeywordHitPill(hit: hit)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+        }
         .preferredColorScheme(theme.colorScheme)
         .task { await viewModel.start() }
+        .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
+            guard let alert = viewModel.soundAlerts.last else { return }
+            withAnimation { visibleSoundAlert = alert }
+        }
+        .task(id: visibleSoundAlert?.id) {
+            // Banners clear themselves; critical ones stay twice as long.
+            guard let alert = visibleSoundAlert else { return }
+            let seconds: UInt64 = alert.event.importance == .critical ? 16 : 8
+            try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
+            if visibleSoundAlert?.id == alert.id {
+                withAnimation { visibleSoundAlert = nil }
+            }
+        }
+        .onChange(of: viewModel.keywordHits.last?.id) { _, _ in
+            guard let hit = viewModel.keywordHits.last else { return }
+            withAnimation { visibleKeywordHit = hit }
+        }
+        .task(id: visibleKeywordHit?.id) {
+            guard let hit = visibleKeywordHit else { return }
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            if visibleKeywordHit?.id == hit.id {
+                withAnimation { visibleKeywordHit = nil }
+            }
+        }
+        .sensoryFeedback(.warning, trigger: viewModel.soundAlerts.last?.id)
+        .sensoryFeedback(.success, trigger: viewModel.keywordHits.last?.id)
+        .onChange(of: viewModel.phase) { _, _ in
+            viewModel.historySessionDidChangePhase()
+        }
         .onChange(of: viewModel.segments.count) { _, _ in noteSpeechActivity() }
         .onChange(of: viewModel.segments.last?.text) { _, _ in
             noteSpeechActivity()
@@ -60,6 +108,9 @@ struct LiveCaptionView: View {
                 // Coming back from the system Settings app after granting
                 // a permission: try again without making them tap.
                 Task { await viewModel.retry() }
+            }
+            if phase == .background {
+                viewModel.persistHistory(ended: false)
             }
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
@@ -90,7 +141,8 @@ struct LiveCaptionView: View {
                             segment: segment,
                             speakerName: viewModel.display.showSpeakerNames ? viewModel.displayName(for: segment) : nil,
                             display: viewModel.display,
-                            theme: theme
+                            theme: theme,
+                            isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id)
                         )
                         .id(segment.id)
                         .onTapGesture { namingSegment = segment }
@@ -292,6 +344,7 @@ private struct CaptionRow: View {
     let speakerName: String?
     let display: DisplayPreferences
     let theme: CaptionTheme
+    let isKeywordHit: Bool
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
@@ -312,9 +365,19 @@ private struct CaptionRow: View {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(display.fontSize * 0.15)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, isKeywordHit ? 8 : 0)
+                .padding(.vertical, isKeywordHit ? 4 : 0)
+                .background(
+                    // A keyword line keeps a soft yellow field behind it,
+                    // so the reader can find "where my name was said"
+                    // after the buzz, even a screenful later.
+                    isKeywordHit ? Color.yellow.opacity(theme.colorScheme == .dark ? 0.22 : 0.35) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 8)
+                )
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
         .accessibilityElement(children: .combine)
+        .accessibilityHint(isKeywordHit ? "מכיל מילה חשובה" : "")
     }
 
     private var weight: Font.Weight {
@@ -365,5 +428,57 @@ private struct NameSpeakerSheet: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+/// The sound-event banner: big icon, the Hebrew name, importance colour.
+/// Tapping dismisses. Critical alerts (sirens, smoke detector) are red and
+/// stay longer; everything else is calm.
+private struct SoundAlertBanner: View {
+    let alert: SoundAlert
+    let onDismiss: () -> Void
+
+    var body: some View {
+        Button(action: onDismiss) {
+            HStack(spacing: 14) {
+                Image(systemName: alert.event.systemImage)
+                    .font(.system(size: 30, weight: .semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(alert.event.name)
+                        .font(.title3.weight(.bold))
+                    Text(alert.event.importance == .critical ? "שימו לב!" : "נשמע עכשיו")
+                        .font(.subheadline)
+                        .opacity(0.85)
+                }
+                Spacer()
+                Image(systemName: "xmark")
+                    .font(.headline)
+                    .opacity(0.7)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(SoundAlertsView.tint(alert.event.importance).opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("התראה: \(alert.event.name)")
+        .accessibilityHint("הקישו לסגירה")
+    }
+}
+
+/// A small, quiet confirmation that a keyword was heard, so the buzz has
+/// a visible explanation.
+private struct KeywordHitPill: View {
+    let hit: KeywordHit
+
+    var body: some View {
+        Label("נאמר: \(hit.match.matchedText)", systemImage: "text.badge.star")
+            .font(.headline)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.yellow.opacity(0.9), in: Capsule())
+            .foregroundStyle(.black)
     }
 }
