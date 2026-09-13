@@ -114,6 +114,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var quickPhrases: [String]
     /// 0...1 as AVSpeechUtterance understands it; 0.45 is a calm pace.
     public var speechRate: Float
+    /// Family names, places, medicines — words both engines are told to
+    /// expect so they come out spelled right. See `VocabularyHints`.
+    public var vocabulary: [String]
 
     public init(
         engine: TranscriptionEngineKind,
@@ -130,7 +133,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         soundAlerts: SoundAlertPreferences = .default,
         saveHistory: Bool = true,
         quickPhrases: [String] = AppSettings.defaultQuickPhrases,
-        speechRate: Float = 0.45
+        speechRate: Float = 0.45,
+        vocabulary: [String] = []
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -147,6 +151,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.saveHistory = saveHistory
         self.quickPhrases = quickPhrases
         self.speechRate = speechRate
+        self.vocabulary = VocabularyHints.normalized(vocabulary)
     }
 
     /// The phrases a hard-of-hearing person needs most often in
@@ -175,7 +180,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case whisperModelVariant, allowServerFallbackForAppleSpeech, display
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
-        case quickPhrases, speechRate
+        case quickPhrases, speechRate, vocabulary
     }
 
     public init(from decoder: any Decoder) throws {
@@ -199,6 +204,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         quickPhrases = try container.decodeIfPresent([String].self, forKey: .quickPhrases) ?? defaults.quickPhrases
         speechRate = try container.decodeIfPresent(Float.self, forKey: .speechRate) ?? defaults.speechRate
         speechRate = min(max(speechRate, 0.2), 0.7)
+        vocabulary = VocabularyHints.normalized(try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? [])
     }
 }
 

@@ -85,6 +85,7 @@ struct AppSettingsTests {
         #expect(decoded.saveHistory == true)
         #expect(decoded.quickPhrases == AppSettings.defaultQuickPhrases)
         #expect(decoded.speechRate == 0.45)
+        #expect(decoded.vocabulary.isEmpty)
         // The credit line is owned by the build, not the file.
         #expect(decoded.creditLine == "Made by Arbel")
     }
@@ -108,6 +109,7 @@ struct AppSettingsTests {
         settings.saveHistory = false
         settings.quickPhrases = ["כן", "לא"]
         settings.speechRate = 0.6
+        settings.vocabulary = ["אבי", "רותי"]
 
         let data = try JSONEncoder().encode(settings)
         let decoded = try JSONDecoder().decode(AppSettings.self, from: data)

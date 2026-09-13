@@ -48,6 +48,8 @@ public final class CaptionPipeline {
 
     private let audio: any AudioCapturing
     private let engineFactory: @MainActor (AppSettings) -> any TranscriptionEngine
+    /// The engine of the current run, so vocabulary edits reach it live.
+    private var currentEngine: (any TranscriptionEngine)?
     private let embedder: any SpeakerEmbedding
     private let soundDetector: (any SoundEventDetecting)?
     private var keywordMatcher = KeywordAlertMatcher(alerts: [])
@@ -138,6 +140,9 @@ public final class CaptionPipeline {
             fail(.engineUnavailable, detail: why.detail, engineUnavailability: why)
             return
         }
+        await engine.setVocabulary(VocabularyHints.normalized(settings.vocabulary))
+        guard runID == run else { return }
+        currentEngine = engine
 
         phase = .startingAudio
         let source: AsyncStream<[Float]>
@@ -452,6 +457,16 @@ public final class CaptionPipeline {
 
     // MARK: - Plumbing
 
+    /// Applies a new hint list to the running engine (and remembers it for
+    /// the next start) without restarting — a name added mid-conversation
+    /// should help from the next sentence on.
+    public func setVocabulary(_ terms: [String]) async {
+        let cleaned = VocabularyHints.normalized(terms)
+        activeSettings?.vocabulary = cleaned
+        guard let currentEngine, phase.isListening || phase == .paused else { return }
+        await currentEngine.setVocabulary(cleaned)
+    }
+
     private func cachedEngine(for settings: AppSettings) -> any TranscriptionEngine {
         let key = "\(settings.engine.rawValue)|\(settings.whisperModelVariant)|\(settings.allowServerFallbackForAppleSpeech)"
         if let cached = engineCache[key] { return cached }
@@ -467,6 +482,7 @@ public final class CaptionPipeline {
 
     private func tearDownSession() {
         runID = UUID()
+        currentEngine = nil
         streamTask?.cancel()
         streamTask = nil
         embeddingTask?.cancel()

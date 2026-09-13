@@ -82,6 +82,9 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
     private let lock = NSLock()
     private var tokenContinuation: AsyncThrowingStream<TranscriptToken, Error>.Continuation?
     private(set) var chunksSeen = 0
+    private var vocabularyHistory: [[String]] = []
+    /// Every list handed to `setVocabulary`, in order.
+    var vocabularySeen: [[String]] { lock.withLock { vocabularyHistory } }
 
     init(
         kind: TranscriptionEngineKind = .whisperKit,
@@ -117,6 +120,10 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
                 }
             }
         }
+    }
+
+    func setVocabulary(_ terms: [String]) async {
+        lock.withLock { vocabularyHistory.append(terms) }
     }
 
     func emit(_ token: TranscriptToken) {
@@ -782,5 +789,43 @@ struct CaptionPipelineAlertTests {
         #expect(await eventually { engine.chunksSeen == 1 })
         #expect(pipeline.phase == .listening)
         #expect(pipeline.soundAlerts.isEmpty)
+    }
+}
+
+@Suite("CaptionPipeline vocabulary hints")
+@MainActor
+struct CaptionPipelineVocabularyTests {
+    @Test("the engine receives the cleaned vocabulary before streaming starts")
+    func vocabularyPassedOnStart() async throws {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.vocabulary = [" אבי ", "רותי", "אבי", ""]
+        await pipeline.start(settings: settings)
+        #expect(pipeline.phase.isListening)
+        #expect(engine.vocabularySeen == [["אבי", "רותי"]])
+    }
+
+    @Test("editing the vocabulary while listening reaches the engine without a restart")
+    func vocabularyUpdatedLive() async throws {
+        let engine = FakeEngine()
+        let (pipeline, _, log) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let callsAfterStart = log.calls
+        await pipeline.setVocabulary(["סבתא", "דני"])
+        #expect(engine.vocabularySeen == [[], ["סבתא", "דני"]])
+        #expect(pipeline.phase.isListening)
+        #expect(log.calls == callsAfterStart)
+        #expect(pipeline.activeSettings?.vocabulary == ["סבתא", "דני"])
+    }
+
+    @Test("a vocabulary edit while stopped is remembered for the next start, not sent to a dead engine")
+    func vocabularyWhileStopped() async throws {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.setVocabulary(["דני"])
+        #expect(engine.vocabularySeen.isEmpty)
+        await pipeline.start(settings: .default)
+        #expect(engine.vocabularySeen == [[]])
     }
 }

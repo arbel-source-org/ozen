@@ -283,6 +283,45 @@ public final class LiveCaptionViewModel {
         pipeline.dismissSoundAlert(id: id)
     }
 
+    // MARK: - Vocabulary (names the engines should expect)
+
+    public var vocabulary: [String] { settings.vocabulary }
+
+    public func addVocabularyTerm(_ term: String) {
+        let cleaned = VocabularyHints.normalized(settings.vocabulary + [term])
+        guard cleaned != settings.vocabulary else { return }
+        settings.vocabulary = cleaned
+        vocabularyChanged()
+    }
+
+    public func removeVocabulary(at offsets: IndexSet) {
+        settings.vocabulary.remove(atOffsets: offsets)
+        vocabularyChanged()
+    }
+
+    public func moveVocabulary(from source: IndexSet, to destination: Int) {
+        settings.vocabulary.move(fromOffsets: source, toOffset: destination)
+        vocabularyChanged()
+    }
+
+    /// Everyone with a saved voice profile is by definition someone whose
+    /// name comes up — one tap adds them all.
+    public func addSpeakerNamesToVocabulary() {
+        let names = settings.speakerProfiles.map(\.name)
+        let cleaned = VocabularyHints.normalized(settings.vocabulary + names)
+        guard cleaned != settings.vocabulary else { return }
+        settings.vocabulary = cleaned
+        vocabularyChanged()
+    }
+
+    private func vocabularyChanged() {
+        persist()
+        let terms = settings.vocabulary
+        Task { [weak self] in
+            await self?.pipeline.setVocabulary(terms)
+        }
+    }
+
     // MARK: - Type to speak
 
     public var isSpeaking: Bool { synthesizer?.isSpeaking ?? false }

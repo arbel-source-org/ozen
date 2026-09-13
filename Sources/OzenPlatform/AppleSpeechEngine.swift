@@ -20,9 +20,23 @@ public final class AppleSpeechEngine: TranscriptionEngine, @unchecked Sendable {
     public let kind: TranscriptionEngineKind = .appleSpeech
 
     private let allowServerFallback: Bool
+    private let stateLock = NSLock()
+    private var vocabulary: [String] = []
+    private weak var activeSession: RecognitionSession?
 
     public init(allowServerFallback: Bool = false) {
         self.allowServerFallback = allowServerFallback
+    }
+
+    /// Stored for the next request and pushed into the live session, whose
+    /// next roll-over picks it up (a request's contextual strings can't be
+    /// changed once it's running).
+    public func setVocabulary(_ terms: [String]) async {
+        let session: RecognitionSession? = stateLock.withLock {
+            vocabulary = terms
+            return activeSession
+        }
+        session?.updateContextualStrings(terms)
     }
 
     public func prepare(
@@ -69,8 +83,10 @@ public final class AppleSpeechEngine: TranscriptionEngine, @unchecked Sendable {
             let session = RecognitionSession(
                 recognizer: recognizer,
                 requiresOnDevice: requiresOnDevice,
+                contextualStrings: stateLock.withLock { vocabulary },
                 continuation: continuation
             )
+            stateLock.withLock { activeSession = session }
             session.start(feeding: audio)
             continuation.onTermination = { _ in session.stop() }
         }
@@ -105,6 +121,7 @@ private final class RecognitionSession: @unchecked Sendable {
 
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    private var contextualStrings: [String]
     private var utteranceID = UUID()
     private var feedTask: Task<Void, Never>?
     private var stopped = false
@@ -129,11 +146,17 @@ private final class RecognitionSession: @unchecked Sendable {
     init(
         recognizer: SFSpeechRecognizer,
         requiresOnDevice: Bool,
+        contextualStrings: [String],
         continuation: AsyncThrowingStream<TranscriptToken, Error>.Continuation
     ) {
         self.recognizer = recognizer
         self.requiresOnDevice = requiresOnDevice
+        self.contextualStrings = contextualStrings
         self.continuation = continuation
+    }
+
+    func updateContextualStrings(_ terms: [String]) {
+        lock.withLock { contextualStrings = terms }
     }
 
     func start(feeding audio: AsyncStream<[Float]>) {
@@ -198,6 +221,9 @@ private final class RecognitionSession: @unchecked Sendable {
         request.requiresOnDeviceRecognition = requiresOnDevice
         request.taskHint = .dictation
         request.addsPunctuation = true
+        if !contextualStrings.isEmpty {
+            request.contextualStrings = contextualStrings
+        }
 
         let id = UUID()
         utteranceID = id

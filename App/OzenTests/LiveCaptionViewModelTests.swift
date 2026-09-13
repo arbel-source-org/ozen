@@ -237,3 +237,53 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.listSummaries().isEmpty)
     }
 }
+
+@Suite("LiveCaptionViewModel vocabulary")
+@MainActor
+struct LiveCaptionViewModelVocabularyTests {
+    private func makeViewModel() throws -> (LiveCaptionViewModel, FakeEngine, URL) {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder()
+        )
+        let store = SettingsStore(fileURL: dir.appendingPathComponent("settings.json"))
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: store,
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: dir.appendingPathComponent("history", isDirectory: true))
+        )
+        return (viewModel, engine, dir.appendingPathComponent("settings.json"))
+    }
+
+    @Test("adding a name cleans it, persists it, and hands it to the running engine")
+    func addTerm() async throws {
+        let (viewModel, engine, file) = try makeViewModel()
+        await viewModel.start()
+        viewModel.addVocabularyTerm("  רותי ")
+        viewModel.addVocabularyTerm("רותי")
+        #expect(viewModel.vocabulary == ["רותי"])
+        let saved = SettingsStore(fileURL: file).load()
+        #expect(saved.vocabulary == ["רותי"])
+        let deadline = Date().addingTimeInterval(2)
+        while engine.vocabularySeen.last != ["רותי"], Date() < deadline {
+            await Task.yield()
+        }
+        #expect(engine.vocabularySeen.last == ["רותי"])
+    }
+
+    @Test("speaker profile names can be added in one go, without duplicating names already listed")
+    func addSpeakers() throws {
+        let (viewModel, _, _) = try makeViewModel()
+        viewModel.addVocabularyTerm("אבי")
+        // FakeEmbedder keys the voice off the first sample, so two
+        // different leading values enroll two different people.
+        #expect(viewModel.enroll(name: "אבי", samples: [Float](repeating: 0.2, count: 16_000)))
+        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.7, count: 16_000)))
+        viewModel.addSpeakerNamesToVocabulary()
+        #expect(viewModel.vocabulary == ["אבי", "רותי"])
+    }
+}

@@ -145,9 +145,16 @@ public protocol TranscriptionEngine: Sendable {
         languageCode: String,
         audio: AsyncStream<[Float]>
     ) -> AsyncThrowingStream<TranscriptToken, Error>
+
+    /// Names and words to bias recognition towards (see `VocabularyHints`).
+    /// Called before every `stream` and again whenever the user edits the
+    /// list mid-conversation; engines that can't use hints ignore it.
+    func setVocabulary(_ terms: [String]) async
 }
 
 public extension TranscriptionEngine {
+    func setVocabulary(_ terms: [String]) async {}
+
     /// `prepare` without caring about progress — for callers (and tests)
     /// that only want the yes/no answer.
     func checkAvailability(languageCode: String) async -> EngineAvailability {

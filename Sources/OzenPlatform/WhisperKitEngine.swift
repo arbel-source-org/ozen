@@ -28,6 +28,13 @@ public actor WhisperKitEngine: TranscriptionEngine {
     private let filter: WhisperResultFilter
     private let store: WhisperModelStore
     private var pipe: WhisperKit?
+    private var vocabulary: [String] = []
+    /// Token ids for the current vocabulary prompt, recomputed only when
+    /// the list changes (encoding is cheap but runs every pass otherwise).
+    private var promptCache: (terms: [String], tokens: [Int])?
+    /// Whisper's prompt budget is half its 448-token context; stay well
+    /// under so the audio's own tokens never get squeezed.
+    private let maxPromptTokens = 120
 
     /// Re-run the model at most this often per utterance — often enough to
     /// feel live, not so often that inference dominates the CPU.
@@ -56,6 +63,10 @@ public actor WhisperKitEngine: TranscriptionEngine {
     }
 
     // MARK: - TranscriptionEngine
+
+    public func setVocabulary(_ terms: [String]) async {
+        vocabulary = terms
+    }
 
     public func prepare(
         languageCode: String,
@@ -187,9 +198,11 @@ public actor WhisperKitEngine: TranscriptionEngine {
             let window = Array(snapshot.samples[0..<end])
             samplesAtLastPass = total
 
+            var options = isFinal ? finalPass : livePass
+            options.promptTokens = promptTokens(using: pipe)
             let results: [TranscriptionResult] = try await pipe.transcribe(
                 audioArray: window,
-                decodeOptions: isFinal ? finalPass : livePass
+                decodeOptions: options
             )
             let segments = results.flatMap(\.segments)
             let text = filter.acceptedText(from: segments.map {
@@ -224,6 +237,28 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 if snapshot.finished && total - end == 0 { break }
             }
         }
+    }
+
+    // MARK: - Vocabulary prompt
+
+    /// Encodes the names list the way WhisperKit's own CLI does for
+    /// `--prompt`: a leading space, special tokens stripped, trimmed to
+    /// the budget from the end (the list is ordered most-important-first).
+    private func promptTokens(using pipe: WhisperKit) -> [Int]? {
+        guard !vocabulary.isEmpty, let tokenizer = pipe.tokenizer else { return nil }
+        if let cached = promptCache, cached.terms == vocabulary {
+            return cached.tokens
+        }
+        let text = VocabularyHints.whisperPrompt(vocabulary)
+        guard !text.isEmpty else { return nil }
+        let specialTokenBegin = tokenizer.specialTokens.specialTokenBegin
+        let tokens = Array(
+            tokenizer.encode(text: " " + text)
+                .filter { $0 < specialTokenBegin }
+                .prefix(maxPromptTokens)
+        )
+        promptCache = (vocabulary, tokens)
+        return tokens.isEmpty ? nil : tokens
     }
 
     // MARK: - Decoding options

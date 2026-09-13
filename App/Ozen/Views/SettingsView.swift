@@ -19,6 +19,7 @@ struct SettingsView: View {
                 displaySection
                 alertsSection
                 speechSection
+                vocabularySection
                 speakersSection
                 behaviourSection
                 historySection
@@ -258,6 +259,25 @@ struct SettingsView: View {
             Text("היסטוריה")
         } footer: {
             Text(viewModel.saveHistory ? "השיחות נשמרות בטלפון בלבד." : "שמירת שיחות כבויה.")
+        }
+    }
+
+    // MARK: - Vocabulary
+
+    private var vocabularySection: some View {
+        Section {
+            NavigationLink {
+                VocabularyView(viewModel: viewModel)
+            } label: {
+                HStack {
+                    Label("שמות ומילים מיוחדות", systemImage: "character.book.closed")
+                    Spacer()
+                    Text(viewModel.vocabulary.isEmpty ? "ריק" : "\(viewModel.vocabulary.count)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } footer: {
+            Text("שני המנועים מקבלים את הרשימה כרמז, כדי ששמות של בני משפחה ייכתבו נכון.")
         }
     }
 
