@@ -11,6 +11,9 @@ import PackageDescription
 // build` / `swift test` here only ever touches the portable core.
 
 var dependencies: [Package.Dependency] = []
+var products: [Product] = [
+    .library(name: "OzenKit", targets: ["OzenKit"])
+]
 
 var targets: [Target] = [
     .target(
@@ -28,6 +31,7 @@ var targets: [Target] = [
 dependencies.append(
     .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.9.0")
 )
+products.append(.library(name: "OzenPlatform", targets: ["OzenPlatform"]))
 targets.append(contentsOf: [
     .target(
         name: "OzenPlatform",
@@ -49,9 +53,7 @@ let package = Package(
     name: "OzenKit",
     defaultLocalization: "he",
     platforms: [.iOS(.v17), .macOS(.v14)],
-    products: [
-        .library(name: "OzenKit", targets: ["OzenKit"])
-    ],
+    products: products,
     dependencies: dependencies,
     targets: targets
 )

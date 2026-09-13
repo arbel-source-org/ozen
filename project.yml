@@ -18,10 +18,7 @@ targets:
       - package: OzenKit
         product: OzenKit
       - package: OzenKit
-        product: OzenKit
-        # OzenPlatform is a target inside the same local package, not a
-        # separate product declaration — xcodegen resolves it via the
-        # package's own target graph.
+        product: OzenPlatform
     info:
       path: App/Ozen/Info.plist
       properties:
