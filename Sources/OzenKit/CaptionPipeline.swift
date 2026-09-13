@@ -45,6 +45,11 @@ public final class CaptionPipeline {
     public private(set) var activeSettings: AppSettings?
     /// Set while a failure is waiting to be retried automatically.
     public private(set) var scheduledRetry: ScheduledRetry?
+    /// Called for every new sound alert, e.g. to post a notification while
+    /// the app isn't on screen.
+    public var onSoundAlert: ((SoundAlert) -> Void)?
+    /// Called with the fresh keyword hits in a line, and the line itself.
+    public var onKeywordHits: (([KeywordHit], TranscriptSegment) -> Void)?
 
     public var inputLevel: Float { audio.inputLevel }
 
@@ -294,6 +299,7 @@ public final class CaptionPipeline {
     private func handle(soundObservation observation: SoundObservation) {
         guard let alert = soundPolicy.evaluate(observation) else { return }
         soundAlerts.append(alert)
+        onSoundAlert?(alert)
         if soundAlerts.count > Self.maxSoundAlerts {
             soundAlerts.removeFirst(soundAlerts.count - Self.maxSoundAlerts)
         }
@@ -305,7 +311,9 @@ public final class CaptionPipeline {
         let fresh = keywordDeduplicator.newMatches(utteranceID: segment.id, matches: matches)
         guard !fresh.isEmpty else { return }
         let timestamp = now()
-        keywordHits.append(contentsOf: fresh.map { KeywordHit(segmentID: segment.id, match: $0, timestamp: timestamp) })
+        let hits = fresh.map { KeywordHit(segmentID: segment.id, match: $0, timestamp: timestamp) }
+        keywordHits.append(contentsOf: hits)
+        onKeywordHits?(hits, segment)
         if keywordHits.count > Self.maxKeywordHits {
             keywordHits.removeFirst(keywordHits.count - Self.maxKeywordHits)
         }

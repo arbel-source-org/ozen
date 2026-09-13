@@ -9,6 +9,7 @@ struct OnboardingView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var page = 0
     @State private var microphone: AudioPermission?
+    @State private var notificationsAllowed: Bool?
     @State private var requesting = false
     @Environment(\.openURL) private var openURL
 
@@ -86,6 +87,20 @@ struct OnboardingView: View {
                 Label("המיקרופון מאושר", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.title3.weight(.semibold))
+                Text("ועוד דבר אחד: כשהטלפון בכיס או נעול, אוזן יכולה להודיע על צלצול בדלת, אזעקה או השם שלך.")
+                if let notificationsAllowed {
+                    Label(notificationsAllowed ? "ההתראות מאושרות" : "בלי התראות. אפשר לשנות בהגדרות.", systemImage: notificationsAllowed ? "checkmark.circle.fill" : "bell.slash")
+                        .foregroundStyle(notificationsAllowed ? .green : .secondary)
+                } else {
+                    Button {
+                        Task { notificationsAllowed = await AlertNotifier.shared.requestAuthorization() }
+                    } label: {
+                        Label("לאשר התראות", systemImage: "bell.badge")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
             case .denied:
                 VStack(alignment: .leading, spacing: 12) {
                     Label("המיקרופון חסום", systemImage: "xmark.circle.fill")

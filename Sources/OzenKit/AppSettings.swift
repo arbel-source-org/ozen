@@ -128,6 +128,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// The first-launch walkthrough (what the app does, engine choice,
     /// microphone permission) has been seen once.
     public var hasCompletedOnboarding: Bool
+    /// Doorbell, siren or her name while the app isn't on screen (pocket,
+    /// locked phone) also becomes a phone notification.
+    public var notifyWhenInBackground: Bool
 
     public init(
         engine: TranscriptionEngineKind,
@@ -146,7 +149,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         quickPhrases: [String] = AppSettings.defaultQuickPhrases,
         speechRate: Float = 0.45,
         vocabulary: [String] = [],
-        hasCompletedOnboarding: Bool = false
+        hasCompletedOnboarding: Bool = false,
+        notifyWhenInBackground: Bool = true
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -165,6 +169,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.speechRate = speechRate
         self.vocabulary = VocabularyHints.normalized(vocabulary)
         self.hasCompletedOnboarding = hasCompletedOnboarding
+        self.notifyWhenInBackground = notifyWhenInBackground
     }
 
     /// The phrases a hard-of-hearing person needs most often in
@@ -194,6 +199,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding
+        case notifyWhenInBackground
     }
 
     public init(from decoder: any Decoder) throws {
@@ -219,6 +225,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         speechRate = min(max(speechRate, 0.2), 0.7)
         vocabulary = VocabularyHints.normalized(try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? [])
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        notifyWhenInBackground = try container.decodeIfPresent(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
     }
 }
 

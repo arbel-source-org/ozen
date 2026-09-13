@@ -220,10 +220,21 @@ struct SettingsView: View {
                     Label("צלילים בבית", systemImage: "bell.badge")
                 }
             }
+            Toggle(isOn: Binding(
+                get: { viewModel.notifyWhenInBackground },
+                set: { enabled in
+                    viewModel.notifyWhenInBackground = enabled
+                    if enabled {
+                        Task { _ = await AlertNotifier.shared.requestAuthorization() }
+                    }
+                }
+            )) {
+                Label("התראה בטלפון כשהמסך כבוי", systemImage: "iphone.radiowaves.left.and.right")
+            }
         } header: {
             Text("התראות")
         } footer: {
-            Text("רטט והדגשה כשנאמרת מילה חשובה; כרזה כשנשמע פעמון דלת, טלפון, אזעקה ועוד.")
+            Text("רטט והדגשה כשנאמרת מילה חשובה; כרזה כשנשמע פעמון דלת, טלפון, אזעקה ועוד. כשהטלפון בכיס או נעול, אותן התראות מגיעות כהודעה בטלפון.")
         }
     }
 

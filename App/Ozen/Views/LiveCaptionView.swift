@@ -170,6 +170,9 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.display.keepScreenAwake) { _, keep in
             UIApplication.shared.isIdleTimerDisabled = viewModel.isListening && keep
         }
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            viewModel.sceneActivityChanged(isActive: phase == .active)
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active, case .failed = viewModel.phase {
                 // Coming back from the system Settings app after granting

@@ -897,3 +897,37 @@ struct CaptionPipelineSpeakerNameTests {
         #expect(pipeline.displayName(for: segment).hasPrefix("דובר "))
     }
 }
+
+@Suite("CaptionPipeline alert hooks")
+@MainActor
+struct CaptionPipelineAlertHookTests {
+    @Test("a keyword heard in a line calls the hook once with the line")
+    func keywordHook() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.keywordAlerts = [KeywordAlert(phrase: "סבתא")]
+        var calls: [(Int, String)] = []
+        pipeline.onKeywordHits = { hits, segment in calls.append((hits.count, segment.text)) }
+        await pipeline.start(settings: settings)
+
+        let id = UUID()
+        engine.emit(token(id, "סבתא בואי"))
+        engine.emit(token(id, "סבתא בואי לאכול", final: true))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+        #expect(calls.count == 1)
+        #expect(calls.first?.0 == 1)
+        #expect(calls.first?.1 == "סבתא בואי")
+    }
+
+    @Test("a sound alert calls the hook")
+    func soundHook() async {
+        let detector = FakeSoundDetector()
+        let (pipeline, _, _) = makePipeline(soundDetector: detector)
+        var raised: [String] = []
+        pipeline.onSoundAlert = { raised.append($0.event.identifier) }
+        await pipeline.start(settings: .default)
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.95, timestamp: 1_000))
+        #expect(await eventually { raised == ["door_bell"] })
+    }
+}

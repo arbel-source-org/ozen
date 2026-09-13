@@ -29,6 +29,10 @@ public final class LiveCaptionViewModel {
     /// Pauses captions while the phone talks, and decides when they may
     /// come back (see `SpeechPauseCoordinator`).
     private var speechPause = SpeechPauseCoordinator()
+    /// Whether the app is on screen; alerts become notifications when not.
+    public private(set) var isAppActive = true
+    private var backgroundAlerts = BackgroundAlertPolicy()
+    private let postNotification: ((AlertNotificationContent) -> Void)?
     private var historySessionID = UUID()
     private var historySessionStartedAt: TimeInterval?
     private var autosaveTask: Task<Void, Never>?
@@ -59,7 +63,8 @@ public final class LiveCaptionViewModel {
             historyStore: TranscriptHistoryStore(directoryURL: support.appendingPathComponent("ozen-history", isDirectory: true)),
             knownSoundIdentifiers: SoundAnalysisDetector.knownIdentifiers(),
             audioManager: audio,
-            synthesizer: SpeechSynthesizer()
+            synthesizer: SpeechSynthesizer(),
+            postNotification: { AlertNotifier.shared.post($0) }
         )
     }
 
@@ -70,7 +75,8 @@ public final class LiveCaptionViewModel {
         historyStore: TranscriptHistoryStore? = nil,
         knownSoundIdentifiers: Set<String>? = nil,
         audioManager: AVAudioInputManager? = nil,
-        synthesizer: (any SpeechSynthesizing)? = nil
+        synthesizer: (any SpeechSynthesizing)? = nil,
+        postNotification: ((AlertNotificationContent) -> Void)? = nil
     ) {
         self.settingsStore = settingsStore
         self.pipeline = pipeline
@@ -80,7 +86,9 @@ public final class LiveCaptionViewModel {
         self.knownSoundIdentifiers = knownSoundIdentifiers
         self.audioManager = audioManager
         self.synthesizer = synthesizer
+        self.postNotification = postNotification
         self.settings = settingsStore.load()
+        backgroundAlerts.isEnabled = settings.notifyWhenInBackground
         for profile in settings.speakerProfiles {
             pipeline.enroll(profile: profile)
         }
@@ -90,6 +98,41 @@ public final class LiveCaptionViewModel {
         }
         synthesizer?.onSpeakingChanged = { [weak self] speaking in
             self?.speakingDidChange(speaking)
+        }
+        pipeline.onSoundAlert = { [weak self] alert in
+            self?.alertRaised(sound: alert)
+        }
+        pipeline.onKeywordHits = { [weak self] hits, segment in
+            self?.alertRaised(keywords: hits, in: segment)
+        }
+    }
+
+    // MARK: - Alerts while the app isn't on screen
+
+    public func sceneActivityChanged(isActive: Bool) {
+        isAppActive = isActive
+    }
+
+    public var notifyWhenInBackground: Bool {
+        get { settings.notifyWhenInBackground }
+        set {
+            settings.notifyWhenInBackground = newValue
+            backgroundAlerts.isEnabled = newValue
+            persist()
+        }
+    }
+
+    private func alertRaised(sound alert: SoundAlert) {
+        guard let content = backgroundAlerts.notification(for: alert, appIsActive: isAppActive, now: Date().timeIntervalSince1970) else { return }
+        postNotification?(content)
+    }
+
+    private func alertRaised(keywords hits: [KeywordHit], in segment: TranscriptSegment) {
+        let now = Date().timeIntervalSince1970
+        for hit in hits {
+            if let content = backgroundAlerts.notification(for: hit, lineText: segment.text, appIsActive: isAppActive, now: now) {
+                postNotification?(content)
+            }
         }
     }
 

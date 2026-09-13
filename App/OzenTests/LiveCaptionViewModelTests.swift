@@ -483,3 +483,49 @@ struct LiveCaptionViewModelSpeakerTests {
         #expect(viewModel.pipeline.speakerClusters.contains { $0.name == "רותי" } == false)
     }
 }
+
+@Suite("LiveCaptionViewModel notifications in the background")
+@MainActor
+struct LiveCaptionViewModelBackgroundAlertTests {
+    @Test("a keyword heard while the app is in the background posts one notification; in front it posts none")
+    func keywordNotification() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        var posted: [AlertNotificationContent] = []
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-bg-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, postNotification: { posted.append($0) })
+        viewModel.addKeywordAlert(phrase: "סבתא")
+        await viewModel.start()
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, הגענו", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(posted.isEmpty)
+
+        viewModel.sceneActivityChanged(isActive: false)
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, את ערה?", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        let deadline = Date().addingTimeInterval(2)
+        while posted.isEmpty, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(posted.count == 1)
+        #expect(posted.first?.title == "נאמר: סבתא")
+        #expect(posted.first?.body == "סבתא, את ערה?")
+    }
+
+    @Test("switching the setting off stops notifications")
+    func settingOff() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        var posted: [AlertNotificationContent] = []
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-bg-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, postNotification: { posted.append($0) })
+        viewModel.addKeywordAlert(phrase: "סבתא")
+        viewModel.notifyWhenInBackground = false
+        viewModel.sceneActivityChanged(isActive: false)
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(posted.isEmpty)
+        #expect(store.load().notifyWhenInBackground == false)
+    }
+}
