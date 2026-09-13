@@ -27,9 +27,20 @@ public struct CaptionStabilizer: Sendable {
     /// missing "final" marker would leave a segment pending forever,
     /// frozen in the "still settling" style even though nothing further
     /// will ever arrive for it.
+    ///
+    /// This is a safety net, not the normal path: both engines send a
+    /// final for every utterance. It must therefore be longer than an
+    /// engine can legitimately go quiet on a line that is still open.
+    /// Whisper finalizes after a 1 s pause *plus* a careful decode, and a
+    /// hot phone spaces live updates up to 4 s apart (`InferenceCadence`).
+    /// The old 1.2 s value raced the final pass on every sentence: the
+    /// line turned solid and was then rewritten, exactly the visible
+    /// mangling this type exists to prevent.
     public var silenceCommitThreshold: TimeInterval
 
-    public init(silenceCommitThreshold: TimeInterval = 1.2) {
+    public static let defaultSilenceCommitThreshold: TimeInterval = 6
+
+    public init(silenceCommitThreshold: TimeInterval = CaptionStabilizer.defaultSilenceCommitThreshold) {
         self.silenceCommitThreshold = silenceCommitThreshold
     }
 

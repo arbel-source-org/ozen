@@ -395,11 +395,33 @@ struct CaptionPipelineTokenTests {
         engine.emit(token(id, "מילה", at: 1_000))
         #expect(await eventually { pipeline.segments.count == 1 })
 
-        pipeline.commitStaleSegments(now: 1_000.5)
+        // Longer than the old 1.2 s threshold and longer than a Whisper
+        // final pass takes: the line must still be open.
+        pipeline.commitStaleSegments(now: 1_004.5)
         #expect(pipeline.segments.first?.isCommitted == false)
 
-        pipeline.commitStaleSegments(now: 1_002.5)
+        pipeline.commitStaleSegments(now: 1_000 + CaptionStabilizer.defaultSilenceCommitThreshold + 0.5)
         #expect(pipeline.segments.first?.isCommitted == true)
+        #expect(pipeline.stats.segmentsCommitted == 1)
+    }
+
+    @Test("a live update, a pause, then the engine's final: the line stays open until the final arrives")
+    func finalPassIsNotRaced() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine], now: { 1_000 })
+        await pipeline.start(settings: .default)
+        let id = UUID()
+        engine.emit(token(id, "מה שלו", at: 1_000))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        // A 1 s pause ends the utterance and the careful final pass takes
+        // ~1 s more on a phone; the stale timer ticks in between.
+        pipeline.commitStaleSegments(now: 1_002.2)
+        #expect(pipeline.segments.first?.isCommitted == false)
+
+        engine.emit(token(id, "מה שלומך?", final: true, at: 1_002.3))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+        #expect(pipeline.segments.first?.text == "מה שלומך?")
         #expect(pipeline.stats.segmentsCommitted == 1)
     }
 
