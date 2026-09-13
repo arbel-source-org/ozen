@@ -1,4 +1,5 @@
 import Foundation
+import CoreML
 // WhisperKit itself isn't audited/marked Sendable upstream, so under Swift
 // 6's strict concurrency checking, constructing and storing it inside this
 // actor is flagged even though it's actually used safely (never shared
@@ -148,6 +149,14 @@ public actor WhisperKitEngine: TranscriptionEngine {
         let config = WhisperKitConfig(
             modelFolder: folder.path,
             tokenizerFolder: store.tokenizerBase,
+            // Captions keep running with the phone locked or in a pocket
+            // (that's when the doorbell notification matters), and iOS
+            // doesn't let a background app submit GPU work. WhisperKit
+            // puts the mel spectrogram on the GPU by default; it's a small
+            // calculation, so it runs on the CPU and nothing in a pass
+            // needs the GPU. The encoder and decoder stay on the Neural
+            // Engine.
+            computeOptions: ModelComputeOptions(melCompute: .cpuOnly),
             verbose: false,
             logLevel: .none,
             prewarm: true,
