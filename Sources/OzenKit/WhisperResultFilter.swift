@@ -65,9 +65,12 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// The text worth showing from one decoding pass, with junk segments
     /// dropped. Empty when nothing survives — the caller should then emit
     /// nothing rather than a blank token.
-    public func acceptedText(from segments: [WhisperSegmentSummary]) -> String {
+    ///
+    /// `echo` drops segments that are just the vocabulary prompt read back
+    /// (see `PromptEchoDetector`).
+    public func acceptedText(from segments: [WhisperSegmentSummary], echo: PromptEchoDetector? = nil) -> String {
         segments
-            .filter { accepts($0) }
+            .filter { accepts($0) && !(echo?.isEcho(Self.stripSpecialTokens($0.text)) ?? false) }
             .map { Self.stripSpecialTokens($0.text).trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: " ")

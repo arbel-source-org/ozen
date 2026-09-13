@@ -32,6 +32,9 @@ public actor WhisperKitEngine: TranscriptionEngine {
     /// Token ids for the current vocabulary prompt, recomputed only when
     /// the list changes (encoding is cheap but runs every pass otherwise).
     private var promptCache: (terms: [String], tokens: [Int])?
+    /// Rebuilt with the vocabulary; catches the prompt coming back as a
+    /// caption on a quiet window.
+    private var echoDetector: PromptEchoDetector?
     /// Whisper's prompt budget is half its 448-token context; stay well
     /// under so the audio's own tokens never get squeezed.
     private let maxPromptTokens = 120
@@ -66,6 +69,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
     public func setVocabulary(_ terms: [String]) async {
         vocabulary = terms
+        let detector = PromptEchoDetector(terms: terms)
+        echoDetector = detector.isEmpty ? nil : detector
     }
 
     public func prepare(
@@ -212,7 +217,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
                     avgLogprob: $0.avgLogprob,
                     compressionRatio: $0.compressionRatio
                 )
-            })
+            }, echo: echoDetector)
             let confidence = Self.confidence(from: segments.map(\.avgLogprob))
 
             // A final pass that comes back empty (the pad was silence and
