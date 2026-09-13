@@ -1,0 +1,327 @@
+import Testing
+@testable import OzenKit
+import Foundation
+
+@Suite("Transcript history persistence")
+struct TranscriptHistoryTests {
+
+    private func makeTempDirectory() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("ozen-history-\(UUID())")
+    }
+
+    private func segment(
+        id: UUID = UUID(),
+        text: String,
+        speakerName: String? = nil,
+        speakerClusterID: Int? = nil,
+        startTimestamp: TimeInterval = 0,
+        isCommitted: Bool = true
+    ) -> SavedSegment {
+        SavedSegment(
+            id: id,
+            text: text,
+            speakerName: speakerName,
+            speakerClusterID: speakerClusterID,
+            startTimestamp: startTimestamp,
+            isCommitted: isCommitted
+        )
+    }
+
+    private func record(
+        id: UUID = UUID(),
+        startedAt: TimeInterval,
+        endedAt: TimeInterval? = nil,
+        segments: [SavedSegment]
+    ) -> TranscriptSessionRecord {
+        TranscriptSessionRecord(
+            id: id,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            engine: .whisperKit,
+            modelVariant: "small",
+            inputName: "iPhone Microphone",
+            segments: segments
+        )
+    }
+
+    @Test("saving then loading a session returns exactly what was saved")
+    func saveThenLoadRoundTrips() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let original = record(startedAt: 100, endedAt: 200, segments: [segment(text: "שלום")])
+        let saved = try store.save(original)
+        #expect(saved == true)
+
+        let loaded = store.load(id: original.id)
+        #expect(loaded == original)
+    }
+
+    @Test("a session with no segments is not written and reports it wasn't saved")
+    func emptyRecordIsNotSaved() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let empty = record(startedAt: 100, segments: [])
+        let saved = try store.save(empty)
+        #expect(saved == false)
+        #expect(store.load(id: empty.id) == nil)
+        #expect(store.listSummaries().isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: dir.path))
+    }
+
+    @Test("saving the same session id again overwrites rather than duplicating it")
+    func overwriteSameIdKeepsOneEntry() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let id = UUID()
+        try store.save(record(id: id, startedAt: 100, segments: [segment(text: "גרסה ראשונה")]))
+        try store.save(record(id: id, startedAt: 100, segments: [segment(text: "גרסה שנייה")]))
+
+        let summaries = store.listSummaries()
+        #expect(summaries.count == 1)
+        #expect(store.load(id: id)?.segments.first?.text == "גרסה שנייה")
+    }
+
+    @Test("listing summaries orders sessions newest-started first")
+    func listingOrderIsNewestFirst() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let oldest = record(startedAt: 100, segments: [segment(text: "ישן")])
+        let middle = record(startedAt: 200, segments: [segment(text: "אמצע")])
+        let newest = record(startedAt: 300, segments: [segment(text: "חדש")])
+        try store.save(middle)
+        try store.save(oldest)
+        try store.save(newest)
+
+        let order = store.listSummaries().map(\.startedAt)
+        #expect(order == [300, 200, 100])
+    }
+
+    @Test("a corrupt file is skipped while other sessions still list correctly")
+    func corruptFileIsSkipped() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let good = record(startedAt: 100, segments: [segment(text: "תקין")])
+        try store.save(good)
+        try Data("not valid json".utf8).write(to: dir.appendingPathComponent("garbage.json"))
+
+        let summaries = store.listSummaries()
+        #expect(summaries.count == 1)
+        #expect(summaries.first?.id == good.id)
+    }
+
+    @Test("a preview longer than 80 characters is truncated with an ellipsis")
+    func previewTruncatesOverEightyCharacters() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let longText = String(repeating: "א", count: 120)
+        try store.save(record(startedAt: 100, segments: [segment(text: longText)]))
+
+        let preview = store.listSummaries().first?.preview
+        #expect(preview?.count == 81)
+        #expect(preview?.hasSuffix("…") == true)
+        #expect(preview == String(longText.prefix(80)) + "…")
+    }
+
+    @Test("a preview of 80 characters or fewer is not truncated")
+    func previewUnderLimitIsUnchanged() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let shortText = String(repeating: "ב", count: 80)
+        try store.save(record(startedAt: 100, segments: [segment(text: shortText)]))
+
+        let preview = store.listSummaries().first?.preview
+        #expect(preview == shortText)
+    }
+
+    @Test("search is case-insensitive over segment text")
+    func searchIsCaseInsensitive() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "Hello Grandma")]))
+
+        #expect(store.search("hello").count == 1)
+        #expect(store.search("GRANDMA").count == 1)
+        #expect(store.search("nonexistent").isEmpty)
+    }
+
+    @Test("search matches on speaker name even when the text doesn't contain the query")
+    func searchMatchesSpeakerNames() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(
+            startedAt: 100,
+            segments: [segment(text: "מה שלומך", speakerName: "סבתא")]
+        ))
+
+        #expect(store.search("סבתא").count == 1)
+        #expect(store.search("סבא").isEmpty)
+    }
+
+    @Test("search ignores Hebrew niqqud on both sides of the comparison")
+    func searchIsNiqqudInsensitive() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "שָׁלוֹם")]))
+
+        #expect(store.search("שלום").count == 1)
+    }
+
+    @Test("an empty or whitespace-only search query returns every session")
+    func emptySearchQueryReturnsAll() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "אחד")]))
+        try store.save(record(startedAt: 200, segments: [segment(text: "שתיים")]))
+
+        #expect(store.search("").count == 2)
+        #expect(store.search("   ").count == 2)
+    }
+
+    @Test("delete and deleteAll remove sessions, and deleting a missing id doesn't throw")
+    func deleteAndDeleteAllRemoveSessions() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let first = record(startedAt: 100, segments: [segment(text: "אחד")])
+        let second = record(startedAt: 200, segments: [segment(text: "שתיים")])
+        try store.save(first)
+        try store.save(second)
+
+        try store.delete(id: first.id)
+        #expect(store.load(id: first.id) == nil)
+        #expect(store.listSummaries().count == 1)
+
+        try store.delete(id: UUID())
+
+        try store.deleteAll()
+        #expect(store.listSummaries().isEmpty)
+    }
+
+    @Test("exported text matches the exact expected line format")
+    func exportTextFormatIsExact() {
+        let withName = segment(text: "שלום", speakerName: "סבתא", startTimestamp: 3_661)
+        let withoutName = segment(text: "מה נשמע", speakerName: nil, startTimestamp: 3_665)
+        let session = record(startedAt: 3_661, segments: [withName, withoutName])
+
+        let text = TranscriptHistoryStore.exportText(session)
+        #expect(text == "[01:01:01] סבתא: שלום\n[01:01:05] מה נשמע")
+    }
+
+    @Test("make(from:) drops empty-text segments and resolves speaker names")
+    func makeFromDropsEmptySegmentsAndResolvesNames() {
+        let keptID = UUID()
+        let droppedID = UUID()
+        let unnamedID = UUID()
+        let live: [TranscriptSegment] = [
+            TranscriptSegment(
+                id: keptID,
+                text: "שלום סבתא",
+                isCommitted: true,
+                speakerClusterID: 0,
+                startTimestamp: 10,
+                lastUpdateTimestamp: 10
+            ),
+            TranscriptSegment(
+                id: droppedID,
+                text: "   ",
+                isCommitted: false,
+                speakerClusterID: nil,
+                startTimestamp: 20,
+                lastUpdateTimestamp: 20
+            ),
+            TranscriptSegment(
+                id: unnamedID,
+                text: "מי זה",
+                isCommitted: false,
+                speakerClusterID: 3,
+                startTimestamp: 30,
+                lastUpdateTimestamp: 30
+            ),
+        ]
+
+        let record = TranscriptSessionRecord.make(
+            from: live,
+            speakerName: { segment in
+                switch segment.speakerClusterID {
+                case 0: return "סבתא"
+                default: return nil
+                }
+            },
+            id: UUID(),
+            startedAt: 5,
+            endedAt: nil,
+            engine: .appleSpeech,
+            modelVariant: nil,
+            inputName: nil
+        )
+
+        #expect(record.segments.map(\.id) == [keptID, unnamedID])
+        #expect(record.segments.first?.speakerName == "סבתא")
+        #expect(record.segments.last?.speakerName == nil)
+        #expect(record.segments.last?.speakerClusterID == 3)
+    }
+
+    @Test("a record missing segments, modelVariant, inputName, and endedAt still decodes with defaults")
+    func tolerantDecodingOfOlderRecord() throws {
+        let json = """
+        {"id":"1E2B4D2A-6C5F-4F1B-9C3E-000000000001","startedAt":100,"engine":"whisperKit"}
+        """
+        let decoded = try JSONDecoder().decode(TranscriptSessionRecord.self, from: Data(json.utf8))
+
+        #expect(decoded.startedAt == 100)
+        #expect(decoded.engine == .whisperKit)
+        #expect(decoded.endedAt == nil)
+        #expect(decoded.modelVariant == nil)
+        #expect(decoded.inputName == nil)
+        #expect(decoded.segments.isEmpty)
+    }
+
+    @Test("total size on disk is positive after a save and zero once everything is deleted")
+    func totalSizeOnDiskReflectsSavedFiles() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        #expect(store.totalSizeOnDisk() == 0)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "בדיקה")]))
+        #expect(store.totalSizeOnDisk() > 0)
+
+        try store.deleteAll()
+        #expect(store.totalSizeOnDisk() == 0)
+    }
+
+    @Test("export applies the caller's UTC offset so times read as local clock time")
+    func exportUsesUTCOffset() {
+        let record = TranscriptSessionRecord(
+            startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil,
+            segments: [SavedSegment(id: UUID(), text: "בוקר", speakerName: nil, speakerClusterID: nil, startTimestamp: 3_600, isCommitted: true)]
+        )
+        #expect(TranscriptHistoryStore.exportText(record) == "[01:00:00] בוקר")
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "[04:00:00] בוקר")
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: -2 * 3_600) == "[23:00:00] בוקר")
+    }
+}
