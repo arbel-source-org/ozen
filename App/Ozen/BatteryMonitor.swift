@@ -33,7 +33,9 @@ final class BatteryMonitor {
             }
             read()
         } else {
-            observers.forEach(NotificationCenter.default.removeObserver)
+            for observer in observers {
+                NotificationCenter.default.removeObserver(observer)
+            }
             observers.removeAll()
             device.isBatteryMonitoringEnabled = false
         }
