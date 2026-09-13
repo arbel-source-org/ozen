@@ -49,7 +49,11 @@ public final class AppleSpeechEngine: TranscriptionEngine, @unchecked Sendable {
             request.requiresOnDeviceRecognition = true
 
             let utteranceID = UUID()
-            let task = recognizer.recognitionTask(with: request) { result, error in
+            // `SFSpeechRecognitionTask.cancel()` is documented as safe to
+            // call from any thread, but the type itself isn't marked
+            // Sendable, so capturing it in this `@Sendable` closure needs
+            // an explicit, deliberate opt-out rather than a silent one.
+            nonisolated(unsafe) let task = recognizer.recognitionTask(with: request) { result, error in
                 if let error {
                     continuation.finish(throwing: error)
                     return

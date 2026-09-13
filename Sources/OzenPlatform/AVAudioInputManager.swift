@@ -85,9 +85,11 @@ public final class AVAudioInputManager {
                 continuation.finish()
             }
 
-            continuation.onTermination = { [weak inputNode] _ in
-                inputNode?.removeTap(onBus: 0)
-            }
+            // Deliberately no `onTermination` cleanup here: `AVAudioInputNode`
+            // isn't Sendable, and capturing it in this `@Sendable` closure
+            // doesn't compile under strict concurrency. `stop()` already
+            // removes the tap and is the documented way callers end capture
+            // (paired 1:1 with `start()`), so nothing is actually lost.
         }
     }
 
