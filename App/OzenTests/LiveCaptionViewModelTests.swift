@@ -338,3 +338,102 @@ struct LiveCaptionViewModelOnboardingTests {
         #expect(box.take() == nil)
     }
 }
+
+@Suite("LiveCaptionViewModel speaking over captions")
+@MainActor
+struct LiveCaptionViewModelSpeechTests {
+    private func makeViewModel() -> (LiveCaptionViewModel, FakeSynthesizer) {
+        let synthesizer = FakeSynthesizer()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in FakeEngine(kind: settings.engine) },
+            embedder: FakeEmbedder()
+        )
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-speech-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, synthesizer: synthesizer)
+        return (viewModel, synthesizer)
+    }
+
+    private func waitFor(_ condition: @MainActor () -> Bool, seconds: Double = 3) async {
+        let deadline = Date().addingTimeInterval(seconds)
+        while !condition(), Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    @Test("captions pause while the phone talks and come back by themselves afterwards")
+    func roundTrip() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        #expect(viewModel.phase.isListening)
+        viewModel.speak("כן")
+        #expect(viewModel.phase == .paused)
+        synthesizer.startNext()
+        synthesizer.finishCurrent()
+        await waitFor { viewModel.phase.isListening }
+        #expect(viewModel.phase.isListening)
+    }
+
+    @Test("a second phrase tapped while the first plays keeps captions paused until the last one ends")
+    func secondPhraseDuringFirst() async throws {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        viewModel.speak("כן")
+        synthesizer.startNext()
+        viewModel.speak("תודה")
+        synthesizer.deliverCallbacks()
+        try await Task.sleep(for: .seconds(SpeechPauseCoordinator.settleSeconds + 0.3))
+        #expect(viewModel.phase == .paused)
+        synthesizer.startNext()
+        synthesizer.finishCurrent()
+        await waitFor { viewModel.phase.isListening }
+        #expect(viewModel.phase.isListening)
+        #expect(synthesizer.requests == ["כן", "תודה"])
+    }
+
+    @Test("pausing by hand while the phone talks is respected; captions stay paused afterwards")
+    func manualPauseWins() async throws {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        viewModel.speak("רגע")
+        synthesizer.startNext()
+        // The status control while paused means "resume"; tap it twice:
+        // resume, then pause again by hand.
+        await viewModel.togglePause()
+        await viewModel.togglePause()
+        #expect(viewModel.phase == .paused)
+        synthesizer.finishCurrent()
+        try await Task.sleep(for: .seconds(SpeechPauseCoordinator.settleSeconds + 0.3))
+        #expect(viewModel.phase == .paused)
+    }
+
+    @Test("launched by Siri to say something: the phone talks first, then captions start")
+    func launchWithSpeech() async throws {
+        let (viewModel, synthesizer) = makeViewModel()
+        let launch = Task { await viewModel.launch(pending: .speak("אני באה")) }
+        try await Task.sleep(for: .milliseconds(60))
+        #expect(synthesizer.requests == ["אני באה"])
+        synthesizer.startNext()
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(viewModel.phase == .idle)
+        synthesizer.finishCurrent()
+        await launch.value
+        #expect(viewModel.phase.isListening)
+    }
+
+    @Test("launched by Siri to stop: nothing starts")
+    func launchWithStop() async {
+        let (viewModel, _) = makeViewModel()
+        await viewModel.launch(pending: .stopCaptions)
+        #expect(viewModel.phase == .idle)
+    }
+
+    @Test("empty or blank text is never sent to the voice and never pauses captions")
+    func blankText() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        viewModel.speak("   ")
+        #expect(synthesizer.requests.isEmpty)
+        #expect(viewModel.phase.isListening)
+    }
+}

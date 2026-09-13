@@ -18,6 +18,7 @@ struct LiveCaptionView: View {
     @State private var lastSegmentUpdate: TimeInterval = 0
     @State private var visibleSoundAlert: SoundAlert?
     @State private var visibleKeywordHit: KeywordHit?
+    @State private var hasLaunched = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
@@ -63,19 +64,22 @@ struct LiveCaptionView: View {
             .padding(.top, 8)
         }
         .preferredColorScheme(theme.colorScheme)
-        .task {
-            // A Siri "start captions" that launched the app is the same as
-            // the automatic start; a "stop" or "say" must run after it.
-            let pending = PendingAppAction.shared.take()
-            if pending == .startCaptions || pending == nil {
-                await viewModel.start()
-            } else if let pending {
-                await viewModel.perform(pending)
-            }
-        }
         .task(id: PendingAppAction.shared.serial) {
-            guard let pending = PendingAppAction.shared.take() else { return }
-            await viewModel.perform(pending)
+            // One hook for both the first appearance and every later Siri
+            // request, so a request that launched the app is handled once
+            // and in order. The work runs in its own task: a new request
+            // changing `serial` cancels this closure, and that must not
+            // cancel a model download that is halfway through.
+            let pending = PendingAppAction.shared.take()
+            let isFirstAppearance = !hasLaunched
+            hasLaunched = true
+            Task {
+                if isFirstAppearance {
+                    await viewModel.launch(pending: pending)
+                } else if let pending {
+                    await viewModel.perform(pending)
+                }
+            }
         }
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
             guard let alert = viewModel.soundAlerts.last else { return }

@@ -10,8 +10,12 @@ import OzenKit
 /// caption the phone's own voice.
 @MainActor
 @Observable
-public final class SpeechSynthesizer {
+public final class SpeechSynthesizer: SpeechSynthesizing {
     public private(set) var isSpeaking = false
+    /// `AVSpeechSynthesizer.isSpeaking` is also true while an utterance is
+    /// queued but not started, which is exactly the state a cancel
+    /// callback needs to see.
+    public var isBusy: Bool { synthesizer.isSpeaking }
     /// Whether any Hebrew voice is installed at all; without one iOS
     /// falls back to a voice that mangles Hebrew, and the UI should say so.
     public let hasHebrewVoice: Bool

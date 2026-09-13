@@ -25,10 +25,10 @@ public final class LiveCaptionViewModel {
 
     private let settingsStore: SettingsStore
     private let audioManager: AVAudioInputManager?
-    private let synthesizer: SpeechSynthesizer?
-    /// True when captions were paused *by us* to let the phone talk, so
-    /// only that pause gets auto-resumed.
-    private var pausedForSpeaking = false
+    private let synthesizer: (any SpeechSynthesizing)?
+    /// Pauses captions while the phone talks, and decides when they may
+    /// come back (see `SpeechPauseCoordinator`).
+    private var speechPause = SpeechPauseCoordinator()
     private var historySessionID = UUID()
     private var historySessionStartedAt: TimeInterval?
     private var autosaveTask: Task<Void, Never>?
@@ -70,7 +70,7 @@ public final class LiveCaptionViewModel {
         historyStore: TranscriptHistoryStore? = nil,
         knownSoundIdentifiers: Set<String>? = nil,
         audioManager: AVAudioInputManager? = nil,
-        synthesizer: SpeechSynthesizer? = nil
+        synthesizer: (any SpeechSynthesizing)? = nil
     ) {
         self.settingsStore = settingsStore
         self.pipeline = pipeline
@@ -118,9 +118,47 @@ public final class LiveCaptionViewModel {
         persist()
     }
 
+    /// Leaving the caption screen for the walkthrough: captions stop (and
+    /// the conversation so far is saved) rather than keep the microphone
+    /// open behind a screen that isn't showing them.
     public func showOnboardingAgain() {
+        if pipeline.phase != .idle {
+            speechPause.userTookControl()
+            pipeline.stop()
+            historySessionDidChangePhase()
+        }
         settings.hasCompletedOnboarding = false
         persist()
+    }
+
+    /// What the caption screen does the first time it appears. A Siri
+    /// request that launched the app shapes it: "stop" starts nothing,
+    /// "say" talks first and only then opens the microphone, anything
+    /// else starts captions as usual.
+    public func launch(pending: AppAction?) async {
+        switch pending {
+        case .stopCaptions:
+            return
+        case .speak(let text):
+            speak(text)
+            await waitUntilSpeechEnds()
+            await start()
+        case .startCaptions, nil:
+            await start()
+        }
+    }
+
+    /// Polls rather than listens: the synthesizer's callbacks already
+    /// drive the resume logic, and this is only used once, at launch.
+    public func waitUntilSpeechEnds(timeoutSeconds: Double = 120) async {
+        guard let synthesizer else { return }
+        let deadline = Date().addingTimeInterval(timeoutSeconds)
+        // Give a just-queued utterance a moment to register as busy.
+        try? await Task.sleep(for: .milliseconds(100))
+        while synthesizer.isBusy, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        try? await Task.sleep(for: .seconds(SpeechPauseCoordinator.settleSeconds))
     }
 
     public func requestMicrophonePermission() async -> AudioPermission {
@@ -142,6 +180,7 @@ public final class LiveCaptionViewModel {
             }
             historySessionDidChangePhase()
         case .stopCaptions:
+            speechPause.userTookControl()
             pipeline.stop()
             historySessionDidChangePhase()
         case .speak(let text):
@@ -162,6 +201,7 @@ public final class LiveCaptionViewModel {
     }
 
     public func togglePause() async {
+        speechPause.userTookControl()
         if pipeline.phase == .paused {
             await pipeline.resume()
         } else if pipeline.phase.isListening {
@@ -380,11 +420,12 @@ public final class LiveCaptionViewModel {
     /// themselves when it's done.
     public func speak(_ text: String) {
         guard let synthesizer else { return }
-        if pipeline.phase.isListening {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        if speechPause.willSpeak(captionsListening: pipeline.phase.isListening) {
             pipeline.pause()
-            pausedForSpeaking = true
         }
-        synthesizer.speak(text, rate: settings.speechRate)
+        synthesizer.speak(trimmed, rate: settings.speechRate)
     }
 
     public func stopSpeaking() {
@@ -392,10 +433,16 @@ public final class LiveCaptionViewModel {
     }
 
     private func speakingDidChange(_ speaking: Bool) {
-        guard !speaking, pausedForSpeaking else { return }
-        pausedForSpeaking = false
+        guard !speaking, let generation = speechPause.speechWentQuiet() else { return }
         Task { [weak self] in
-            guard let self, self.pipeline.phase == .paused else { return }
+            try? await Task.sleep(for: .seconds(SpeechPauseCoordinator.settleSeconds))
+            guard let self else { return }
+            let resume = self.speechPause.shouldResume(
+                generation: generation,
+                synthesizerBusy: self.synthesizer?.isBusy ?? false,
+                captionsPaused: self.pipeline.phase == .paused
+            )
+            guard resume else { return }
             await self.pipeline.resume()
             self.historySessionDidChangePhase()
         }
