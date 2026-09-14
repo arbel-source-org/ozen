@@ -205,15 +205,37 @@ public final class AVAudioInputManager: AudioCapturing {
         }
     }
 
+    /// Asks the system for the input the policy picks. `selectedInputUID`
+    /// only becomes that input once the system has accepted it: a Bluetooth
+    /// microphone that is listed but not ready yet can be refused, and
+    /// recording then carries on from another input. Claiming the refused
+    /// one anyway would put its check mark in the picker and its name in
+    /// Diagnostics while a different microphone does the listening, and
+    /// route changes, which retry this on their own, have no one to tell.
     private func applySelection() throws {
         let resolved = AudioRoutePolicy.resolveSelection(
             available: availableInputs,
             preferredUID: preferredInputUID,
             currentUID: selectedInputUID
         )
-        selectedInputUID = resolved
-        guard let resolved, let port = session.availableInputs?.first(where: { $0.uid == resolved }) else { return }
-        try session.setPreferredInput(port)
+        guard let resolved, let port = session.availableInputs?.first(where: { $0.uid == resolved }) else {
+            selectedInputUID = resolved
+            return
+        }
+        do {
+            try session.setPreferredInput(port)
+            selectedInputUID = resolved
+        } catch {
+            selectedInputUID = inputInUse ?? availableInputs.first(where: { $0.uid == selectedInputUID })?.uid
+            throw error
+        }
+    }
+
+    /// The listed input the session is recording from right now, if any.
+    private var inputInUse: String? {
+        session.currentRoute.inputs
+            .map(\.uid)
+            .first { uid in availableInputs.contains { $0.uid == uid } }
     }
 
     private func observeNotificationsIfNeeded() {
