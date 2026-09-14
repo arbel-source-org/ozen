@@ -707,6 +707,38 @@ struct CaptionPipelineLifecycleTests {
         #expect(built.aliveCount == 1)
     }
 
+    @Test("a memory warning after a failure lets the engine go, unless a retry is on its way")
+    func memoryWarningAfterFailure() async throws {
+        for retryComing in [false, true] {
+            let built = BuiltEngines()
+            let audio = FakeAudioCapturer()
+            audio.startError = TestError()
+            let pipeline = CaptionPipeline(
+                audio: audio,
+                engineFactory: { settings in
+                    let engine = FakeEngine(kind: settings.engine)
+                    built.add(engine)
+                    return engine
+                },
+                embedder: FakeEmbedder(),
+                recovery: retryComing ? AutoRecoveryPolicy(glitchDelays: [600], downloadDelays: []) : .disabled
+            )
+            await pipeline.start(settings: .default)
+            #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+            #expect((pipeline.scheduledRetry != nil) == retryComing)
+            #expect(await eventually { built.aliveCount == 1 })
+
+            pipeline.handleMemoryWarning()
+            if retryComing {
+                try await Task.sleep(for: .milliseconds(200))
+                #expect(built.aliveCount == 1)
+                pipeline.stop()
+            } else {
+                #expect(await eventually { built.aliveCount == 0 })
+            }
+        }
+    }
+
     @Test("retry after a failure starts again with the same settings")
     func retryAfterFailure() async {
         let audio = FakeAudioCapturer()
