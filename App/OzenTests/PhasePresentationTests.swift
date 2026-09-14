@@ -97,3 +97,29 @@ struct PhasePresentationTests {
         #expect(downloading.title.contains("42%"))
     }
 }
+
+/// Small pieces of wording she reads on the screen.
+@Suite("Screen wording")
+@MainActor
+struct ScreenWordingTests {
+    @Test("minutes ago reads naturally in Hebrew for one, two and more")
+    func minutesAgo() {
+        #expect(LiveCaptionView.minutesAgoText(0) == "לפני דקה")
+        #expect(LiveCaptionView.minutesAgoText(1) == "לפני דקה")
+        #expect(LiveCaptionView.minutesAgoText(2) == "לפני שתי דקות")
+        #expect(LiveCaptionView.minutesAgoText(7) == "לפני 7 דקות")
+    }
+
+    @Test("the auto-delete warning counts one conversation in the singular")
+    func expiryWarning() {
+        #expect(HistoryView.expiryWarning(count: 1) == "שיחה ישנה אחת תימחק עכשיו")
+        #expect(HistoryView.expiryWarning(count: 12) == "12 שיחות ישנות יימחקו עכשיו")
+    }
+
+    @Test("every auto-delete choice has its own name")
+    func retentionNames() {
+        let names = HistoryRetention.allCases.map(HistoryView.name(for:))
+        #expect(Set(names).count == HistoryRetention.allCases.count)
+        #expect(HistoryView.name(for: .forever) == "אף פעם")
+    }
+}
