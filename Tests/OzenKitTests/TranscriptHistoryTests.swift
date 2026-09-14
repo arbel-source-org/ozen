@@ -765,6 +765,23 @@ struct TranscriptHistoryTitleTests {
         #expect(store.search("רופא").map(\.id) == [id])
     }
 
+    @Test("without the prepared search files (a copy restored from a backup) a conversation is still found by its name, and they are made again")
+    func nameFoundWithoutSearchFiles() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let id = UUID()
+        try store.save(record(id: id, lines: ["שלום"]))
+        try store.rename(id: id, title: "ביקור אצל הרופא")
+        let prepared = dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName, isDirectory: true)
+        try FileManager.default.removeItem(at: prepared)
+
+        #expect(store.search("רופא").map(\.id) == [id])
+        #expect(store.search("סבתא").isEmpty)
+        let remade = try FileManager.default.contentsOfDirectory(atPath: prepared.path)
+        #expect(remade.contains { $0.hasSuffix(".search-v1.txt") })
+        #expect(store.search("רופא").map(\.id) == [id])
+    }
+
     @Test("autosaving a live conversation keeps the name given to it meanwhile")
     func autosaveKeepsName() throws {
         let (store, dir) = makeStore()
