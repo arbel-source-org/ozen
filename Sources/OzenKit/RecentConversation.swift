@@ -29,6 +29,12 @@ public enum RecentConversation {
             .max { $0.lastActiveAt < $1.lastActiveAt }
     }
 
+    /// Only a conversation saved this recently can qualify, so only those
+    /// files need opening (see `TranscriptHistoryStore.summaries(modifiedSince:)`).
+    public static func oldestQualifyingSave(now: TimeInterval, within window: TimeInterval = ConversationBreak.quietSeconds) -> TimeInterval {
+        now - window - clockSkewSeconds
+    }
+
     /// Whole minutes since the conversation was last going, at least 1.
     public static func minutesAgo(_ summary: TranscriptSessionSummary, now: TimeInterval) -> Int {
         max(1, Int((now - summary.lastActiveAt) / 60))

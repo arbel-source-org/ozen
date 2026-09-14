@@ -527,7 +527,8 @@ public final class LiveCaptionViewModel {
     public func loadRecentConversation(now: TimeInterval = Date().timeIntervalSince1970) async {
         let store = historyStore
         let current = historySessionID
-        let summaries = await Task.detached(priority: .utility) { store.listSummaries() }.value
+        let cutoff = RecentConversation.oldestQualifyingSave(now: now)
+        let summaries = await Task.detached(priority: .utility) { store.summaries(modifiedSince: cutoff) }.value
         recentConversation = RecentConversation.resumable(in: summaries, now: now, excluding: current)
     }
 

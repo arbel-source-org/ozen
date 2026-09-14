@@ -461,7 +461,23 @@ public struct TranscriptHistoryStore: Sendable {
     }
 
     public func listSummaries() -> [TranscriptSessionSummary] {
-        recordFiles()
+        summaries(of: recordFiles())
+    }
+
+    /// Summaries of the conversations whose file was written at or after
+    /// `cutoff`. Checking a file's date is far cheaper than opening it, so
+    /// "what was being saved in the last half hour" doesn't read a year of
+    /// history at launch.
+    public func summaries(modifiedSince cutoff: TimeInterval) -> [TranscriptSessionSummary] {
+        let recent = recordFiles().filter { url in
+            guard let modified = Self.modificationDate(of: url) else { return true }
+            return modified.timeIntervalSince1970 >= cutoff
+        }
+        return summaries(of: recent)
+    }
+
+    private func summaries(of files: [URL]) -> [TranscriptSessionSummary] {
+        files
             .compactMap { url -> TranscriptSessionSummary? in
                 if let cached = cachedSummary(forRecordFile: url) { return cached }
                 guard let record = Self.decodeRecord(at: url) else { return nil }

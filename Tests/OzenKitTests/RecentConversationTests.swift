@@ -84,4 +84,29 @@ struct RecentConversationTests {
         try Data(previous.utf8).write(to: summaryFile)
         #expect(store.listSummaries().first?.lastLineAt == 700)
     }
+
+    @Test("only conversations saved recently are opened when looking for one cut off")
+    func onlyRecentFilesAreRead() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-recent-files-\(UUID())", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        func record() -> TranscriptSessionRecord {
+            TranscriptSessionRecord(
+                id: UUID(), startedAt: 100, endedAt: nil, engine: .whisperKit, modelVariant: nil, inputName: nil,
+                segments: [SavedSegment(id: UUID(), text: "שלום", speakerName: nil, speakerClusterID: nil, startTimestamp: 100, isCommitted: true)]
+            )
+        }
+        let old = record()
+        let fresh = record()
+        try store.save(old)
+        try store.save(fresh)
+        let lastWeek = Date().addingTimeInterval(-7 * 86_400)
+        try FileManager.default.setAttributes([.modificationDate: lastWeek], ofItemAtPath: dir.appendingPathComponent("\(old.id.uuidString).json").path)
+
+        let now = Date().timeIntervalSince1970
+        let found = store.summaries(modifiedSince: RecentConversation.oldestQualifyingSave(now: now))
+        #expect(found.map(\.id) == [fresh.id])
+        #expect(store.listSummaries().count == 2)
+        #expect(RecentConversation.oldestQualifyingSave(now: now) < now - ConversationBreak.quietSeconds)
+    }
 }
