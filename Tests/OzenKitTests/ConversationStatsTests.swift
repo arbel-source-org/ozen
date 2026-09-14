@@ -109,6 +109,7 @@ struct ConversationStatsTests {
         #expect(ConversationStats.minutesText(75 * minute) == "שעה ורבע")
         #expect(ConversationStats.minutesText(90 * minute) == "שעה וחצי")
         #expect(ConversationStats.minutesText(95 * minute) == "שעה ו-35 דקות")
+        #expect(ConversationStats.minutesText(105 * minute) == "שעה ושלושה רבעים")
         #expect(ConversationStats.minutesText(120 * minute) == "שעתיים")
         #expect(ConversationStats.minutesText(150 * minute + 20) == "שעתיים וחצי")
         #expect(ConversationStats.minutesText(180 * minute) == "3 שעות")

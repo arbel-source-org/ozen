@@ -169,6 +169,7 @@ public struct ConversationStats: Sendable, Equatable {
         case 2: return "\(hoursText) ושתי דקות"
         case 15: return "\(hoursText) ורבע"
         case 30: return "\(hoursText) וחצי"
+        case 45: return "\(hoursText) ושלושה רבעים"
         case let rest: return "\(hoursText) ו-\(rest) דקות"
         }
     }
