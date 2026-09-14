@@ -55,7 +55,9 @@ leave the phone.
   doorbell already flash the edge of the screen.
 - **Alerts don't vibrate.** With the app open each kind vibrates its own
   way: long buzzes for an alarm or siren, a double knock for the door or a
-  baby, three quick taps for her name. If nothing vibrates at all, iOS
+  baby, three quick taps for her name. Settings → צלילים בבית → "איך כל
+  התראה מרגישה" plays each one, to learn them together. If nothing vibrates
+  at all, iOS
   Settings → Accessibility → Touch → Vibration has been turned off, which
   silences every app.
 - **A banner "השמירה בטלפון נכשלה", or History says the last save failed.**

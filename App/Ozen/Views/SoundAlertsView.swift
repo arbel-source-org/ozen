@@ -28,6 +28,8 @@ struct SoundAlertsView: View {
                 Text("הזיהוי נעשה בטלפון בלבד, על אותו אודיו שמשמש לכתוביות. אותו צליל לא יופיע שוב במשך 20 שניות.")
             }
 
+            vibrationSamples
+
             ForEach(grouped, id: \.0) { importance, events in
                 Section {
                     ForEach(events) { event in
@@ -57,6 +59,32 @@ struct SoundAlertsView: View {
         }
         .navigationTitle("צלילים בבית")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Each kind of alert vibrates differently, which only helps once she
+    /// knows which is which: these let her, or whoever sets the phone up
+    /// with her, feel each one.
+    private var vibrationSamples: some View {
+        Section {
+            sampleButton("חירום: אזעקה, גלאי עשן", vibration: .pattern(for: .critical))
+            sampleButton("חשוב: פעמון, דפיקה בדלת, בכי של תינוק", vibration: .pattern(for: .high))
+            sampleButton("צליל אחר בבית", vibration: .pattern(for: .medium))
+            sampleButton("מילה מהרשימה, כמו השם שלך", vibration: .keyword)
+        } header: {
+            Text("איך כל התראה מרגישה")
+        } footer: {
+            Text("כשהאפליקציה פתוחה, כל סוג התראה רוטט אחרת, כך שאפשר לדעת מה קרה גם בלי להסתכל. הקישו כדי להרגיש.")
+        }
+    }
+
+    private func sampleButton(_ title: String, vibration: AlertVibration) -> some View {
+        Button {
+            // Captions may be listening behind this screen.
+            viewModel.pipeline.ignoreSounds(whileVibrating: vibration)
+            AlertHapticPlayer.shared.play(vibration)
+        } label: {
+            Label(title, systemImage: "iphone.radiowaves.left.and.right")
+        }
     }
 
     static func floorName(_ importance: SoundEvent.Importance) -> String {
