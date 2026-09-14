@@ -8,6 +8,9 @@ jobs:
   ozenkit-linux:
     name: OzenKit (Linux, portable core)
     runs-on: ubuntu-latest
+    # A hung test would otherwise hold the runner for GitHub's six-hour
+    # default; the whole job normally takes about a minute.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: swift-actions/setup-swift@v2
@@ -19,6 +22,8 @@ jobs:
   app:
     name: Ozen app (iOS Simulator)
     runs-on: macos-15
+    # Normally about eight minutes; a hung test fails the run instead.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Install XcodeGen
