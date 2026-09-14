@@ -15,6 +15,8 @@ import OzenPlatform
 public final class LiveCaptionViewModel {
     public let pipeline: CaptionPipeline
     public let historyStore: TranscriptHistoryStore
+    /// Autosaves off the main thread, final saves in order behind them.
+    private let historyWriter: TranscriptHistoryWriter
     /// Labels this device's sound classifier actually supports, or nil
     /// when unknown (tests, or a device without the classifier).
     public let knownSoundIdentifiers: Set<String>?
@@ -87,6 +89,7 @@ public final class LiveCaptionViewModel {
         self.historyStore = historyStore ?? TranscriptHistoryStore(
             directoryURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-history-\(UUID())")
         )
+        self.historyWriter = TranscriptHistoryWriter(store: self.historyStore)
         self.knownSoundIdentifiers = knownSoundIdentifiers
         self.audioManager = audioManager
         self.synthesizer = synthesizer
@@ -588,7 +591,11 @@ public final class LiveCaptionViewModel {
     /// history is on). Called by the autosave loop, on every phase change,
     /// and when the app goes to the background — so a conversation is never
     /// lost to a crash or a force-quit.
-    public func persistHistory(ended: Bool, endedAt: TimeInterval? = nil) {
+    ///
+    /// `inBackground` is for the periodic autosave: the conversation is
+    /// encoded and written off the main thread so a long one doesn't
+    /// stutter the captions. Every other save waits until it is on disk.
+    public func persistHistory(ended: Bool, endedAt: TimeInterval? = nil, inBackground: Bool = false) {
         // After a conversation break the next conversation starts at its
         // first line, not at the moment the break was noticed.
         guard settings.saveHistory,
@@ -604,7 +611,11 @@ public final class LiveCaptionViewModel {
             modelVariant: settings.engine == .whisperKit ? settings.whisperModelVariant : nil,
             inputName: selectedInput?.portName
         )
-        try? historyStore.save(record)
+        if inBackground {
+            historyWriter.saveInBackground(record)
+        } else {
+            historyWriter.saveNow(record)
+        }
     }
 
     private var currentHistorySegments: [TranscriptSegment] {
@@ -639,7 +650,7 @@ public final class LiveCaptionViewModel {
                         try? await Task.sleep(nanoseconds: Self.autosaveIntervalSeconds * 1_000_000_000)
                         guard let self, !Task.isCancelled else { return }
                         if !self.checkForConversationBreak() {
-                            self.persistHistory(ended: false)
+                            self.persistHistory(ended: false, inBackground: true)
                         }
                     }
                 }

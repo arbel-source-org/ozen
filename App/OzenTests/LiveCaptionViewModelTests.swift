@@ -221,6 +221,28 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.listSummaries().count == 2)
     }
 
+    @Test("an autosave still being written never lands on top of the final save")
+    func autosaveThenFinalSave() async {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום", isFinal: true, timestamp: 1))
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+
+        viewModel.persistHistory(ended: false, inBackground: true)
+        viewModel.persistHistory(ended: true)
+
+        let sessions = history.listSummaries()
+        #expect(sessions.count == 1)
+        #expect(sessions.first?.endedAt != nil)
+    }
+
     @Test("history is not written when saving is switched off")
     func historyOff() async {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
