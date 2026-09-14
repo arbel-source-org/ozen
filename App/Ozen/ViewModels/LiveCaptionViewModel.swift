@@ -93,7 +93,7 @@ public final class LiveCaptionViewModel {
     private var soundIdentifiersLoad: Task<Void, Never>?
     @ObservationIgnored private var announcer = CaptionAnnouncer()
     @ObservationIgnored private let lockScreen: (any LockScreenCaptionsDisplaying)?
-    @ObservationIgnored private var lockScreenThrottle = LockScreenUpdateThrottle()
+    @ObservationIgnored private var lockScreenThrottle = LockScreenUpdateThrottle(minimumInterval: LockScreenUpdateThrottle.foregroundInterval)
     @ObservationIgnored private var lockScreenFlush: Task<Void, Never>?
     @ObservationIgnored private var lockScreenKeepAlive: Task<Void, Never>?
     @ObservationIgnored private var lockScreenShowing = false
@@ -244,6 +244,12 @@ public final class LiveCaptionViewModel {
         // earlier is tried again: Live Activities may just have been
         // switched on.
         if isActive { lockScreenNextStartAttempt = 0 }
+        lockScreenThrottle.minimumInterval = isActive
+            ? LockScreenUpdateThrottle.foregroundInterval
+            : LockScreenUpdateThrottle.backgroundInterval
+        // A send held back for the slower pace in front goes now.
+        lockScreenFlush?.cancel()
+        lockScreenFlush = nil
         refreshLockScreen()
         // Captions that failed with the app open were on screen for her to
         // see; putting the phone away with them still stopped is when she

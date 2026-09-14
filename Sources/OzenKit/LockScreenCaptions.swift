@@ -131,8 +131,17 @@ extension LockScreenCaptions {
 /// Captions change several times a second while someone talks, and iOS
 /// throttles a Live Activity that updates that often. Changes are sent at
 /// most once per `minimumInterval`; one arriving sooner is sent when the
-/// interval is up, so the last words of a sentence never stay unsent.
+/// interval is up, so the last words of a sentence never stay unsent. A
+/// changed status ("paused because of a call") goes at once.
 public struct LockScreenUpdateThrottle: Sendable, Equatable {
+    /// With the app out of sight: the lock screen may be what she reads.
+    public static let backgroundInterval: TimeInterval = 1
+    /// With the app in front, where the lock screen can't be seen. Every
+    /// update has the widget extension draw the lines again, so hours of
+    /// captions on screen shouldn't redraw an invisible copy each second;
+    /// leaving the app sends the newest lines straight away.
+    public static let foregroundInterval: TimeInterval = 15
+
     public enum Decision: Sendable, Equatable {
         case send
         /// Try again after this many seconds.
@@ -144,13 +153,13 @@ public struct LockScreenUpdateThrottle: Sendable, Equatable {
     private var lastSentAt: TimeInterval?
     private var lastSent: LockScreenCaptionContent?
 
-    public init(minimumInterval: TimeInterval = 1) {
+    public init(minimumInterval: TimeInterval = LockScreenUpdateThrottle.backgroundInterval) {
         self.minimumInterval = minimumInterval
     }
 
     public func decide(_ content: LockScreenCaptionContent, now: TimeInterval) -> Decision {
         guard content != lastSent else { return .nothingNew }
-        guard let lastSentAt, now >= lastSentAt else { return .send }
+        guard let lastSentAt, now >= lastSentAt, content.status == lastSent?.status else { return .send }
         let elapsed = now - lastSentAt
         return elapsed >= minimumInterval ? .send : .wait(minimumInterval - elapsed)
     }

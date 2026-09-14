@@ -90,6 +90,18 @@ struct LockScreenUpdateThrottleTests {
         #expect(throttle.decide(LockScreenCaptionContent(lines: second.lines, status: "stopped"), now: 105) == .send)
     }
 
+    @Test("a new status goes at once, even inside the interval")
+    func statusChangeSkipsTheWait() {
+        var throttle = LockScreenUpdateThrottle(minimumInterval: LockScreenUpdateThrottle.foregroundInterval)
+        throttle.sent(first, at: 100)
+        #expect(throttle.decide(second, now: 101) == .wait(LockScreenUpdateThrottle.foregroundInterval - 1))
+        let paused = LockScreenCaptionContent(lines: first.lines, status: "paused")
+        #expect(throttle.decide(paused, now: 101) == .send)
+        throttle.sent(paused, at: 101)
+        #expect(throttle.decide(LockScreenCaptionContent(lines: second.lines, status: "paused"), now: 102) == .wait(LockScreenUpdateThrottle.foregroundInterval - 1))
+        #expect(throttle.decide(first, now: 102) == .send)
+    }
+
     @Test("a clock that went backwards sends rather than waiting for ever")
     func clockBackwards() {
         var throttle = LockScreenUpdateThrottle(minimumInterval: 1)

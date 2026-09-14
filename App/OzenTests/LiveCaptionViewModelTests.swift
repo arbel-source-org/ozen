@@ -1515,9 +1515,12 @@ struct LiveCaptionViewModelLockScreenTests {
         await viewModel.start()
         #expect(await eventually { lockScreen.isShowing })
 
+        // Out of sight, where the lock screen is what she reads.
+        viewModel.sceneActivityChanged(isActive: false)
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "the pills at eight", isFinal: true, timestamp: Date().timeIntervalSince1970))
         #expect(await eventually { lockScreen.shown.last?.lines.last?.text == "the pills at eight" })
         #expect(lockScreen.shown.last?.status == nil)
+        viewModel.sceneActivityChanged(isActive: true)
 
         await viewModel.togglePause()
         #expect(await eventually { lockScreen.ends == 1 })
@@ -1527,6 +1530,25 @@ struct LiveCaptionViewModelLockScreenTests {
         viewModel.display.lockScreenCaptions = false
         #expect(lockScreen.ends == 2)
         #expect(!lockScreen.isShowing)
+    }
+
+    @Test("with the app in front, new lines wait; leaving the app sends them at once")
+    func slowerInFront() async {
+        let lockScreen = FakeLockScreen()
+        let (viewModel, engine) = makeViewModel(lockScreen: lockScreen)
+        await viewModel.start()
+        #expect(await eventually { lockScreen.isShowing })
+        #expect(await eventually { viewModel.phase.isListening })
+        try? await Task.sleep(for: .milliseconds(200))
+        let sentBefore = lockScreen.shown.count
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "coffee is ready", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        #expect(await eventually { viewModel.segments.last?.text == "coffee is ready" })
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(lockScreen.shown.count == sentBefore)
+
+        viewModel.sceneActivityChanged(isActive: false)
+        #expect(await eventually { lockScreen.shown.last?.lines.last?.text == "coffee is ready" })
     }
 
     @Test("with the app in the background none can be started; back in front it starts")
