@@ -185,6 +185,7 @@ struct SettingsView: View {
                 } maximumValueLabel: {
                     Image(systemName: "textformat.size.larger")
                 }
+                .accessibilityValue("\(Int(viewModel.display.fontSize))")
                 // With a number in it, so the number switch below shows
                 // what it does right here.
                 Text(
@@ -339,6 +340,8 @@ struct SettingsView: View {
                         .monospacedDigit()
                 }
                 Slider(value: $viewModel.speechRate, in: 0.2...0.7, step: 0.05)
+                    .accessibilityLabel("מהירות דיבור")
+                    .accessibilityValue(String(format: "%.2f", viewModel.speechRate))
                 HStack {
                     Text("לאט")
                     Spacer()
@@ -454,6 +457,8 @@ struct SettingsView: View {
                         .monospacedDigit()
                 }
                 Slider(value: $viewModel.speakerSimilarityThreshold, in: 0.5...0.95, step: 0.01)
+                    .accessibilityLabel("רגישות הפרדת דוברים")
+                    .accessibilityValue(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
                 HStack {
                     Text("מאחד יותר")
                     Spacer()
