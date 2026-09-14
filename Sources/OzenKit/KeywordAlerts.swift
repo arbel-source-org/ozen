@@ -67,12 +67,23 @@ public enum HebrewText {
         return String(String.UnicodeScalarView(withoutNiqqud))
     }
 
+    /// Hyphen, Hebrew maqaf, hyphen variants, en and em dashes, slash.
+    static let wordJoiners: Set<Unicode.Scalar> = ["-", "\u{05BE}", "\u{2010}", "\u{2011}", "\u{2013}", "\u{2014}", "/"]
+
+    /// Turns characters that join two words into spaces, so "תל-אביב",
+    /// "תל־אביב" (maqaf) and "תל אביב" split into the same two words. Must
+    /// run before `stripNiqqud`: the maqaf sits inside the niqqud block and
+    /// would otherwise vanish and glue the words together.
+    public static func separatingJoiners(_ text: String) -> String {
+        String(String.UnicodeScalarView(text.unicodeScalars.map { wordJoiners.contains($0) ? " " : $0 }))
+    }
+
     /// The canonical form every keyword comparison is done in: niqqud
     /// gone, punctuation and symbols gone, case folded, whitespace
     /// collapsed to single spaces. Mirrors `WhisperResultFilter.normalize`
     /// with the added niqqud pass Hebrew needs.
     public static func normalize(_ text: String) -> String {
-        let withoutNiqqud = stripNiqqud(text)
+        let withoutNiqqud = stripNiqqud(separatingJoiners(text))
         let stripped = withoutNiqqud.unicodeScalars.filter { scalar in
             !CharacterSet.punctuationCharacters.contains(scalar)
                 && !CharacterSet.symbols.contains(scalar)
@@ -135,7 +146,7 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
     }
 
     public func matches(in text: String) -> [KeywordMatch] {
-        let rawWords = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        let rawWords = HebrewText.separatingJoiners(text).split(whereSeparator: { $0.isWhitespace }).map(String.init)
         guard !rawWords.isEmpty else { return [] }
         // Normalizing word-by-word (rather than normalizing the whole
         // string and re-splitting) keeps this array the same length as

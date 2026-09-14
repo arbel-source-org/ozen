@@ -256,4 +256,14 @@ struct KeywordAlertDecodingTests {
         #expect(alert.isEnabled)
         #expect(alert.phrase == "סבתא")
     }
+
+    @Test("hyphenated, maqaf-joined and spaced forms of a name match each other")
+    func joinedForms() {
+        let matcher = KeywordAlertMatcher(alerts: [KeywordAlert(phrase: "תל אביב")])
+        #expect(matcher.matches(in: "נסענו לתל-אביב אתמול").count == 1)
+        #expect(matcher.matches(in: "נסענו לתל\u{05BE}אביב אתמול").count == 1)
+        let hyphenated = KeywordAlertMatcher(alerts: [KeywordAlert(phrase: "בן-דוד")])
+        #expect(hyphenated.matches(in: "הגיע בן דוד שלי").count == 1)
+        #expect(HebrewText.normalize("תל-אביב") == HebrewText.normalize("תל אביב"))
+    }
 }
