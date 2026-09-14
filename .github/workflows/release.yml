@@ -83,9 +83,13 @@ jobs:
               echo "## Changes since build ${PREVIOUS##*.}"
               echo
               # Hebrew quoted in a commit subject is replaced with a marker:
-              # the repository's pages are kept free of Hebrew text.
+              # the repository's pages are kept free of Hebrew text. Tests,
+              # documents and the build itself change nothing on the phone,
+              # so they're left out of what's new.
               git log --no-merges --pretty='- %s' "$PREVIOUS..${{ github.sha }}" \
-                | perl -CSD -pe 's/[\x{0590}-\x{05FF}]+(?:[\s,\x{05F3}\x{05F4}"\x27\-]+[\x{0590}-\x{05FF}]+)*/(Hebrew)/g'
+                | grep -vE '^- (Tests?|README|Spec|Docs?|CI|Troubleshooting|Sideloading):' \
+                | perl -CSD -pe 's/[\x{0590}-\x{05FF}]+(?:[\s,\x{05F3}\x{05F4}"\x27\-]+[\x{0590}-\x{05FF}]+)*/(Hebrew)/g' \
+                || true
             fi
           } > release-notes.md
           # --target: without it the tag lands on the default branch's
