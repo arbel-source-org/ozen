@@ -70,6 +70,8 @@ public final class CaptionPipeline {
     /// How long the model download has left at its current pace, while
     /// one runs and there's enough to go on (see `DownloadEstimator`).
     public private(set) var downloadSecondsRemaining: Double?
+    /// When the preparation progress on screen was last replaced.
+    @ObservationIgnored private var progressShownAt: TimeInterval = -.infinity
     @ObservationIgnored private var downloadEstimator = DownloadEstimator()
     /// Called for every new sound alert, e.g. to post a notification while
     /// the app isn't on screen.
@@ -255,9 +257,12 @@ public final class CaptionPipeline {
         }
         let availability = await engine.prepare(languageCode: settings.languageCode) { [weak self] progress in
             Task { @MainActor [weak self] in
-                guard let self, self.runID == run, case .preparingEngine = self.phase else { return }
+                guard let self, self.runID == run, case .preparingEngine(let shown) = self.phase else { return }
+                let time = self.now()
+                guard progress.isNews(after: shown, shownAt: self.progressShownAt, now: time) else { return }
+                self.progressShownAt = time
                 self.phase = .preparingEngine(progress)
-                self.trackDownload(progress)
+                self.trackDownload(progress, at: time)
             }
         }
         guard runID == run else { return }
@@ -821,13 +826,13 @@ public final class CaptionPipeline {
         await currentEngine.setVocabulary(cleaned)
     }
 
-    private func trackDownload(_ progress: EnginePreparationProgress) {
+    private func trackDownload(_ progress: EnginePreparationProgress, at time: TimeInterval) {
         guard progress.stage == .downloadingModel, let fraction = progress.fraction else {
             downloadEstimator.reset()
             downloadSecondsRemaining = nil
             return
         }
-        downloadEstimator.record(fraction: fraction, at: now())
+        downloadEstimator.record(fraction: fraction, at: time)
         downloadSecondsRemaining = downloadEstimator.secondsRemaining()
     }
 

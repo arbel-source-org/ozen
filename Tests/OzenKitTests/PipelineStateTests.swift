@@ -91,6 +91,21 @@ struct PipelineStateTests {
         #expect(PipelinePhase.failed(PipelineFailure(kind: .audioSessionFailed, detail: "x")).step == .failed(PipelineFailure(kind: .audioSessionFailed, detail: "x")))
     }
 
+    @Test("a download's progress is news at another step, model or whole percent, or a second later")
+    func progressNews() {
+        let shown = EnginePreparationProgress(stage: .downloadingModel, fraction: 0.421, detail: "small")
+        func downloading(_ fraction: Double, _ variant: String = "small") -> EnginePreparationProgress {
+            EnginePreparationProgress(stage: .downloadingModel, fraction: fraction, detail: variant)
+        }
+        #expect(!downloading(0.4249).isNews(after: shown, shownAt: 10, now: 10.5))
+        #expect(downloading(0.426).isNews(after: shown, shownAt: 10, now: 10.5))
+        #expect(downloading(0.4249).isNews(after: shown, shownAt: 10, now: 11))
+        #expect(downloading(0.421, "base").isNews(after: shown, shownAt: 10, now: 10.1))
+        let loading = EnginePreparationProgress(stage: .loadingModel, detail: "small")
+        #expect(loading.isNews(after: shown, shownAt: 10, now: 10.1))
+        #expect(!loading.isNews(after: loading, shownAt: 10, now: 50))
+    }
+
     @Test("caption lag counts only while a line is still being written")
     func lagOnlyWhileOpen() {
         var stats = PipelineStats()

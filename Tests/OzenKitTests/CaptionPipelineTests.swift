@@ -306,6 +306,21 @@ struct CaptionPipelineStartupTests {
         #expect(pipeline.phase == .listening)
     }
 
+    @Test("a download's progress replaces what's on screen only at another whole percent")
+    func progressShownByWholePercent() async {
+        let updates = [0.100, 0.101, 0.104, 0.106, 0.107].map {
+            EnginePreparationProgress(stage: .downloadingModel, fraction: $0, detail: "small")
+        }
+        let engine = FakeEngine(progressUpdates: updates)
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var shown: Double?
+        engine.duringPrepare = { shown = pipeline.phase.preparationProgress?.fraction }
+
+        await pipeline.start(settings: .default)
+
+        #expect(shown == 0.106)
+    }
+
     @Test("denied microphone permission fails without ever touching the engine or session")
     func permissionDenied() async {
         let audio = FakeAudioCapturer()

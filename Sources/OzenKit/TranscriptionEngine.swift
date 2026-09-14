@@ -75,6 +75,26 @@ public struct EnginePreparationProgress: Sendable, Equatable {
         self.fraction = fraction
         self.detail = detail
     }
+
+    /// How often a download's fraction alone is put on screen when it
+    /// hasn't reached another whole percent, so the time left stays fresh.
+    public static let fractionIntervalSeconds: TimeInterval = 1
+
+    /// Whether this update is worth showing after `shown`, which went on
+    /// screen at `shownAt`: another step or model, another whole percent
+    /// (what the screen shows), or a second later. A download reports every
+    /// chunk off the network, and each report redrew the caption screen.
+    public func isNews(after shown: EnginePreparationProgress, shownAt: TimeInterval, now: TimeInterval) -> Bool {
+        guard stage == shown.stage, detail == shown.detail, let fraction, let shownFraction = shown.fraction else {
+            return self != shown
+        }
+        return Self.percent(fraction) != Self.percent(shownFraction)
+            || now - shownAt >= Self.fractionIntervalSeconds
+    }
+
+    private static func percent(_ fraction: Double) -> Int {
+        Int((fraction * 100).rounded())
+    }
 }
 
 /// Why an engine can't be used, structured so the UI can decide what to
