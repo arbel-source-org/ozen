@@ -174,6 +174,10 @@ a free Apple ID from a Linux machine is documented step by step, including
 the three things that were broken along the way, in
 [docs/sideloading-from-linux.md](docs/sideloading-from-linux.md).
 
+When she calls with a problem, [docs/troubleshooting.md](docs/troubleshooting.md)
+says what every status message means and what to do about it, and how to
+get the diagnostics report sent over.
+
 ## Status
 
 The whole pipeline — permission, session, input listing, engine
