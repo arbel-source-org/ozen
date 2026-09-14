@@ -158,11 +158,20 @@ public final class AVAudioInputManager: AudioCapturing {
         } catch {
             return false
         }
-        if activeTap != nil, !engine.isRunning {
-            engine.prepare()
-            try? engine.start()
-        }
+        resumeCaptureAfterInterruption()
         return true
+    }
+
+    /// Starts capture again once an interruption is over. The microphone
+    /// may not be the one from before the call: a Bluetooth headset often
+    /// reconnects in another mode during a call, or the phone falls back to
+    /// its own microphone, and the old tap is bound to the old format.
+    /// Starting the engine into that tap gives silence at best, so the tap
+    /// is rebuilt for whatever the hardware reports now, with the same
+    /// retries a route change gets.
+    private func resumeCaptureAfterInterruption() {
+        guard activeTap != nil, !engine.isRunning else { return }
+        recoverFromConfigurationChange()
     }
 
     public func refreshInputs() {
@@ -246,9 +255,7 @@ public final class AVAudioInputManager: AudioCapturing {
                     let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                     if options.contains(.shouldResume) || self.activeTap != nil {
                         try? self.session.setActive(true)
-                        if self.activeTap != nil, !self.engine.isRunning {
-                            try? self.engine.start()
-                        }
+                        self.resumeCaptureAfterInterruption()
                     }
                     self.onInterruption?(false)
                 default:
