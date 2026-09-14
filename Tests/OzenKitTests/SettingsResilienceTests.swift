@@ -86,3 +86,23 @@ struct EnrollmentNonFiniteTests {
         #expect(pipeline.embedding(forEnrollmentSamples: [Float](repeating: 0.2, count: 16_000)) == nil)
     }
 }
+
+@Suite("Saved conversations survive lines they can't read")
+struct TranscriptRecordResilienceTests {
+    @Test("an unknown engine and one damaged line still load the rest of the conversation")
+    func damagedLine() throws {
+        let id = UUID().uuidString
+        let json = """
+        {"id":"\(id)","startedAt":100,"engine":"someFutureEngine","segments":[
+          {"id":"\(UUID().uuidString)","text":"שלום","startTimestamp":100,"isCommitted":true},
+          {"id":"\(UUID().uuidString)","text":42,"startTimestamp":101,"isCommitted":true},
+          {"id":"\(UUID().uuidString)","text":"להתראות","startTimestamp":102,"isCommitted":true}
+        ],"title":7}
+        """
+        let record = try JSONDecoder().decode(TranscriptSessionRecord.self, from: Data(json.utf8))
+        #expect(record.id.uuidString == id)
+        #expect(record.segments.map(\.text) == ["שלום", "להתראות"])
+        #expect(record.engine == .whisperKit)
+        #expect(record.title == nil)
+    }
+}

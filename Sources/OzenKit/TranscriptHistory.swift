@@ -146,12 +146,15 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         startedAt = try container.decode(TimeInterval.self, forKey: .startedAt)
-        endedAt = try container.decodeIfPresent(TimeInterval.self, forKey: .endedAt)
-        engine = try container.decode(TranscriptionEngineKind.self, forKey: .engine)
-        modelVariant = try container.decodeIfPresent(String.self, forKey: .modelVariant)
-        inputName = try container.decodeIfPresent(String.self, forKey: .inputName)
-        segments = try container.decodeIfPresent([SavedSegment].self, forKey: .segments) ?? []
-        title = try container.decodeIfPresent(String.self, forKey: .title)
+        endedAt = container.lenient(TimeInterval.self, forKey: .endedAt)
+        // Which engine wrote it only labels the conversation; one this
+        // build doesn't know mustn't hide everything that was said.
+        engine = container.lenient(TranscriptionEngineKind.self, forKey: .engine) ?? .whisperKit
+        modelVariant = container.lenient(String.self, forKey: .modelVariant)
+        inputName = container.lenient(String.self, forKey: .inputName)
+        // A damaged line is left out; the rest of the conversation loads.
+        segments = container.lenientArray(of: SavedSegment.self, forKey: .segments) ?? []
+        title = container.lenient(String.self, forKey: .title)
     }
 }
 
