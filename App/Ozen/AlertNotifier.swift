@@ -48,6 +48,12 @@ nonisolated final class AlertNotifier: Sendable {
             lastPostError.set(error.map { String(describing: $0) })
         }
     }
+
+    /// Takes a notification that no longer holds off the lock screen and
+    /// out of Notification Center.
+    func withdraw(identifier: String) {
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [identifier])
+    }
 }
 
 nonisolated private final class LockedErrorText: @unchecked Sendable {

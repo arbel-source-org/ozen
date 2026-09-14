@@ -696,6 +696,142 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
     }
 }
 
+@Suite("LiveCaptionViewModel captions that stop while the phone is put away")
+@MainActor
+struct LiveCaptionViewModelStoppedCaptionsTests {
+    private final class Phone {
+        var reclaimAnswer: Bool
+        var reclaims = 0
+        var posted: [AlertNotificationContent] = []
+        var withdrawn: [String] = []
+        init(reclaimAnswer: Bool) { self.reclaimAnswer = reclaimAnswer }
+    }
+
+    private func makeViewModel(
+        phone: Phone,
+        engine: FakeEngine = FakeEngine(),
+        recovery: AutoRecoveryPolicy = .disabled
+    ) -> LiveCaptionViewModel {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-stopped-\(UUID())", isDirectory: true)
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: recovery,
+            audioWatchdog: .disabled
+        )
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathExtension("json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: directory),
+            postNotification: { phone.posted.append($0) },
+            withdrawNotification: { phone.withdrawn.append($0) },
+            reclaimAudioSession: {
+                phone.reclaims += 1
+                return phone.reclaimAnswer
+            }
+        )
+        viewModel.callEndGrace = .zero
+        return viewModel
+    }
+
+    private func waitFor(_ condition: @MainActor () -> Bool) async -> Bool {
+        let deadline = ContinuousClock.now + .seconds(2)
+        while ContinuousClock.now < deadline {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return condition()
+    }
+
+    @Test("after a call iOS never ended, running captions take the microphone back by themselves")
+    func reclaimsAfterCall() async {
+        let phone = Phone(reclaimAnswer: true)
+        let viewModel = makeViewModel(phone: phone)
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.systemInterruptionChanged(began: true)
+        viewModel.phoneCallsChanged(inProgress: true)
+        #expect(phone.reclaims == 0)
+
+        viewModel.phoneCallsChanged(inProgress: false)
+        await viewModel.finishReclaimAfterCall()
+
+        #expect(phone.reclaims == 1)
+        #expect(viewModel.isInterruptedBySystem == false)
+        #expect(phone.posted.isEmpty)
+    }
+
+    @Test("when the microphone can't be taken back she is told once, and the notice goes once captions return")
+    func tellsWhenStuck() async {
+        let phone = Phone(reclaimAnswer: false)
+        let viewModel = makeViewModel(phone: phone)
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.systemInterruptionChanged(began: true)
+        viewModel.phoneCallsChanged(inProgress: true)
+        viewModel.phoneCallsChanged(inProgress: false)
+        await viewModel.finishReclaimAfterCall()
+
+        #expect(viewModel.isInterruptedBySystem)
+        #expect(phone.posted.map(\.identifier) == [StoppedCaptionsNotice.identifier])
+        #expect(phone.withdrawn.isEmpty)
+
+        // She opens the app from the notification; now it works.
+        phone.reclaimAnswer = true
+        viewModel.sceneActivityChanged(isActive: true)
+        #expect(viewModel.isInterruptedBySystem == false)
+        #expect(phone.posted.count == 1)
+        #expect(phone.withdrawn == [StoppedCaptionsNotice.identifier])
+    }
+
+    @Test("captions paused before the call leave the audio session and her notifications alone")
+    func pausedLeftAlone() async {
+        let phone = Phone(reclaimAnswer: true)
+        let viewModel = makeViewModel(phone: phone)
+        await viewModel.start()
+        await viewModel.togglePause()
+        #expect(viewModel.phase == .paused)
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.systemInterruptionChanged(began: true)
+        viewModel.phoneCallsChanged(inProgress: true)
+        viewModel.phoneCallsChanged(inProgress: false)
+        await viewModel.finishReclaimAfterCall()
+
+        #expect(phone.reclaims == 0)
+        #expect(phone.posted.isEmpty)
+    }
+
+    @Test("a failure nothing will retry, while the app is in the background, posts one notice")
+    func failureInBackground() async {
+        let phone = Phone(reclaimAnswer: true)
+        let engine = FakeEngine()
+        let viewModel = makeViewModel(phone: phone, engine: engine)
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: false)
+
+        engine.endStream(throwing: TestError())
+
+        #expect(await waitFor { phone.posted.count == 1 })
+        #expect(phone.posted.first?.identifier == StoppedCaptionsNotice.identifier)
+    }
+
+    @Test("a failure that will be retried posts nothing")
+    func retriedFailureQuiet() async {
+        let phone = Phone(reclaimAnswer: true)
+        let engine = FakeEngine()
+        let viewModel = makeViewModel(phone: phone, engine: engine, recovery: AutoRecoveryPolicy(glitchDelays: [30], downloadDelays: []))
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: false)
+
+        engine.endStream(throwing: TestError())
+
+        #expect(await waitFor { viewModel.pipeline.scheduledRetry != nil })
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(phone.posted.isEmpty)
+    }
+}
+
 @Suite("LiveCaptionViewModel settings save errors")
 @MainActor
 struct LiveCaptionViewModelSettingsSaveTests {

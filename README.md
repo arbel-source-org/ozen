@@ -93,7 +93,11 @@ things, for Hebrew conversation, entirely on-device.
 - **Alerts reach her with the screen off.** With the phone in a pocket or
   locked, a sound alert or her name becomes a phone notification (once per
   30 seconds per sound or word), so the doorbell isn't missed just because
-  nobody was looking at the app.
+  nobody was looking at the app. If captions stop there and nothing will
+  bring them back (a call ends but iOS keeps the microphone, or recovery
+  gave up), the app first tries to take the microphone back by itself, and
+  otherwise sends one notification saying so, removed again once captions
+  are back.
 - **Battery warnings** at 20% and 10% while captions run, because hours of
   listening drain the phone and nobody following a conversation watches
   the battery icon.
@@ -186,10 +190,10 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (365 tests). The platform layer (WhisperKit/Speech engines, real
+logic (373 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 59 tests).
+the same fakes (another 64 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.

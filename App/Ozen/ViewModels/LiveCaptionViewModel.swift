@@ -41,6 +41,17 @@ public final class LiveCaptionViewModel {
     public private(set) var isAppActive = true
     private var backgroundAlerts = BackgroundAlertPolicy()
     private let postNotification: ((AlertNotificationContent) -> Void)?
+    /// Removes a delivered notification by its identifier.
+    private let withdrawNotification: ((String) -> Void)?
+    /// Tells her when captions stop while the phone is put away.
+    private var stoppedCaptions = StoppedCaptionsNotice()
+    private let phoneCalls: PhoneCallMonitor?
+    /// A call ended while iOS still holds the microphone for it.
+    private var callEndedDuringInterruption = false
+    private var reclaimAfterCallTask: Task<Void, Never>?
+    /// How long after a call ends iOS gets to hand the microphone back by
+    /// itself before the app asks for it.
+    var callEndGrace: Duration = .seconds(2)
     /// Tries to take the audio session back after an interruption whose
     /// end was never announced; true when it worked.
     private let reclaimAudioSession: (@MainActor () -> Bool)?
@@ -101,7 +112,9 @@ public final class LiveCaptionViewModel {
             loadKnownSoundIdentifiers: { SoundAnalysisDetector.knownIdentifiers() },
             audioManager: audio,
             synthesizer: SpeechSynthesizer(),
-            postNotification: { AlertNotifier.shared.post($0) }
+            postNotification: { AlertNotifier.shared.post($0) },
+            withdrawNotification: { AlertNotifier.shared.withdraw(identifier: $0) },
+            phoneCalls: PhoneCallMonitor()
         )
     }
 
@@ -115,6 +128,8 @@ public final class LiveCaptionViewModel {
         audioManager: AVAudioInputManager? = nil,
         synthesizer: (any SpeechSynthesizing)? = nil,
         postNotification: ((AlertNotificationContent) -> Void)? = nil,
+        withdrawNotification: ((String) -> Void)? = nil,
+        phoneCalls: PhoneCallMonitor? = nil,
         reclaimAudioSession: (@MainActor () -> Bool)? = nil
     ) {
         self.settingsStore = settingsStore
@@ -127,6 +142,8 @@ public final class LiveCaptionViewModel {
         self.audioManager = audioManager
         self.synthesizer = synthesizer
         self.postNotification = postNotification
+        self.withdrawNotification = withdrawNotification
+        self.phoneCalls = phoneCalls
         if let reclaimAudioSession {
             self.reclaimAudioSession = reclaimAudioSession
         } else if let audioManager {
@@ -150,6 +167,14 @@ public final class LiveCaptionViewModel {
         }
         pipeline.onKeywordHits = { [weak self] hits, segment in
             self?.alertRaised(keywords: hits, in: segment)
+        }
+        pipeline.onPhaseChange = { [weak self] _ in
+            // A failure's automatic retry is lined up right after its phase
+            // is set, so look once the pipeline has finished reacting.
+            Task { @MainActor [weak self] in self?.checkCaptionsStillRunning() }
+        }
+        phoneCalls?.onChange = { [weak self] inProgress in
+            self?.phoneCallsChanged(inProgress: inProgress)
         }
         if let loadKnownSoundIdentifiers {
             Task { [weak self] in
@@ -198,7 +223,74 @@ public final class LiveCaptionViewModel {
     /// The system took (`true`) or gave back (`false`) the audio session.
     func systemInterruptionChanged(began: Bool) {
         isInterruptedBySystem = began
+        callEndedDuringInterruption = false
+        if !began {
+            reclaimAfterCallTask?.cancel()
+            reclaimAfterCallTask = nil
+        }
         pipeline.systemInterruptionChanged(active: began)
+        checkCaptionsStillRunning()
+    }
+
+    /// A phone call started (`true`) or the last one ended (`false`).
+    ///
+    /// iOS usually hands the microphone back as a call ends, but doesn't
+    /// promise to, and with the phone locked nobody opens the app to take
+    /// it back. So a moment after the call, if the microphone is still
+    /// held, the app asks for it; if that doesn't work, she gets a
+    /// notification instead of silently losing her alerts.
+    func phoneCallsChanged(inProgress: Bool) {
+        reclaimAfterCallTask?.cancel()
+        reclaimAfterCallTask = nil
+        if inProgress {
+            callEndedDuringInterruption = false
+            checkCaptionsStillRunning()
+            return
+        }
+        guard isInterruptedBySystem else { return }
+        reclaimAfterCallTask = Task { [weak self, callEndGrace] in
+            try? await Task.sleep(for: callEndGrace)
+            guard let self, !Task.isCancelled else { return }
+            self.reclaimAfterCallTask = nil
+            self.reclaimMicrophoneAfterCall()
+        }
+    }
+
+    /// Returns once the check that follows the end of a call has run.
+    func finishReclaimAfterCall() async {
+        await reclaimAfterCallTask?.value
+    }
+
+    private func reclaimMicrophoneAfterCall() {
+        guard isInterruptedBySystem else { return }
+        callEndedDuringInterruption = true
+        // Only for captions that were running: taking the audio session
+        // for paused captions would stop her music for nothing.
+        let phase = pipeline.phase
+        if phase.isListening || phase.failure != nil, reclaimAudioSession?() == true {
+            systemInterruptionChanged(began: false)
+        } else {
+            checkCaptionsStillRunning()
+        }
+    }
+
+    /// Posts or withdraws the "captions stopped" notification to match what
+    /// the pipeline is doing now (see `StoppedCaptionsNotice`).
+    private func checkCaptionsStillRunning() {
+        let cause = StoppedCaptionsNotice.cause(
+            phase: pipeline.phase,
+            retryScheduled: pipeline.scheduledRetry != nil,
+            systemInterrupted: isInterruptedBySystem,
+            callEndedDuringInterruption: callEndedDuringInterruption
+        )
+        switch stoppedCaptions.update(for: cause, appIsActive: isAppActive, isEnabled: settings.notifyWhenInBackground) {
+        case .post(let content)?:
+            postNotification?(content)
+        case .withdraw(let identifier)?:
+            withdrawNotification?(identifier)
+        case nil:
+            break
+        }
     }
 
     /// Speech models may download over cellular data.

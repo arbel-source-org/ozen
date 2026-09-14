@@ -20,7 +20,7 @@ leave the phone.
 | מקשיב | Captions are running. | Nothing. If no words appear, check the microphone (below). |
 | מושהה | Paused by a tap, or while the phone speaks a typed reply. | Tap it to continue. |
 | לא פעיל | Stopped (for example by Siri). | Tap it to start. |
-| הכתוביות מושהות בגלל שיחה | A phone call or another app has the microphone. | Nothing. They come back after the call. If they don't, open Ozen again. |
+| הכתוביות מושהות בגלל שיחה | A phone call or another app has the microphone. | Nothing. They come back after the call. If they don't, a notification "הכתוביות נעצרו" arrives; open Ozen from it. |
 | מוריד את מודל השפה · N% | First-time download of the speech model. | Keep the app open (the screen stays on by itself) until it finishes. |
 | ממתין ל-Wi-Fi כדי להוריד את מודל השפה | The model still has to download and the phone is on cellular data or Low Data Mode. | Connect to Wi-Fi and it starts by itself, or tap to download over cellular. |
 | אין מספיק מקום פנוי בטלפון | Not enough room for the model. It says how much to free. | Free space (Settings → General → iPhone Storage), then open Ozen again and it starts by itself. Or tap to pick a smaller model, or switch to Apple's engine, which needs no download. |

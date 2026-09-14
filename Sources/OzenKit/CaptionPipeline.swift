@@ -19,7 +19,14 @@ import Observation
 @MainActor
 @Observable
 public final class CaptionPipeline {
-    public private(set) var phase: PipelinePhase = .idle
+    public private(set) var phase: PipelinePhase = .idle {
+        didSet {
+            // Download progress moves many times a second; only a change
+            // of step is news.
+            guard oldValue.preparationProgress == nil || phase.preparationProgress == nil else { return }
+            onPhaseChange?(phase)
+        }
+    }
     public private(set) var segments: [TranscriptSegment] = []
     public private(set) var availableInputs: [AudioInputDescriptor] = []
     public private(set) var selectedInputUID: String?
@@ -52,6 +59,11 @@ public final class CaptionPipeline {
     public var onSoundAlert: ((SoundAlert) -> Void)?
     /// Called with the fresh keyword hits in a line, and the line itself.
     public var onKeywordHits: (([KeywordHit], TranscriptSegment) -> Void)?
+    /// Called when `phase` moves to another step (not for each bit of
+    /// download progress). Runs as the phase is set, before the pipeline
+    /// has finished reacting to it: a failure's retry, for one, is lined up
+    /// just after.
+    public var onPhaseChange: ((PipelinePhase) -> Void)?
 
     public var inputLevel: Float { audio.inputLevel }
     /// The connection as last reported, for diagnostics; nil when unknown.
