@@ -294,7 +294,7 @@ struct LiveCaptionView: View {
                 .font(.system(size: liveDisplay.fontSize, weight: .medium))
                 .foregroundStyle(theme.text)
             Text(viewModel.isListening
-                 ? "כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. הקישו על שורה כדי לתת שם לדובר, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט."
+                 ? "כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. הקישו על שורה כדי לתת שם לדובר, לחצו עליה ארוכות כדי לסמן אותה כחשובה, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט."
                  : "אפשר לבחור מיקרופון בכפתור למטה מימין ולשנות מנוע תמלול בהגדרות.")
                 .font(.system(size: max(17, liveDisplay.fontSize * 0.6)))
                 .foregroundStyle(theme.pendingText)
