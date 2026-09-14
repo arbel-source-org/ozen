@@ -54,6 +54,15 @@ struct CaptionLayoutTests {
         #expect(CaptionLayout.directed("OK, see you tomorrow.", languageCode: "en") == "OK, see you tomorrow.")
     }
 
+    @Test("which text would lay itself out left to right")
+    func opensLeftToRight() {
+        #expect(CaptionLayout.opensLeftToRight("OK, אז נתראה מחר"))
+        #expect(CaptionLayout.opensLeftToRight("[10:30:00] WhatsApp שלחה"))
+        #expect(CaptionLayout.opensLeftToRight("[10:30:00] סבתא: OK") == false)
+        #expect(CaptionLayout.opensLeftToRight("3 כדורים ביום") == false)
+        #expect(CaptionLayout.opensLeftToRight("12:30, 3.5 ...") == false)
+    }
+
     @Test("a preview gets the marks without being broken into paragraphs")
     func previewNotParagraphed() {
         let long = "אתמול הלכנו לשוק בבוקר מוקדם. WhatsApp שלחה הודעה וקנינו ירקות טריים לכל השבוע. אחר כך ישבנו בבית קפה קטן ליד התחנה."

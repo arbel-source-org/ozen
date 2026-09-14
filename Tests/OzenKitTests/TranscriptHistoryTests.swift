@@ -796,4 +796,12 @@ struct TranscriptHistoryTitledExportTests {
         record.segments = []
         #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "שיחה מתאריך 14.09.2026")
     }
+
+    @Test("a shared line opening with an English word gets a right-to-left mark, Hebrew lines don't")
+    func rightToLeftLines() {
+        let english = SavedSegment(id: UUID(), text: "OK, נתראה מחר", speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true)
+        let named = SavedSegment(id: UUID(), text: "OK, נתראה מחר", speakerName: "דנה", speakerClusterID: nil, startTimestamp: 0, isCommitted: true)
+        let record = TranscriptSessionRecord(startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [english, named])
+        #expect(TranscriptHistoryStore.exportText(record) == "שיחה מתאריך 01.01.1970\n\n\u{200F}[00:00:00] OK, נתראה מחר\n[00:00:00] דנה: OK, נתראה מחר")
+    }
 }

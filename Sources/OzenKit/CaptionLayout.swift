@@ -58,6 +58,23 @@ public enum CaptionLayout {
 
     static let rightToLeftMark = "\u{200F}"
 
+    /// Whether `text` would be laid out left to right on its own: its first
+    /// letter (skipping digits, spaces and punctuation, which have no
+    /// direction of their own) isn't a right-to-left one.
+    static func opensLeftToRight(_ text: String) -> Bool {
+        for scalar in text.unicodeScalars where scalar.properties.isAlphabetic {
+            return !isRightToLeftLetter(scalar)
+        }
+        return false
+    }
+
+    private static func isRightToLeftLetter(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x0590...0x08FF, 0xFB1D...0xFDFF, 0xFE70...0xFEFF: return true
+        default: return false
+        }
+    }
+
     static func isRightToLeft(languageCode: String) -> Bool {
         let base = languageCode.split(separator: "-").first.map { String($0).lowercased() } ?? ""
         return ["he", "iw", "yi", "ar", "fa", "ur"].contains(base)

@@ -600,10 +600,15 @@ public struct TranscriptHistoryStore: Sendable {
             .map { segment in
                 let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
                 let star = segment.isStarred ? "★ " : ""
+                let line: String
                 if let name = segment.speakerName, !name.isEmpty {
-                    return "\(star)[\(time)] \(name): \(segment.text)"
+                    line = "\(star)[\(time)] \(name): \(segment.text)"
+                } else {
+                    line = "\(star)[\(time)] \(segment.text)"
                 }
-                return "\(star)[\(time)] \(segment.text)"
+                // Pasted into a chat, a line opening with an English word
+                // would be laid out left to right and read out of order.
+                return CaptionLayout.opensLeftToRight(line) ? CaptionLayout.rightToLeftMark + line : line
             }
             .joined(separator: "\n")
         let date = formattedDate(record.startedAt, utcOffsetSeconds: utcOffsetSeconds)
