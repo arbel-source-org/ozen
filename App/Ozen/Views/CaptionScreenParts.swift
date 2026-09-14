@@ -35,6 +35,14 @@ struct CaptionRow: View {
                         .font(.system(size: max(14, display.fontSize * 0.6)))
                         .foregroundStyle(.yellow)
                 }
+                if isKeywordHit {
+                    // The yellow field alone is easy to miss scrolling back
+                    // with weak eyes; a bell marks the line the way the star
+                    // and question mark mark theirs.
+                    Image(systemName: "bell.fill")
+                        .font(.system(size: max(14, display.fontSize * 0.6)))
+                        .foregroundStyle(theme.text)
+                }
                 if isUncertain {
                     // Not a colour change: the words stay as readable as
                     // every other line, with a mark saying they may be wrong.
@@ -64,7 +72,7 @@ struct CaptionRow: View {
         // VoiceOver reads the speaker on every line, even where the
         // screen leaves the repeated name out.
         .accessibilityLabel(accessibilityText)
-        .accessibilityHint(isKeywordHit ? "מכיל מילה חשובה" : "")
+        .accessibilityHint(isKeywordHit ? "מכילה מילה חשובה" : "")
     }
 
     private var accessibilityText: String {

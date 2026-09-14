@@ -285,7 +285,7 @@ private struct SavedLineRow: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
-        .accessibilityHint(isMatch ? "מכיל את מה שחיפשת" : "")
+        .accessibilityHint(isMatch ? "מכילה את מה שחיפשת" : "")
     }
 
     private var isUncertain: Bool {

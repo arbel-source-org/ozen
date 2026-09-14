@@ -42,7 +42,9 @@ struct TypeToSpeakView: View {
                             Text("משפטים מוכנים")
                             Spacer()
                             Button(editingPhrases ? "סיום" : "עריכה") { editingPhrases.toggle() }
-                                .font(.caption)
+                                .font(.subheadline.weight(.semibold))
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                     }
 
@@ -139,6 +141,8 @@ private struct QuickPhrasesEditor: View {
                 Button(action: add) {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("הוספה")
                 .disabled(newPhrase.trimmingCharacters(in: .whitespaces).isEmpty)

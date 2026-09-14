@@ -20,12 +20,14 @@ struct KeywordAlertsView: View {
                     Button(action: add) {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
                     .disabled(newPhrase.trimmingCharacters(in: .whitespaces).isEmpty)
                     .accessibilityLabel("הוספה")
                 }
             } footer: {
-                Text("כשמילה מהרשימה נאמרת, הטלפון ירטוט והשורה תודגש בצהוב. גם צורות כמו \"לסבתא\" או \"וסבתא\" נחשבות.")
+                Text("כשמילה מהרשימה נאמרת, הטלפון ירטוט והשורה תודגש בצהוב עם פעמון. גם צורות כמו \"לסבתא\" או \"וסבתא\" נחשבות. כדאי לכתוב מילים בלי ה׳ בהתחלה: \"רופא\" ולא \"הרופא\", כדי שגם \"לרופא\" ייחשב.")
             }
 
             Section("הרשימה") {

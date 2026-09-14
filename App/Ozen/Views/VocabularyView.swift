@@ -21,6 +21,8 @@ struct VocabularyView: View {
                     Button(action: add) {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
                     .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
                     .accessibilityLabel("הוספה")
