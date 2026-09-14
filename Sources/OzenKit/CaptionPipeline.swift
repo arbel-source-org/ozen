@@ -48,6 +48,7 @@ public final class CaptionPipeline {
 
     /// Tunable from Settings without a restart.
     public var soundPolicy: SoundEventPolicy
+    private var soundsIgnoredUntil: TimeInterval = 0
 
     /// The settings the running (or last-run) session was started with.
     /// Engine/model/language changes need a restart; input changes don't.
@@ -391,7 +392,24 @@ public final class CaptionPipeline {
         soundAlerts = []
     }
 
+    /// Stops listening for sounds while the phone vibrates for an alert,
+    /// and for a moment after, since the classifier reports what it heard a
+    /// little late. A phone buzzing on a table is, to the classifier, a
+    /// phone ringing or an alarm clock: without this the vibration raises
+    /// an alert of its own, which vibrates again.
+    public func ignoreSounds(whileVibrating vibration: AlertVibration) {
+        soundsIgnoredUntil = max(soundsIgnoredUntil, now() + vibration.totalSeconds + Self.soundReportDelaySeconds)
+    }
+
+    /// How long after a sound the classifier may still be reporting it: its
+    /// window is about a second long.
+    static let soundReportDelaySeconds: TimeInterval = 1.5
+
     private func handle(soundObservation observation: SoundObservation) {
+        // Judged by when the classifier produced the reading, not when it
+        // got here, and dropped before the policy, so the phone's own buzz
+        // doesn't start a cooldown that would hide a real ring right after.
+        guard observation.timestamp >= soundsIgnoredUntil else { return }
         guard let alert = soundPolicy.evaluate(observation) else { return }
         soundAlerts.append(alert)
         onSoundAlert?(alert)

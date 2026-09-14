@@ -179,7 +179,7 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
             guard let alert = viewModel.soundAlerts.last else { return }
             withAnimation { visibleSoundAlert = alert }
-            AlertHapticPlayer.shared.play(.pattern(for: alert.event.importance))
+            vibrate(.pattern(for: alert.event.importance))
             announceAlert(alert.event.importance == .critical ? "שימו לב! \(alert.event.name)" : "התראה: \(alert.event.name)")
         }
         .task(id: visibleSoundAlert?.id) {
@@ -194,7 +194,7 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.keywordHits.last?.id) { _, _ in
             guard let hit = viewModel.keywordHits.last else { return }
             withAnimation { visibleKeywordHit = hit }
-            AlertHapticPlayer.shared.play(.keyword)
+            vibrate(.keyword)
             announceAlert("נאמר: \(hit.match.phrase)")
         }
         .task(id: visibleKeywordHit?.id) {
@@ -643,6 +643,13 @@ struct LiveCaptionView: View {
         .disabled(current.action == .none)
         .accessibilityLabel(current.title)
         .accessibilityHint(current.detail ?? "")
+    }
+
+    /// Vibrates for an alert while the sound classifier looks away, so the
+    /// buzz on the table isn't taken for a phone ringing.
+    private func vibrate(_ vibration: AlertVibration) {
+        viewModel.pipeline.ignoreSounds(whileVibrating: vibration)
+        AlertHapticPlayer.shared.play(vibration)
     }
 
     /// Opens the big-letters pad a Shortcut asked for. Only one sheet can
