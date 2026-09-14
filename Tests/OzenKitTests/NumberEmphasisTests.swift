@@ -48,8 +48,18 @@ struct NumberEmphasisTests {
     @Test("doses and measures written out in full, and three quarters, keep their unit")
     func moreUnits() {
         #expect(emphasized("שלושים מיליגרם בבוקר ועשר יחידות אינסולין") == ["שלושים מיליגרם", "ועשר יחידות"])
-        #expect(emphasized("חמישה מיליליטר, שתי כפות ושלושת רבעי כוס") == ["חמישה מיליליטר", "שתי כפות", "ושלושת", "רבעי כוס"])
+        #expect(emphasized("חמישה מיליליטר, שתי כפות ושלושת רבעי כוס") == ["חמישה מיליליטר", "שתי כפות", "ושלושת רבעי כוס"])
         #expect(emphasized("לחכות שלושים שניות") == ["שלושים שניות"])
+    }
+
+    @Test("quarters count only after a number, and a unit with the article still joins its amount")
+    func quartersAndTheUnit() {
+        #expect(emphasized("רבעי הירח משתנים כל שבוע") == [])
+        #expect(NumberEmphasis.hasListableNumber("הדוח יוצא בכל רבעי השנה") == false)
+        #expect(emphasized("שתיתי כבר שלושת רבעי הכוס") == ["שלושת רבעי הכוס"])
+        #expect(emphasized("חצי הכוס, ורבע השעה הראשונה") == ["חצי הכוס", "ורבע השעה"])
+        #expect(emphasized("שלושת רבעי, כוס") == ["שלושת רבעי"])
+        #expect(emphasized("שלושת, רבעי כוס") == ["שלושת"])
     }
 
     @Test("nobody, everybody and at once are not a count of one; once is")

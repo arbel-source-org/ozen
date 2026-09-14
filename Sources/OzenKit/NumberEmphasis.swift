@@ -18,23 +18,40 @@ public enum NumberEmphasis {
     public static func ranges(in text: String) -> [Range<String.Index>] {
         let words = self.words(in: text)
         var result: [Range<String.Index>] = []
-        var skipUnitAt: Int?
+        var lastJoined = -1
         for (position, word) in words.enumerated() {
-            guard position != skipUnitAt else { continue }
+            guard position > lastJoined else { continue }
             guard let found = numberRange(of: word, at: position, in: words) else { continue }
-            // "3 kadurim" ("3 pills"): the unit joins the number, unless
-            // punctuation ends the number's word first ("be-sha'a 10:30,
-            // kadurim" — "at 10:30, pills").
-            if found.upperBound == word.text.endIndex, position + 1 < words.count,
-               let unit = words[position + 1].coreRange, let unitWord = words[position + 1].core,
-               units.contains(unitWord) {
-                result.append(found.lowerBound..<unit.upperBound)
-                skipUnitAt = position + 1
-            } else {
-                result.append(found)
+            // "3 kadurim" ("3 pills"), "shloshet riv'ei ha-kos" ("three
+            // quarters of the cup"): what the amount is of joins it, unless
+            // punctuation ends a word first ("be-sha'a 10:30, kadurim" —
+            // "at 10:30, pills").
+            var end = found.upperBound
+            var last = position
+            var endsWord = found.upperBound == word.text.endIndex
+            while endsWord, last + 1 < words.count,
+                  let joined = joinedWord(words[last + 1], allowingFraction: last == position) {
+                last += 1
+                end = joined.range.upperBound
+                endsWord = end == words[last].text.endIndex
+                guard joined.isFraction else { break }
             }
+            result.append(found.lowerBound..<end)
+            lastJoined = last
         }
         return result
+    }
+
+    /// A unit after an amount, with or without the article ("chatzi ha-kos"
+    /// — "half the cup"), or right after a count, "riv'ei" ("quarters of"),
+    /// which a unit may follow in turn. On its own "riv'ei" is no amount:
+    /// "riv'ei ha-yare'ach" are the moon's quarters.
+    private static func joinedWord(_ word: Word, allowingFraction: Bool) -> (range: Range<String.Index>, isFraction: Bool)? {
+        guard let range = word.coreRange, let core = word.core else { return nil }
+        if allowingFraction, fractionsOf.contains(core) { return (range, true) }
+        let withoutArticle = core.hasPrefix("ה") && core.count > 2 ? String(core.dropFirst()) : core
+        guard units.contains(core) || units.contains(withoutArticle) else { return nil }
+        return (range, false)
     }
 
     private static func numberRange(of word: Word, at position: Int, in words: [Word]) -> Range<String.Index>? {
@@ -158,6 +175,8 @@ public enum NumberEmphasis {
         "פעם", "פעמים",
     ]
 
+    static let fractionsOf: Set<String> = ["רבעי"]
+
     static let onesWords: Set<String> = ["אחד", "אחת"]
     static let twoWords: Set<String> = ["שני", "שתי"]
     static let notACountBefore: Set<String> = ["אף", "ואף", "באף", "לאף", "כל", "וכל", "לכל", "בכל", "מכל", "בבת"]
@@ -186,7 +205,7 @@ public enum NumberEmphasis {
         "מאה", "מאתיים", "מאות",
         "אלף", "אלפיים", "אלפים",
         "מיליון",
-        "חצי", "רבע", "רבעי", "שליש", "שלישים",
+        "חצי", "רבע", "שליש", "שלישים",
         // Two by themselves, and never anything else: "twice", "two days",
         // "two weeks". The times a pill is taken and the wait for the next
         // appointment are said this way.
