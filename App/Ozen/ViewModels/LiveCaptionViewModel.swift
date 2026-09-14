@@ -31,6 +31,8 @@ public final class LiveCaptionViewModel {
     /// Why the last settings save failed, for the diagnostics screen; nil
     /// when the last save worked.
     public private(set) var settingsSaveError: String?
+    /// Whether the caption screen says saving is failing (a full phone).
+    public private(set) var savingTrouble = SavingTroubleNotice()
     /// Lines marked as important in the conversation on screen.
     public private(set) var starredSegmentIDs: Set<UUID> = []
 
@@ -951,10 +953,13 @@ public final class LiveCaptionViewModel {
             starred: starredSegmentIDs
         )
         if inBackground {
+            // Reports the save before this one: a background save's own
+            // result lands after this returns, and is picked up by the next.
             historyWriter.saveInBackground(record)
         } else {
             historyWriter.saveNow(record)
         }
+        refreshSavingTrouble()
     }
 
     /// Why the latest history save didn't reach the disk, or nil when it
@@ -964,6 +969,22 @@ public final class LiveCaptionViewModel {
     /// Names a saved conversation, in order with any autosave in flight.
     public func renameConversation(id: UUID, title: String) {
         historyWriter.renameNow(id: id, title: title)
+        refreshSavingTrouble()
+    }
+
+    /// Hides the saving-failed banner until saving works and fails again.
+    public func dismissSavingTrouble() {
+        savingTrouble.dismiss()
+    }
+
+    private func refreshSavingTrouble() {
+        var next = savingTrouble
+        next.update(
+            settingsFailed: settingsSaveError != nil,
+            historyFailed: settings.saveHistory && historySaveFailure != nil
+        )
+        // Only a real change redraws the caption screen.
+        if next != savingTrouble { savingTrouble = next }
     }
 
     /// Deletes a saved conversation. If it is the one still being
@@ -1058,6 +1079,7 @@ public final class LiveCaptionViewModel {
         } catch {
             settingsSaveError = String(describing: error)
         }
+        refreshSavingTrouble()
     }
 }
 

@@ -1201,3 +1201,57 @@ struct LiveCaptionViewModelActivityTests {
         #expect(viewModel.lastCaptionActivityAt == spokenAt)
     }
 }
+
+@Suite("LiveCaptionViewModel saving trouble")
+@MainActor
+struct LiveCaptionViewModelSavingTroubleTests {
+    /// A plain file where a folder should be: creating the folder fails the
+    /// way a save does on a phone with no space left.
+    private func blockedFolder() throws -> URL {
+        let blocker = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-blocked-\(UUID())")
+        try Data("x".utf8).write(to: blocker)
+        return blocker
+    }
+
+    @Test("a settings save that can't reach the disk puts the banner up, and a working save takes it down")
+    func settingsSaveFailure() throws {
+        let blocker = try blockedFolder()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: blocker.appendingPathComponent("settings.json")),
+            pipeline: pipeline
+        )
+        #expect(!viewModel.savingTrouble.shouldShow)
+
+        viewModel.hapticOnSpeechResume.toggle()
+        #expect(viewModel.settingsSaveError != nil)
+        #expect(viewModel.savingTrouble.shouldShow)
+
+        viewModel.dismissSavingTrouble()
+        #expect(!viewModel.savingTrouble.shouldShow)
+
+        try FileManager.default.removeItem(at: blocker)
+        viewModel.hapticOnSpeechResume.toggle()
+        #expect(viewModel.settingsSaveError == nil)
+        #expect(!viewModel.savingTrouble.isFailing)
+    }
+
+    @Test("a conversation that can't be saved puts the banner up")
+    func historySaveFailure() async throws {
+        let blocker = try blockedFolder()
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-settings-\(UUID()).json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: blocker.appendingPathComponent("history", isDirectory: true))
+        )
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: 1))
+        await eventually { !viewModel.segments.isEmpty }
+
+        viewModel.persistHistory(ended: false)
+        #expect(viewModel.historySaveFailure != nil)
+        #expect(viewModel.savingTrouble.shouldShow)
+    }
+}

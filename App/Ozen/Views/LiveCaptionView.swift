@@ -125,6 +125,12 @@ struct LiveCaptionView: View {
                     }
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
+                if viewModel.savingTrouble.shouldShow {
+                    SavingTroubleBanner {
+                        withAnimation { viewModel.dismissSavingTrouble() }
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 if let notice = battery.notice {
                     BatteryBanner(notice: notice) {
                         withAnimation { battery.dismiss() }
