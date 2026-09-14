@@ -70,7 +70,7 @@ struct TypeToSpeakView: View {
                 canSpeak: viewModel.hasHebrewVoice,
                 onSpeak: { viewModel.speak($0) }
             )
-            .soundAlertOverlay(viewModel.soundAlerts.last)
+            .alertOverlay(for: viewModel)
         }
     }
 

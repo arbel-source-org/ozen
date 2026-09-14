@@ -34,6 +34,9 @@ public final class LiveCaptionViewModel {
     /// Whether the caption screen says saving is failing (a full phone).
     public private(set) var savingTrouble = SavingTroubleNotice()
     @ObservationIgnored private var keywordAttention = KeywordAttentionPolicy()
+    /// The latest keyword hit that got her attention, for screens covering
+    /// the captions to show its pill too.
+    public private(set) var attentionKeywordHit: KeywordHit?
     /// Lines marked as important in the conversation on screen.
     public private(set) var starredSegmentIDs: Set<UUID> = []
 
@@ -982,7 +985,9 @@ public final class LiveCaptionViewModel {
     /// Whether a keyword hit should buzz, show its pill and be announced,
     /// or only highlight its line (see `KeywordAttentionPolicy`).
     public func claimAttention(for hit: KeywordHit) -> Bool {
-        keywordAttention.claimAttention(for: hit)
+        guard keywordAttention.claimAttention(for: hit) else { return false }
+        attentionKeywordHit = hit
+        return true
     }
 
     /// Hides the saving-failed banner until saving works and fails again.

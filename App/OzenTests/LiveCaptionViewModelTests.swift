@@ -1276,5 +1276,7 @@ struct LiveCaptionViewModelKeywordAttentionTests {
         let attention = viewModel.keywordHits.map { viewModel.claimAttention(for: $0) }
         #expect(attention == [true, false])
         #expect(viewModel.keywordHitSegmentIDs.count == 2)
+        // Screens over the captions show the one that got her attention.
+        #expect(viewModel.attentionKeywordHit?.id == viewModel.keywordHits.first?.id)
     }
 }
