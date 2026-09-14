@@ -182,7 +182,14 @@ struct SettingsView: View {
                 } maximumValueLabel: {
                     Image(systemName: "textformat.size.larger")
                 }
-                Text("שלום סבתא, מה שלומך היום?")
+                // With a number in it, so the number switch below shows
+                // what it does right here.
+                Text(
+                    caption: "שלום סבתא, נגיע בשש עם שלושה ילדים.",
+                    emphasizingNumbers: viewModel.display.emphasizeNumbers,
+                    size: viewModel.display.fontSize,
+                    numberColor: CaptionTheme(viewModel.display.theme).numberText
+                )
                     .font(.system(size: viewModel.display.fontSize, weight: viewModel.display.boldText ? .bold : .medium))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
