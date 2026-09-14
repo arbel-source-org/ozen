@@ -185,7 +185,15 @@ input source).
   least one wired/USB-C mic are both selectable and both actually route
   audio; verify a mid-conversation route change doesn't drop the session;
   verify Hebrew transcription quality against a real conversation; verify
-  two real family members enroll and get correctly told apart.
+  two real family members enroll and get correctly told apart. Added
+  2026-09-14, since the simulator has no haptics or real microphone: with
+  captions running, each alert vibration (Settings → צלילים בבית → "איך כל
+  התראה מרגישה", then a real doorbell or a keyword) is actually felt; with
+  the phone face down on a table, the three-second alarm buzz does not
+  raise a phone, alarm-clock, beep or knock alert of its own; a refused
+  Bluetooth microphone leaves the picker's check mark on the one really
+  recording; the white theme's status line and speaker names are easy to
+  read in daylight.
 
 ## Explicit non-goals for v1
 
