@@ -33,6 +33,10 @@ public struct TranscriptToken: Sendable, Equatable {
     /// Speech reports per-segment confidence; Whisper exposes log-probs that
     /// get mapped into this range). Nil means the engine said nothing.
     public var confidence: Float?
+    /// The engine heard a different person start talking here, in the same
+    /// stretch of audio as the line before (see `CloudSpeech.turns`). The
+    /// voice heard just before belongs to that other line, not this one.
+    public var startsNewSpeakerTurn: Bool
 
     public init(
         utteranceID: UUID,
@@ -40,7 +44,8 @@ public struct TranscriptToken: Sendable, Equatable {
         isFinal: Bool,
         timestamp: TimeInterval,
         speakerClusterID: Int? = nil,
-        confidence: Float? = nil
+        confidence: Float? = nil,
+        startsNewSpeakerTurn: Bool = false
     ) {
         self.utteranceID = utteranceID
         self.text = text
@@ -48,6 +53,7 @@ public struct TranscriptToken: Sendable, Equatable {
         self.timestamp = timestamp
         self.speakerClusterID = speakerClusterID
         self.confidence = confidence
+        self.startsNewSpeakerTurn = startsNewSpeakerTurn
     }
 }
 

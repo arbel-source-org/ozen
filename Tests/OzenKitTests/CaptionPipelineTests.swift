@@ -1256,6 +1256,25 @@ struct CaptionPipelineSilenceSpeakerTests {
         #expect(pipeline.segments.first?.speakerClusterID == voice)
     }
 
+    @Test("a second speaker split out of the same audio doesn't take the voice heard just before")
+    func splitTurnKeepsNoVoice() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.count == 1 })
+        let voice = pipeline.speakerClusters[0].id
+
+        engine.emit(token(UUID(), "מה שלומך?", final: true))
+        var reply = token(UUID(), "טוב, תודה", final: true)
+        reply.startsNewSpeakerTurn = true
+        engine.emit(reply)
+        #expect(await eventually { pipeline.segments.count == 2 })
+        #expect(pipeline.segments.first?.speakerClusterID == voice)
+        #expect(pipeline.segments.last?.speakerClusterID == nil)
+    }
+
     @Test("an old voice is not pinned on a line that starts much later")
     func staleVoiceNotUsed() async {
         let clock = TestClock()

@@ -734,7 +734,7 @@ public final class CaptionPipeline {
         if enriched.speakerClusterID == nil {
             if let assigned = utteranceClusterAssignments[token.utteranceID] {
                 enriched.speakerClusterID = assigned
-            } else if !isKnown, let recent = recentSpeechCluster, now() - recent.at <= Self.recentSpeechClusterSeconds {
+            } else if !isKnown, !token.startsNewSpeakerTurn, let recent = recentSpeechCluster, now() - recent.at <= Self.recentSpeechClusterSeconds {
                 enriched.speakerClusterID = recent.id
                 utteranceClusterAssignments[token.utteranceID] = recent.id
             }

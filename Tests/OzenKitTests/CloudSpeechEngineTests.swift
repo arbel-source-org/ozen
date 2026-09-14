@@ -97,6 +97,7 @@ struct CloudSpeechEngineTests {
         let finals = try await transcribe(engine(http), speech(seconds: 1.5) + silence(seconds: 1)).filter { $0.isFinal }
         #expect(finals.map(\.text) == ["מה שלומך?", "טוב, תודה"])
         #expect(Set(finals.map(\.utteranceID)).count == 2)
+        #expect(finals.map(\.startsNewSpeakerTurn) == [false, true])
     }
 
     @Test("a quiet room sends nothing and shows nothing")

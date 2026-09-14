@@ -218,7 +218,8 @@ public actor CloudSpeechEngine: TranscriptionEngine {
                         utteranceID: index == 0 ? utteranceID : UUID(),
                         text: turn,
                         isFinal: true,
-                        timestamp: timestamp
+                        timestamp: timestamp,
+                        startsNewSpeakerTurn: index > 0
                     ))
                 }
                 intake.drop(prefix: end)
