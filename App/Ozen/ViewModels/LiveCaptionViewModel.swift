@@ -1025,6 +1025,8 @@ public final class LiveCaptionViewModel {
     /// a usable voice print.
     public func enroll(name: String, seconds: Double, onProgress: @MainActor (Double) -> Void) async -> Bool {
         let samples = await pipeline.captureEnrollmentSamples(seconds: seconds, onProgress: onProgress)
+        // Stopped midway: the part recorded isn't kept as her voice.
+        guard !Task.isCancelled else { return false }
         return enroll(name: name, samples: samples)
     }
 

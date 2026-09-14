@@ -1,9 +1,6 @@
 import SwiftUI
 import OzenKit
 
-/// One-time voice enrollment: record ~30 s through the live capture path,
-/// extract an embedding, save it as a named profile so that person's turns
-/// are labeled from the very first utterance.
 struct SpeakerEnrollmentView: View {
     let viewModel: LiveCaptionViewModel
     @Environment(\.dismiss) private var dismiss
@@ -12,6 +9,7 @@ struct SpeakerEnrollmentView: View {
     @State private var isRecording = false
     @State private var progress: Double = 0
     @State private var failed = false
+    @State private var recording: Task<Void, Never>?
 
     private let targetSeconds = 30.0
 
@@ -29,12 +27,13 @@ struct SpeakerEnrollmentView: View {
                         ProgressView(value: progress) {
                             Text("מקליט… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) שניות")
                         }
-                        // Thirty seconds is long to find out afterwards that
-                        // the wrong microphone was listening.
                         LevelMeter(level: viewModel.inputLevel, isActive: true)
                         Text("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                        Button("עצירה בלי לשמור", role: .destructive) {
+                            recording?.cancel()
+                        }
                     } else {
                         Button {
                             record()
@@ -54,8 +53,10 @@ struct SpeakerEnrollmentView: View {
             .interactiveDismissDisabled(isRecording)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("ביטול") { dismiss() }
-                        .disabled(isRecording)
+                    Button("ביטול") {
+                        recording?.cancel()
+                        dismiss()
+                    }
                 }
             }
             .alert("ההקלטה קצרה או שקטה מדי", isPresented: $failed) {
@@ -69,7 +70,7 @@ struct SpeakerEnrollmentView: View {
     private func record() {
         isRecording = true
         progress = 0
-        Task {
+        recording = Task {
             let saved = await viewModel.enroll(
                 name: name.trimmingCharacters(in: .whitespaces),
                 seconds: targetSeconds
@@ -79,7 +80,7 @@ struct SpeakerEnrollmentView: View {
             isRecording = false
             if saved {
                 dismiss()
-            } else {
+            } else if !Task.isCancelled {
                 failed = true
             }
         }

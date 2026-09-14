@@ -127,6 +127,25 @@ struct LiveCaptionViewModelTests {
         #expect(store.load().speakerProfiles.isEmpty)
     }
 
+    @Test("a voice recording stopped midway saves no profile, however much was heard")
+    func enrollStoppedMidway() async {
+        let store = temporaryStore()
+        let audio = FakeAudioCapturer()
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: fakePipeline(audio: audio))
+        var heard = 0.0
+        let recording = Task { @MainActor in
+            await viewModel.enroll(name: "סבתא", seconds: 30) { heard = $0 }
+        }
+        #expect(await eventually { audio.calls.contains("startCapture") })
+        audio.push([Float](repeating: 0.5, count: 96_000))
+        #expect(await eventually { heard > 0 })
+
+        recording.cancel()
+        #expect(await recording.value == false)
+        #expect(viewModel.settings.speakerProfiles.isEmpty)
+        #expect(store.load().speakerProfiles.isEmpty)
+    }
+
     @Test("pause and resume round-trip through the pipeline")
     func pauseResume() async {
         let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())

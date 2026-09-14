@@ -913,6 +913,27 @@ struct CaptionPipelineEnrollmentTests {
         #expect(pipeline.phase == .idle)
     }
 
+    @Test("stopping an enrollment midway ends the recording at once and brings captions back", .timeLimit(.minutes(1)))
+    func enrollmentCancelled() async {
+        let (pipeline, audio, _) = makePipeline()
+        await pipeline.start(settings: .default)
+        var heard = 0.0
+        let recording = Task { @MainActor in
+            await pipeline.captureEnrollmentSamples(seconds: 30) { heard = $0 }
+        }
+        #expect(await eventually { audio.calls.filter { $0 == "startCapture" }.count == 2 })
+        audio.push([Float](repeating: 0.1, count: 8_000))
+        #expect(await eventually { heard > 0 })
+
+        let stopped = ContinuousClock.now
+        recording.cancel()
+        let samples = await recording.value
+
+        #expect(ContinuousClock.now - stopped < .seconds(2))
+        #expect(samples.count == 8_000)
+        #expect(pipeline.phase == .listening)
+    }
+
     @Test("without microphone permission enrollment records nothing and sets nothing up")
     func enrollmentWithoutPermission() async {
         let (pipeline, audio, _) = makePipeline()
