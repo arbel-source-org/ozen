@@ -94,7 +94,7 @@ struct HistoryDetailView: View {
                         .accessibilityActions { copyButton(segment.text) }
                     }
                 } header: {
-                    Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .long, time: .shortened))
+                    Text(HistoryDays.heading(startedAt: record.startedAt))
                 } footer: {
                     Text(Self.sourceLine(for: record))
                 }

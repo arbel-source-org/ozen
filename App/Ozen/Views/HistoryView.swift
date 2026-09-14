@@ -76,9 +76,7 @@ struct HistoryView: View {
     }
 
     private var sessionDays: [HistoryDay] {
-        HistoryDays.grouped(sessions, now: Date().timeIntervalSince1970) {
-            TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: $0))
-        }
+        HistoryDays.grouped(sessions, now: Date().timeIntervalSince1970, utcOffsetSeconds: HistoryDays.localOffset)
     }
 
     private func sessionLink(_ session: TranscriptSessionSummary) -> some View {
