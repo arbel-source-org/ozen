@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import OzenKit
+import OzenPlatform
 
 /// First launch. Five short pages in large type: what the app is, how it
 /// works, which engine (with the model download explained before it
@@ -76,6 +77,11 @@ struct OnboardingView: View {
                 Text(modelChoiceNote)
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                if let missing = modelStorageShortfall {
+                    Label("אין מספיק מקום בטלפון למודל הזה. צריך לפנות עוד \(PhasePresentation.sizeText(megabytes: missing)).", systemImage: "externaldrive.badge.exclamationmark")
+                        .font(.callout)
+                        .foregroundStyle(.red)
+                }
             }
             EngineCard(
                 title: "Apple",
@@ -197,6 +203,15 @@ struct OnboardingView: View {
 
     private var modelSizeText: String {
         WhisperModelCatalog.option(for: viewModel.settings.whisperModelVariant)?.sizeLabel ?? "500 MB"
+    }
+
+    /// How much room to free before the chosen model fits, said up front
+    /// rather than after the download has been started.
+    private var modelStorageShortfall: Int? {
+        guard let size = WhisperModelCatalog.option(for: viewModel.settings.whisperModelVariant)?.sizeMB,
+              !WhisperModelStore().isInstalled(viewModel.settings.whisperModelVariant)
+        else { return nil }
+        return StorageSpaceGate.shortfallMegabytes(downloadMegabytes: size, availableBytes: DeviceStorage.availableBytes())
     }
 
     private var modelChoiceNote: String {
