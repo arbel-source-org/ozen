@@ -1475,10 +1475,15 @@ struct LiveCaptionViewModelLockScreenTests {
         var isShowing = false
         var ends = 0
         var isAllowedBySystem = true
+        /// iOS refuses to start one even though they are allowed.
+        var refusesStarts = false
+        var startAttempts = 0
 
         func show(_ content: LockScreenCaptionContent, mayStart: Bool) -> Bool {
             if !isShowing {
                 guard mayStart, isAllowedBySystem else { return false }
+                startAttempts += 1
+                guard !refusesStarts else { return false }
                 isShowing = true
             }
             shown.append(content)
@@ -1548,6 +1553,27 @@ struct LiveCaptionViewModelLockScreenTests {
         viewModel.sceneActivityChanged(isActive: false)
         viewModel.sceneActivityChanged(isActive: true)
         #expect(viewModel.lockScreenCaptionsAllowedBySystem)
+        #expect(lockScreen.isShowing)
+    }
+
+    @Test("a start iOS refuses isn't asked for again with every new line; back in front it is")
+    func refusedStartIsNotRetriedPerLine() async {
+        let lockScreen = FakeLockScreen()
+        lockScreen.refusesStarts = true
+        let (viewModel, engine) = makeViewModel(lockScreen: lockScreen)
+        await viewModel.start()
+        #expect(await eventually { lockScreen.startAttempts == 1 })
+        for n in 1...5 {
+            engine.emit(TranscriptToken(utteranceID: UUID(), text: "line \(n)", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        }
+        #expect(await eventually { viewModel.segments.last?.text == "line 5" })
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(lockScreen.startAttempts == 1)
+
+        lockScreen.refusesStarts = false
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.sceneActivityChanged(isActive: true)
+        #expect(lockScreen.startAttempts == 2)
         #expect(lockScreen.isShowing)
     }
 

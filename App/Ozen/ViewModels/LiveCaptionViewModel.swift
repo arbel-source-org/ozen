@@ -97,6 +97,8 @@ public final class LiveCaptionViewModel {
     @ObservationIgnored private var lockScreenFlush: Task<Void, Never>?
     @ObservationIgnored private var lockScreenKeepAlive: Task<Void, Never>?
     @ObservationIgnored private var lockScreenShowing = false
+    /// When a Live Activity may next be started after iOS refused one.
+    @ObservationIgnored private var lockScreenNextStartAttempt: TimeInterval = 0
     private static let retentionCheckIntervalSeconds: TimeInterval = 6 * 60 * 60
 
     private static let autosaveIntervalSeconds: UInt64 = 20
@@ -237,8 +239,11 @@ public final class LiveCaptionViewModel {
         } else {
             awayCatchUp.screenLeft(at: now)
         }
-        // Back in front is the only time a Live Activity can be started,
-        // one iOS ended after eight hours included.
+        // Back in front is the only time a Live Activity can be started
+        // (one iOS ended after eight hours included), and a start it refused
+        // earlier is tried again: Live Activities may just have been
+        // switched on.
+        if isActive { lockScreenNextStartAttempt = 0 }
         refreshLockScreen()
         // Captions that failed with the app open were on screen for her to
         // see; putting the phone away with them still stopped is when she
@@ -597,6 +602,7 @@ public final class LiveCaptionViewModel {
             lockScreenKeepAlive?.cancel()
             lockScreenKeepAlive = nil
             lockScreenThrottle.reset()
+            lockScreenNextStartAttempt = 0
             if lockScreenShowing {
                 lockScreen.end()
                 lockScreenShowing = false
@@ -634,8 +640,14 @@ public final class LiveCaptionViewModel {
 
     private func sendToLockScreen(_ content: LockScreenCaptionContent, at time: TimeInterval) {
         guard let lockScreen else { return }
-        lockScreenShowing = lockScreen.show(content, mayStart: isAppActive)
-        guard lockScreenShowing else { return }
+        // A start iOS refused (Live Activities off, too many running) isn't
+        // asked for again with every word that follows.
+        let mayStart = isAppActive && time >= lockScreenNextStartAttempt
+        lockScreenShowing = lockScreen.show(content, mayStart: mayStart)
+        guard lockScreenShowing else {
+            if mayStart { lockScreenNextStartAttempt = time + Self.lockScreenStartRetrySeconds }
+            return
+        }
         lockScreenThrottle.sent(content, at: time)
         guard lockScreenKeepAlive == nil else { return }
         // Nothing said for a while sends nothing, and the lines would turn
@@ -653,6 +665,7 @@ public final class LiveCaptionViewModel {
     }
 
     static let lockScreenKeepAliveSeconds: Double = 50
+    static let lockScreenStartRetrySeconds: TimeInterval = 30
 
     /// False when iOS Settings has Live Activities off for Ozen, so the
     /// lock screen captions setting can't show anything. Read when the
