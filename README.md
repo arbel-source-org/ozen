@@ -41,7 +41,9 @@ things, for Hebrew conversation, entirely on-device.
 - **Display built for reading all evening**: text size 20–64 pt (pinch
   the captions to change it), white-on-black / yellow-on-black /
   black-on-white, bold, speaker names on/off (shown once at the start of
-  each person's turn, like a chat), long stretches of speech
+  each person's turn, like a chat), a small question mark on lines the
+  engine itself was unsure of (so she knows when to ask again), long
+  stretches of speech
   broken into short paragraphs at sentence ends, screen stays awake while
   listening, auto-scroll that stops when you scroll up to re-read (with a
   "back to latest" pill).
@@ -98,8 +100,10 @@ things, for Hebrew conversation, entirely on-device.
 - **Star what matters.** Hold a caption line to mark it as important
   (what the doctor said about the pills), copy it, or say who is talking.
   Stars are saved with the conversation, counted in the history list,
-  marked in shared text, and one button steps through them later. A
-  search result opens at the lines it found, highlighted.
+  marked in shared text, and one button steps through them later. One
+  list gathers every starred line from every conversation, and can be
+  shared as text. A search result opens at the lines it found,
+  highlighted.
 - **Saved speakers can be renamed**, and the new name follows onto lines
   already on screen and into the names list.
 - **First-launch walkthrough** in large type that explains the engines and
@@ -161,7 +165,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (291 tests). The platform layer (WhisperKit/Speech engines, real
+logic (302 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 35 tests).
