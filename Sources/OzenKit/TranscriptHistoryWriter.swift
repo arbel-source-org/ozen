@@ -28,10 +28,13 @@ public final class TranscriptHistoryWriter: Sendable {
         self.queue = queue
     }
 
-    /// Queues a save and returns immediately.
-    public func saveInBackground(_ record: TranscriptSessionRecord) {
+    /// Queues a save and returns immediately. `finished` runs on the
+    /// writer's queue once the save is done, with `lastFailure` already
+    /// saying how it went.
+    public func saveInBackground(_ record: TranscriptSessionRecord, finished: (@Sendable () -> Void)? = nil) {
         queue.async { [store, failure] in
             failure.capture { try store.save(record) }
+            finished?()
         }
     }
 

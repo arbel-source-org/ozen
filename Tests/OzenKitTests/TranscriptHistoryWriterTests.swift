@@ -54,6 +54,22 @@ struct TranscriptHistoryWriterTests {
         #expect(store.listSummaries().count == 1)
     }
 
+    @Test("an autosave says when it is done, by which time a failure is already known")
+    func autosaveReportsWhenDone() async throws {
+        // A plain file where the history folder should be: the save fails.
+        let blocker = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-writer-blocked-\(UUID())")
+        try Data("x".utf8).write(to: blocker)
+        defer { try? FileManager.default.removeItem(at: blocker) }
+        let writer = TranscriptHistoryWriter(store: TranscriptHistoryStore(directoryURL: blocker.appendingPathComponent("history", isDirectory: true)))
+
+        let failureWhenDone: String? = await withCheckedContinuation { continuation in
+            writer.saveInBackground(record(id: UUID(), lines: 1, ended: false)) {
+                continuation.resume(returning: writer.lastFailure)
+            }
+        }
+        #expect(failureWhenDone != nil)
+    }
+
     @Test("a rename waits for autosaves already queued, so the name ends up on the newest copy")
     func renameQueuesBehindAutosave() {
         let (store, dir) = makeStore()

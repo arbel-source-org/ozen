@@ -522,7 +522,7 @@ public final class LiveCaptionViewModel {
             inputName: session.inputName,
             starred: starredSegmentIDs
         )
-        historyWriter.saveInBackground(record)
+        saveInBackground(record)
     }
 
     public func clearTranscript() {
@@ -954,13 +954,19 @@ public final class LiveCaptionViewModel {
             starred: starredSegmentIDs
         )
         if inBackground {
-            // Reports the save before this one: a background save's own
-            // result lands after this returns, and is picked up by the next.
-            historyWriter.saveInBackground(record)
+            saveInBackground(record)
         } else {
             historyWriter.saveNow(record)
+            refreshSavingTrouble()
         }
-        refreshSavingTrouble()
+    }
+
+    /// Saves without holding up the captions, and has the saving-failed
+    /// banner reflect this save as soon as it lands, not at the next one.
+    private func saveInBackground(_ record: TranscriptSessionRecord) {
+        historyWriter.saveInBackground(record) { [weak self] in
+            Task { @MainActor [weak self] in self?.refreshSavingTrouble() }
+        }
     }
 
     /// Why the latest history save didn't reach the disk, or nil when it
