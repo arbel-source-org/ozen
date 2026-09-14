@@ -874,6 +874,9 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
 
         #expect(phone.reclaims == 0)
         #expect(phone.posted.isEmpty)
+        // The call is over: the status can offer to resume again.
+        #expect(viewModel.isInterruptedBySystem == false)
+        #expect(viewModel.phase == .paused)
     }
 
     @Test("a failure nothing will retry, while the app is in the background, posts one notice")
@@ -905,7 +908,9 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
         viewModel.sceneActivityChanged(isActive: false)
         #expect(phone.posted.map(\.identifier) == [StoppedCaptionsNotice.identifier])
 
+        // Opened while still failed: the status says it, so the notice goes.
         viewModel.sceneActivityChanged(isActive: true)
+        #expect(phone.withdrawn == [StoppedCaptionsNotice.identifier])
         viewModel.sceneActivityChanged(isActive: false)
         #expect(phone.posted.count == 1)
     }

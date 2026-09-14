@@ -29,7 +29,11 @@ public struct StoppedCaptionsNotice: Sendable, Equatable {
     }
 
     public static let identifier = "captions-stopped"
+    /// A notice is sitting in Notification Center.
     private var posted = false
+    /// She has been told about this stop: by the notice, or by opening the
+    /// app and seeing the status. Not told again until captions run.
+    private var told = false
 
     public init() {}
 
@@ -61,15 +65,29 @@ public struct StoppedCaptionsNotice: Sendable, Equatable {
     /// What to do with the phone's notifications given the current `cause`.
     /// Nothing is posted while the app is on screen (the status already
     /// says it), or when she turned notifications from the app off.
+    ///
+    /// Opening the app while captions are still stopped takes the notice
+    /// away: the status says the same thing, and a notice left behind sat
+    /// in Notification Center for as long as the problem lasted. Putting
+    /// the phone away again doesn't post it a second time.
     public mutating func update(for cause: Cause?, appIsActive: Bool, isEnabled: Bool) -> Update? {
-        guard let cause else {
-            guard posted else { return nil }
-            posted = false
-            return .withdraw(identifier: Self.identifier)
+        guard cause != nil else {
+            told = false
+            return withdrawIfPosted()
         }
-        guard !appIsActive, isEnabled, !posted else { return nil }
+        if appIsActive {
+            return withdrawIfPosted()
+        }
+        guard isEnabled, !told, let cause else { return nil }
         posted = true
+        told = true
         return .post(Self.content(for: cause))
+    }
+
+    private mutating func withdrawIfPosted() -> Update? {
+        guard posted else { return nil }
+        posted = false
+        return .withdraw(identifier: Self.identifier)
     }
 
     static func content(for cause: Cause) -> AlertNotificationContent {

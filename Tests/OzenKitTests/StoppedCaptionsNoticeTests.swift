@@ -84,6 +84,21 @@ struct StoppedCaptionsNoticeTests {
         }
     }
 
+    @Test("opening the app while captions are still stopped takes the notice away, without posting it again later")
+    func withdrawnOnScreen() {
+        var notice = StoppedCaptionsNotice()
+        _ = notice.update(for: .failed(glitch), appIsActive: false, isEnabled: true)
+        #expect(notice.update(for: .failed(glitch), appIsActive: true, isEnabled: true) == .withdraw(identifier: StoppedCaptionsNotice.identifier))
+        #expect(notice.update(for: .failed(glitch), appIsActive: true, isEnabled: true) == nil)
+        #expect(notice.update(for: .failed(glitch), appIsActive: false, isEnabled: true) == nil)
+
+        // Captions ran again, then stopped again: that's news.
+        #expect(notice.update(for: nil, appIsActive: true, isEnabled: true) == nil)
+        if case .post = notice.update(for: .callEnded, appIsActive: false, isEnabled: true) {} else {
+            Issue.record("a new stop after recovering should notify again")
+        }
+    }
+
     @Test("the message says what she can do about it")
     func wording() {
         let callEnded = StoppedCaptionsNotice.content(for: .callEnded).body

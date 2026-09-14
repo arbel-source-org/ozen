@@ -307,7 +307,18 @@ public final class LiveCaptionViewModel {
         // Only for captions that were running: taking the audio session
         // for paused captions would stop her music for nothing.
         let phase = pipeline.phase
-        if phase.isListening || phase.failure != nil, reclaimAudioSession?() == true {
+        guard phase.isListening || phase.failure != nil else {
+            // Paused captions have nothing to take back, but the call is
+            // over: left marked as interrupted, the status kept saying
+            // "paused because of a call" with nothing to tap, whenever iOS
+            // didn't say the interruption ended and the app never left the
+            // screen (a call answered from the banner). Resuming asks for
+            // the microphone then, and a microphone still held is a failure
+            // automatic recovery handles.
+            systemInterruptionChanged(began: false)
+            return
+        }
+        if reclaimAudioSession?() == true {
             systemInterruptionChanged(began: false)
         } else {
             checkCaptionsStillRunning()
