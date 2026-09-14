@@ -378,6 +378,14 @@ private final class TapState: @unchecked Sendable {
         else {
             throw AVAudioInputManager.CaptureError.converterUnavailable
         }
+        // Left alone, a converter from a stereo input to mono keeps the
+        // first channel and drops the rest. Plenty of USB-C and wireless
+        // lavalier receivers are stereo, and a two-transmitter one puts the
+        // second person's microphone on the right channel only: that person
+        // would never be captioned. Mixing keeps everyone, at the cost of a
+        // few decibels for a microphone wired to one side, which the voice
+        // detector's adaptive threshold takes in its stride.
+        converter.downmix = true
         self.inputFormat = inputFormat
         self.continuation = continuation
         self.onLevel = onLevel
