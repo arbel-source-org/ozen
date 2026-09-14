@@ -109,6 +109,12 @@ leave the phone.
   an air conditioner), up to 8 dB when it swings. Talking only a few dB
   above a loud `floor:` is where words get lost; moving the phone closer
   to the people than to the noise helps most.
+- **Nonsense lines, or a saved voice that stops being recognised, with one
+  microphone only.** The report's `damaged:` count (next to `stalls:`) is
+  how many pieces of audio arrived broken. Ozen replaces them with silence,
+  so a few after a Bluetooth microphone reconnects do no harm; a number
+  that keeps climbing means that microphone, or its connection, is failing.
+  Try the phone's own microphone to confirm.
 - **A small question mark next to a line.** The engine wasn't sure it heard
   that line right. Holding the line offers to ask the speaker to repeat it.
 - **No phone notifications when the screen is off.** Settings → Notifications (hatra'ot) shows
