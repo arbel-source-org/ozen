@@ -67,6 +67,7 @@ public final class LiveCaptionViewModel {
     private var autosaveTask: Task<Void, Never>?
     private var lastRetentionCheck: TimeInterval = 0
     private var launchHousekeeping: Task<Void, Never>?
+    @ObservationIgnored private var announcer = CaptionAnnouncer()
     private static let retentionCheckIntervalSeconds: TimeInterval = 6 * 60 * 60
 
     private static let autosaveIntervalSeconds: UInt64 = 20
@@ -485,6 +486,22 @@ public final class LiveCaptionViewModel {
         set {
             settings.saveHistory = newValue
             persist()
+        }
+    }
+
+    /// What VoiceOver should read out for lines finished since the last
+    /// call, or nil. Lines that finish while VoiceOver is off, or the
+    /// setting is, are skipped for good, so turning either on later
+    /// doesn't read out the backlog.
+    public func captionAnnouncement(voiceOverRunning: Bool) -> String? {
+        let segments = pipeline.segments
+        guard voiceOverRunning, settings.display.announceNewLines else {
+            announcer.skipLinesSoFar(segments)
+            return nil
+        }
+        let namesShown = settings.display.showSpeakerNames
+        return announcer.announcement(for: segments) { [pipeline] segment in
+            namesShown && segment.speakerClusterID != nil ? pipeline.displayName(for: segment) : nil
         }
     }
 

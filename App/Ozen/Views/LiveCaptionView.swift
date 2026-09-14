@@ -174,6 +174,12 @@ struct LiveCaptionView: View {
             noteSpeechActivity()
             scrollToLatestIfPinned()
         }
+        .onChange(of: viewModel.stats.segmentsCommitted) { _, _ in
+            announceNewLines()
+        }
+        .onChange(of: viewModel.segments.isEmpty) { _, _ in
+            announceNewLines()
+        }
         .onChange(of: viewModel.isListening, initial: true) { _, listening in
             battery.setActive(listening)
         }
@@ -375,6 +381,17 @@ struct LiveCaptionView: View {
         .foregroundStyle(theme.chrome)
         .padding(14)
         .background(theme.chrome.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// Finished lines reach VoiceOver (speech or a braille display) by
+    /// themselves. Each announcement waits for VoiceOver to finish the one
+    /// before, so a line that finishes while the last is still being read
+    /// doesn't cut it off mid-sentence.
+    private func announceNewLines() {
+        guard let text = viewModel.captionAnnouncement(voiceOverRunning: UIAccessibility.isVoiceOverRunning) else { return }
+        var announcement = AttributedString(text)
+        announcement.accessibilitySpeechQueueAnnouncement = true
+        AccessibilityNotification.Announcement(announcement).post()
     }
 
     /// "לפני דקה", "לפני שתי דקות", "לפני 7 דקות".

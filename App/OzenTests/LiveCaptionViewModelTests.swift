@@ -1016,3 +1016,45 @@ struct LiveCaptionViewModelRecentConversationTests {
         #expect(viewModel.recentConversation == nil)
     }
 }
+
+@Suite("LiveCaptionViewModel VoiceOver announcements")
+@MainActor
+struct LiveCaptionViewModelAnnouncementTests {
+    @Test("finished lines are announced once with VoiceOver on; lines finished while it's off, or with the setting off, are never read later")
+    func announcesFinishedLines() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-announce-\(UUID())", isDirectory: true)
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        )
+        viewModel.display.showSpeakerNames = false
+        await viewModel.start()
+
+        func say(_ text: String, count: Int) async {
+            engine.emit(TranscriptToken(utteranceID: UUID(), text: text, isFinal: true, timestamp: Date().timeIntervalSince1970))
+            let deadline = ContinuousClock.now + .seconds(2)
+            while viewModel.segments.count < count && ContinuousClock.now < deadline {
+                try? await Task.sleep(for: .milliseconds(5))
+            }
+        }
+
+        await say("בוקר טוב", count: 1)
+        #expect(viewModel.captionAnnouncement(voiceOverRunning: true) == "בוקר טוב")
+        #expect(viewModel.captionAnnouncement(voiceOverRunning: true) == nil)
+
+        await say("זה נאמר כש-VoiceOver כבוי", count: 2)
+        #expect(viewModel.captionAnnouncement(voiceOverRunning: false) == nil)
+        #expect(viewModel.captionAnnouncement(voiceOverRunning: true) == nil)
+
+        viewModel.display.announceNewLines = false
+        await say("וזה עם ההגדרה כבויה", count: 3)
+        #expect(viewModel.captionAnnouncement(voiceOverRunning: true) == nil)
+
+        viewModel.display.announceNewLines = true
+        await say("ועכשיו שוב", count: 4)
+        #expect(viewModel.captionAnnouncement(voiceOverRunning: true) == "ועכשיו שוב")
+    }
+}

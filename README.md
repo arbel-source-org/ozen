@@ -46,7 +46,9 @@ things, for Hebrew conversation, entirely on-device.
   stretches of speech
   broken into short paragraphs at sentence ends, screen stays awake while
   listening, auto-scroll that stops when you scroll up to re-read (with a
-  "back to latest" pill).
+  "back to latest" pill). With VoiceOver on, each finished line is read
+  out or sent to a braille display by itself, once, with the speaker's
+  name when the speaker changes.
 - **Robust audio**: a live level meter per microphone, automatic recovery
   from phone-call interruptions and route changes (AirPods in/out, USB mic
   unplugged), Whisper-hallucination filtering on silence, no model runs on
@@ -177,10 +179,10 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (335 tests). The platform layer (WhisperKit/Speech engines, real
+logic (342 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 52 tests).
+the same fakes (another 53 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
