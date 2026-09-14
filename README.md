@@ -199,7 +199,9 @@ Sources/OzenKit/        (builds + tests on Linux — no Mac needed for this half
 Sources/OzenPlatform/  WhisperKit/Speech/AVFoundation/Accelerate integration
                         (Apple-only; built and tested via CI's macOS runner)
 Tests/                  Unit tests for both of the above
-App/                    The SwiftUI app itself (generated via XcodeGen)
+App/Ozen/               The SwiftUI app itself (generated via XcodeGen)
+App/OzenWidget/         Widget extension: lock screen captions, Control Center button
+App/Shared/             Code compiled into both the app and the widget extension
 project.yml             XcodeGen config — run `xcodegen generate` to get Ozen.xcodeproj
 docs/superpowers/specs/ Design doc with the full rationale and open questions
 ```
