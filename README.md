@@ -53,7 +53,7 @@ things, for Hebrew conversation, entirely on-device.
   broken into short paragraphs at sentence ends, screen stays awake while
   listening (and locks as usual after a quarter hour with nothing said, while
   captions and alerts carry on), auto-scroll that stops when you scroll up to re-read (with a
-  "back to latest" pill). With VoiceOver on, each finished line is read
+  "back to latest" pill that counts the lines said meanwhile). With VoiceOver on, each finished line is read
   out or sent to a braille display by itself, once, with the speaker's
   name when the speaker changes. Doorbell, alarm and name alerts are
   read out the moment they happen.
