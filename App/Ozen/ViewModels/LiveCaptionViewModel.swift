@@ -33,6 +33,7 @@ public final class LiveCaptionViewModel {
     public private(set) var settingsSaveError: String?
     /// Whether the caption screen says saving is failing (a full phone).
     public private(set) var savingTrouble = SavingTroubleNotice()
+    @ObservationIgnored private var keywordAttention = KeywordAttentionPolicy()
     /// Lines marked as important in the conversation on screen.
     public private(set) var starredSegmentIDs: Set<UUID> = []
 
@@ -970,6 +971,12 @@ public final class LiveCaptionViewModel {
     public func renameConversation(id: UUID, title: String) {
         historyWriter.renameNow(id: id, title: title)
         refreshSavingTrouble()
+    }
+
+    /// Whether a keyword hit should buzz, show its pill and be announced,
+    /// or only highlight its line (see `KeywordAttentionPolicy`).
+    public func claimAttention(for hit: KeywordHit) -> Bool {
+        keywordAttention.claimAttention(for: hit)
     }
 
     /// Hides the saving-failed banner until saving works and fails again.

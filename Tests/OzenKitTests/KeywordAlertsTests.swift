@@ -285,3 +285,44 @@ struct KeywordAlertDecodingTests {
         #expect(HebrewText.normalize("תל-אביב") == HebrewText.normalize("תל אביב"))
     }
 }
+
+@Suite("KeywordAttentionPolicy")
+struct KeywordAttentionPolicyTests {
+    private func hit(_ alertID: UUID, at timestamp: TimeInterval) -> KeywordHit {
+        KeywordHit(segmentID: UUID(), match: KeywordMatch(alertID: alertID, phrase: "סבתא", matchedText: "סבתא", wordIndex: 0), timestamp: timestamp)
+    }
+
+    @Test("her name gets her attention, then not again for every mention right after")
+    func repeatsInsideCooldownAreQuiet() {
+        var policy = KeywordAttentionPolicy(cooldownSeconds: 15)
+        let name = UUID()
+        let atFirst = policy.claimAttention(for: hit(name, at: 100))
+        #expect(atFirst)
+        let fourSecondsLater = policy.claimAttention(for: hit(name, at: 104))
+        #expect(!fourSecondsLater)
+        let fourteenSecondsLater = policy.claimAttention(for: hit(name, at: 114))
+        #expect(!fourteenSecondsLater)
+    }
+
+    @Test("said again once the cooldown has passed, it gets her attention again, counted from the last time it did")
+    func afterCooldownAttentionAgain() {
+        var policy = KeywordAttentionPolicy(cooldownSeconds: 15)
+        let name = UUID()
+        let atFirst = policy.claimAttention(for: hit(name, at: 100))
+        #expect(atFirst)
+        let tenSecondsLater = policy.claimAttention(for: hit(name, at: 110))
+        #expect(!tenSecondsLater)
+        // 15 s after the buzz, not after the quiet mention at 110.
+        let fifteenSecondsAfterTheBuzz = policy.claimAttention(for: hit(name, at: 115))
+        #expect(fifteenSecondsAfterTheBuzz)
+    }
+
+    @Test("a different word is not held back by the first one")
+    func wordsAreIndependent() {
+        var policy = KeywordAttentionPolicy(cooldownSeconds: 15)
+        let firstWord = policy.claimAttention(for: hit(UUID(), at: 100))
+        #expect(firstWord)
+        let otherWordASecondLater = policy.claimAttention(for: hit(UUID(), at: 101))
+        #expect(otherWordASecondLater)
+    }
+}

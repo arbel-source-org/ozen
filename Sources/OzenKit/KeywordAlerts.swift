@@ -281,3 +281,31 @@ public struct KeywordAlertDeduplicator: Sendable {
         trackingOrder.removeAll()
     }
 }
+
+/// Whether a keyword said again should get her attention again.
+///
+/// Her name is the most common keyword, and at a family dinner it is said
+/// over and over. A buzz, the "נאמר: ..." pill and a VoiceOver announcement
+/// every time would soon be switched off altogether. So each word gets her
+/// attention at most once every `cooldownSeconds`; every line it is said in
+/// is still highlighted with a bell, so nothing is lost scrolling back.
+/// Shorter than the 30 seconds between notifications: someone repeating her
+/// name because she didn't react is exactly when the buzz helps.
+public struct KeywordAttentionPolicy: Sendable, Equatable {
+    public var cooldownSeconds: TimeInterval
+    private var lastAttentionAt: [UUID: TimeInterval] = [:]
+
+    public init(cooldownSeconds: TimeInterval = 15) {
+        self.cooldownSeconds = cooldownSeconds
+    }
+
+    /// Whether this hit should buzz and show, recording it if so.
+    public mutating func claimAttention(for hit: KeywordHit) -> Bool {
+        let alertID = hit.match.alertID
+        if let last = lastAttentionAt[alertID], hit.timestamp - last < cooldownSeconds {
+            return false
+        }
+        lastAttentionAt[alertID] = hit.timestamp
+        return true
+    }
+}

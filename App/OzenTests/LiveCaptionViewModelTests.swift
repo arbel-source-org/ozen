@@ -1255,3 +1255,26 @@ struct LiveCaptionViewModelSavingTroubleTests {
         #expect(viewModel.savingTrouble.shouldShow)
     }
 }
+
+@Suite("LiveCaptionViewModel keyword attention")
+@MainActor
+struct LiveCaptionViewModelKeywordAttentionTests {
+    @Test("her name said twice in a row buzzes once; both lines stay highlighted")
+    func repeatedNameBuzzesOnce() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-attention-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline)
+        viewModel.addKeywordAlert(phrase: "סבתא")
+        await viewModel.start()
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, בואי", isFinal: true, timestamp: 1))
+        await eventually { viewModel.keywordHits.count == 1 }
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, את שומעת?", isFinal: true, timestamp: 2))
+        await eventually { viewModel.keywordHits.count == 2 }
+
+        let attention = viewModel.keywordHits.map { viewModel.claimAttention(for: $0) }
+        #expect(attention == [true, false])
+        #expect(viewModel.keywordHitSegmentIDs.count == 2)
+    }
+}

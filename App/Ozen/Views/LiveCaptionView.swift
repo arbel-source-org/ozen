@@ -191,7 +191,9 @@ struct LiveCaptionView: View {
             }
         }
         .onChange(of: viewModel.keywordHits.last?.id) { _, _ in
-            guard let hit = viewModel.keywordHits.last else { return }
+            // Every line with the word keeps its highlight; the buzz, pill
+            // and announcement don't repeat for each mention at the table.
+            guard let hit = viewModel.keywordHits.last, viewModel.claimAttention(for: hit) else { return }
             withAnimation { visibleKeywordHit = hit }
             vibrate(.keyword)
             announceAlert("נאמר: \(hit.match.phrase)")
