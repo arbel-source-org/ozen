@@ -22,6 +22,8 @@ struct HistoryDetailView: View {
     @State private var hasJumped = false
     @State private var scrollRequest = 0
     @State private var hasLoaded = false
+    /// The line this was opened at, lit up for a moment once scrolled to.
+    @State private var arrivedLineID: UUID?
     @State private var confirmingDelete = false
     @State private var deleteError: String?
     @State private var renaming = false
@@ -86,7 +88,7 @@ struct HistoryDetailView: View {
                             emphasizeNumbers: viewModel.display.emphasizeNumbers,
                             isMatch: isMatch
                         )
-                        .listRowBackground(isMatch ? Color.yellow.opacity(0.3) : nil)
+                        .listRowBackground(isMatch || segment.id == arrivedLineID ? Color.yellow.opacity(0.3) : nil)
                         .id(segment.id)
                         .contextMenu { copyButton(segment.text) }
                         .accessibilityActions { copyButton(segment.text) }
@@ -103,6 +105,10 @@ struct HistoryDetailView: View {
                 guard let target = isSearch ? matches.first : initialLineID else { return }
                 try? await Task.sleep(for: .milliseconds(150))
                 withAnimation { proxy.scrollTo(target, anchor: .center) }
+                guard !isSearch else { return }
+                withAnimation { arrivedLineID = target }
+                try? await Task.sleep(for: .seconds(2))
+                withAnimation(.easeOut(duration: 0.8)) { arrivedLineID = nil }
             }
             .onChange(of: scrollRequest) { _, _ in
                 guard matches.indices.contains(currentMatch) else { return }
