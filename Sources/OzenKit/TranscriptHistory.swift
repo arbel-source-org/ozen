@@ -591,6 +591,10 @@ public struct TranscriptHistoryStore: Sendable {
     /// would otherwise make this render differently on a test machine than
     /// on the phone. The app passes `TimeZone.current.secondsFromGMT()`;
     /// tests pass 0.
+    ///
+    /// Opens with the conversation's name, if it has one, and its date:
+    /// pasted into a chat or a note, the lines alone never say which day
+    /// the doctor said it.
     public static func exportText(_ record: TranscriptSessionRecord, utcOffsetSeconds: Int = 0) -> String {
         let lines = record.segments
             .map { segment in
@@ -602,9 +606,14 @@ public struct TranscriptHistoryStore: Sendable {
                 return "\(star)[\(time)] \(segment.text)"
             }
             .joined(separator: "\n")
-        // A named conversation says what it was before the first line.
-        guard let title = record.title else { return lines }
-        return "\(title)\n\n\(lines)"
+        let date = formattedDate(record.startedAt, utcOffsetSeconds: utcOffsetSeconds)
+        let heading: String
+        if let title = record.title, !title.isEmpty {
+            heading = "\(title), \(date)"
+        } else {
+            heading = "שיחה מתאריך \(date)"
+        }
+        return lines.isEmpty ? heading : "\(heading)\n\n\(lines)"
     }
 
     /// Starred lines as plain text for sharing: one block per

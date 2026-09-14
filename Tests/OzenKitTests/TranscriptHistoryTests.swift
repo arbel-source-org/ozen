@@ -227,7 +227,7 @@ struct TranscriptHistoryTests {
         let session = record(startedAt: 3_661, segments: [withName, withoutName])
 
         let text = TranscriptHistoryStore.exportText(session)
-        #expect(text == "[01:01:01] סבתא: שלום\n[01:01:05] מה נשמע")
+        #expect(text == "שיחה מתאריך 01.01.1970\n\n[01:01:01] סבתא: שלום\n[01:01:05] מה נשמע")
     }
 
     @Test("make(from:) drops empty-text segments and resolves speaker names")
@@ -320,9 +320,11 @@ struct TranscriptHistoryTests {
             startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil,
             segments: [SavedSegment(id: UUID(), text: "בוקר", speakerName: nil, speakerClusterID: nil, startTimestamp: 3_600, isCommitted: true)]
         )
-        #expect(TranscriptHistoryStore.exportText(record) == "[01:00:00] בוקר")
-        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "[04:00:00] בוקר")
-        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: -2 * 3_600) == "[23:00:00] בוקר")
+        #expect(TranscriptHistoryStore.exportText(record) == "שיחה מתאריך 01.01.1970\n\n[01:00:00] בוקר")
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "שיחה מתאריך 01.01.1970\n\n[04:00:00] בוקר")
+        // West of Greenwich, a conversation that started at midnight UTC
+        // was still on the previous day.
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: -2 * 3_600) == "שיחה מתאריך 31.12.1969\n\n[23:00:00] בוקר")
     }
 
     @Test("the summary lists the real names that took part, once each, without generic labels")
@@ -617,7 +619,7 @@ struct TranscriptHistoryStarredTests {
         #expect(store.listSummaries().first?.starredCount == 1)
 
         let text = TranscriptHistoryStore.exportText(record)
-        #expect(text == "[01:00:00] שלום\n★ [01:00:00] לקחת כדור אחד בבוקר\n[01:00:00] ביי")
+        #expect(text == "שיחה מתאריך 01.01.1970\n\n[01:00:00] שלום\n★ [01:00:00] לקחת כדור אחד בבוקר\n[01:00:00] ביי")
     }
 
     @Test("a line saved before stars existed loads as not starred")
@@ -780,12 +782,18 @@ struct TranscriptHistoryTitleTests {
 
 @Suite("Transcript history sharing a named conversation")
 struct TranscriptHistoryTitledExportTests {
-    @Test("a named conversation's shared text starts with its name")
+    @Test("shared text starts with the conversation's name, if any, and its date")
     func titled() {
-        let line = SavedSegment(id: UUID(), text: "כדור בבוקר", speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true)
-        var record = TranscriptSessionRecord(startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [line])
-        #expect(TranscriptHistoryStore.exportText(record) == "[00:00:00] כדור בבוקר")
+        // 14 September 2026, 07:30 in Israel (UTC+3).
+        let startedAt: TimeInterval = 1_789_360_200
+        let line = SavedSegment(id: UUID(), text: "כדור בבוקר", speakerName: nil, speakerClusterID: nil, startTimestamp: startedAt, isCommitted: true)
+        var record = TranscriptSessionRecord(startedAt: startedAt, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [line])
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "שיחה מתאריך 14.09.2026\n\n[07:30:00] כדור בבוקר")
         record.title = "ביקור אצל הרופא"
-        #expect(TranscriptHistoryStore.exportText(record) == "ביקור אצל הרופא\n\n[00:00:00] כדור בבוקר")
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "ביקור אצל הרופא, 14.09.2026\n\n[07:30:00] כדור בבוקר")
+        record.title = ""
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "שיחה מתאריך 14.09.2026\n\n[07:30:00] כדור בבוקר")
+        record.segments = []
+        #expect(TranscriptHistoryStore.exportText(record, utcOffsetSeconds: 3 * 3_600) == "שיחה מתאריך 14.09.2026")
     }
 }
