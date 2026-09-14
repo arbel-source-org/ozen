@@ -120,7 +120,7 @@ struct LiveCaptionViewModelTests {
         let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: fakePipeline())
 
         #expect(!viewModel.enroll(name: "ריק", samples: []))
-        #expect(viewModel.enroll(name: "סבתא", samples: [Float](repeating: 0.5, count: 16_000)))
+        #expect(viewModel.enroll(name: "סבתא", samples: [Float](repeating: 0.5, count: 96_000)))
         #expect(store.load().speakerProfiles.map(\.name) == ["סבתא"])
 
         viewModel.removeProfile(id: viewModel.settings.speakerProfiles[0].id)
@@ -303,8 +303,8 @@ struct LiveCaptionViewModelVocabularyTests {
         viewModel.addVocabularyTerm("אבי")
         // FakeEmbedder keys the voice off the first sample, so two
         // different leading values enroll two different people.
-        #expect(viewModel.enroll(name: "אבי", samples: [Float](repeating: 0.2, count: 16_000)))
-        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.7, count: 16_000)))
+        #expect(viewModel.enroll(name: "אבי", samples: [Float](repeating: 0.2, count: 96_000)))
+        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.7, count: 96_000)))
         viewModel.addSpeakerNamesToVocabulary()
         #expect(viewModel.vocabulary == ["אבי", "רותי"])
     }
@@ -494,7 +494,7 @@ struct LiveCaptionViewModelSpeakerTests {
     @Test("renaming a speaker updates the profile on disk, the names list and the live label")
     func rename() {
         let (viewModel, file) = makeViewModel()
-        #expect(viewModel.enroll(name: "אבי", samples: [Float](repeating: 0.3, count: 16_000)))
+        #expect(viewModel.enroll(name: "אבי", samples: [Float](repeating: 0.3, count: 96_000)))
         viewModel.addVocabularyTerm("אבי")
         let id = viewModel.settings.speakerProfiles[0].id
 
@@ -509,7 +509,7 @@ struct LiveCaptionViewModelSpeakerTests {
     @Test("a blank new name is ignored")
     func blankRename() {
         let (viewModel, _) = makeViewModel()
-        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.3, count: 16_000)))
+        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.3, count: 96_000)))
         viewModel.renameProfile(id: viewModel.settings.speakerProfiles[0].id, to: "   ")
         #expect(viewModel.settings.speakerProfiles[0].name == "רותי")
     }
@@ -517,7 +517,7 @@ struct LiveCaptionViewModelSpeakerTests {
     @Test("deleting a speaker stops their name from labeling lines")
     func deleteForgets() {
         let (viewModel, _) = makeViewModel()
-        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.3, count: 16_000)))
+        #expect(viewModel.enroll(name: "רותי", samples: [Float](repeating: 0.3, count: 96_000)))
         viewModel.removeProfile(id: viewModel.settings.speakerProfiles[0].id)
         #expect(viewModel.settings.speakerProfiles.isEmpty)
         #expect(viewModel.pipeline.speakerClusters.contains { $0.name == "רותי" } == false)

@@ -83,7 +83,52 @@ struct EnrollmentNonFiniteTests {
     @Test("a voice print with NaN in it is refused, so it can never break saving settings")
     func nanRefused() {
         let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: NaNEmbedder())
-        #expect(pipeline.embedding(forEnrollmentSamples: [Float](repeating: 0.2, count: 16_000)) == nil)
+        #expect(pipeline.embedding(forEnrollmentSamples: [Float](repeating: 0.2, count: 96_000)) == nil)
+    }
+}
+
+@Suite("Voice enrollment uses only the speech in the recording")
+@MainActor
+struct EnrollmentSpeechOnlyTests {
+    /// The "voice print" is the window's loudness, so a test can see
+    /// exactly which audio went into it.
+    private struct LoudnessEmbedder: SpeakerEmbedding {
+        func embed(samples: [Float], sampleRate: Double) -> [Float]? {
+            [EnergyVoiceDetector.rms(samples)]
+        }
+    }
+
+    private func pipeline() -> CaptionPipeline {
+        CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: LoudnessEmbedder())
+    }
+
+    private func speech(seconds: Double, amplitude: Float = 0.3) -> [Float] {
+        (0..<Int(seconds * 16_000)).map { $0 % 2 == 0 ? amplitude : -amplitude }
+    }
+
+    private func silence(seconds: Double) -> [Float] {
+        [Float](repeating: 0, count: Int(seconds * 16_000))
+    }
+
+    @Test("a recording nobody spoke in makes no voice print")
+    func silentRecording() {
+        #expect(pipeline().embedding(forEnrollmentSamples: silence(seconds: 30)) == nil)
+        // A quiet room: nothing near speech level.
+        #expect(pipeline().embedding(forEnrollmentSamples: speech(seconds: 30, amplitude: 0.002)) == nil)
+    }
+
+    @Test("a couple of seconds of speech isn't enough; a few more is")
+    func tooLittleSpeech() {
+        #expect(pipeline().embedding(forEnrollmentSamples: speech(seconds: 3) + silence(seconds: 27)) == nil)
+        #expect(pipeline().embedding(forEnrollmentSamples: speech(seconds: 4.5) + silence(seconds: 25.5)) != nil)
+    }
+
+    @Test("pauses between sentences don't water the voice down")
+    func pausesLeftOut() throws {
+        let recording = speech(seconds: 6) + silence(seconds: 6) + speech(seconds: 6) + silence(seconds: 12)
+        let print = try #require(pipeline().embedding(forEnrollmentSamples: recording))
+        // The whole recording's loudness would be about 0.19.
+        #expect(abs(print[0] - 0.3) < 0.001)
     }
 }
 

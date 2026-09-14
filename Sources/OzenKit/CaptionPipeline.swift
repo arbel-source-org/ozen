@@ -453,14 +453,64 @@ public final class CaptionPipeline {
     /// Computes an embedding from an enrollment recording, or nil if the
     /// recording was too short to say anything about the voice.
     public func embedding(forEnrollmentSamples samples: [Float]) -> [Float]? {
-        // A voice print with a NaN in it can't be compared, and can't be
-        // saved either (JSON has no NaN): better no profile than one that
-        // makes every later settings save fail.
-        guard let embedding = embedder.embed(samples: samples, sampleRate: Self.sampleRate),
-              !embedding.isEmpty,
-              embedding.allSatisfy(\.isFinite)
-        else { return nil }
-        return embedding
+        // Made the way live speech is matched: 1.5 s windows, only those
+        // with enough speech in them, averaged. One print of the whole
+        // recording mixed the pauses between sentences into the voice,
+        // and a recording nobody spoke in still became a "voice".
+        var sum: [Float] = []
+        var count = 0
+        for window in Self.speechWindows(in: samples) {
+            // A print with a NaN in it can't be compared, and can't be
+            // saved either (JSON has no NaN): one would make every later
+            // settings save fail.
+            guard let embedding = embedder.embed(samples: window, sampleRate: Self.sampleRate),
+                  !embedding.isEmpty,
+                  embedding.allSatisfy(\.isFinite),
+                  sum.isEmpty || embedding.count == sum.count
+            else { continue }
+            if sum.isEmpty {
+                sum = embedding
+            } else {
+                for index in sum.indices { sum[index] += embedding[index] }
+            }
+            count += 1
+        }
+        guard count >= Self.minimumEnrollmentWindows else { return nil }
+        return sum.map { $0 / Float(count) }
+    }
+
+    /// A voice print needs this many windows of speech, about 4.5 seconds
+    /// of someone talking, to be worth keeping.
+    static let minimumEnrollmentWindows = 3
+
+    /// `samples` cut into embedding windows, keeping those that hold as
+    /// much speech as live matching asks for. Fed through a voice detector
+    /// in chunks about the size the microphone delivers.
+    static func speechWindows(in samples: [Float]) -> [[Float]] {
+        let chunkSize = 800
+        let windowSamples = Int(embeddingWindowSeconds * sampleRate)
+        var detector = EnergyVoiceDetector()
+        var windows: [[Float]] = []
+        var buffer: [Float] = []
+        var speechSamples = 0
+        var offset = 0
+        while offset < samples.count {
+            let end = min(offset + chunkSize, samples.count)
+            let chunk = Array(samples[offset..<end])
+            buffer.append(contentsOf: chunk)
+            if detector.isSpeech(chunk) {
+                speechSamples += chunk.count
+            }
+            if buffer.count >= windowSamples {
+                if Double(speechSamples) / Double(buffer.count) >= minimumSpeechFractionForEmbedding {
+                    windows.append(buffer)
+                }
+                buffer.removeAll(keepingCapacity: true)
+                speechSamples = 0
+            }
+            offset = end
+        }
+        return windows
     }
 
     /// Records `seconds` of audio for voice enrollment through the *same*
