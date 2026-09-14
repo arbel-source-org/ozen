@@ -166,6 +166,7 @@ struct TypeToSpeakView: View {
 private struct QuickPhrasesEditor: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var newPhrase = ""
+    @State private var confirmingReset = false
 
     var body: some View {
         Section("עריכת המשפטים") {
@@ -190,8 +191,16 @@ private struct QuickPhrasesEditor: View {
             .onMove { from, to in
                 viewModel.moveQuickPhrases(from: from, to: to)
             }
-            Button("לשחזר את ברירת המחדל") {
-                viewModel.resetQuickPhrases()
+            Button("לשחזר את ברירת המחדל", role: .destructive) {
+                confirmingReset = true
+            }
+            .disabled(viewModel.settings.quickPhrases == AppSettings.defaultQuickPhrases)
+            .confirmationDialog("לשחזר את המשפטים המוכנים?", isPresented: $confirmingReset, titleVisibility: .visible) {
+                Button("לשחזר", role: .destructive) {
+                    viewModel.resetQuickPhrases()
+                }
+            } message: {
+                Text("המשפטים שנוספו או שונו יימחקו.")
             }
         }
     }
