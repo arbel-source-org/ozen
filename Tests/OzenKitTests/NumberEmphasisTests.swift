@@ -35,6 +35,23 @@ struct NumberEmphasisTests {
         #expect(NumberEmphasis.hasListableNumber("שני ימים") == false)
     }
 
+    @Test("twice, two days, two weeks and the other words that are two by themselves stand out and are listed")
+    func dualWords() {
+        #expect(emphasized("פעמיים ביום, אחרי האוכל") == ["פעמיים"])
+        #expect(emphasized("נתראה בעוד שבועיים, ולפני זה יומיים בלי") == ["שבועיים", "יומיים"])
+        #expect(emphasized("תוך שעתיים, לחודשיים ובשנתיים האחרונות") == ["שעתיים", "לחודשיים", "ובשנתיים"])
+        #expect(NumberEmphasis.hasListableNumber("כדור פעמיים ביום"))
+        #expect(NumberEmphasis.hasListableNumber("ביקורת בעוד שבועיים"))
+        #expect(emphasized("בדיקה שבועית וכדור יומי, תשלום חודשי") == [])
+    }
+
+    @Test("doses and measures written out in full, and three quarters, keep their unit")
+    func moreUnits() {
+        #expect(emphasized("שלושים מיליגרם בבוקר ועשר יחידות אינסולין") == ["שלושים מיליגרם", "ועשר יחידות"])
+        #expect(emphasized("חמישה מיליליטר, שתי כפות ושלושת רבעי כוס") == ["חמישה מיליליטר", "שתי כפות", "ושלושת", "רבעי כוס"])
+        #expect(emphasized("לחכות שלושים שניות") == ["שלושים שניות"])
+    }
+
     @Test("nobody, everybody and at once are not a count of one; once is")
     func notACount() {
         #expect(emphasized("אף אחד לא בא, כל אחד לבד, הכול בבת אחת") == [])
