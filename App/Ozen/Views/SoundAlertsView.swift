@@ -70,6 +70,7 @@ struct SoundAlertsView: View {
             sampleButton("חשוב: פעמון, דפיקה בדלת, בכי של תינוק", vibration: .pattern(for: .high))
             sampleButton("צליל אחר בבית", vibration: .pattern(for: .medium))
             sampleButton("מילה מהרשימה, כמו השם שלך", vibration: .keyword)
+            sampleButton("מישהו מתחיל לדבר אחרי שקט", vibration: .speechResumed)
         } header: {
             Text("איך כל התראה מרגישה")
         } footer: {
