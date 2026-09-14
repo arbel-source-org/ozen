@@ -49,7 +49,7 @@ struct PhasePresentationTests {
     func pausedForSpeech() {
         let speaking = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false, pausedForSpeech: true)
         #expect(speaking.title == "הטלפון מדבר")
-        #expect(speaking.action == .resume)
+        #expect(speaking.action == .stopSpeaking)
         let byHand = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false)
         #expect(byHand.title == "מושהה")
     }

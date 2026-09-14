@@ -422,6 +422,17 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(await eventually { viewModel.phase.isListening })
     }
 
+    @Test("stopping the phone mid-phrase from the status line brings captions back by themselves")
+    func stopSpeakingResumes() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        viewModel.speak("משפט ארוך מאוד")
+        synthesizer.startNext()
+        viewModel.stopSpeaking()
+        synthesizer.deliverCallbacks()
+        #expect(await eventually { viewModel.phase.isListening })
+    }
+
     @Test("a call that cuts off the phone's voice doesn't leave captions paused for good; they return after it")
     func callDuringPhrase() async {
         let audio = FakeAudioCapturer()

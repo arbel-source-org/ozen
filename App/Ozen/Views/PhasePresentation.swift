@@ -13,6 +13,8 @@ struct PhasePresentation {
         case start
         case pause
         case resume
+        /// Cut the phone off mid-phrase; captions then come back by themselves.
+        case stopSpeaking
         case retry
         case openSystemSettings
         case openEngineSettings
@@ -66,7 +68,7 @@ struct PhasePresentation {
         case .paused where pausedForSpeech:
             // Not "paused": that reads as something to fix, and tapping it
             // would open the microphone onto the phone's own voice.
-            self.init(title: "הטלפון מדבר", detail: "הכתוביות ימשיכו לבד כשיסיים", systemImage: "speaker.wave.2.fill", tint: .orange, action: .resume)
+            self.init(title: "הטלפון מדבר", detail: "הכתוביות ימשיכו לבד כשיסיים · הקישו כדי לעצור אותו", systemImage: "speaker.wave.2.fill", tint: .orange, action: .stopSpeaking)
 
         case .paused:
             self.init(title: "מושהה", detail: "הקישו להמשיך", systemImage: "pause.circle.fill", tint: .orange, action: .resume)

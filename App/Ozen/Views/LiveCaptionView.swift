@@ -763,6 +763,8 @@ struct LiveCaptionView: View {
             break
         case .start, .pause, .resume:
             Task { await viewModel.togglePause() }
+        case .stopSpeaking:
+            viewModel.stopSpeaking()
         case .retry:
             Task { await viewModel.retry() }
         case .openSystemSettings:

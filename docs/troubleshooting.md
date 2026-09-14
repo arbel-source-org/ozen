@@ -19,7 +19,7 @@ leave the phone.
 | --- | --- | --- |
 | מקשיב | Captions are running. | Nothing. If no words appear, check the microphone (below). |
 | מושהה | Paused by a tap. | Tap it to continue. |
-| הטלפון מדבר | The phone is saying a typed reply aloud; captions pause so they don't caption it. | Nothing. They continue by themselves when it finishes. |
+| הטלפון מדבר | The phone is saying a typed reply aloud; captions pause so they don't caption it. | Nothing. They continue by themselves when it finishes. Tapping it stops the phone talking. |
 | לא פעיל | Stopped (for example by Siri). | Tap it to start. |
 | הכתוביות מושהות בגלל שיחה | A phone call or another app has the microphone. | Nothing. They come back after the call. If they don't, a notification "הכתוביות נעצרו" arrives; open Ozen from it. |
 | מוריד את מודל השפה · N% | First-time download of the speech model. | Keep the app open (the screen stays on by itself) until it finishes. |
