@@ -793,6 +793,23 @@ public final class LiveCaptionViewModel {
 
     // MARK: - Keyword alerts
 
+    /// The first keyword hit since the last call that should buzz, show its
+    /// pill and be announced, or nil when they should only highlight their
+    /// lines (see `KeywordAttentionPolicy`). Every new hit is considered,
+    /// not just the newest: one line can hold two words from the list
+    /// ("grandma, call an ambulance"), and each starts its own quiet period.
+    public func claimAttentionForNewKeywordHits() -> KeywordHit? {
+        let fresh = keywordHits.filter { !handledKeywordHitIDs.contains($0.id) }
+        // keywordHits is capped, so this set stays small.
+        handledKeywordHitIDs = Set(keywordHits.map(\.id))
+        var claimed: KeywordHit?
+        for hit in fresh where keywordAttention.claimAttention(for: hit) {
+            claimed = claimed ?? hit
+        }
+        if let claimed { attentionKeywordHit = claimed }
+        return claimed
+    }
+
     public var keywordAlerts: [KeywordAlert] { settings.keywordAlerts }
 
     public func addKeywordAlert(phrase: String) {
@@ -1138,23 +1155,6 @@ public final class LiveCaptionViewModel {
     public func renameConversation(id: UUID, title: String) {
         historyWriter.renameNow(id: id, title: title)
         refreshSavingTrouble()
-    }
-
-    /// The first keyword hit since the last call that should buzz, show its
-    /// pill and be announced, or nil when they should only highlight their
-    /// lines (see `KeywordAttentionPolicy`). Every new hit is considered,
-    /// not just the newest: one line can hold two words from the list
-    /// ("grandma, call an ambulance"), and each starts its own quiet period.
-    public func claimAttentionForNewKeywordHits() -> KeywordHit? {
-        let fresh = keywordHits.filter { !handledKeywordHitIDs.contains($0.id) }
-        // keywordHits is capped, so this set stays small.
-        handledKeywordHitIDs = Set(keywordHits.map(\.id))
-        var claimed: KeywordHit?
-        for hit in fresh where keywordAttention.claimAttention(for: hit) {
-            claimed = claimed ?? hit
-        }
-        if let claimed { attentionKeywordHit = claimed }
-        return claimed
     }
 
     /// Hides the saving-failed banner until saving works and fails again.
