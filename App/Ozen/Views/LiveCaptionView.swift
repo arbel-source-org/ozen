@@ -386,9 +386,8 @@ struct LiveCaptionView: View {
     /// doesn't cut it off mid-sentence.
     private func announceNewLines() {
         guard let text = viewModel.captionAnnouncement(voiceOverRunning: UIAccessibility.isVoiceOverRunning) else { return }
-        var announcement = AttributedString(text)
-        announcement.accessibilitySpeechQueueAnnouncement = true
-        AccessibilityNotification.Announcement(announcement).post()
+        let announcement = NSAttributedString(string: text, attributes: [.accessibilitySpeechQueueAnnouncement: true])
+        UIAccessibility.post(notification: .announcement, argument: announcement)
     }
 
     /// "לפני דקה", "לפני שתי דקות", "לפני 7 דקות".
