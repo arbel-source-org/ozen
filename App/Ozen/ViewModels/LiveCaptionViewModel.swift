@@ -24,6 +24,9 @@ public final class LiveCaptionViewModel {
     /// Set while the system has the audio session (an incoming call), so
     /// the screen can say why captions stopped instead of looking broken.
     public private(set) var isInterruptedBySystem = false
+    /// Why the last settings save failed, for the diagnostics screen; nil
+    /// when the last save worked.
+    public private(set) var settingsSaveError: String?
 
     private let settingsStore: SettingsStore
     private let audioManager: AVAudioInputManager?
@@ -703,7 +706,12 @@ public final class LiveCaptionViewModel {
     // MARK: - Persistence
 
     private func persist() {
-        try? settingsStore.save(settings)
+        do {
+            try settingsStore.save(settings)
+            if settingsSaveError != nil { settingsSaveError = nil }
+        } catch {
+            settingsSaveError = String(describing: error)
+        }
     }
 }
 

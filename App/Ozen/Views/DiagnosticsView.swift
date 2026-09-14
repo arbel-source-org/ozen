@@ -58,6 +58,7 @@ struct DiagnosticsView: View {
             Section("התאוששות") {
                 LabeledContent("ניסיון חוזר אוטומטי", value: retryText)
                 LabeledContent("שיחת טלפון תופסת את האודיו", value: viewModel.isInterruptedBySystem ? "כן" : "לא")
+                LabeledContent("שמירת הגדרות", value: viewModel.settingsSaveError == nil ? "תקינה" : "נכשלה")
             }
 
             Section("מודל ומילים") {
@@ -139,6 +140,7 @@ struct DiagnosticsView: View {
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)
+        settings save error: \(viewModel.settingsSaveError ?? "-")
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText)
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString)

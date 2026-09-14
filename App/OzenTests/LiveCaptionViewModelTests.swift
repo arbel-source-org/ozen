@@ -677,3 +677,32 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
         #expect(viewModel.isInterruptedBySystem)
     }
 }
+
+@Suite("LiveCaptionViewModel settings save errors")
+@MainActor
+struct LiveCaptionViewModelSettingsSaveTests {
+    @Test("a settings save that fails is recorded for diagnostics, and cleared once a save works")
+    func recordsFailure() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-save-\(UUID())", isDirectory: true)
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        // A file where the settings folder should be: saving can't create it.
+        let blocker = base.appendingPathComponent("blocked")
+        try Data("x".utf8).write(to: blocker)
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: FakeEmbedder())
+
+        let broken = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: blocker.appendingPathComponent("ozen-settings.json")),
+            pipeline: pipeline
+        )
+        broken.hapticOnSpeechResume = false
+        #expect(broken.settingsSaveError != nil)
+
+        let working = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: base.appendingPathComponent("ozen-settings.json")),
+            pipeline: pipeline
+        )
+        working.hapticOnSpeechResume = false
+        #expect(working.settingsSaveError == nil)
+    }
+}
