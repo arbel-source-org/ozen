@@ -304,6 +304,11 @@ struct HistoryDetailView: View {
             record = loaded
             stats = summary
             matches = found
+            // Opened at a starred line: "next" continues from that one.
+            if let initialLineID, let index = found.firstIndex(of: initialLineID) {
+                currentMatch = index
+                hasJumped = true
+            }
             hasLoaded = true
         }
     }
