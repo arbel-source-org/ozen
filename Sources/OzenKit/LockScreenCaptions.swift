@@ -34,33 +34,29 @@ public enum LockScreenCaptions {
     /// Never cut a line shorter than this for a long speaker name.
     static let minimumCharacters = 20
 
-    /// The newest `lineCount` lines with text. `name` gives the label for a
-    /// line's speaker, or nil to show none; a name is kept only where it
-    /// changes from the line before.
+    /// The newest `count` lines with text. `name` gives the label for a
+    /// line's speaker, or nil to show none. The first line shown always
+    /// carries its name, since on the lock screen there is nothing above
+    /// it to say who is talking; after that a name is kept only where the
+    /// speaker changes.
     public static func lines(
         from segments: [TranscriptSegment],
+        count: Int = lineCount,
         name: (TranscriptSegment) -> String?
     ) -> [LockScreenCaptionLine] {
         var picked: [TranscriptSegment] = []
         var index = segments.endIndex
-        // One line before the shown ones, to know whether the first shown
-        // line starts a new speaker.
-        var before: TranscriptSegment?
-        while index > segments.startIndex {
+        while index > segments.startIndex, picked.count < count {
             index -= 1
             let segment = segments[index]
             guard !segment.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
-            if picked.count == lineCount {
-                before = segment
-                break
-            }
             picked.insert(segment, at: 0)
         }
-        var previousName = before.flatMap(name)
+        var previousName: String?
         return picked.enumerated().map { offset, segment in
             let name = name(segment)
             defer { previousName = name }
-            let speaker = name != previousName ? name : nil
+            let speaker = offset == 0 || name != previousName ? name : nil
             let budget = offset == picked.count - 1 ? newestLineMaximumCharacters : earlierLineMaximumCharacters
             // The name shares the line's room ("Speaker 2: ").
             let room = max(minimumCharacters, budget - (speaker.map { $0.count + 2 } ?? 0))

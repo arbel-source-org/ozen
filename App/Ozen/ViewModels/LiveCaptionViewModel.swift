@@ -605,7 +605,12 @@ public final class LiveCaptionViewModel {
         }
         let namesShown = settings.display.showSpeakerNames
         let content = LockScreenCaptionContent(
-            lines: LockScreenCaptions.lines(from: pipeline.segments) { [pipeline] segment in
+            // Under a note ("paused because of a call") there is room for
+            // the newest line only.
+            lines: LockScreenCaptions.lines(
+                from: pipeline.segments,
+                count: presence.status == nil ? LockScreenCaptions.lineCount : 1
+            ) { [pipeline] segment in
                 namesShown && segment.speakerClusterID != nil ? pipeline.displayName(for: segment) : nil
             },
             status: presence.status

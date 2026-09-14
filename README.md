@@ -153,7 +153,7 @@ things, for Hebrew conversation, entirely on-device.
   model first, so it is less likely to be the app iOS ends.
 - **Captions on the lock screen.** While captions run, the newest two
   lines show on the lock screen and in the Dynamic Island as a Live
-  Activity, a speaker's name heading their turn, so the last sentence can
+  Activity, the top line always saying who is talking, so the last sentence can
   be read without unlocking the phone. A call or a failure keeps it there
   and says why the lines stopped; if iOS closes the app it says the lines
   aren't updating rather than showing an old sentence as new. Settings can

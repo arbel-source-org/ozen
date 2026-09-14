@@ -23,12 +23,20 @@ struct LockScreenCaptionsTests {
         #expect(LockScreenCaptions.lines(from: []) { _ in nil }.isEmpty)
     }
 
-    @Test("a speaker's name heads their run of lines, even when the run began above the shown lines")
-    func namesOnlyWhereTheSpeakerChanges() {
-        let continuing = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b", speaker: 1), line("c", speaker: 2)], name: names)
-        #expect(continuing.map(\.speaker) == [nil, "Speaker 2"])
-        let fresh = LockScreenCaptions.lines(from: [line("a", speaker: 2), line("b", speaker: 1), line("c", speaker: 1)], name: names)
-        #expect(fresh.map(\.speaker) == ["Speaker 1", nil])
+    @Test("the top line always says who is talking; below it a name shows only where the speaker changes")
+    func namesOnTopAndWhereTheSpeakerChanges() {
+        let changing = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b", speaker: 1), line("c", speaker: 2)], name: names)
+        #expect(changing.map(\.speaker) == ["Speaker 1", "Speaker 2"])
+        let continuing = LockScreenCaptions.lines(from: [line("a", speaker: 2), line("b", speaker: 1), line("c", speaker: 1)], name: names)
+        #expect(continuing.map(\.speaker) == ["Speaker 1", nil])
+        let unnamed = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b")], name: names)
+        #expect(unnamed.map(\.speaker) == ["Speaker 1", nil])
+    }
+
+    @Test("asked for one line, the newest comes with its speaker's name even mid-run")
+    func singleLine() {
+        let one = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b", speaker: 1), line("  ")], count: 1, name: names)
+        #expect(one == [LockScreenCaptionLine(speaker: "Speaker 1", text: "b", isFinal: true)])
     }
 
     @Test("long lines are cut to what fits: the newest line gets more room than the one before, and a name takes its share")
