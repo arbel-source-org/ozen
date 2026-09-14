@@ -157,6 +157,19 @@ leave the phone.
 - **Picking a model asks "Download … and switch to it?"** (lehorid … ve-la'avor
   elav). Captions are running and that model isn't on the phone yet:
   captions stop until it has downloaded and loaded, so it asks first.
+- **A search in History finds nothing, though she remembers the
+  conversation.** Every word typed has to appear in it somewhere, so fewer
+  words find more: "doctor" (rofe) rather than "what the doctor said about
+  the pills". Parts of words count ("rofe" also finds "la-rofe", "to the
+  doctor"), and a speaker's name or the conversation's own name can be
+  searched too. A conversation that captioned a word wrongly can only be
+  found by what is actually written; the day headings (Today, Yesterday, a
+  weekday) are the other way in.
+- **"Earlier lines were saved. Tap to read them" (shurot mukdamot yoter
+  nishmeru) at the top of the captions.** The caption screen keeps the
+  newest 300 lines; tapping the note opens the saved conversation where the
+  screen cut off. With saving off, or failing, it reads "Earlier lines are
+  no longer shown" (shurot mukdamot yoter kvar lo mutzagot) instead.
 
 ## Reinstalling
 
