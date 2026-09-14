@@ -2,24 +2,6 @@ import ActivityKit
 import Foundation
 import OzenKit
 
-/// Where the view model sends the lock screen's caption lines. A protocol
-/// so tests can see what would be shown without ActivityKit.
-@MainActor
-public protocol LockScreenCaptionsDisplaying: AnyObject {
-    /// Shows `content`, starting the Live Activity if none is running and
-    /// `mayStart` (iOS only lets an app start one while it is in front).
-    /// Returns whether it is on the lock screen now.
-    @discardableResult
-    func show(_ content: LockScreenCaptionContent, mayStart: Bool) -> Bool
-    func end()
-    /// False when Live Activities are switched off for the app in iOS
-    /// Settings, where nothing the app does can show them.
-    var isAllowedBySystem: Bool { get }
-    /// Why iOS last refused to start one, with the clock time, for the
-    /// diagnostics report; nil when it never has.
-    var lastStartFailure: String? { get }
-}
-
 /// The Live Activity itself (see `CaptionActivityAttributes`).
 ///
 /// Only the activity's id is kept, and every call on ActivityKit happens in
@@ -28,8 +10,8 @@ public protocol LockScreenCaptionsDisplaying: AnyObject {
 /// methods is what strict concurrency checking refuses.
 @MainActor
 final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
-    /// Updates carry a stale date this far ahead, and the view model sends
-    /// the lines again well before it: if iOS closes the app, the lock
+    /// Updates carry a stale date this far ahead, and the lines are sent
+    /// again well before it (`LockScreenCaptionsCoordinator`): if iOS closes the app, the lock
     /// screen then says the captions stopped updating instead of showing an
     /// old sentence as if it were just said.
     static let staleAfterSeconds: TimeInterval = 120

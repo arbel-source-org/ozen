@@ -92,13 +92,7 @@ public final class LiveCaptionViewModel {
     private var launchHousekeeping: Task<Void, Never>?
     private var soundIdentifiersLoad: Task<Void, Never>?
     @ObservationIgnored private var announcer = CaptionAnnouncer()
-    @ObservationIgnored private let lockScreen: (any LockScreenCaptionsDisplaying)?
-    @ObservationIgnored private var lockScreenThrottle = LockScreenUpdateThrottle(minimumInterval: LockScreenUpdateThrottle.foregroundInterval)
-    @ObservationIgnored private var lockScreenFlush: Task<Void, Never>?
-    @ObservationIgnored private var lockScreenKeepAlive: Task<Void, Never>?
-    @ObservationIgnored private var lockScreenShowing = false
-    /// When a Live Activity may next be started after iOS refused one.
-    @ObservationIgnored private var lockScreenNextStartAttempt: TimeInterval = 0
+    @ObservationIgnored private var lockScreen: LockScreenCaptionsCoordinator?
     private static let retentionCheckIntervalSeconds: TimeInterval = 6 * 60 * 60
 
     private static let autosaveIntervalSeconds: UInt64 = 20
@@ -154,7 +148,6 @@ public final class LiveCaptionViewModel {
         reclaimAudioSession: (@MainActor () -> Bool)? = nil,
         lockScreen: (any LockScreenCaptionsDisplaying)? = nil
     ) {
-        self.lockScreen = lockScreen
         self.settingsStore = settingsStore
         self.pipeline = pipeline
         self.historyStore = historyStore ?? TranscriptHistoryStore(
@@ -200,6 +193,31 @@ public final class LiveCaptionViewModel {
                 self?.refreshLockScreen()
             }
         }
+        if let lockScreen {
+            self.lockScreen = LockScreenCaptionsCoordinator(
+                display: lockScreen,
+                situation: { [weak self] in
+                    guard let self else {
+                        return .init(enabled: false, phase: .idle, interruptedByCall: false, pausedForSpeech: false, captionSize: 0)
+                    }
+                    return .init(
+                        enabled: self.settings.display.lockScreenCaptions,
+                        phase: self.pipeline.phase,
+                        interruptedByCall: self.isInterruptedBySystem,
+                        pausedForSpeech: self.captionsHeldForSpeech,
+                        captionSize: self.settings.display.fontSize
+                    )
+                },
+                lines: { [weak self] count, textSize in
+                    guard let self else { return [] }
+                    let pipeline = self.pipeline
+                    let namesShown = self.settings.display.showSpeakerNames
+                    return LockScreenCaptions.lines(from: pipeline.segments, count: count, textSize: textSize) { segment in
+                        namesShown && segment.speakerClusterID != nil ? pipeline.displayName(for: segment) : nil
+                    }
+                }
+            )
+        }
         pipeline.onCaptionsChanged = { [weak self] in
             self?.refreshLockScreen()
         }
@@ -239,18 +257,7 @@ public final class LiveCaptionViewModel {
         } else {
             awayCatchUp.screenLeft(at: now)
         }
-        // Back in front is the only time a Live Activity can be started
-        // (one iOS ended after eight hours included), and a start it refused
-        // earlier is tried again: Live Activities may just have been
-        // switched on.
-        if isActive { lockScreenNextStartAttempt = 0 }
-        lockScreenThrottle.minimumInterval = isActive
-            ? LockScreenUpdateThrottle.foregroundInterval
-            : LockScreenUpdateThrottle.backgroundInterval
-        // A send held back for the slower pace in front goes now.
-        lockScreenFlush?.cancel()
-        lockScreenFlush = nil
-        refreshLockScreen()
+        lockScreen?.appActivityChanged(isActive: isActive)
         // Captions that failed with the app open were on screen for her to
         // see; putting the phone away with them still stopped is when she
         // needs telling, and no pipeline event will come along to say so.
@@ -590,105 +597,26 @@ public final class LiveCaptionViewModel {
 
     // MARK: - Lock screen
 
-    /// Puts the newest lines on the lock screen while captions run, and
-    /// takes them away when captions are stopped or the setting is off (see
-    /// `LockScreenCaptions.presence`). Called whenever a line changes, the
-    /// phase changes, the app comes and goes, or the display settings
-    /// change.
+    /// Brings the lock screen captions up to date (see
+    /// `LockScreenCaptionsCoordinator`). Called whenever a line changes,
+    /// the phase changes, or the display settings change.
     func refreshLockScreen() {
-        guard let lockScreen else { return }
-        let presence = LockScreenCaptions.presence(
-            phase: pipeline.phase,
-            interruptedByCall: isInterruptedBySystem,
-            pausedForSpeech: captionsHeldForSpeech
-        )
-        guard settings.display.lockScreenCaptions, presence.keep else {
-            lockScreenFlush?.cancel()
-            lockScreenFlush = nil
-            lockScreenKeepAlive?.cancel()
-            lockScreenKeepAlive = nil
-            lockScreenThrottle.reset()
-            lockScreenNextStartAttempt = 0
-            if lockScreenShowing {
-                lockScreen.end()
-                lockScreenShowing = false
-            }
-            return
-        }
-        let namesShown = settings.display.showSpeakerNames
-        let textSize = LockScreenTextSize(captionSize: settings.display.fontSize)
-        let content = LockScreenCaptionContent(
-            // Under a note ("paused because of a call") there is room for
-            // the newest line only.
-            lines: LockScreenCaptions.lines(
-                from: pipeline.segments,
-                count: presence.status == nil ? LockScreenCaptions.lineCount : 1,
-                textSize: textSize
-            ) { [pipeline] segment in
-                namesShown && segment.speakerClusterID != nil ? pipeline.displayName(for: segment) : nil
-            },
-            status: presence.status,
-            textSize: textSize
-        )
-        let now = Date().timeIntervalSince1970
-        switch lockScreenThrottle.decide(content, now: now) {
-        case .nothingNew where lockScreenShowing:
-            return
-        case .send, .nothingNew:
-            sendToLockScreen(content, at: now)
-        case .wait(let delay):
-            guard lockScreenFlush == nil else { return }
-            lockScreenFlush = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(delay))
-                guard let self, !Task.isCancelled else { return }
-                self.lockScreenFlush = nil
-                self.refreshLockScreen()
-            }
-        }
+        lockScreen?.refresh()
     }
-
-    private func sendToLockScreen(_ content: LockScreenCaptionContent, at time: TimeInterval) {
-        guard let lockScreen else { return }
-        // A start iOS refused (Live Activities off, too many running) isn't
-        // asked for again with every word that follows.
-        let mayStart = isAppActive && time >= lockScreenNextStartAttempt
-        lockScreenShowing = lockScreen.show(content, mayStart: mayStart)
-        guard lockScreenShowing else {
-            if mayStart { lockScreenNextStartAttempt = time + Self.lockScreenStartRetrySeconds }
-            return
-        }
-        lockScreenThrottle.sent(content, at: time)
-        guard lockScreenKeepAlive == nil else { return }
-        // Nothing said for a while sends nothing, and the lines would turn
-        // stale on the lock screen (see `LockScreenCaptionsActivity`) while
-        // captions are in fact running. Sending them again now and then
-        // keeps "not updating" for when the app really stopped.
-        lockScreenKeepAlive = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(Self.lockScreenKeepAliveSeconds))
-                guard let self, !Task.isCancelled else { return }
-                self.lockScreenThrottle.reset()
-                self.refreshLockScreen()
-            }
-        }
-    }
-
-    static let lockScreenKeepAliveSeconds: Double = 50
-    static let lockScreenStartRetrySeconds: TimeInterval = 30
 
     /// False when iOS Settings has Live Activities off for Ozen, so the
     /// lock screen captions setting can't show anything. Read when the
     /// settings screen appears; it isn't observed.
     public var lockScreenCaptionsAllowedBySystem: Bool {
-        lockScreen?.isAllowedBySystem ?? true
+        lockScreen?.display.isAllowedBySystem ?? true
     }
 
     /// Whether the lines are on the lock screen as far as the app knows,
     /// for the diagnostics report.
-    public var lockScreenCaptionsShowing: Bool { lockScreenShowing }
+    public var lockScreenCaptionsShowing: Bool { lockScreen?.isShowing ?? false }
 
     /// Why iOS last refused to put them there, for the diagnostics report.
-    public var lockScreenCaptionsLastStartFailure: String? { lockScreen?.lastStartFailure }
+    public var lockScreenCaptionsLastStartFailure: String? { lockScreen?.display.lastStartFailure }
 
     /// She has seen where the lines she missed begin.
     func acknowledgeAwayLines() {
