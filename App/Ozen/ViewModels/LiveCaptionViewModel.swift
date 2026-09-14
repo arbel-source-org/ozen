@@ -92,6 +92,11 @@ public final class LiveCaptionViewModel {
     private var launchHousekeeping: Task<Void, Never>?
     private var soundIdentifiersLoad: Task<Void, Never>?
     @ObservationIgnored private var announcer = CaptionAnnouncer()
+    @ObservationIgnored private let lockScreen: (any LockScreenCaptionsDisplaying)?
+    @ObservationIgnored private var lockScreenThrottle = LockScreenUpdateThrottle()
+    @ObservationIgnored private var lockScreenFlush: Task<Void, Never>?
+    @ObservationIgnored private var lockScreenKeepAlive: Task<Void, Never>?
+    @ObservationIgnored private var lockScreenShowing = false
     private static let retentionCheckIntervalSeconds: TimeInterval = 6 * 60 * 60
 
     private static let autosaveIntervalSeconds: UInt64 = 20
@@ -127,7 +132,8 @@ public final class LiveCaptionViewModel {
             synthesizer: SpeechSynthesizer(),
             postNotification: { AlertNotifier.shared.post($0) },
             withdrawNotification: { AlertNotifier.shared.withdraw(identifier: $0) },
-            phoneCalls: PhoneCallMonitor()
+            phoneCalls: PhoneCallMonitor(),
+            lockScreen: LockScreenCaptionsActivity()
         )
     }
 
@@ -143,8 +149,10 @@ public final class LiveCaptionViewModel {
         postNotification: ((AlertNotificationContent) -> Void)? = nil,
         withdrawNotification: ((String) -> Void)? = nil,
         phoneCalls: PhoneCallMonitor? = nil,
-        reclaimAudioSession: (@MainActor () -> Bool)? = nil
+        reclaimAudioSession: (@MainActor () -> Bool)? = nil,
+        lockScreen: (any LockScreenCaptionsDisplaying)? = nil
     ) {
+        self.lockScreen = lockScreen
         self.settingsStore = settingsStore
         self.pipeline = pipeline
         self.historyStore = historyStore ?? TranscriptHistoryStore(
@@ -187,7 +195,11 @@ public final class LiveCaptionViewModel {
             Task { @MainActor [weak self] in
                 self?.holdCaptionsIfStillSpeaking()
                 self?.checkCaptionsStillRunning()
+                self?.refreshLockScreen()
             }
+        }
+        pipeline.onCaptionsChanged = { [weak self] in
+            self?.refreshLockScreen()
         }
         phoneCalls?.onChange = { [weak self] inProgress in
             self?.phoneCallsChanged(inProgress: inProgress)
@@ -225,6 +237,9 @@ public final class LiveCaptionViewModel {
         } else {
             awayCatchUp.screenLeft(at: now)
         }
+        // Back in front is the only time a Live Activity can be started,
+        // one iOS ended after eight hours included.
+        refreshLockScreen()
         // Captions that failed with the app open were on screen for her to
         // see; putting the phone away with them still stopped is when she
         // needs telling, and no pipeline event will come along to say so.
@@ -270,6 +285,7 @@ public final class LiveCaptionViewModel {
         }
         pipeline.systemInterruptionChanged(active: began)
         checkCaptionsStillRunning()
+        refreshLockScreen()
     }
 
     /// A phone call started (`true`) or the last one ended (`false`).
@@ -563,6 +579,78 @@ public final class LiveCaptionViewModel {
         saveInBackground(record)
     }
 
+    // MARK: - Lock screen
+
+    /// Puts the newest lines on the lock screen while captions run, and
+    /// takes them away when captions are stopped or the setting is off (see
+    /// `LockScreenCaptions.presence`). Called whenever a line changes, the
+    /// phase changes, the app comes and goes, or the display settings
+    /// change.
+    func refreshLockScreen() {
+        guard let lockScreen else { return }
+        let presence = LockScreenCaptions.presence(
+            phase: pipeline.phase,
+            interruptedByCall: isInterruptedBySystem,
+            pausedForSpeech: captionsHeldForSpeech
+        )
+        guard settings.display.lockScreenCaptions, presence.keep else {
+            lockScreenFlush?.cancel()
+            lockScreenFlush = nil
+            lockScreenKeepAlive?.cancel()
+            lockScreenKeepAlive = nil
+            lockScreenThrottle.reset()
+            if lockScreenShowing {
+                lockScreen.end()
+                lockScreenShowing = false
+            }
+            return
+        }
+        let namesShown = settings.display.showSpeakerNames
+        let content = LockScreenCaptionContent(
+            lines: LockScreenCaptions.lines(from: pipeline.segments) { [pipeline] segment in
+                namesShown && segment.speakerClusterID != nil ? pipeline.displayName(for: segment) : nil
+            },
+            status: presence.status
+        )
+        let now = Date().timeIntervalSince1970
+        switch lockScreenThrottle.decide(content, now: now) {
+        case .nothingNew where lockScreenShowing:
+            return
+        case .send, .nothingNew:
+            sendToLockScreen(content, at: now)
+        case .wait(let delay):
+            guard lockScreenFlush == nil else { return }
+            lockScreenFlush = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(delay))
+                guard let self, !Task.isCancelled else { return }
+                self.lockScreenFlush = nil
+                self.refreshLockScreen()
+            }
+        }
+    }
+
+    private func sendToLockScreen(_ content: LockScreenCaptionContent, at time: TimeInterval) {
+        guard let lockScreen else { return }
+        lockScreenShowing = lockScreen.show(content, mayStart: isAppActive)
+        guard lockScreenShowing else { return }
+        lockScreenThrottle.sent(content, at: time)
+        guard lockScreenKeepAlive == nil else { return }
+        // Nothing said for a while sends nothing, and the lines would turn
+        // stale on the lock screen (see `LockScreenCaptionsActivity`) while
+        // captions are in fact running. Sending them again now and then
+        // keeps "not updating" for when the app really stopped.
+        lockScreenKeepAlive = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(Self.lockScreenKeepAliveSeconds))
+                guard let self, !Task.isCancelled else { return }
+                self.lockScreenThrottle.reset()
+                self.refreshLockScreen()
+            }
+        }
+    }
+
+    static let lockScreenKeepAliveSeconds: Double = 50
+
     /// She has seen where the lines she missed begin.
     func acknowledgeAwayLines() {
         guard !awayCatchUp.isAcknowledged else { return }
@@ -642,6 +730,7 @@ public final class LiveCaptionViewModel {
         set {
             settings.display = newValue
             persist()
+            refreshLockScreen()
         }
     }
 
@@ -957,6 +1046,7 @@ public final class LiveCaptionViewModel {
         guard let centroid = pipeline.nameSpeaker(of: segment, name: name) else { return }
         settings.speakerProfiles.append(SpeakerProfile(name: name, embedding: centroid))
         persist()
+        speakerLabelsChanged()
     }
 
     /// Deletes a person from the saved speakers: every voice print with
@@ -966,6 +1056,7 @@ public final class LiveCaptionViewModel {
         settings.speakerProfiles.removeAll { $0.name == name }
         persist()
         pipeline.forgetSpeakerName(name)
+        speakerLabelsChanged()
     }
 
     public func removeProfile(id: UUID) {
@@ -976,6 +1067,7 @@ public final class LiveCaptionViewModel {
         // nobody by that name is left.
         if !settings.speakerProfiles.contains(where: { $0.name == removed.name }) {
             pipeline.forgetSpeakerName(removed.name)
+            speakerLabelsChanged()
         }
     }
 
@@ -1001,6 +1093,22 @@ public final class LiveCaptionViewModel {
             persist()
         }
         pipeline.renameSpeakers(named: oldName, to: trimmed)
+        speakerLabelsChanged()
+    }
+
+    /// A name was given, changed or removed. The lines on screen show the
+    /// new labels at once; the saved copies of their conversations have to
+    /// be written again to match. The open conversation's autosave would
+    /// catch up, but one that a quiet break had already closed and saved
+    /// kept the old names in History for good.
+    private func speakerLabelsChanged() {
+        for closed in closedHistorySessions {
+            saveClosed(closed)
+        }
+        if !currentHistorySegments.isEmpty {
+            persistHistory(ended: false, inBackground: true)
+        }
+        refreshLockScreen()
     }
 
     public func displayName(for segment: TranscriptSegment) -> String {
@@ -1048,6 +1156,11 @@ public final class LiveCaptionViewModel {
         historyWriter.saveInBackground(record) { [weak self] in
             Task { @MainActor [weak self] in self?.refreshSavingTrouble() }
         }
+    }
+
+    /// Returns once every history save already asked for has finished.
+    func waitForHistorySaves() {
+        historyWriter.waitUntilIdle()
     }
 
     /// Why the latest history save didn't reach the disk, or nil when it

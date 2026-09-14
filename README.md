@@ -151,6 +151,13 @@ things, for Hebrew conversation, entirely on-device.
   conversation from a few minutes ago, one tap away. When iOS warns it is
   short of memory and captions are off, the app lets go of the loaded
   model first, so it is less likely to be the app iOS ends.
+- **Captions on the lock screen.** While captions run, the newest two
+  lines show on the lock screen and in the Dynamic Island as a Live
+  Activity, a speaker's name heading their turn, so the last sentence can
+  be read without unlocking the phone. A call or a failure keeps it there
+  and says why the lines stopped; if iOS closes the app it says the lines
+  aren't updating rather than showing an old sentence as new. Settings can
+  turn it off, since anyone looking at the phone can read it.
 - **Picks up where she stopped reading.** Captions carry on with the phone
   locked or another app open; coming back, a line across the captions marks
   where the ones she missed begin, with how many there are, and a button at

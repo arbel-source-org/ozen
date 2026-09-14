@@ -68,6 +68,9 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
     /// Numbers (times, amounts, phone numbers) drawn heavier and in their
     /// own colour. See `NumberEmphasis`.
     public var emphasizeNumbers: Bool
+    /// The newest lines on the lock screen, as a Live Activity, while
+    /// captions run. See `LockScreenCaptions`.
+    public var lockScreenCaptions: Bool
 
     public static let minimumFontSize: Double = 20
     public static let maximumFontSize: Double = 64
@@ -80,7 +83,8 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         keepScreenAwake: Bool = true,
         markUncertainLines: Bool = true,
         announceNewLines: Bool = true,
-        emphasizeNumbers: Bool = true
+        emphasizeNumbers: Bool = true,
+        lockScreenCaptions: Bool = true
     ) {
         self.fontSize = fontSize
         self.theme = theme
@@ -90,6 +94,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         self.markUncertainLines = markUncertainLines
         self.announceNewLines = announceNewLines
         self.emphasizeNumbers = emphasizeNumbers
+        self.lockScreenCaptions = lockScreenCaptions
     }
 
     public static let `default` = DisplayPreferences()
@@ -104,6 +109,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case fontSize, theme, boldText, showSpeakerNames, keepScreenAwake, markUncertainLines, announceNewLines, emphasizeNumbers
+        case lockScreenCaptions
     }
 
     public init(from decoder: any Decoder) throws {
@@ -117,6 +123,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         markUncertainLines = container.lenient(Bool.self, forKey: .markUncertainLines) ?? defaults.markUncertainLines
         announceNewLines = container.lenient(Bool.self, forKey: .announceNewLines) ?? defaults.announceNewLines
         emphasizeNumbers = container.lenient(Bool.self, forKey: .emphasizeNumbers) ?? defaults.emphasizeNumbers
+        lockScreenCaptions = container.lenient(Bool.self, forKey: .lockScreenCaptions) ?? defaults.lockScreenCaptions
         fontSize = min(max(fontSize, Self.minimumFontSize), Self.maximumFontSize)
     }
 }

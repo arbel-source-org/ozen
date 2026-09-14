@@ -73,6 +73,11 @@ public final class CaptionPipeline {
     /// has finished reacting to it: a failure's retry, for one, is lined up
     /// just after.
     public var onPhaseChange: ((PipelinePhase) -> Void)?
+    /// A caption line was added or changed, or the transcript was cleared.
+    /// For what follows the captions outside the app's own screen (the
+    /// lock screen), which SwiftUI's observation doesn't reach while the
+    /// app is in the background.
+    public var onCaptionsChanged: (() -> Void)?
 
     public var inputLevel: Float { audio.inputLevel }
     /// The connection as last reported, for diagnostics; nil when unknown.
@@ -391,6 +396,7 @@ public final class CaptionPipeline {
 
     public func clearTranscript() {
         segments = []
+        defer { onCaptionsChanged?() }
         stabilizer = CaptionStabilizer(silenceCommitThreshold: stabilizer.silenceCommitThreshold)
         startNewConversation()
         keywordHits = []
@@ -780,6 +786,7 @@ public final class CaptionPipeline {
         } else {
             segments.append(segment)
         }
+        onCaptionsChanged?()
     }
 
     // MARK: - Plumbing

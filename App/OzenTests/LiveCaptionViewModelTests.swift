@@ -1147,6 +1147,33 @@ struct LiveCaptionViewModelDeleteConversationTests {
         #expect(summaries.first?.preview == "ערב טוב")
     }
 
+    @Test("naming a voice after a quiet break renames it in the earlier conversation's saved copy too")
+    func nameReachesClosedConversation() async throws {
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-names-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: history
+        )
+        await viewModel.start()
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.count == 1 })
+        await say("the doctor said one pill", at: Date().timeIntervalSince1970 - 30 * 60, into: engine, until: viewModel, count: 1)
+        #expect(viewModel.segments.first?.speakerClusterID != nil)
+        #expect(viewModel.checkForConversationBreak())
+        let earlier = try #require(history.listSummaries().first)
+        #expect(history.load(id: earlier.id)?.segments.first?.speakerName != "Dr. Cohen")
+
+        viewModel.nameSpeaker(of: viewModel.segments[0], name: "Dr. Cohen")
+        viewModel.waitForHistorySaves()
+
+        #expect(history.load(id: earlier.id)?.segments.first?.speakerName == "Dr. Cohen")
+    }
+
     @Test("delete all also retires the conversation in progress")
     func deleteAllIncludesLive() async throws {
         let (viewModel, engine, history) = makeViewModel()
@@ -1436,5 +1463,83 @@ struct LiveCaptionViewModelKeywordAttentionTests {
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "האמבולנס בדרך", isFinal: true, timestamp: 2))
         await eventually { viewModel.keywordHits.count == 3 }
         #expect(viewModel.claimAttentionForNewKeywordHits() == nil)
+    }
+}
+
+@Suite("LiveCaptionViewModel lock screen captions")
+@MainActor
+struct LiveCaptionViewModelLockScreenTests {
+    @MainActor
+    final class FakeLockScreen: LockScreenCaptionsDisplaying {
+        var shown: [LockScreenCaptionContent] = []
+        var isShowing = false
+        var ends = 0
+
+        func show(_ content: LockScreenCaptionContent, mayStart: Bool) -> Bool {
+            if !isShowing {
+                guard mayStart else { return false }
+                isShowing = true
+            }
+            shown.append(content)
+            return true
+        }
+
+        func end() {
+            ends += 1
+            isShowing = false
+        }
+    }
+
+    private func makeViewModel(lockScreen: FakeLockScreen) -> (LiveCaptionViewModel, FakeEngine) {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-lock-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, postNotification: { _ in }, lockScreen: lockScreen)
+        return (viewModel, engine)
+    }
+
+    @Test("listening puts the newest lines on the lock screen; pausing by hand or turning the setting off takes them away")
+    func showsAndEnds() async {
+        let lockScreen = FakeLockScreen()
+        let (viewModel, engine) = makeViewModel(lockScreen: lockScreen)
+        await viewModel.start()
+        #expect(await eventually { lockScreen.isShowing })
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "the pills at eight", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        #expect(await eventually { lockScreen.shown.last?.lines.last?.text == "the pills at eight" })
+        #expect(lockScreen.shown.last?.status == nil)
+
+        await viewModel.togglePause()
+        #expect(await eventually { lockScreen.ends == 1 })
+        await viewModel.togglePause()
+        #expect(await eventually { lockScreen.isShowing })
+
+        viewModel.display.lockScreenCaptions = false
+        #expect(lockScreen.ends == 2)
+        #expect(!lockScreen.isShowing)
+    }
+
+    @Test("with the app in the background none can be started; back in front it starts")
+    func startsOnlyInFront() async {
+        let lockScreen = FakeLockScreen()
+        let (viewModel, _) = makeViewModel(lockScreen: lockScreen)
+        viewModel.sceneActivityChanged(isActive: false)
+        await viewModel.start()
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(!lockScreen.isShowing)
+
+        viewModel.sceneActivityChanged(isActive: true)
+        #expect(lockScreen.isShowing)
+    }
+
+    @Test("a call keeps the lock screen captions, saying why they paused")
+    func callKeepsThem() async {
+        let lockScreen = FakeLockScreen()
+        let (viewModel, _) = makeViewModel(lockScreen: lockScreen)
+        await viewModel.start()
+        #expect(await eventually { lockScreen.isShowing })
+        viewModel.systemInterruptionChanged(began: true)
+        #expect(await eventually { lockScreen.shown.last?.status != nil })
+        #expect(lockScreen.ends == 0)
     }
 }

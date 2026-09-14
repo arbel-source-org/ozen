@@ -48,6 +48,15 @@ leave the phone.
   the phone was locked or another app was open; the line shows where the
   ones she hasn't seen begin. The button at the top, "What was said
   meanwhile" (ma she-ne'emar beinta'yim), scrolls up to it.
+- **Captions on the lock screen.** The newest lines show there while
+  captions run, and stay (saying "paused because of a call" or "captions
+  stopped") when something interrupts them. If none appear: iOS Settings →
+  Ozen → Live Activities must be on, and captions have to be started (or the
+  app opened once) with the phone unlocked, since iOS only lets an app put a
+  new one on the lock screen from the front. They also end by themselves
+  after eight hours; opening the app brings them back. Settings → Display
+  (tetzuga) → "Captions on the lock screen too" (ktuviyot gam be-masach
+  ha-ne'ila) turns them off.
 - **The screen turned off while listening.** After fifteen minutes with
   nothing said, the phone locks as usual to save the battery. Captions and
   doorbell or alarm alerts keep running; unlock to read.
