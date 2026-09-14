@@ -55,9 +55,10 @@ ALTSERVER_ANISETTE_SERVER=http://127.0.0.1:6970 \
 ./AltServer -u <UDID from idevice_id -l> -a YOUR_APPLE_ID -p YOUR_APP_SPECIFIC_PASSWORD Ozen.ipa
 ```
 
-The app carries a widget extension (the lock screen captions), which AltServer
-signs as a second App ID, `…Ozen.Captions`. A free Apple ID allows ten new App
-IDs a week, so this only matters when installing many different apps with it.
+The app carries a widget extension (the lock screen captions and the Control
+Center button), which AltServer signs as a second App ID, `…Ozen.Captions`. A
+free Apple ID allows ten new App IDs a week, so this only matters when
+installing many different apps with it.
 
 Then on the phone: Settings → General → VPN & Device Management → trust the
 developer certificate; Settings → Privacy & Security → Developer Mode → on
