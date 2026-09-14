@@ -59,6 +59,7 @@ struct DiagnosticsView: View {
                 LabeledContent("ניסיון חוזר אוטומטי", value: retryText)
                 LabeledContent("שיחת טלפון תופסת את האודיו", value: viewModel.isInterruptedBySystem ? "כן" : "לא")
                 LabeledContent("שמירת הגדרות", value: viewModel.settingsSaveError == nil ? "תקינה" : "נכשלה")
+                LabeledContent("חיבור לאינטרנט", value: Self.describe(viewModel.pipeline.networkConditions))
             }
 
             Section("מודל ומילים") {
@@ -140,11 +141,19 @@ struct DiagnosticsView: View {
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)
-        settings save error: \(viewModel.settingsSaveError ?? "-")
+        settings save error: \(viewModel.settingsSaveError ?? "-") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText)
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString)
         """
+    }
+
+    static func describe(_ network: NetworkConditions?) -> String {
+        guard let network else { return "—" }
+        guard network.isConnected else { return "אין חיבור" }
+        var parts = [network.isExpensive ? "סלולרי" : "Wi-Fi"]
+        if network.isConstrained { parts.append("חיסכון בנתונים") }
+        return parts.joined(separator: " · ")
     }
 
     static func describe(_ phase: PipelinePhase) -> String {

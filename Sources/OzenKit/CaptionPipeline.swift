@@ -52,6 +52,8 @@ public final class CaptionPipeline {
     public var onKeywordHits: (([KeywordHit], TranscriptSegment) -> Void)?
 
     public var inputLevel: Float { audio.inputLevel }
+    /// The connection as last reported, for diagnostics; nil when unknown.
+    public var networkConditions: NetworkConditions? { network?.current }
 
     private let audio: any AudioCapturing
     private let engineFactory: @MainActor (AppSettings) -> any TranscriptionEngine
