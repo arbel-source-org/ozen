@@ -33,7 +33,6 @@ struct OnboardingView: View {
                 .padding(.bottom, 16)
         }
         .background(Color(.systemBackground))
-        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
     // MARK: - Pages
@@ -239,8 +238,12 @@ private struct OnboardingPage<Content: View>: View {
                     .foregroundStyle(.tint)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 32)
+                    .accessibilityHidden(true)
                 Text(title)
-                    .font(.system(size: 36, weight: .bold))
+                    // Scales with the phone's text size, like everything
+                    // else here: the largest sizes are the ones she may use.
+                    .font(.largeTitle.bold())
+                    .accessibilityAddTraits(.isHeader)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.bottom, 8)
                 content
@@ -264,6 +267,7 @@ private struct OnboardingRow: View {
                 .font(.title2)
                 .foregroundStyle(.tint)
                 .frame(width: 32)
+                .accessibilityHidden(true)
             Text(text)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

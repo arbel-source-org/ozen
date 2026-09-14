@@ -119,7 +119,9 @@ private struct QuickPhrasesEditor: View {
                     .onSubmit(add)
                 Button(action: add) {
                     Image(systemName: "plus.circle.fill")
+                        .font(.title2)
                 }
+                .accessibilityLabel("הוספה")
                 .disabled(newPhrase.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             ForEach(viewModel.settings.quickPhrases, id: \.self) { phrase in
