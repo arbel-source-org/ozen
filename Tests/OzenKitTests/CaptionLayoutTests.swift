@@ -137,3 +137,35 @@ struct CaptionLayoutTimeMarkTests {
         #expect(CaptionLayout.timeMarkedLineIDs(in: []).isEmpty)
     }
 }
+
+@Suite("CaptionLayout lines drawn on the caption screen")
+struct CaptionLayoutOnScreenTests {
+    @Test("only the newest lines are drawn once there are more than the limit")
+    func window() {
+        #expect(CaptionLayout.firstOnScreenIndex(lineCount: 0) == 0)
+        #expect(CaptionLayout.firstOnScreenIndex(lineCount: CaptionLayout.onScreenLineLimit) == 0)
+        #expect(CaptionLayout.firstOnScreenIndex(lineCount: CaptionLayout.onScreenLineLimit + 1) == 1)
+        #expect(CaptionLayout.firstOnScreenIndex(lineCount: 20_000) == 20_000 - CaptionLayout.onScreenLineLimit)
+    }
+}
+
+@Suite("CaptionPipeline with days of lines")
+@MainActor
+struct CaptionPipelineLongRunTests {
+    @Test("an update to the newest line lands on it, however many lines came before")
+    func manyLines() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder(), recovery: .disabled)
+        await pipeline.start(settings: .default)
+        for index in 0..<2_000 {
+            engine.emit(TranscriptToken(utteranceID: UUID(), text: "שורה \(index)", isFinal: true, timestamp: 1_000 + Double(index)))
+        }
+        let open = UUID()
+        engine.emit(TranscriptToken(utteranceID: open, text: "עוד", isFinal: false, timestamp: 3_000))
+        engine.emit(TranscriptToken(utteranceID: open, text: "עוד מעט", isFinal: true, timestamp: 3_001))
+        #expect(await eventually { pipeline.segments.count == 2_001 && pipeline.segments.last?.text == "עוד מעט" })
+        #expect(pipeline.segments.last?.isCommitted == true)
+        #expect(pipeline.segments.first?.text == "שורה 0")
+    }
+}
+

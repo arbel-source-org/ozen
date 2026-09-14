@@ -117,6 +117,20 @@ public enum CaptionLayout {
 }
 
 extension CaptionLayout {
+    /// How many of the newest lines the caption screen draws. A phone left
+    /// listening on the nightstand for days collects thousands, and every
+    /// word arriving made the screen go over all of them again. Nobody
+    /// scrolls back through hundreds of lines on the live screen; older
+    /// ones are in the saved conversations.
+    public static let onScreenLineLimit = 300
+
+    /// Where the lines drawn on the caption screen start.
+    public static func firstOnScreenIndex(lineCount: Int) -> Int {
+        max(0, lineCount - onScreenLineLimit)
+    }
+}
+
+extension CaptionLayout {
     /// Whether a line shows its speaker's name above it.
     ///
     /// Like a chat, the name appears when the speaker changes, not on every

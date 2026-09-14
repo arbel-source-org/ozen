@@ -77,7 +77,9 @@ public struct CaptionStabilizer: Sendable {
 
     @discardableResult
     public mutating func ingest(_ token: TranscriptToken) -> TranscriptSegment {
-        if let index = segments.firstIndex(where: { $0.id == token.utteranceID }) {
+        // From the end: the line being written is almost always the last
+        // one, and a phone left listening for days holds thousands.
+        if let index = segments.lastIndex(where: { $0.id == token.utteranceID }) {
             if segments[index].isCommitted {
                 if provisionalCommits.remove(token.utteranceID) != nil {
                     // Committed only because the engine went quiet, and it

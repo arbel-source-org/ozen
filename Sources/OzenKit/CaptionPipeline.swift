@@ -678,7 +678,9 @@ public final class CaptionPipeline {
         stats.lastTokenAt = now()
         // A brand-new utterance with nothing to show yet isn't worth an
         // (empty) row on screen; wait for text before creating it.
-        let isKnown = stabilizer.segments.contains { $0.id == token.utteranceID }
+        // Searched from the end, where the line being written is: a phone
+        // left listening for days holds thousands of lines.
+        let isKnown = stabilizer.segments.lastIndex { $0.id == token.utteranceID } != nil
         if !isKnown && token.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return
         }
@@ -691,7 +693,7 @@ public final class CaptionPipeline {
                 utteranceClusterAssignments[token.utteranceID] = recent.id
             }
         }
-        let wasCommitted = stabilizer.segments.first(where: { $0.id == token.utteranceID })?.isCommitted ?? false
+        let wasCommitted = stabilizer.segments.last(where: { $0.id == token.utteranceID })?.isCommitted ?? false
         let segment = stabilizer.ingest(enriched)
         if segment.isCommitted && !wasCommitted {
             stats.segmentsCommitted += 1
@@ -747,7 +749,7 @@ public final class CaptionPipeline {
             // Writing an unchanged value still tells every observer the
             // transcript changed and redraws the caption list, every 1.5 s
             // of speech; only write when the speaker actually changed.
-            if let index = segments.firstIndex(where: { $0.id == currentUtteranceID }),
+            if let index = segments.lastIndex(where: { $0.id == currentUtteranceID }),
                segments[index].speakerClusterID != clusterID {
                 segments[index].speakerClusterID = clusterID
             }
@@ -755,7 +757,7 @@ public final class CaptionPipeline {
     }
 
     private func upsert(_ segment: TranscriptSegment) {
-        if let index = segments.firstIndex(where: { $0.id == segment.id }) {
+        if let index = segments.lastIndex(where: { $0.id == segment.id }) {
             segments[index] = segment
         } else {
             segments.append(segment)

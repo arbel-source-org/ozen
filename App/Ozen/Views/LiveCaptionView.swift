@@ -364,8 +364,10 @@ struct LiveCaptionView: View {
                 LazyVStack(alignment: .leading, spacing: max(12, liveDisplay.fontSize * 0.6)) {
                     if viewModel.segments.isEmpty {
                         emptyState
+                    } else if CaptionLayout.firstOnScreenIndex(lineCount: viewModel.segments.count) > 0 {
+                        earlierLinesNote
                     }
-                    ForEach(Array(viewModel.segments.enumerated()), id: \.element.id) { index, segment in
+                    ForEach(onScreenLines, id: \.segment.id) { index, segment in
                         let name = viewModel.display.showSpeakerNames && segment.speakerClusterID != nil
                             ? viewModel.displayName(for: segment) : nil
                         CaptionRow(
@@ -431,6 +433,23 @@ struct LiveCaptionView: View {
             .scrollIndicators(.hidden)
             .onAppear { scrollProxy = proxy }
         }
+    }
+
+    /// The newest lines (see `CaptionLayout.onScreenLineLimit`), each with
+    /// its place in the whole transcript: the speaker label looks at the
+    /// line before it, even the first one drawn.
+    private var onScreenLines: [(index: Int, segment: TranscriptSegment)] {
+        let segments = viewModel.segments
+        let start = CaptionLayout.firstOnScreenIndex(lineCount: segments.count)
+        return segments.indices.dropFirst(start).map { ($0, segments[$0]) }
+    }
+
+    /// Above the first line drawn, once the oldest ones are no longer.
+    private var earlierLinesNote: some View {
+        Text(viewModel.settings.saveHistory ? "שורות מוקדמות יותר נמצאות בשיחות השמורות" : "שורות מוקדמות יותר כבר לא מוצגות")
+            .font(.system(size: max(15, liveDisplay.fontSize * 0.5)))
+            .foregroundStyle(theme.pendingText)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var emptyState: some View {
