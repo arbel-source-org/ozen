@@ -195,7 +195,11 @@ input source).
   the words captioned right after it on the phone's own microphone; a refused
   Bluetooth microphone leaves the picker's check mark on the one really
   recording; the white theme's status line and speaker names are easy to
-  read in daylight.
+  read in daylight. Also: a stereo or two-transmitter lavalier receiver
+  captions a voice on either channel; the coloured numbers are readable
+  in all three themes and don't make ordinary lines look important; a
+  phrase tapped while the model is still loading is not captioned; and
+  Diagnostics' memory row shows plausible numbers for the loaded model.
 
 ## Explicit non-goals for v1
 
