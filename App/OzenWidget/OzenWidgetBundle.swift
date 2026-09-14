@@ -42,7 +42,8 @@ struct CaptionLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
-                    CaptionLinesView(state: context.state, isStale: context.isStale, fontSize: 17)
+                    // Less room than the lock screen: the newest line only.
+                    CaptionLinesView(state: context.state, isStale: context.isStale, fontSize: 17, newestOnly: true)
                 }
             } compactLeading: {
                 // Marks only: VoiceOver reads the activity's lines instead.
@@ -67,6 +68,7 @@ struct CaptionLinesView: View {
     let state: CaptionActivityAttributes.ContentState
     let isStale: Bool
     let fontSize: CGFloat
+    var newestOnly = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -122,10 +124,17 @@ struct CaptionLinesView: View {
             .foregroundStyle(.white.opacity(0.8))
     }
 
-    /// Only the newest line under a status note: two caption lines fill the
-    /// lock screen's room, leaving none for the note.
+    /// Only the newest line under a note (two caption lines fill the lock
+    /// screen's room, leaving none for it) and in the Dynamic Island.
     private var shownLines: [CaptionActivityAttributes.ContentState.Line] {
-        state.status != nil || isStale ? Array(state.lines.suffix(1)) : state.lines
+        guard newestOnly || state.status != nil || isStale, var newest = state.lines.last else {
+            return state.lines
+        }
+        if newest.speaker == nil, state.lines.count > 1 {
+            // No name on a line means the speaker of the line above it.
+            newest.speaker = state.lines[state.lines.count - 2].speaker
+        }
+        return [newest]
     }
 
     private func lineText(_ line: CaptionActivityAttributes.ContentState.Line) -> Text {
