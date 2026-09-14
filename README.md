@@ -101,7 +101,8 @@ things, for Hebrew conversation, entirely on-device.
   bring them back (a call ends but iOS keeps the microphone, or recovery
   gave up), the app first tries to take the microphone back by itself, and
   otherwise sends one notification saying so, removed again once captions
-  are back.
+  are back. (iOS may suspend a locked app for the length of a call; then
+  this runs whenever iOS next lets the app run.)
 - **Battery warnings** at 20% and 10% while captions run, because hours of
   listening drain the phone and nobody following a conversation watches
   the battery icon.

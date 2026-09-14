@@ -46,6 +46,11 @@ leave the phone.
 - **No phone notifications when the screen is off.** Settings → התראות shows
   a red warning if notifications are blocked for Ozen in iOS, with a button
   to fix it.
+- **The doorbell notification comes, but she doesn't notice it.** With the
+  phone face down or across the room, turn on iOS Settings → Accessibility →
+  Audio & Visual → LED Flash for Alerts: the camera light then blinks for
+  every notification, Ozen's included. With the app open, sirens and the
+  doorbell already flash the edge of the screen.
 - **History says the last save failed.** The phone is out of storage; free
   some space and saving resumes by itself.
 
