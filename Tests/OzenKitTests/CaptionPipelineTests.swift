@@ -1637,6 +1637,20 @@ struct CaptionPipelineNaNEmbeddingTests {
         try await Task.sleep(for: .milliseconds(100))
         #expect(pipeline.speakerClusters.isEmpty)
     }
+
+    @Test("damaged audio from the microphone is counted for the diagnostics report")
+    func glitchedAudioCounted() async {
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in FakeEngine() }, embedder: FakeEmbedder(), recovery: .disabled)
+        await pipeline.start(settings: .default)
+        var glitched = [Float](repeating: 0.1, count: 1_600)
+        glitched[7] = .nan
+        audio.push(glitched)
+        audio.push([Float](repeating: 0.1, count: 1_600))
+        audio.push(glitched)
+        #expect(await eventually { pipeline.stats.audioChunksReceived == 3 })
+        #expect(await eventually { pipeline.stats.glitchedAudioChunks == 2 })
+    }
 }
 
 /// Free space the test can change while the pipeline holds on to it.

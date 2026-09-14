@@ -283,7 +283,12 @@ public final class CaptionPipeline {
             return
         }
 
-        let fan = AudioFanOut(source: source, count: soundDetector == nil ? 2 : 3)
+        let fan = AudioFanOut(source: source, count: soundDetector == nil ? 2 : 3) { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.runID == run else { return }
+                self.stats.glitchedAudioChunks += 1
+            }
+        }
         fanOut = fan
         let tokens = engine.stream(languageCode: settings.languageCode, audio: fan.outputs[0])
         let embedderAudio = fan.outputs[1]

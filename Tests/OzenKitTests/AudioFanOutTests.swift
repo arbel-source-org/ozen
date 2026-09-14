@@ -1,5 +1,6 @@
 import Testing
 @testable import OzenKit
+import Foundation
 
 @Suite("AudioFanOut")
 struct AudioFanOutTests {
@@ -25,7 +26,8 @@ struct AudioFanOutTests {
     @Test("a glitched sample, NaN or infinite, reaches every output as silence; the rest of the chunk is untouched")
     func glitchedSamplesBecomeSilence() async {
         let (source, continuation) = AsyncStream<[Float]>.makeStream()
-        let fan = AudioFanOut(source: source, count: 2)
+        let glitches = GlitchCount()
+        let fan = AudioFanOut(source: source, count: 2) { glitches.add() }
 
         continuation.yield([0.5, .nan, -0.25])
         continuation.yield([.infinity, 0.125, -.infinity])
@@ -39,6 +41,14 @@ struct AudioFanOutTests {
             }
             #expect(received == [[0.5, 0, -0.25], [0, 0.125, 0], [0.75]])
         }
+        #expect(glitches.value == 2)
+    }
+
+    final class GlitchCount: @unchecked Sendable {
+        private let lock = NSLock()
+        private var count = 0
+        var value: Int { lock.withLock { count } }
+        func add() { lock.withLock { count += 1 } }
     }
 
     @Test("a slow consumer does not lose chunks while the fast one races ahead")

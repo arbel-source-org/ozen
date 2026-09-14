@@ -121,6 +121,10 @@ public struct PipelineStats: Sendable, Equatable {
     /// Times the microphone stopped delivering audio mid-session and
     /// capture was restarted because of it.
     public var audioStalls: Int = 0
+    /// Chunks with a NaN or infinite sample in them, passed on as silence
+    /// (see `AudioFanOut`). Climbing means a microphone sending damaged
+    /// audio.
+    public var glitchedAudioChunks: Int = 0
     /// A caption line is still being written (not yet final).
     public var hasOpenLine = false
     /// Sound alerts are being listened for right now. False while

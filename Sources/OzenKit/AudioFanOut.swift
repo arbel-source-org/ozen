@@ -17,7 +17,8 @@ import Foundation
 /// A glitched buffer (a Bluetooth microphone reconnecting, a converter
 /// hiccup) can carry NaN or infinite samples, which spoil everything they
 /// touch: a Whisper window turns to nonsense, a voice print never matches.
-/// They reach the consumers as silence.
+/// They reach the consumers as silence, and `onGlitch` hears of each such
+/// chunk.
 public struct AudioFanOut: Sendable {
     public let outputs: [AsyncStream<[Float]>]
     private let pump: Task<Void, Never>
@@ -27,7 +28,12 @@ public struct AudioFanOut: Sendable {
     /// far more than any live consumer falls behind by.
     public static let defaultBufferLimit = 3_000
 
-    public init(source: AsyncStream<[Float]>, count: Int, bufferLimit: Int = AudioFanOut.defaultBufferLimit) {
+    public init(
+        source: AsyncStream<[Float]>,
+        count: Int,
+        bufferLimit: Int = AudioFanOut.defaultBufferLimit,
+        onGlitch: @escaping @Sendable () -> Void = {}
+    ) {
         var streams: [AsyncStream<[Float]>] = []
         var continuations: [AsyncStream<[Float]>.Continuation] = []
         for _ in 0..<max(count, 1) {
@@ -41,7 +47,9 @@ public struct AudioFanOut: Sendable {
         pump = Task {
             for await chunk in source {
                 if Task.isCancelled { break }
-                let chunk = Self.withoutGlitches(chunk)
+                let glitched = !chunk.allSatisfy(\.isFinite)
+                let chunk = glitched ? Self.withoutGlitches(chunk) : chunk
+                if glitched { onGlitch() }
                 for sink in sinks {
                     sink.yield(chunk)
                 }
