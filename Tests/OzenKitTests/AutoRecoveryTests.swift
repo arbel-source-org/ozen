@@ -91,15 +91,6 @@ struct CaptionPipelineRecoveryTests {
         )
     }
 
-    private func waitFor(_ milliseconds: Int = 2_000, _ condition: @MainActor () -> Bool) async -> Bool {
-        let deadline = ContinuousClock.now + .milliseconds(milliseconds)
-        while ContinuousClock.now < deadline {
-            if condition() { return true }
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        return condition()
-    }
-
     @Test("the recognizer dropping out mid-conversation recovers by itself")
     func recoversFromEngineDropout() async {
         let engine = FakeEngine()
@@ -108,9 +99,9 @@ struct CaptionPipelineRecoveryTests {
         #expect(pipeline.phase.isListening)
 
         engine.endStream(throwing: TestError())
-        #expect(await waitFor { pipeline.phase.failure != nil })
+        #expect(await eventually { pipeline.phase.failure != nil })
         #expect(pipeline.scheduledRetry?.attempt == 1)
-        #expect(await waitFor { pipeline.phase.isListening })
+        #expect(await eventually { pipeline.phase.isListening })
         #expect(pipeline.scheduledRetry == nil)
     }
 
@@ -123,7 +114,7 @@ struct CaptionPipelineRecoveryTests {
         #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
 
         // Initial attempt plus the two scheduled retries.
-        #expect(await waitFor { audio.calls.filter { $0 == "startCapture" }.count == 3 && pipeline.scheduledRetry == nil })
+        #expect(await eventually { audio.calls.filter { $0 == "startCapture" }.count == 3 && pipeline.scheduledRetry == nil })
         try? await Task.sleep(for: .milliseconds(80))
         #expect(audio.calls.filter { $0 == "startCapture" }.count == 3)
         #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
@@ -145,7 +136,7 @@ struct CaptionPipelineRecoveryTests {
         let pipeline = makeRecoveringPipeline(engine: engine, policy: AutoRecoveryPolicy(glitchDelays: [0.15], downloadDelays: []))
         await pipeline.start(settings: .default)
         engine.endStream(throwing: TestError())
-        #expect(await waitFor { pipeline.scheduledRetry != nil })
+        #expect(await eventually { pipeline.scheduledRetry != nil })
         pipeline.stop()
         #expect(pipeline.scheduledRetry == nil)
         try? await Task.sleep(for: .milliseconds(250))
@@ -165,7 +156,7 @@ struct CaptionPipelineRecoveryTests {
         audio.startError = nil
         pipeline.systemInterruptionChanged(active: false)
         #expect(pipeline.scheduledRetry != nil)
-        #expect(await waitFor { pipeline.phase.isListening })
+        #expect(await eventually { pipeline.phase.isListening })
     }
 
     @Test("a minute of healthy listening earns a fresh set of attempts")
@@ -176,14 +167,14 @@ struct CaptionPipelineRecoveryTests {
         await pipeline.start(settings: .default)
 
         engine.endStream(throwing: TestError())
-        #expect(await waitFor { pipeline.phase.failure != nil })
-        #expect(await waitFor { pipeline.phase.isListening && pipeline.scheduledRetry == nil })
+        #expect(await eventually { pipeline.phase.failure != nil })
+        #expect(await eventually { pipeline.phase.isListening && pipeline.scheduledRetry == nil })
 
         clock.advance(61)
         engine.endStream(throwing: TestError())
-        #expect(await waitFor { pipeline.phase.failure != nil })
+        #expect(await eventually { pipeline.phase.failure != nil })
         #expect(pipeline.scheduledRetry != nil)
-        #expect(await waitFor { pipeline.phase.isListening })
+        #expect(await eventually { pipeline.phase.isListening })
     }
 
     @Test("failing again right after a recovery does not get a fresh set of attempts")
@@ -193,11 +184,11 @@ struct CaptionPipelineRecoveryTests {
         await pipeline.start(settings: .default)
 
         engine.endStream(throwing: TestError())
-        #expect(await waitFor { pipeline.phase.failure != nil })
-        #expect(await waitFor { pipeline.phase.isListening && pipeline.scheduledRetry == nil })
+        #expect(await eventually { pipeline.phase.failure != nil })
+        #expect(await eventually { pipeline.phase.isListening && pipeline.scheduledRetry == nil })
 
         engine.endStream(throwing: TestError())
-        #expect(await waitFor { pipeline.phase.failure != nil })
+        #expect(await eventually { pipeline.phase.failure != nil })
         #expect(pipeline.scheduledRetry == nil)
     }
 }

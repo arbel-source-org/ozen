@@ -1232,16 +1232,8 @@ struct CaptionPipelineEmbeddingThreadTests {
 
         // This loop runs on the main actor. If the analysis ran there too,
         // the loop could only look again after it finished.
-        var seenMidAnalysis = false
-        let deadline = ContinuousClock.now + .seconds(2)
-        while ContinuousClock.now < deadline {
-            let state = embedder.state
-            if state.started {
-                seenMidAnalysis = !state.finished
-                break
-            }
-            try await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { embedder.state.started }
+        let seenMidAnalysis = embedder.state.started && !embedder.state.finished
         embedder.letGo()
 
         #expect(seenMidAnalysis)
@@ -1369,11 +1361,7 @@ struct CaptionPipelineDownloadNetworkTests {
         #expect(engine.prepareCount == 0)
 
         network.change(to: .wifi)
-        let deadline = ContinuousClock.now + .seconds(2)
-        while !pipeline.phase.isListening && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        #expect(pipeline.phase.isListening)
+        #expect(await eventually { pipeline.phase.isListening })
         #expect(engine.prepareCount == 1)
     }
 
@@ -1385,11 +1373,7 @@ struct CaptionPipelineDownloadNetworkTests {
         #expect(pipeline.phase.failure != nil)
 
         network.change(to: .wifi)
-        let deadline = ContinuousClock.now + .seconds(2)
-        while !pipeline.phase.isListening && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        #expect(pipeline.phase.isListening)
+        #expect(await eventually { pipeline.phase.isListening })
     }
 
     @Test("a download that failed on Wi-Fi isn't retried early just because Wi-Fi reported again")
@@ -1420,10 +1404,7 @@ struct CaptionPipelineDownloadNetworkTests {
         #expect(pipeline.phase.isListening)
 
         engine.endStream(throwing: TestError())
-        let deadline = ContinuousClock.now + .seconds(2)
-        while pipeline.phase.failure == nil && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { pipeline.phase.failure != nil }
         network.change(to: .wifi)
         try? await Task.sleep(for: .milliseconds(50))
         #expect(pipeline.phase.failure?.kind == .transcriptionStopped)

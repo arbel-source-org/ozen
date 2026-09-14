@@ -412,8 +412,7 @@ struct LiveCaptionViewModelSpeechTests {
     func launchWithSpeech() async throws {
         let (viewModel, synthesizer) = makeViewModel()
         let launch = Task { await viewModel.launch(pending: .speak("אני באה")) }
-        try await Task.sleep(for: .milliseconds(60))
-        #expect(synthesizer.requests == ["אני באה"])
+        #expect(await eventually { synthesizer.requests == ["אני באה"] })
         synthesizer.startNext()
         try await Task.sleep(for: .milliseconds(300))
         #expect(viewModel.phase == .idle)
