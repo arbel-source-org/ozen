@@ -4,11 +4,17 @@ import OzenKit
 
 /// Posts `BackgroundAlertPolicy`'s notifications through the system.
 ///
-/// Holds no state and isn't tied to the main actor: the notification
-/// center is fetched at each use, so nothing main-actor-owned is handed to
-/// the framework's own threads.
+/// Isn't tied to the main actor: the notification center is fetched at
+/// each use, so nothing main-actor-owned is handed to the framework's own
+/// threads. The only state is the last scheduling error, behind a lock.
 nonisolated final class AlertNotifier: Sendable {
     static let shared = AlertNotifier()
+    private let lastPostError = LockedErrorText()
+
+    /// Why the most recent notification couldn't be scheduled, or nil when
+    /// it was. Shown in diagnostics: a doorbell alert that never reached
+    /// the lock screen otherwise leaves no trace.
+    var lastFailure: String? { lastPostError.value }
 
     /// Asks once; later calls just report the answer the person gave.
     func requestAuthorization() async -> Bool {
@@ -38,6 +44,25 @@ nonisolated final class AlertNotifier: Sendable {
         body.interruptionLevel = .active
         body.relevanceScore = content.isUrgent ? 1 : 0.5
         let request = UNNotificationRequest(identifier: content.identifier, content: body, trigger: nil)
-        UNUserNotificationCenter.current().add(request) { _ in }
+        UNUserNotificationCenter.current().add(request) { [lastPostError] error in
+            lastPostError.set(error.map { String(describing: $0) })
+        }
+    }
+}
+
+nonisolated private final class LockedErrorText: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: String?
+
+    var value: String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return stored
+    }
+
+    func set(_ text: String?) {
+        lock.lock()
+        stored = text
+        lock.unlock()
     }
 }
