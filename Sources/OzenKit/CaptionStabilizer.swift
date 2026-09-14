@@ -120,4 +120,17 @@ public struct CaptionStabilizer: Sendable {
         }
         return justCommitted
     }
+
+    /// Finalizes every line still being written, for when the engine that
+    /// was writing them has gone (pause, stop, a failure). Nothing will
+    /// ever finish them otherwise: a new engine starts new lines.
+    @discardableResult
+    public mutating func commitAll() -> [TranscriptSegment] {
+        var justCommitted: [TranscriptSegment] = []
+        for index in segments.indices where !segments[index].isCommitted {
+            segments[index].isCommitted = true
+            justCommitted.append(segments[index])
+        }
+        return justCommitted
+    }
 }

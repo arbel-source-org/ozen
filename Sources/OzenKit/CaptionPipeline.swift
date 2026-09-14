@@ -773,6 +773,21 @@ public final class CaptionPipeline {
         fanOut?.cancel()
         fanOut = nil
         audio.stopCapture()
+        finishOpenLines()
+    }
+
+    /// The words of a line cut off mid-sentence (paused, stopped, the
+    /// microphone failed) are as final as they will get. Left open, the
+    /// line stayed dimmed like text still arriving, was saved unfinished,
+    /// and was never read out to VoiceOver.
+    private func finishOpenLines() {
+        let finished = stabilizer.commitAll()
+        guard !finished.isEmpty else { return }
+        for segment in finished {
+            upsert(segment)
+            stats.segmentsCommitted += 1
+        }
+        stats.hasOpenLine = false
     }
 }
 

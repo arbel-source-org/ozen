@@ -151,3 +151,21 @@ struct CaptionConfidenceTests {
         #expect(old.markUncertainLines)
     }
 }
+
+@Suite("CaptionStabilizer finishing every open line")
+struct CaptionStabilizerCommitAllTests {
+    @Test("commitAll finishes open lines only, and returns just those")
+    func commitAll() {
+        var stabilizer = CaptionStabilizer()
+        let open = UUID()
+        let done = UUID()
+        stabilizer.ingest(TranscriptToken(utteranceID: done, text: "שלום", isFinal: true, timestamp: 1))
+        stabilizer.ingest(TranscriptToken(utteranceID: open, text: "מה נש", isFinal: false, timestamp: 2))
+
+        let finished = stabilizer.commitAll()
+        #expect(finished.map(\.id) == [open])
+        let allFinished = stabilizer.segments.allSatisfy { $0.isCommitted }
+        #expect(allFinished)
+        #expect(stabilizer.commitAll().isEmpty)
+    }
+}

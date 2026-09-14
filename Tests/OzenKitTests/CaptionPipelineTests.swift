@@ -1504,3 +1504,49 @@ struct CaptionPipelineStorageTests {
         #expect(idleEngine.prepareCount == 0)
     }
 }
+
+@Suite("CaptionPipeline lines cut off mid-sentence")
+@MainActor
+struct CaptionPipelineOpenLineTests {
+    private func startWithOpenLine() async -> (CaptionPipeline, FakeEngine, UUID) {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: .disabled,
+            audioWatchdog: .disabled
+        )
+        await pipeline.start(settings: .default)
+        let utterance = UUID()
+        engine.emit(TranscriptToken(utteranceID: utterance, text: "הרופא אמר ש", isFinal: false, timestamp: Date().timeIntervalSince1970))
+        _ = await eventually { pipeline.segments.count == 1 }
+        return (pipeline, engine, utterance)
+    }
+
+    @Test("pausing finishes the line that was being written")
+    func pauseFinishesLine() async {
+        let (pipeline, _, _) = await startWithOpenLine()
+        #expect(pipeline.segments.first?.isCommitted == false)
+        #expect(pipeline.stats.hasOpenLine)
+
+        pipeline.pause()
+        #expect(pipeline.segments.first?.isCommitted == true)
+        #expect(pipeline.segments.first?.text == "הרופא אמר ש")
+        #expect(pipeline.stats.segmentsCommitted == 1)
+        #expect(pipeline.stats.hasOpenLine == false)
+    }
+
+    @Test("stopping finishes it too, and a line already final isn't counted twice")
+    func stopFinishesLine() async {
+        let (pipeline, engine, _) = await startWithOpenLine()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "כן", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        _ = await eventually { pipeline.segments.count == 2 }
+        #expect(pipeline.stats.segmentsCommitted == 1)
+
+        pipeline.stop()
+        let allFinished = pipeline.segments.allSatisfy { $0.isCommitted }
+        #expect(allFinished)
+        #expect(pipeline.stats.segmentsCommitted == 2)
+    }
+}
