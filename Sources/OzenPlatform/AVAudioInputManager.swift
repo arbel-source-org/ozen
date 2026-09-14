@@ -106,6 +106,23 @@ public final class AVAudioInputManager: AudioCapturing {
     public func selectInput(uid: String) throws {
         preferredInputUID = uid
         try applySelection()
+        confirmSelectionSoon()
+    }
+
+    /// A request that is accepted but never moves the route causes no
+    /// route change, so nothing would take the check mark back off it.
+    /// Look again once a Bluetooth microphone has had time to take over.
+    private func confirmSelectionSoon() {
+        guard sessionPrepared else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(2))
+            guard let self else { return }
+            let shown = self.selectedInputUID
+            self.showInputInUse()
+            if self.selectedInputUID != shown {
+                self.onInputsChanged?()
+            }
+        }
     }
 
     // MARK: - Session plumbing
@@ -197,12 +214,30 @@ public final class AVAudioInputManager: AudioCapturing {
             )
         }
         refreshAvailableInputs()
-        if selectedInputUID == nil {
+        if sessionPrepared {
+            showInputInUse()
+        } else {
+            // Nothing is recording to ask, so the policy decides; a chosen
+            // microphone unplugged since gives way to one that is here,
+            // instead of keeping a check mark nothing in the list carries.
             selectedInputUID = AudioRoutePolicy.resolveSelection(
                 available: availableInputs,
                 preferredUID: preferredInputUID,
-                currentUID: nil
+                currentUID: selectedInputUID
             )
+        }
+    }
+
+    /// Puts the selection on the input the session is really recording
+    /// from. Asking for an input and being told yes doesn't mean the route
+    /// moved: a Bluetooth headset still setting up its microphone can
+    /// accept the request and the phone's own microphone go on recording.
+    /// Route changes arrive once the route has actually settled, so after
+    /// each one the picker shows the truth; the saved preference is left
+    /// alone, and asked for again at the next route change.
+    private func showInputInUse() {
+        if let inUse = inputInUse {
+            selectedInputUID = inUse
         }
     }
 
@@ -269,6 +304,7 @@ public final class AVAudioInputManager: AudioCapturing {
                 guard let self else { return }
                 self.refreshAvailableInputs()
                 try? self.applySelection()
+                self.showInputInUse()
                 self.onInputsChanged?()
             }
         })
