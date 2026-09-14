@@ -41,6 +41,24 @@ struct KeywordAlertMatcherTests {
         }
     }
 
+    @Test("a prefix that stacks on the article matches the stem")
+    func prefixStackedOnArticleMatches() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("רופא")])
+        for stacked in ["כשה", "וכשה", "ומה", "שמה"] {
+            let word = stacked + "רופא"
+            let matches = matcher.matches(in: "אתמול \(word) אמר לחכות")
+            #expect(matches.count == 1, "stacked prefix \(stacked) should match")
+            #expect(matches.first?.matchedText == word)
+        }
+    }
+
+    @Test("a name starting with ה does not fire on an everyday word that only looks like it with a preposition swapped in")
+    func nameStartingWithHeDoesNotMatchSwappedLetter() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("הילה"), alert("הלל")])
+        #expect(matcher.matches(in: "לילה טוב, זה בכלל לא חשוב").isEmpty)
+        #expect(matcher.matches(in: "להילה ולהלל").count == 2)
+    }
+
     @Test("a suffix change is not treated as a match")
     func suffixChangeDoesNotMatch() {
         let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])

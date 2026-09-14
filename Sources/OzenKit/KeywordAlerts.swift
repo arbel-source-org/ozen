@@ -111,12 +111,22 @@ public enum HebrewText {
     /// happens to start the word itself, but that trade-off is the right
     /// one for an alert that must not stay silent just because a caption
     /// said "לסבתא" instead of "סבתא".
+    ///
+    /// Deliberately missing: ב, כ and ל swallowing the article, as in
+    /// "לרופא" for "to the doctor". Matching that against a phrase that
+    /// starts with ה would also fire the name "הילה" on every "לילה"
+    /// (night) and "הלל" on every "כלל", so a phrase saved as "הרופא"
+    /// catches "הרופא" and "שהרופא" but not "לרופא"; saved as "רופא" it
+    /// catches all of them.
     public static let attachedPrefixes: Set<String> = [
         "ו", "ה", "ב", "ל", "מ", "ש", "כ",
         "וה", "וב", "ול", "ומ", "וש", "וכ",
         "שה", "שב", "של", "שמ",
         "כש", "בה", "לה", "מה",
         "וכש", "ולכ", "ושה",
+        // "when the", "and when the", "and from the", "that from the":
+        // "כשהרופא אמר" is how a doctor's visit gets retold.
+        "כשה", "וכשה", "ומה", "שמה",
     ]
 
     /// True if `word` is `stem` on its own, or `stem` with one of the
