@@ -186,6 +186,10 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
     /// Lines marked as important.
     public var starredCount: Int
     public var title: String?
+    /// When the newest line began. A conversation the app never got to
+    /// close (iOS ended the app in the background) has no end time, and
+    /// this is the closest thing to one.
+    public var lastLineAt: TimeInterval?
 
     public init(
         id: UUID,
@@ -196,7 +200,8 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
         engine: TranscriptionEngineKind,
         speakerNames: [String] = [],
         starredCount: Int = 0,
-        title: String? = nil
+        title: String? = nil,
+        lastLineAt: TimeInterval? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -207,6 +212,7 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
         self.speakerNames = speakerNames
         self.starredCount = starredCount
         self.title = title
+        self.lastLineAt = lastLineAt
     }
 
     public var durationSeconds: TimeInterval? {
@@ -234,7 +240,8 @@ extension TranscriptSessionSummary {
             engine: record.engine,
             speakerNames: Self.realNames(in: record.segments),
             starredCount: record.segments.filter(\.isStarred).count,
-            title: record.title
+            title: record.title,
+            lastLineAt: record.segments.map(\.startTimestamp).max()
         )
     }
 
@@ -283,7 +290,7 @@ public struct TranscriptHistoryStore: Sendable {
 
     /// Bumped whenever `TranscriptSessionSummary` changes meaning, so
     /// summaries written by an older build are rebuilt instead of trusted.
-    static let summaryFormat = 3
+    static let summaryFormat = 4
     static let summariesFolderName = "summaries"
 
     private struct CachedSummary: Codable {

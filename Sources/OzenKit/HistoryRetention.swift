@@ -38,8 +38,9 @@ public enum HistoryRetention: String, Sendable, Codable, CaseIterable, Equatable
 
 extension TranscriptSessionSummary {
     /// When the conversation was last going: when it ended, or, for one
-    /// the app never got to close (a crash, a force-quit), when it began.
-    public var lastActiveAt: TimeInterval { endedAt ?? startedAt }
+    /// the app never got to close (a crash, iOS ending it in the
+    /// background), when its newest line began.
+    public var lastActiveAt: TimeInterval { endedAt ?? lastLineAt ?? startedAt }
 
     /// Starred lines or a name mean she wanted this one kept.
     public var isKeptByChoice: Bool { starredCount > 0 || title != nil }

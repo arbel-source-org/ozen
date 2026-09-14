@@ -105,6 +105,10 @@ things, for Hebrew conversation, entirely on-device.
   captions. Old conversations can delete themselves after a week, a
   month, three months or a year (off by default); starred or named ones
   are always kept, and a change that would delete something asks first.
+- **Nothing lost when iOS closes the app.** A speech model is one of the
+  biggest things in a phone's memory, so iOS may end the app in the
+  background mid-conversation. Coming back, the empty screen offers the
+  conversation from a few minutes ago, one tap away.
 - **Star what matters.** Hold a caption line to mark it as important
   (what the doctor said about the pills), copy it, or say who is talking.
   Stars are saved with the conversation, counted in the history list,
@@ -173,10 +177,10 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (330 tests). The platform layer (WhisperKit/Speech engines, real
+logic (335 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 51 tests).
+the same fakes (another 52 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.

@@ -22,6 +22,7 @@ struct LiveCaptionView: View {
     @State private var fontSizeTrigger = 0
     @State private var battery = BatteryMonitor()
     @State private var confirmingCellularDownload = false
+    @State private var openedRecentConversation: TranscriptSessionSummary?
     /// Live scale while a pinch is in progress; 1 otherwise.
     @GestureState private var pinchScale: Double = 1
     @Environment(\.openURL) private var openURL
@@ -196,6 +197,19 @@ struct LiveCaptionView: View {
             }
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+        .sheet(item: $openedRecentConversation) { recent in
+            NavigationStack {
+                HistoryDetailView(viewModel: viewModel, sessionID: recent.id) {
+                    // Renamed or deleted from inside: the card follows.
+                    Task { await viewModel.loadRecentConversation() }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("סגירה") { openedRecentConversation = nil }
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showingMicPicker) {
             MicPickerView(viewModel: viewModel)
         }
@@ -312,9 +326,64 @@ struct LiveCaptionView: View {
                 .font(.system(size: max(17, liveDisplay.fontSize * 0.6)))
                 .foregroundStyle(theme.pendingText)
                 .fixedSize(horizontal: false, vertical: true)
+            if let recent = viewModel.recentConversation {
+                recentConversationCard(recent)
+                    .padding(.top, 8)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 40)
+    }
+
+    /// After iOS closed the app in the middle of a conversation: what was
+    /// said before is one tap away instead of gone from view.
+    private func recentConversationCard(_ recent: TranscriptSessionSummary) -> some View {
+        let minutes = RecentConversation.minutesAgo(recent, now: Date().timeIntervalSince1970)
+        return HStack(alignment: .top, spacing: 12) {
+            Button {
+                openedRecentConversation = recent
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "text.bubble")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("השיחה מ\(Self.minutesAgoText(minutes)) נשמרה")
+                            .font(.headline)
+                        Text(recent.title ?? recent.preview)
+                            .font(.subheadline)
+                            .lineLimit(2)
+                            .opacity(0.8)
+                        Text("הקישו כדי לקרוא אותה")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Button {
+                withAnimation { viewModel.dismissRecentConversation() }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("סגירה")
+        }
+        .foregroundStyle(theme.chrome)
+        .padding(14)
+        .background(theme.chrome.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    /// "לפני דקה", "לפני שתי דקות", "לפני 7 דקות".
+    static func minutesAgoText(_ minutes: Int) -> String {
+        switch minutes {
+        case ...1: return "לפני דקה"
+        case 2: return "לפני שתי דקות"
+        default: return "לפני \(minutes) דקות"
+        }
     }
 
     private var jumpToLatestPill: some View {

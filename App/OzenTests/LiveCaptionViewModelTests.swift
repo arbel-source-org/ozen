@@ -933,6 +933,7 @@ struct LiveCaptionViewModelHistoryRetentionTests {
         let history = TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
         let settingsStore = SettingsStore(fileURL: directory.appendingPathComponent("settings.json"))
         let viewModel = LiveCaptionViewModel(settingsStore: settingsStore, pipeline: pipeline, historyStore: history)
+        await viewModel.finishLaunchHousekeeping()
 
         let day: TimeInterval = 86_400
         let now = Date().timeIntervalSince1970
@@ -969,5 +970,49 @@ struct LiveCaptionViewModelHistoryRetentionTests {
         #expect(left.count == 2)
         #expect(!left.contains(old.id))
         #expect(left.contains(oldStarred.id))
+    }
+}
+
+@Suite("LiveCaptionViewModel conversation cut off by iOS")
+@MainActor
+struct LiveCaptionViewModelRecentConversationTests {
+    @Test("a conversation still going minutes before launch is offered, and clearing or dismissing hides it")
+    func offersRecentConversation() async throws {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-recent-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        let now = Date().timeIntervalSince1970
+        // What the autosave left behind: never closed, last line 4 minutes ago.
+        let cutOff = TranscriptSessionRecord(
+            id: UUID(), startedAt: now - 50 * 60, endedAt: nil, engine: .whisperKit, modelVariant: nil, inputName: nil,
+            segments: [
+                SavedSegment(id: UUID(), text: "התחלנו", speakerName: nil, speakerClusterID: nil, startTimestamp: now - 50 * 60, isCommitted: true),
+                SavedSegment(id: UUID(), text: "והרופא אמר", speakerName: nil, speakerClusterID: nil, startTimestamp: now - 4 * 60, isCommitted: true),
+            ]
+        )
+        try history.save(cutOff)
+
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: history
+        )
+        await viewModel.finishLaunchHousekeeping()
+        #expect(viewModel.recentConversation?.id == cutOff.id)
+        await viewModel.loadRecentConversation(now: now)
+        #expect(viewModel.recentConversation?.id == cutOff.id)
+
+        viewModel.dismissRecentConversation()
+        #expect(viewModel.recentConversation == nil)
+
+        await viewModel.loadRecentConversation(now: now)
+        #expect(viewModel.recentConversation != nil)
+        viewModel.clearTranscript()
+        #expect(viewModel.recentConversation == nil)
+
+        // Half an hour later it's no longer "moments ago".
+        await viewModel.loadRecentConversation(now: now + 30 * 60)
+        #expect(viewModel.recentConversation == nil)
     }
 }

@@ -18,6 +18,7 @@ struct HistoryRetentionTests {
         endedDaysAgo: Double?,
         starred: Bool = false,
         title: String? = nil,
+        lastLineDaysAgo: Double? = nil,
         id: UUID = UUID()
     ) -> TranscriptSessionRecord {
         TranscriptSessionRecord(
@@ -29,7 +30,7 @@ struct HistoryRetentionTests {
             inputName: nil,
             segments: [
                 SavedSegment(id: UUID(), text: "שלום", speakerName: nil, speakerClusterID: nil, startTimestamp: now - startedDaysAgo * day, isCommitted: true, isStarred: starred),
-            ],
+            ] + (lastLineDaysAgo.map { [SavedSegment(id: UUID(), text: "להתראות", speakerName: nil, speakerClusterID: nil, startTimestamp: now - $0 * day, isCommitted: true)] } ?? []),
             title: title
         )
     }
@@ -53,9 +54,10 @@ struct HistoryRetentionTests {
         let oldNamed = conversation(startedDaysAgo: 40, endedDaysAgo: 40, title: "יום הולדת")
         // Began long ago but went on until yesterday: judged by its end.
         let longRunning = conversation(startedDaysAgo: 40, endedDaysAgo: 1)
-        // Never closed (the app was killed): judged by when it began.
+        // Never closed (the app was killed): judged by its newest line.
         let neverClosed = conversation(startedDaysAgo: 40, endedDaysAgo: nil)
-        for record in [old, recent, oldStarred, oldNamed, longRunning, neverClosed] {
+        let neverClosedButTalkedYesterday = conversation(startedDaysAgo: 40, endedDaysAgo: nil, lastLineDaysAgo: 1)
+        for record in [old, recent, oldStarred, oldNamed, longRunning, neverClosed, neverClosedButTalkedYesterday] {
             try store.save(record)
         }
 
@@ -63,9 +65,9 @@ struct HistoryRetentionTests {
 
         #expect(deleted == 2)
         let left = Set(store.listSummaries().map(\.id))
-        #expect(left == [recent.id, oldStarred.id, oldNamed.id, longRunning.id])
+        #expect(left == [recent.id, oldStarred.id, oldNamed.id, longRunning.id, neverClosedButTalkedYesterday.id])
         #expect(store.load(id: old.id) == nil)
-        #expect(store.search("שלום").count == 4)
+        #expect(store.search("שלום").count == 5)
     }
 
     @Test("the conversation still on screen is never deleted")

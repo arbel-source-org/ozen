@@ -66,6 +66,7 @@ public final class LiveCaptionViewModel {
     }
     private var autosaveTask: Task<Void, Never>?
     private var lastRetentionCheck: TimeInterval = 0
+    private var launchHousekeeping: Task<Void, Never>?
     private static let retentionCheckIntervalSeconds: TimeInterval = 6 * 60 * 60
 
     private static let autosaveIntervalSeconds: UInt64 = 20
@@ -155,9 +156,15 @@ public final class LiveCaptionViewModel {
                 self?.knownSoundIdentifiers = identifiers
             }
         }
-        Task { [weak self] in
+        launchHousekeeping = Task { [weak self] in
             await self?.deleteExpiredHistory()
+            await self?.loadRecentConversation()
         }
+    }
+
+    /// Returns once the history tidying started at launch has finished.
+    func finishLaunchHousekeeping() async {
+        await launchHousekeeping?.value
     }
 
     // MARK: - Alerts while the app isn't on screen
@@ -387,6 +394,7 @@ public final class LiveCaptionViewModel {
     }
 
     public func clearTranscript() {
+        recentConversation = nil
         persistHistory(ended: true)
         starredSegmentIDs = []
         closedHistorySessions = []
@@ -478,6 +486,23 @@ public final class LiveCaptionViewModel {
             settings.saveHistory = newValue
             persist()
         }
+    }
+
+    /// The saved conversation that was still going moments ago, offered on
+    /// the empty screen after iOS closed the app mid-conversation. See
+    /// `RecentConversation`.
+    public private(set) var recentConversation: TranscriptSessionSummary?
+
+    /// Looks for a conversation cut off moments ago, off the main thread.
+    public func loadRecentConversation(now: TimeInterval = Date().timeIntervalSince1970) async {
+        let store = historyStore
+        let current = historySessionID
+        let summaries = await Task.detached(priority: .utility) { store.listSummaries() }.value
+        recentConversation = RecentConversation.resumable(in: summaries, now: now, excluding: current)
+    }
+
+    public func dismissRecentConversation() {
+        recentConversation = nil
     }
 
     /// How long saved conversations are kept. Changing it doesn't delete
