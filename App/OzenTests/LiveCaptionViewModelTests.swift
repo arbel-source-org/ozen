@@ -1254,6 +1254,24 @@ struct LiveCaptionViewModelSavingTroubleTests {
         #expect(viewModel.historySaveFailure != nil)
         #expect(viewModel.savingTrouble.shouldShow)
     }
+
+    @Test("an autosave that fails in the background puts the banner up by itself, without waiting for the next save")
+    func backgroundSaveFailure() async throws {
+        let blocker = try blockedFolder()
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-settings-\(UUID()).json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: blocker.appendingPathComponent("history", isDirectory: true))
+        )
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: 1))
+        await eventually { !viewModel.segments.isEmpty }
+
+        viewModel.persistHistory(ended: false, inBackground: true)
+        #expect(await eventually { viewModel.savingTrouble.shouldShow })
+    }
 }
 
 @Suite("LiveCaptionViewModel keyword attention")
