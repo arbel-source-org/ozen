@@ -49,6 +49,20 @@ public final class LiveCaptionViewModel {
     /// saved conversation (see `ConversationBreak`); the screen still
     /// shows them.
     private var historySegmentOffset = 0
+    /// Conversations a quiet break closed while their lines are still on
+    /// screen, so a star added to one of those lines goes to the right
+    /// saved conversation.
+    private var closedHistorySessions: [ClosedHistorySession] = []
+
+    private struct ClosedHistorySession {
+        let id: UUID
+        let lines: Range<Int>
+        let startedAt: TimeInterval
+        let endedAt: TimeInterval?
+        let engine: TranscriptionEngineKind
+        let modelVariant: String?
+        let inputName: String?
+    }
     private var autosaveTask: Task<Void, Never>?
 
     private static let autosaveIntervalSeconds: UInt64 = 20
@@ -314,12 +328,37 @@ public final class LiveCaptionViewModel {
         if starredSegmentIDs.remove(segment.id) == nil {
             starredSegmentIDs.insert(segment.id)
         }
-        persistHistory(ended: false, inBackground: true)
+        if let index = pipeline.segments.firstIndex(where: { $0.id == segment.id }),
+           index < historySegmentOffset,
+           let closed = closedHistorySessions.last(where: { $0.lines.contains(index) }) {
+            saveClosed(closed)
+        } else {
+            persistHistory(ended: false, inBackground: true)
+        }
+    }
+
+    private func saveClosed(_ session: ClosedHistorySession) {
+        guard settings.saveHistory else { return }
+        let segments = pipeline.segments
+        let lines = session.lines.clamped(to: segments.indices)
+        let record = TranscriptSessionRecord.make(
+            from: Array(segments[lines]),
+            speakerName: { [pipeline] in pipeline.displayName(for: $0) },
+            id: session.id,
+            startedAt: session.startedAt,
+            endedAt: session.endedAt,
+            engine: session.engine,
+            modelVariant: session.modelVariant,
+            inputName: session.inputName,
+            starred: starredSegmentIDs
+        )
+        historyWriter.saveInBackground(record)
     }
 
     public func clearTranscript() {
         persistHistory(ended: true)
         starredSegmentIDs = []
+        closedHistorySessions = []
         pipeline.clearTranscript()
         historySessionID = UUID()
         historySegmentOffset = 0
@@ -685,6 +724,17 @@ public final class LiveCaptionViewModel {
         let lastCaptionAt = currentHistorySegments.map(\.lastUpdateTimestamp).max()
         guard ConversationBreak.shouldStartNew(lastCaptionAt: lastCaptionAt, now: now) else { return false }
         persistHistory(ended: true, endedAt: lastCaptionAt)
+        if let startedAt = historySessionStartedAt ?? currentHistorySegments.first?.startTimestamp {
+            closedHistorySessions.append(ClosedHistorySession(
+                id: historySessionID,
+                lines: historySegmentOffset..<pipeline.segments.count,
+                startedAt: startedAt,
+                endedAt: lastCaptionAt,
+                engine: settings.engine,
+                modelVariant: settings.engine == .whisperKit ? settings.whisperModelVariant : nil,
+                inputName: selectedInput?.portName
+            ))
+        }
         historySessionID = UUID()
         historySegmentOffset = pipeline.segments.count
         historySessionStartedAt = nil

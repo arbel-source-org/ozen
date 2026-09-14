@@ -747,3 +747,47 @@ struct LiveCaptionViewModelStarTests {
         #expect(viewModel.starredSegmentIDs.isEmpty)
     }
 }
+
+@Suite("LiveCaptionViewModel stars across a conversation break")
+@MainActor
+struct LiveCaptionViewModelStarAcrossBreakTests {
+    @Test("a star on a line from before a quiet break is saved with that earlier conversation")
+    func starGoesToEarlierConversation() async throws {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-star-break-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory)
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathExtension("json")),
+            pipeline: pipeline,
+            historyStore: history
+        )
+        await viewModel.start()
+
+        let longAgo = Date().timeIntervalSince1970 - 30 * 60
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "הרופא אמר כדור אחד", isFinal: true, timestamp: longAgo))
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.segments.isEmpty, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(viewModel.checkForConversationBreak())
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        let deadline2 = Date().addingTimeInterval(2)
+        while viewModel.segments.count < 2, Date() < deadline2 {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        viewModel.toggleStar(viewModel.segments[0])
+        // A save that must finish now waits behind the star's background save.
+        viewModel.persistHistory(ended: false)
+
+        let summaries = history.listSummaries()
+        #expect(summaries.count == 2)
+        let earlier = summaries.first { $0.preview == "הרופא אמר כדור אחד" }
+        let later = summaries.first { $0.preview == "ערב טוב" }
+        #expect(earlier?.starredCount == 1)
+        #expect(earlier?.endedAt != nil)
+        #expect(later?.starredCount == 0)
+        #expect(later?.segmentCount == 1)
+    }
+}
