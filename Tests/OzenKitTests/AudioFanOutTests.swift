@@ -43,6 +43,24 @@ struct AudioFanOutTests {
         #expect(slowSum == Float((0..<50).reduce(0, +)))
     }
 
+    @Test("an output nobody reads keeps only the newest audio, so it can't grow without end")
+    func abandonedOutputIsBounded() async {
+        let (source, continuation) = AsyncStream<[Float]>.makeStream()
+        let fan = AudioFanOut(source: source, count: 2, bufferLimit: 10)
+        for i in 0..<25 {
+            continuation.yield([Float(i)])
+        }
+        continuation.finish()
+
+        // Draining the first output waits for every chunk to have been
+        // handed to both.
+        for await _ in fan.outputs[0] {}
+
+        var abandoned: [Float] = []
+        for await chunk in fan.outputs[1] { abandoned.append(chunk[0]) }
+        #expect(abandoned == (15..<25).map(Float.init))
+    }
+
     @Test("a count below one still yields a single usable output")
     func minimumOneOutput() {
         let (source, _) = AsyncStream<[Float]>.makeStream()
