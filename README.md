@@ -151,6 +151,11 @@ things, for Hebrew conversation, entirely on-device.
   conversation from a few minutes ago, one tap away. When iOS warns it is
   short of memory and captions are off, the app lets go of the loaded
   model first, so it is less likely to be the app iOS ends.
+- **Picks up where she stopped reading.** Captions carry on with the phone
+  locked or another app open; coming back, a line across the captions marks
+  where the ones she missed begin, with how many there are, and a button at
+  the top jumps up to it ("What was said meanwhile" (ma she-ne'emar
+  beinta'yim)). A glance away of a few seconds doesn't move the mark.
 - **Star what matters.** Hold a caption line to mark it as important
   (what the doctor said about the pills), copy it, or say who is talking.
   Stars are saved with the conversation, counted in the history list,

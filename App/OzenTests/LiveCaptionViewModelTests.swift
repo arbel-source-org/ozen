@@ -586,6 +586,33 @@ struct LiveCaptionViewModelBackgroundAlertTests {
         #expect(posted.first?.body == "סבתא, את ערה?")
     }
 
+    @Test("lines said while the app was away are marked from the first of them; clearing removes the mark")
+    func awayLinesMarked() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-away-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, postNotification: { _ in })
+        viewModel.awayCatchUp = AwayCatchUp(minimumAwaySeconds: 0)
+        await viewModel.start()
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "read before leaving", isFinal: true, timestamp: Date().timeIntervalSince1970 - 60))
+        await eventually { viewModel.segments.count == 1 }
+        viewModel.sceneActivityChanged(isActive: false)
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "missed one", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "missed two", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        await eventually { viewModel.segments.count == 3 }
+        #expect(viewModel.awayCatchUp.firstMissedIndex(in: viewModel.segments) == nil)
+
+        viewModel.sceneActivityChanged(isActive: true)
+        #expect(viewModel.awayCatchUp.firstMissedIndex(in: viewModel.segments) == 1)
+        #expect(viewModel.awayCatchUp.offersJump(in: viewModel.segments))
+        viewModel.acknowledgeAwayLines()
+        #expect(!viewModel.awayCatchUp.offersJump(in: viewModel.segments))
+
+        viewModel.clearTranscript()
+        #expect(viewModel.awayCatchUp.away == nil)
+    }
+
     @Test("a low battery becomes a notification only while the app is in the background")
     func batteryNotification() {
         var posted: [AlertNotificationContent] = []

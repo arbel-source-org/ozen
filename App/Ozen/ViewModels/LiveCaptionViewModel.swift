@@ -33,6 +33,8 @@ public final class LiveCaptionViewModel {
     public private(set) var settingsSaveError: String?
     /// Whether the caption screen says saving is failing (a full phone).
     public private(set) var savingTrouble = SavingTroubleNotice()
+    /// Where the lines said while the screen was away begin.
+    var awayCatchUp = AwayCatchUp()
     @ObservationIgnored private var keywordAttention = KeywordAttentionPolicy()
     @ObservationIgnored private var handledKeywordHitIDs: Set<UUID> = []
     /// The latest keyword hit that got her attention, for screens covering
@@ -217,6 +219,12 @@ public final class LiveCaptionViewModel {
 
     public func sceneActivityChanged(isActive: Bool) {
         isAppActive = isActive
+        let now = Date().timeIntervalSince1970
+        if isActive {
+            awayCatchUp.screenReturned(at: now)
+        } else {
+            awayCatchUp.screenLeft(at: now)
+        }
         // Captions that failed with the app open were on screen for her to
         // see; putting the phone away with them still stopped is when she
         // needs telling, and no pipeline event will come along to say so.
@@ -544,8 +552,15 @@ public final class LiveCaptionViewModel {
         saveInBackground(record)
     }
 
+    /// She has seen where the lines she missed begin.
+    func acknowledgeAwayLines() {
+        guard !awayCatchUp.isAcknowledged else { return }
+        awayCatchUp.acknowledge()
+    }
+
     public func clearTranscript() {
         recentConversation = nil
+        awayCatchUp.clear()
         persistHistory(ended: true)
         starredSegmentIDs = []
         closedHistorySessions = []

@@ -43,6 +43,11 @@ leave the phone.
   doesn't end up at speaker 140. Lines already on screen keep their labels.
   To have someone always called by name, tap one of their lines and type
   the name.
+- **A line across the captions: "Said while the app was closed · 12 lines"
+  (ne'emar k'she-ha-aplikatzia hayta sgura).** Captions kept coming while
+  the phone was locked or another app was open; the line shows where the
+  ones she hasn't seen begin. The button at the top, "What was said
+  meanwhile" (ma she-ne'emar beinta'yim), scrolls up to it.
 - **The screen turned off while listening.** After fifteen minutes with
   nothing said, the phone locks as usual to save the battery. Captions and
   doorbell or alarm alerts keep running; unlock to read.

@@ -149,6 +149,7 @@ struct LiveCaptionView: View {
                     KeywordHitPill(hit: hit)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
+                awayJumpButton
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -367,54 +368,12 @@ struct LiveCaptionView: View {
                     } else if CaptionLayout.firstOnScreenIndex(lineCount: viewModel.segments.count) > 0 {
                         earlierLinesNote
                     }
+                    let mark = awayMark
                     ForEach(onScreenLines, id: \.segment.id) { index, segment in
-                        let name = viewModel.display.showSpeakerNames && segment.speakerClusterID != nil
-                            ? viewModel.displayName(for: segment) : nil
-                        CaptionRow(
-                            segment: segment,
-                            speakerName: name,
-                            // Like a chat: the name heads a run of lines by
-                            // one person instead of repeating on each.
-                            showsSpeakerLabel: name != nil && CaptionLayout.showsSpeakerLabel(
-                                for: segment,
-                                after: index > 0 ? viewModel.segments[index - 1] : nil
-                            ),
-                            display: liveDisplay,
-                            theme: theme,
-                            isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id),
-                            isStarred: viewModel.starredSegmentIDs.contains(segment.id),
-                            isUncertain: viewModel.display.markUncertainLines && CaptionConfidence.isUncertain(segment)
-                        )
-                        .id(segment.id)
-                        .onTapGesture { namingSegment = segment }
-                        .contextMenu {
-                            let starred = viewModel.starredSegmentIDs.contains(segment.id)
-                            Button {
-                                viewModel.toggleStar(segment)
-                            } label: {
-                                Label(starred ? "ביטול הסימון" : "סימון כחשוב", systemImage: starred ? "star.slash" : "star")
-                            }
-                            if viewModel.hasHebrewVoice {
-                                Button {
-                                    viewModel.askToRepeat()
-                                } label: {
-                                    Label("לבקש שיחזרו על זה", systemImage: "arrow.counterclockwise.circle")
-                                }
-                            }
-                            Button {
-                                namingSegment = segment
-                            } label: {
-                                Label("מי מדבר?", systemImage: "person.crop.circle.badge.questionmark")
-                            }
-                            Button {
-                                UIPasteboard.general.string = segment.text
-                            } label: {
-                                Label("העתקה", systemImage: "doc.on.doc")
-                            }
+                        if let mark, index == mark.index {
+                            awayDivider(lineCount: mark.count)
                         }
-                        .accessibilityAction(named: viewModel.starredSegmentIDs.contains(segment.id) ? "ביטול הסימון" : "סימון כחשוב") {
-                            viewModel.toggleStar(segment)
-                        }
+                        captionLine(index: index, segment: segment)
                     }
                     // A sentinel at the very end: while it's on screen the
                     // reader is at the bottom and auto-scroll stays on;
@@ -432,6 +391,116 @@ struct LiveCaptionView: View {
             }
             .scrollIndicators(.hidden)
             .onAppear { scrollProxy = proxy }
+        }
+    }
+
+    /// One caption line with everything a hold or a tap on it can do.
+    private func captionLine(index: Int, segment: TranscriptSegment) -> some View {
+        let name = viewModel.display.showSpeakerNames && segment.speakerClusterID != nil
+            ? viewModel.displayName(for: segment) : nil
+        return CaptionRow(
+            segment: segment,
+            speakerName: name,
+            // Like a chat: the name heads a run of lines by
+            // one person instead of repeating on each.
+            showsSpeakerLabel: name != nil && CaptionLayout.showsSpeakerLabel(
+                for: segment,
+                after: index > 0 ? viewModel.segments[index - 1] : nil
+            ),
+            display: liveDisplay,
+            theme: theme,
+            isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id),
+            isStarred: viewModel.starredSegmentIDs.contains(segment.id),
+            isUncertain: viewModel.display.markUncertainLines && CaptionConfidence.isUncertain(segment)
+        )
+        .id(segment.id)
+        .onTapGesture { namingSegment = segment }
+        .contextMenu {
+            let starred = viewModel.starredSegmentIDs.contains(segment.id)
+            Button {
+                viewModel.toggleStar(segment)
+            } label: {
+                Label(starred ? "ביטול הסימון" : "סימון כחשוב", systemImage: starred ? "star.slash" : "star")
+            }
+            if viewModel.hasHebrewVoice {
+                Button {
+                    viewModel.askToRepeat()
+                } label: {
+                    Label("לבקש שיחזרו על זה", systemImage: "arrow.counterclockwise.circle")
+                }
+            }
+            Button {
+                namingSegment = segment
+            } label: {
+                Label("מי מדבר?", systemImage: "person.crop.circle.badge.questionmark")
+            }
+            Button {
+                UIPasteboard.general.string = segment.text
+            } label: {
+                Label("העתקה", systemImage: "doc.on.doc")
+            }
+        }
+        .accessibilityAction(named: viewModel.starredSegmentIDs.contains(segment.id) ? "ביטול הסימון" : "סימון כחשוב") {
+            viewModel.toggleStar(segment)
+        }
+    }
+
+    /// Where the lines said while the screen was away begin, as drawn: never
+    /// above the first line on screen. It scans the whole transcript, so the
+    /// list reads it once per update rather than once per line.
+    private var awayMark: (index: Int, segmentID: UUID, count: Int)? {
+        let segments = viewModel.segments
+        guard let first = viewModel.awayCatchUp.firstMissedIndex(in: segments) else { return nil }
+        let index = max(first, CaptionLayout.firstOnScreenIndex(lineCount: segments.count))
+        guard segments.indices.contains(index) else { return nil }
+        return (index, segments[index].id, viewModel.awayCatchUp.missedLineCount(in: segments))
+    }
+
+    private func awayDivider(lineCount: Int) -> some View {
+        HStack(spacing: 10) {
+            Text("נאמר כשהאפליקציה הייתה סגורה · \(lineCount) שורות")
+                .font(.system(size: max(15, liveDisplay.fontSize * 0.5), weight: .semibold))
+                .foregroundStyle(theme.pendingText)
+                .fixedSize(horizontal: false, vertical: true)
+            Rectangle()
+                .fill(theme.pendingText)
+                .frame(height: 2)
+        }
+        .padding(.top, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("מכאן, מה שנאמר כשהאפליקציה הייתה סגורה: \(lineCount) שורות")
+        // On screen, it has been seen: no need to offer the jump.
+        .onAppear { viewModel.acknowledgeAwayLines() }
+    }
+
+    /// Back at the newest line after a while away, a way up to where the
+    /// lines she missed begin. Shown until she goes there or sees the mark.
+    @ViewBuilder
+    private var awayJumpButton: some View {
+        if let mark = awayMark, viewModel.awayCatchUp.offersJump(in: viewModel.segments) {
+            Button {
+                viewModel.acknowledgeAwayLines()
+                isPinnedToBottom = false
+                guard let proxy = scrollProxy else { return }
+                // The mark sits just above its first line: leave room for it.
+                let anchor = UnitPoint(x: 0.5, y: 0.12)
+                if reduceMotion {
+                    proxy.scrollTo(mark.segmentID, anchor: anchor)
+                } else {
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        proxy.scrollTo(mark.segmentID, anchor: anchor)
+                    }
+                }
+            } label: {
+                Label("מה שנאמר בינתיים · \(mark.count) שורות", systemImage: "arrow.up.to.line")
+                    .font(.headline)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.thinMaterial, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(theme.chrome)
+            .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
 
