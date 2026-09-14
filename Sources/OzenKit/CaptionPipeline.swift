@@ -409,16 +409,20 @@ public final class CaptionPipeline {
 
     // MARK: - Inputs
 
-    public func selectInput(uid: String) {
+    /// Switches to the input `uid`. Returns whether that input is the one
+    /// in use afterwards: the system can refuse it, or settle on another.
+    @discardableResult
+    public func selectInput(uid: String) -> Bool {
         do {
             try audio.selectInput(uid: uid)
             stats.inputChanges += 1
             syncInputs()
         } catch {
-            // Deliberately swallowed: a failed switch leaves the previous
-            // input active, which is strictly better than dropping a live
-            // conversation over a mic the system refused.
+            // A failed switch leaves the previous input active, which is
+            // strictly better than dropping a live conversation over a mic
+            // the system refused. The caller says so on screen.
         }
+        return selectedInputUID == uid
     }
 
     /// Re-reads the input list from the audio layer. Public so the mic

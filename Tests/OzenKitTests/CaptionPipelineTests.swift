@@ -656,7 +656,7 @@ struct CaptionPipelineInputTests {
         let (pipeline, _, _) = makePipeline(audio: audio)
         await pipeline.start(settings: .default)
 
-        pipeline.selectInput(uid: "airpods")
+        #expect(pipeline.selectInput(uid: "airpods"))
 
         #expect(pipeline.selectedInputUID == "airpods")
         #expect(pipeline.stats.inputChanges == 1)
@@ -667,7 +667,7 @@ struct CaptionPipelineInputTests {
         let (pipeline, _, _) = makePipeline()
         await pipeline.start(settings: .default)
 
-        pipeline.selectInput(uid: "ghost")
+        #expect(pipeline.selectInput(uid: "ghost") == false)
 
         #expect(pipeline.selectedInputUID == "builtin")
         #expect(pipeline.phase == .listening)

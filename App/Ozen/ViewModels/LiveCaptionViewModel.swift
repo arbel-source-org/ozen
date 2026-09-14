@@ -528,10 +528,15 @@ public final class LiveCaptionViewModel {
 
     // MARK: - Inputs
 
-    public func selectInput(uid: String) {
-        pipeline.selectInput(uid: uid)
+    /// Switches microphone and remembers the choice, even when the switch
+    /// didn't take: a microphone still connecting is used as soon as the
+    /// system offers it. Returns whether it is in use now.
+    @discardableResult
+    public func selectInput(uid: String) -> Bool {
+        let switched = pipeline.selectInput(uid: uid)
         settings.preferredInputUID = uid
         persist()
+        return switched
     }
 
     public func refreshInputs() {

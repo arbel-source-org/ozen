@@ -8,6 +8,8 @@ import OzenKit
 struct MicPickerView: View {
     let viewModel: LiveCaptionViewModel
     @Environment(\.dismiss) private var dismiss
+    /// The microphone last tapped that the phone wouldn't switch to.
+    @State private var refusedInputName: String?
 
     var body: some View {
         NavigationStack {
@@ -15,11 +17,16 @@ struct MicPickerView: View {
                 Section {
                     ForEach(viewModel.availableInputs) { input in
                         Button {
-                            viewModel.selectInput(uid: input.uid)
+                            refusedInputName = viewModel.selectInput(uid: input.uid) ? nil : input.portName
                         } label: {
                             InputRow(input: input, isSelected: input.uid == viewModel.selectedInputUID)
                         }
                         .foregroundStyle(.primary)
+                    }
+                    if let refusedInputName {
+                        Label("הטלפון לא עבר ל\"\(refusedInputName)\", והמיקרופון המסומן עדיין מקליט. נסו לנתק ולחבר אותו שוב.", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.footnote)
                     }
                 } header: {
                     Text("מיקרופונים זמינים")
