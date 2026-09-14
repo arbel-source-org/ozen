@@ -22,16 +22,22 @@ public final class CAMPlusPlusSpeakerEmbedder: SpeakerEmbedding, @unchecked Send
     private let model: MLModel
     private let fbank = KaldiFBank()
 
-    /// Nil if the bundled model can't be found, compiled or loaded — a
-    /// corrupt install, not something to crash the app launching over.
-    /// Callers fall back to `MFCCSpeakerEmbedder`.
+    /// Nil if the bundled model can't be found or loaded — a corrupt
+    /// install, not something to crash the app launching over. Callers
+    /// fall back to `MFCCSpeakerEmbedder`.
+    ///
+    /// Looks for `.mlmodelc`, not the `.mlpackage` the source tree and
+    /// `Package.swift` name: Xcode's own SPM integration compiles a
+    /// `resources: [.copy(...)]`-declared `.mlpackage` to `.mlmodelc` as
+    /// part of the build (CoreML gets this special handling regardless of
+    /// `.copy` vs `.process`), so that's what actually ends up in
+    /// `Bundle.module` — confirmed by CI, not assumed.
     public init?() {
-        guard let packageURL = Bundle.module.url(forResource: "CAMPlusPlus", withExtension: "mlpackage") else {
+        guard let modelURL = Bundle.module.url(forResource: "CAMPlusPlus", withExtension: "mlmodelc") else {
             return nil
         }
         do {
-            let compiledURL = try MLModel.compileModel(at: packageURL)
-            model = try MLModel(contentsOf: compiledURL)
+            model = try MLModel(contentsOf: modelURL)
         } catch {
             return nil
         }
