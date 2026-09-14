@@ -149,6 +149,7 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
             guard let alert = viewModel.soundAlerts.last else { return }
             withAnimation { visibleSoundAlert = alert }
+            announceAlert(alert.event.importance == .critical ? "שימו לב! \(alert.event.name)" : "התראה: \(alert.event.name)")
         }
         .task(id: visibleSoundAlert?.id) {
             // Banners clear themselves; critical ones stay twice as long.
@@ -162,6 +163,7 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.keywordHits.last?.id) { _, _ in
             guard let hit = viewModel.keywordHits.last else { return }
             withAnimation { visibleKeywordHit = hit }
+            announceAlert("נאמר: \(hit.match.phrase)")
         }
         .task(id: visibleKeywordHit?.id) {
             guard let hit = visibleKeywordHit else { return }
@@ -416,6 +418,15 @@ struct LiveCaptionView: View {
         guard let text = viewModel.captionAnnouncement(voiceOverRunning: UIAccessibility.isVoiceOverRunning) else { return }
         let announcement = NSAttributedString(string: text, attributes: [.accessibilitySpeechQueueAnnouncement: true])
         UIAccessibility.post(notification: .announcement, argument: announcement)
+    }
+
+    /// A doorbell, an alarm or her name, read out by VoiceOver as soon as
+    /// it happens. The banner and the buzz can't be seen or felt by
+    /// everyone who needs them, so alerts are spoken whatever the setting
+    /// for reading caption lines says.
+    private func announceAlert(_ text: String) {
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        UIAccessibility.post(notification: .announcement, argument: text)
     }
 
     /// "לפני דקה", "לפני שתי דקות", "לפני 7 דקות".
