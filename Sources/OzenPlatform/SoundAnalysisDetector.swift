@@ -31,6 +31,10 @@ public struct SoundAnalysisDetector: SoundEventDetecting {
         return Set(request.knownClassifications)
     }
 
+    /// How many times a failed classifier is set up again in one session
+    /// before sound alerts are left off (Diagnostics then says so).
+    static let maximumRestarts = 5
+
     public func observations(audio: AsyncStream<[Float]>) -> AsyncStream<SoundObservation> {
         let forwardingConfidence = forwardingConfidence
         let windowSeconds = windowSeconds
@@ -40,36 +44,60 @@ public struct SoundAnalysisDetector: SoundEventDetecting {
                     continuation.finish()
                     return
                 }
-                let analyzer = SNAudioStreamAnalyzer(format: format)
-                let observer = ClassificationObserver(continuation: continuation, minimumConfidence: forwardingConfidence)
-                do {
-                    let request = try SNClassifySoundRequest(classifierIdentifier: .version1)
-                    let window = CMTime(seconds: windowSeconds, preferredTimescale: 16_000)
-                    if case .durationRange(let range) = request.windowDurationConstraint, range.containsTime(window) {
-                        request.windowDuration = window
-                    }
-                    request.overlapFactor = 0.5
-                    try analyzer.add(request, withObserver: observer)
-                } catch {
-                    continuation.finish()
-                    return
-                }
-
+                // The analyzer's request can fail partway through a
+                // conversation; a new analyzer picks up from the next chunk,
+                // so a doorbell later in the evening still gets through.
+                var session = Self.makeSession(format: format, continuation: continuation, forwardingConfidence: forwardingConfidence, windowSeconds: windowSeconds)
+                var restarts = 0
                 var framePosition: AVAudioFramePosition = 0
                 for await chunk in audio {
                     if Task.isCancelled { break }
-                    guard let buffer = Self.pcmBuffer(from: chunk, format: format) else { continue }
+                    if session == nil || session?.observer.hasFailed == true {
+                        guard restarts < Self.maximumRestarts else { break }
+                        restarts += 1
+                        session = Self.makeSession(format: format, continuation: continuation, forwardingConfidence: forwardingConfidence, windowSeconds: windowSeconds)
+                        framePosition = 0
+                        guard session != nil else { continue }
+                    }
+                    guard let current = session, let buffer = Self.pcmBuffer(from: chunk, format: format) else { continue }
                     // Synchronous and CPU-bound: this is exactly why the
                     // whole loop runs on a detached utility-priority task
                     // rather than anywhere near the main actor.
-                    analyzer.analyze(buffer, atAudioFramePosition: framePosition)
+                    current.analyzer.analyze(buffer, atAudioFramePosition: framePosition)
                     framePosition += AVAudioFramePosition(chunk.count)
                 }
-                analyzer.completeAnalysis()
+                session?.analyzer.completeAnalysis()
                 continuation.finish()
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+
+    private struct Session {
+        let analyzer: SNAudioStreamAnalyzer
+        let observer: ClassificationObserver
+    }
+
+    private static func makeSession(
+        format: AVAudioFormat,
+        continuation: AsyncStream<SoundObservation>.Continuation,
+        forwardingConfidence: Double,
+        windowSeconds: Double
+    ) -> Session? {
+        let analyzer = SNAudioStreamAnalyzer(format: format)
+        let observer = ClassificationObserver(continuation: continuation, minimumConfidence: forwardingConfidence)
+        do {
+            let request = try SNClassifySoundRequest(classifierIdentifier: .version1)
+            let window = CMTime(seconds: windowSeconds, preferredTimescale: 16_000)
+            if case .durationRange(let range) = request.windowDurationConstraint, range.containsTime(window) {
+                request.windowDuration = window
+            }
+            request.overlapFactor = 0.5
+            try analyzer.add(request, withObserver: observer)
+        } catch {
+            return nil
+        }
+        return Session(analyzer: analyzer, observer: observer)
     }
 
     private static func pcmBuffer(from samples: [Float], format: AVAudioFormat) -> AVAudioPCMBuffer? {
@@ -89,10 +117,18 @@ public struct SoundAnalysisDetector: SoundEventDetecting {
 }
 
 /// Receives classifier results on the analyzer's own queue and forwards
-/// the top few confident labels of each window.
+/// the top few confident labels of each window. A failure is only noted:
+/// the detector's loop sets up a new analyzer rather than ending the
+/// stream of observations.
 private final class ClassificationObserver: NSObject, SNResultsObserving, @unchecked Sendable {
     private let continuation: AsyncStream<SoundObservation>.Continuation
     private let minimumConfidence: Double
+    private let lock = NSLock()
+    private var failed = false
+
+    var hasFailed: Bool {
+        lock.withLock { failed }
+    }
 
     init(continuation: AsyncStream<SoundObservation>.Continuation, minimumConfidence: Double) {
         self.continuation = continuation
@@ -112,10 +148,11 @@ private final class ClassificationObserver: NSObject, SNResultsObserving, @unche
     }
 
     func request(_ request: SNRequest, didFailWithError error: Error) {
-        continuation.finish()
+        lock.withLock { failed = true }
     }
 
     func requestDidComplete(_ request: SNRequest) {
-        continuation.finish()
+        // Only after `completeAnalysis`, when the audio has ended; the
+        // detector's loop finishes the stream itself.
     }
 }
