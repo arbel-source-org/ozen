@@ -479,6 +479,10 @@ public final class CaptionPipeline {
         return sum.map { $0 / Float(count) }
     }
 
+    /// How far past its length an enrollment recording may run before it
+    /// is given up on.
+    var enrollmentStallSeconds: Double = 5
+
     /// A voice print needs this many windows of speech, about 4.5 seconds
     /// of someone talking, to be worth keeping.
     static let minimumEnrollmentWindows = 3
@@ -533,11 +537,21 @@ public final class CaptionPipeline {
         var collected: [Float] = []
         let target = Int(seconds * Self.sampleRate)
         if let stream = await enrollmentCapture() {
+            // A microphone that stops delivering would keep the recording
+            // screen up for good, its cancel button disabled. Stopping
+            // capture ends the stream, and a short recording is refused
+            // like a quiet one.
+            let deadline = Task { @MainActor [audio, enrollmentStallSeconds] in
+                try? await Task.sleep(for: .seconds(seconds + enrollmentStallSeconds))
+                guard !Task.isCancelled else { return }
+                audio.stopCapture()
+            }
             for await chunk in stream {
                 collected.append(contentsOf: chunk)
                 onProgress(min(Double(collected.count) / Double(target), 1))
                 if collected.count >= target { break }
             }
+            deadline.cancel()
             audio.stopCapture()
         }
 

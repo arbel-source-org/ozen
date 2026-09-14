@@ -743,6 +743,23 @@ struct CaptionPipelineEnrollmentTests {
         #expect(audio.calls.prefix(4) == ["startCapture", "requestPermission", "prepareSession", "startCapture"])
     }
 
+    @Test("a microphone that delivers nothing ends the recording instead of hanging it", .timeLimit(.minutes(1)))
+    func enrollmentStalls() async {
+        let (pipeline, audio, _) = makePipeline()
+        pipeline.enrollmentStallSeconds = 0.1
+        let started = ContinuousClock.now
+        let recording = Task { @MainActor in
+            await pipeline.captureEnrollmentSamples(seconds: 0.1)
+        }
+        #expect(await eventually { audio.calls.contains("startCapture") })
+        audio.push([Float](repeating: 0.1, count: 400))
+        let samples = await recording.value
+
+        #expect(samples.count == 400)
+        #expect(ContinuousClock.now - started < .seconds(2))
+        #expect(pipeline.phase == .idle)
+    }
+
     @Test("without microphone permission enrollment records nothing and sets nothing up")
     func enrollmentWithoutPermission() async {
         let (pipeline, audio, _) = makePipeline()
