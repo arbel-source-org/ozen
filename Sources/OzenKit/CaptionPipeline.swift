@@ -521,7 +521,11 @@ public final class CaptionPipeline {
 
             guard let currentUtteranceID = stabilizer.segments.last(where: { !$0.isCommitted })?.id else { continue }
             utteranceClusterAssignments[currentUtteranceID] = clusterID
-            if let index = segments.firstIndex(where: { $0.id == currentUtteranceID }) {
+            // Writing an unchanged value still tells every observer the
+            // transcript changed and redraws the caption list, every 1.5 s
+            // of speech; only write when the speaker actually changed.
+            if let index = segments.firstIndex(where: { $0.id == currentUtteranceID }),
+               segments[index].speakerClusterID != clusterID {
                 segments[index].speakerClusterID = clusterID
             }
         }
