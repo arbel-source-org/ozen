@@ -54,6 +54,11 @@ public actor WhisperKitEngine: TranscriptionEngine {
     /// Whisper's window is 30 s; finalize before that so the model never
     /// sees a truncated utterance.
     private let maxUtteranceSeconds = 28.0
+    /// How far back from the end a line that ran too long looks for a
+    /// quiet moment to be cut at (`UtteranceCut`), and the stretch it
+    /// measures at a time.
+    private let longCutLookBackSeconds = 2.0
+    private let longCutFrameSeconds = 0.05
     private let sampleRate = 16_000.0
 
     public init(
@@ -276,6 +281,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
         let padSamples = Int(trailingPadSeconds * sampleRate)
         let keepSamples = Int(leadingKeepSeconds * sampleRate)
         let maxSamples = Int(maxUtteranceSeconds * sampleRate)
+        let longCutLookBack = Int(longCutLookBackSeconds * sampleRate)
+        let longCutFrame = Int(longCutFrameSeconds * sampleRate)
         var lastLivePassSeconds: Double?
 
         var utteranceID = UUID()
@@ -313,7 +320,22 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 continue
             }
 
-            let end = isFinal ? min(total, speechEnd + padSamples) : total
+            let end: Int
+            if !isFinal {
+                end = total
+            } else if tooLong && !pauseReached && !snapshot.finished {
+                // Still talking at the cap: end the line in the quietest
+                // moment of the last two seconds rather than mid-word. What
+                // comes after it is kept and starts the next line.
+                end = UtteranceCut.quietestPoint(
+                    in: snapshot.samples,
+                    before: min(total, speechEnd + padSamples),
+                    lookBack: longCutLookBack,
+                    frame: longCutFrame
+                )
+            } else {
+                end = min(total, speechEnd + padSamples)
+            }
             let window = Array(snapshot.samples[0..<end])
             samplesAtLastPass = total
 
@@ -369,6 +391,10 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 utteranceID = UUID()
                 samplesAtLastPass = 0
                 lastShownText = ""
+                // How long a pass over the finished line took says little
+                // about the next, shorter one; its first preview shouldn't
+                // wait on it.
+                lastLivePassSeconds = nil
                 if snapshot.finished && total - end == 0 { break }
             }
         }
