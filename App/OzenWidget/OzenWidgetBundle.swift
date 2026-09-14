@@ -67,14 +67,21 @@ struct CaptionLinesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if state.lines.isEmpty {
-                Label("מקשיב…", systemImage: "ear")
-                    .font(.system(size: fontSize, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.8))
+                // "Listening" under "captions are starting" or "paused
+                // because of a call" would say the opposite of the note.
+                if state.status == nil {
+                    listeningLabel
+                }
             } else {
-                ForEach(Array(state.lines.enumerated()), id: \.offset) { _, line in
+                ForEach(Array(shownLines.enumerated()), id: \.offset) { offset, line in
+                    let isNewest = offset == shownLines.count - 1
                     lineText(line)
                         .font(.system(size: fontSize, weight: .semibold))
-                        .lineLimit(3)
+                        // The app cuts each line to about this many lines
+                        // (`LockScreenCaptions`); a wide one shrinks a little
+                        // rather than lose its end, the newest words.
+                        .lineLimit(isNewest ? 3 : 2)
+                        .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -92,6 +99,18 @@ struct CaptionLinesView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .environment(\.layoutDirection, .rightToLeft)
+    }
+
+    private var listeningLabel: some View {
+        Label("מקשיב…", systemImage: "ear")
+            .font(.system(size: fontSize, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.8))
+    }
+
+    /// Only the newest line under a status note: two caption lines fill the
+    /// lock screen's room, leaving none for the note.
+    private var shownLines: [CaptionActivityAttributes.ContentState.Line] {
+        state.status != nil || isStale ? Array(state.lines.suffix(1)) : state.lines
     }
 
     private func lineText(_ line: CaptionActivityAttributes.ContentState.Line) -> Text {

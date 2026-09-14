@@ -21,11 +21,18 @@ public struct LockScreenCaptionLine: Sendable, Equatable, Hashable, Codable {
 /// step too many while someone is talking. A Live Activity puts the newest
 /// lines on the lock screen; this decides which lines and how much of each.
 public enum LockScreenCaptions {
-    /// Lines shown at once: the lock screen gives a Live Activity room for
-    /// about three lines of large text.
+    /// Lines shown at once.
     public static let lineCount = 2
-    /// Characters kept from the end of a long line.
-    public static let maximumCharacters = 140
+    /// Characters kept from the end of the newest line. The lock screen
+    /// gives a Live Activity 160 points of height, about five lines of the
+    /// 21-point text at some 30 characters each: three for the newest line
+    /// and two for the one before. A line longer than its lines would lose
+    /// its end, the newest words, so it is cut from the front here instead.
+    public static let newestLineMaximumCharacters = 80
+    /// Characters kept from the end of each earlier line.
+    public static let earlierLineMaximumCharacters = 45
+    /// Never cut a line shorter than this for a long speaker name.
+    static let minimumCharacters = 20
 
     /// The newest `lineCount` lines with text. `name` gives the label for a
     /// line's speaker, or nil to show none; a name is kept only where it
@@ -50,12 +57,16 @@ public enum LockScreenCaptions {
             picked.insert(segment, at: 0)
         }
         var previousName = before.flatMap(name)
-        return picked.map { segment in
-            let speaker = name(segment)
-            defer { previousName = speaker }
+        return picked.enumerated().map { offset, segment in
+            let name = name(segment)
+            defer { previousName = name }
+            let speaker = name != previousName ? name : nil
+            let budget = offset == picked.count - 1 ? newestLineMaximumCharacters : earlierLineMaximumCharacters
+            // The name shares the line's room ("Speaker 2: ").
+            let room = max(minimumCharacters, budget - (speaker.map { $0.count + 2 } ?? 0))
             return LockScreenCaptionLine(
-                speaker: speaker != previousName ? speaker : nil,
-                text: tail(of: segment.text, maximumCharacters: maximumCharacters),
+                speaker: speaker,
+                text: tail(of: segment.text, maximumCharacters: room),
                 isFinal: segment.isCommitted
             )
         }

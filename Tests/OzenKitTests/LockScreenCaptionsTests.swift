@@ -31,6 +31,25 @@ struct LockScreenCaptionsTests {
         #expect(fresh.map(\.speaker) == ["Speaker 1", nil])
     }
 
+    @Test("long lines are cut to what fits: the newest line gets more room than the one before, and a name takes its share")
+    func linesCutToFit() {
+        let long = (1...40).map { "word\($0)" }.joined(separator: " ")
+        let lines = LockScreenCaptions.lines(from: [line(long), line(long)]) { _ in nil }
+        #expect(lines.count == 2)
+        #expect(lines[0].text.count <= LockScreenCaptions.earlierLineMaximumCharacters)
+        #expect(lines[1].text.count <= LockScreenCaptions.newestLineMaximumCharacters)
+        #expect(lines[1].text.count > LockScreenCaptions.earlierLineMaximumCharacters)
+        #expect(lines.allSatisfy { $0.text.hasSuffix("word40") })
+
+        let named = LockScreenCaptions.lines(from: [line(long, speaker: 1)], name: names)
+        #expect(named[0].speaker == "Speaker 1")
+        #expect(named[0].text.count + "Speaker 1: ".count <= LockScreenCaptions.newestLineMaximumCharacters)
+
+        let longName: (TranscriptSegment) -> String? = { _ in String(repeating: "n", count: 90) }
+        let crowded = LockScreenCaptions.lines(from: [line(long)], name: longName)
+        #expect(crowded[0].text == LockScreenCaptions.tail(of: long, maximumCharacters: LockScreenCaptions.minimumCharacters))
+    }
+
     @Test("a long line keeps its newest words, from a word boundary, marked as cut")
     func longLineTail() {
         let words = (1...60).map { "word\($0)" }.joined(separator: " ")
