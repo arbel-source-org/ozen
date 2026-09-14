@@ -16,7 +16,12 @@ import Foundation
 /// | google/gemini-3.8-flash         | 24%         | 4                   |
 ///
 /// gemini-3.1-flash-lite also put four alternating speakers on four lines,
-/// labelled A B A B, and costs about six cents per hour of speech.
+/// labelled A B A B, and costs about six cents per hour of speech sent once
+/// (the live re-sends make it two to three times that).
+///
+/// Who is talking is still the phone's job. Given a short recording of each
+/// of four people and asked whose voice a new recording was, these models
+/// got 8 and 7 of 22 right (LibriSpeech voices): barely better than a guess.
 public enum CloudSpeech {
     public static let completionsURL = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
     public static let keyURL = URL(string: "https://openrouter.ai/api/v1/key")!
