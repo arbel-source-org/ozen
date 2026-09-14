@@ -58,7 +58,9 @@ leave the phone.
   new one on the lock screen from the front. They also end by themselves
   after eight hours; opening the app brings them back. Settings → Display
   (tetzuga) → "Captions on the lock screen too" (ktuviyot gam be-masach
-  ha-ne'ila) turns them off.
+  ha-ne'ila) turns them off. With the caption text size at 34 or more, the
+  lock screen's lines are larger too, and show fewer words of the line
+  before the newest.
 - **Adding the start button to Control Center or the lock screen.** On iOS
   18 or later: open Control Center, press and hold an empty spot, tap "Add
   a Control" and search for Ozen. For the lock screen: press and hold the

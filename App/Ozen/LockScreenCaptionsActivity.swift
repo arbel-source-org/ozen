@@ -58,7 +58,8 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
             lines: content.lines.map {
                 CaptionActivityAttributes.ContentState.Line(speaker: $0.speaker, text: $0.text, isFinal: $0.isFinal)
             },
-            status: content.status
+            status: content.status,
+            large: content.textSize == .large
         )
         let staleDate = Date().addingTimeInterval(Self.staleAfterSeconds)
         if let activityID, Self.isRunning(id: activityID) {

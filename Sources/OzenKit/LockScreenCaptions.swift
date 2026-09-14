@@ -23,14 +23,6 @@ public struct LockScreenCaptionLine: Sendable, Equatable, Hashable, Codable {
 public enum LockScreenCaptions {
     /// Lines shown at once.
     public static let lineCount = 2
-    /// Characters kept from the end of the newest line. The lock screen
-    /// gives a Live Activity 160 points of height, about five lines of the
-    /// 21-point text at some 30 characters each: three for the newest line
-    /// and two for the one before. A line longer than its lines would lose
-    /// its end, the newest words, so it is cut from the front here instead.
-    public static let newestLineMaximumCharacters = 80
-    /// Characters kept from the end of each earlier line.
-    public static let earlierLineMaximumCharacters = 45
     /// Never cut a line shorter than this for a long speaker name.
     static let minimumCharacters = 20
 
@@ -42,6 +34,7 @@ public enum LockScreenCaptions {
     public static func lines(
         from segments: [TranscriptSegment],
         count: Int = lineCount,
+        textSize: LockScreenTextSize = .regular,
         name: (TranscriptSegment) -> String?
     ) -> [LockScreenCaptionLine] {
         var picked: [TranscriptSegment] = []
@@ -57,7 +50,7 @@ public enum LockScreenCaptions {
             let name = name(segment)
             defer { previousName = name }
             let speaker = offset == 0 || name != previousName ? name : nil
-            let budget = offset == picked.count - 1 ? newestLineMaximumCharacters : earlierLineMaximumCharacters
+            let budget = offset == picked.count - 1 ? textSize.newestLineMaximumCharacters : textSize.earlierLineMaximumCharacters
             // The name shares the line's room ("Speaker 2: ").
             let room = max(minimumCharacters, budget - (speaker.map { $0.count + 2 } ?? 0))
             return LockScreenCaptionLine(
@@ -89,10 +82,51 @@ public struct LockScreenCaptionContent: Sendable, Equatable {
     /// Set while captions aren't running but will again by themselves or
     /// with a tap ("paused because of a call", "stopped").
     public var status: String?
+    public var textSize: LockScreenTextSize
 
-    public init(lines: [LockScreenCaptionLine], status: String? = nil) {
+    public init(lines: [LockScreenCaptionLine], status: String? = nil, textSize: LockScreenTextSize = .regular) {
         self.lines = lines
         self.status = status
+        self.textSize = textSize
+    }
+}
+
+/// How big the lock screen's lines are, and so how much of each fits.
+///
+/// A Live Activity gets 160 points of height on the lock screen, however
+/// large she has the captions in the app. Someone who reads them large
+/// gets larger lines there too, and fewer words of the line before.
+public enum LockScreenTextSize: String, Sendable, Equatable, Codable {
+    /// 21-point lines: about 30 characters a line, three for the newest
+    /// line and two for the one before.
+    case regular
+    /// 27-point lines: about 23 characters a line, three for the newest
+    /// line and one for the one before.
+    case large
+
+    /// Captions this size or larger in the app make the lock screen large.
+    public static let largeFromCaptionSize: Double = 34
+
+    public init(captionSize: Double) {
+        self = captionSize >= Self.largeFromCaptionSize ? .large : .regular
+    }
+
+    /// Characters kept from the end of the newest line. A line longer than
+    /// its lines would lose its end, the newest words, so it is cut from
+    /// the front instead.
+    public var newestLineMaximumCharacters: Int {
+        switch self {
+        case .regular: return 80
+        case .large: return 60
+        }
+    }
+
+    /// Characters kept from the end of each earlier line.
+    public var earlierLineMaximumCharacters: Int {
+        switch self {
+        case .regular: return 45
+        case .large: return 22
+        }
     }
 }
 

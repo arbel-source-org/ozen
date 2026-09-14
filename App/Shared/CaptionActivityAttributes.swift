@@ -18,5 +18,8 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
         var lines: [Line]
         /// Why captions aren't running right now, when they aren't.
         var status: String?
+        /// Larger lines, for someone who reads the captions large in the
+        /// app (see `LockScreenTextSize`); the app cuts them shorter to fit.
+        var large: Bool
     }
 }

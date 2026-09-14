@@ -34,7 +34,7 @@ struct StartCaptionsControl: ControlWidget {
 struct CaptionLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: CaptionActivityAttributes.self) { context in
-            CaptionLinesView(state: context.state, isStale: context.isStale, fontSize: 21)
+            CaptionLinesView(state: context.state, isStale: context.isStale, fontSize: context.state.large ? 27 : 21)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .activityBackgroundTint(.black)
@@ -84,7 +84,7 @@ struct CaptionLinesView: View {
                         // The app cuts each line to about this many lines
                         // (`LockScreenCaptions`); a wide one shrinks a little
                         // rather than lose its end, the newest words.
-                        .lineLimit(isNewest ? 3 : 2)
+                        .lineLimit(isNewest ? 3 : (state.large ? 1 : 2))
                         .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
                 }

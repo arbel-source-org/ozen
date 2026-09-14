@@ -616,16 +616,19 @@ public final class LiveCaptionViewModel {
             return
         }
         let namesShown = settings.display.showSpeakerNames
+        let textSize = LockScreenTextSize(captionSize: settings.display.fontSize)
         let content = LockScreenCaptionContent(
             // Under a note ("paused because of a call") there is room for
             // the newest line only.
             lines: LockScreenCaptions.lines(
                 from: pipeline.segments,
-                count: presence.status == nil ? LockScreenCaptions.lineCount : 1
+                count: presence.status == nil ? LockScreenCaptions.lineCount : 1,
+                textSize: textSize
             ) { [pipeline] segment in
                 namesShown && segment.speakerClusterID != nil ? pipeline.displayName(for: segment) : nil
             },
-            status: presence.status
+            status: presence.status,
+            textSize: textSize
         )
         let now = Date().timeIntervalSince1970
         switch lockScreenThrottle.decide(content, now: now) {
