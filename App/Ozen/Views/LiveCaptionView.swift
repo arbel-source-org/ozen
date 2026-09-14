@@ -448,7 +448,7 @@ private struct CaptionRow: View {
                 .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID))
             }
 
-            Text(segment.text)
+            Text(CaptionLayout.readableText(segment.text))
                 .font(.system(size: display.fontSize, weight: weight))
                 .italic(!segment.isCommitted)
                 .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
@@ -486,7 +486,7 @@ private struct NameSpeakerSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(segment.text)
+                    Text(CaptionLayout.readableText(segment.text))
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .lineLimit(3)

@@ -152,7 +152,7 @@ struct HistoryDetailView: View {
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID))
                                 }
-                                Text(segment.text)
+                                Text(CaptionLayout.readableText(segment.text))
                                     .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
                             }
                         }
