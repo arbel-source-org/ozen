@@ -3,15 +3,16 @@ import UserNotifications
 import OzenKit
 
 /// Posts `BackgroundAlertPolicy`'s notifications through the system.
-@MainActor
-final class AlertNotifier {
+///
+/// Holds no state and isn't tied to the main actor: the notification
+/// center is fetched at each use, so nothing main-actor-owned is handed to
+/// the framework's own threads.
+nonisolated final class AlertNotifier: Sendable {
     static let shared = AlertNotifier()
-
-    private let center = UNUserNotificationCenter.current()
 
     /// Asks once; later calls just report the answer the person gave.
     func requestAuthorization() async -> Bool {
-        (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
     func post(_ content: AlertNotificationContent) {
@@ -26,6 +27,6 @@ final class AlertNotifier {
         body.interruptionLevel = .active
         body.relevanceScore = content.isUrgent ? 1 : 0.5
         let request = UNNotificationRequest(identifier: content.identifier, content: body, trigger: nil)
-        center.add(request) { _ in }
+        UNUserNotificationCenter.current().add(request) { _ in }
     }
 }
