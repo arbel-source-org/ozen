@@ -450,6 +450,9 @@ public final class CaptionPipeline {
             upsert(segment)
             stats.segmentsCommitted += 1
         }
+        if !committed.isEmpty {
+            stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
+        }
     }
 
     private func handle(token: TranscriptToken) {
@@ -476,6 +479,7 @@ public final class CaptionPipeline {
             stats.segmentsCommitted += 1
         }
         upsert(segment)
+        stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
         scanForKeywords(in: segment)
     }
 

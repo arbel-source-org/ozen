@@ -64,6 +64,7 @@ struct PipelineStateTests {
         #expect(stats.captionLagSeconds == nil)
         stats.lastAudioAt = 100
         stats.lastTokenAt = 99.2
+        stats.hasOpenLine = true
         #expect(stats.captionLagSeconds != nil)
         #expect(abs((stats.captionLagSeconds ?? 0) - 0.8) < 0.0001)
         stats.lastTokenAt = 101
@@ -76,5 +77,18 @@ struct PipelineStateTests {
         #expect(availability.unavailability?.kind == .modelLoadFailed)
         #expect(availability.unavailability?.detail == "boom")
         #expect(EngineAvailability.available.unavailability == nil)
+    }
+
+    @Test("caption lag counts only while a line is still being written")
+    func lagOnlyWhileOpen() {
+        var stats = PipelineStats()
+        #expect(stats.captionLagSeconds == nil)
+        stats.lastTokenAt = 100
+        stats.lastAudioAt = 103
+        stats.hasOpenLine = true
+        #expect(stats.captionLagSeconds == 3)
+        stats.hasOpenLine = false
+        stats.lastAudioAt = 160
+        #expect(stats.captionLagSeconds == 0)
     }
 }

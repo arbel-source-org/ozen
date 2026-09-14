@@ -108,13 +108,19 @@ public struct PipelineStats: Sendable, Equatable {
     public var engineRestarts: Int = 0
     public var inputChanges: Int = 0
     public var speakerClustersOpened: Int = 0
+    /// A caption line is still being written (not yet final).
+    public var hasOpenLine = false
 
     public init() {}
 
-    /// Seconds between the newest audio and the newest token — a rough,
-    /// honest "how far behind is the caption" number.
+    /// Seconds between the newest audio and the newest token while a line
+    /// is still being written: a rough, honest "how far behind is the
+    /// caption" number. With every line final, the captions have caught up
+    /// and the lag is 0; measuring then would count the silence since the
+    /// last word as delay.
     public var captionLagSeconds: Double? {
         guard let lastAudioAt, let lastTokenAt else { return nil }
+        guard hasOpenLine else { return 0 }
         return max(0, lastAudioAt - lastTokenAt)
     }
 }
