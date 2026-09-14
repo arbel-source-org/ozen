@@ -18,20 +18,18 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
     public var isBusy: Bool { synthesizer.isSpeaking }
     /// Whether any Hebrew voice is installed at all; without one iOS
     /// falls back to a voice that mangles Hebrew, and the UI should say so.
-    public let hasHebrewVoice: Bool
+    /// False for the first moment after launch, until the voices are read.
+    public private(set) var hasHebrewVoice = false
 
     public var onSpeakingChanged: (@MainActor (Bool) -> Void)?
 
     private let synthesizer = AVSpeechSynthesizer()
     private let delegate = SpeakingDelegate()
-    private let voice: AVSpeechSynthesisVoice?
+    @ObservationIgnored private var voice: AVSpeechSynthesisVoice?
+    private let languageCode: String
 
     public init(languageCode: String = "he-IL") {
-        let candidates = AVSpeechSynthesisVoice.speechVoices().filter { $0.language == languageCode }
-        // Prefer the highest quality voice installed (enhanced/premium
-        // voices are downloaded by the user in iOS Settings).
-        voice = candidates.max { $0.quality.rawValue < $1.quality.rawValue } ?? AVSpeechSynthesisVoice(language: languageCode)
-        hasHebrewVoice = voice?.language == languageCode
+        self.languageCode = languageCode
         synthesizer.delegate = delegate
         delegate.onChange = { [weak self] speaking in
             Task { @MainActor [weak self] in
@@ -40,6 +38,24 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
                 self.onSpeakingChanged?(speaking)
             }
         }
+        // Listing the installed voices reads their metadata from disk: not
+        // on the main thread while the app draws its first screen.
+        Task { [weak self] in
+            let identifier = await Task.detached(priority: .utility) {
+                SpeechSynthesizer.bestVoiceIdentifier(for: languageCode)
+            }.value
+            guard let self, let identifier, let voice = AVSpeechSynthesisVoice(identifier: identifier) else { return }
+            self.voice = voice
+            self.hasHebrewVoice = voice.language == languageCode
+        }
+    }
+
+    /// The highest quality voice installed for the language (enhanced and
+    /// premium voices are downloaded by the user in iOS Settings).
+    private nonisolated static func bestVoiceIdentifier(for languageCode: String) -> String? {
+        let candidates = AVSpeechSynthesisVoice.speechVoices().filter { $0.language == languageCode }
+        let best = candidates.max { $0.quality.rawValue < $1.quality.rawValue } ?? AVSpeechSynthesisVoice(language: languageCode)
+        return best?.identifier
     }
 
     public func speak(_ text: String, rate: Float) {
@@ -49,7 +65,9 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
             synthesizer.stopSpeaking(at: .immediate)
         }
         let utterance = AVSpeechUtterance(string: trimmed)
-        utterance.voice = voice
+        // Spoken before the voice list was read: ask for the language, so
+        // it never falls back to an English voice.
+        utterance.voice = voice ?? AVSpeechSynthesisVoice(language: languageCode)
         utterance.rate = min(max(rate, AVSpeechUtteranceMinimumSpeechRate), AVSpeechUtteranceMaximumSpeechRate)
         utterance.prefersAssistiveTechnologySettings = false
         synthesizer.speak(utterance)
