@@ -90,6 +90,10 @@ things, for Hebrew conversation, entirely on-device.
 - **Sound alerts.** Doorbell, knocking, a baby crying, a smoke alarm, a
   civil-defence siren and about 45 more, recognized on the phone by
   Apple's sound classifier and shown as a banner, with per-sound muting.
+  Sirens and alarms flash the edge of the whole screen for a few seconds,
+  the doorbell and a crying baby twice, so they're caught from the corner
+  of the eye (slower than any seizure risk, and a steady glow with Reduce
+  Motion on).
 - **Alerts reach her with the screen off.** With the phone in a pocket or
   locked, a sound alert or her name becomes a phone notification (once per
   30 seconds per sound or word), so the doorbell isn't missed just because
@@ -190,7 +194,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (373 tests). The platform layer (WhisperKit/Speech engines, real
+logic (376 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 64 tests).

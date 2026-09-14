@@ -160,6 +160,45 @@ struct SoundAlertBanner: View {
     }
 }
 
+/// Flashes the edge of the whole screen when a safety or door sound is
+/// heard (see `AlertFlash`), so it's noticed without looking at the
+/// banner. Only new alerts flash, not one that was already there when the
+/// screen appeared. Takes no touches, and is invisible when dark.
+struct AlertFlashOverlay: View {
+    let alert: SoundAlert?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var flashing: SoundAlert?
+    @State private var isLit = false
+
+    var body: some View {
+        Rectangle()
+            .strokeBorder(SoundAlertsView.tint(flashing?.event.importance ?? .critical), lineWidth: 22)
+            .background(SoundAlertsView.tint(flashing?.event.importance ?? .critical).opacity(0.2))
+            .ignoresSafeArea()
+            .opacity(isLit ? 1 : 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onChange(of: alert?.id) { _, _ in
+                // A kettle heard during a siren's flash doesn't cut it short.
+                guard let alert, AlertFlash.pattern(for: alert.event.importance, reduceMotion: reduceMotion) != nil else { return }
+                flashing = alert
+            }
+            .task(id: flashing?.id) {
+                guard let alert = flashing,
+                      let flash = AlertFlash.pattern(for: alert.event.importance, reduceMotion: reduceMotion)
+                else { return }
+                for _ in 0..<flash.count {
+                    withAnimation(.easeOut(duration: 0.08)) { isLit = true }
+                    try? await Task.sleep(for: .seconds(flash.litSeconds))
+                    withAnimation(.easeIn(duration: 0.15)) { isLit = false }
+                    if Task.isCancelled { return }
+                    try? await Task.sleep(for: .seconds(flash.darkSeconds))
+                    if Task.isCancelled { return }
+                }
+            }
+    }
+}
+
 /// A small, quiet confirmation that a keyword was heard, so the buzz has
 /// a visible explanation.
 struct KeywordHitPill: View {

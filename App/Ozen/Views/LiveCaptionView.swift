@@ -125,6 +125,9 @@ struct LiveCaptionView: View {
             .padding(.horizontal, 16)
             .padding(.top, 8)
         }
+        .overlay {
+            AlertFlashOverlay(alert: viewModel.soundAlerts.last)
+        }
         .preferredColorScheme(theme.colorScheme)
     }
 
