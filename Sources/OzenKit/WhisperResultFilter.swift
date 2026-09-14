@@ -60,13 +60,18 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// as in "targum: Michal" ("translation: Michal").
     public var hallucinatedCreditLabels: [String]
 
+    /// Each also in the short written form of "by" that subtitle files use
+    /// (ayin-gershayim-yod, which the normalizer reads without its mark),
+    /// and the "translated and synced by" credit of Hebrew subtitle sites.
     public static let defaultCreditPrefixes: [String] = [
         "כתוביות על ידי", "תורגם על ידי", "תרגום על ידי", "תמלול על ידי", "תוכתב על ידי",
+        "כתוביות ע״י", "תורגם ע״י", "תרגום ע״י", "תמלול ע״י",
+        "תורגם וסונכרן", "סונכרן על ידי", "סונכרן ע״י",
         "subtitles by", "subtitled by", "translated by", "transcribed by", "captions by",
     ]
 
     public static let defaultCreditLabels: [String] = [
-        "כתוביות", "תרגום", "תמלול", "הפקה", "עריכה", "subtitles", "translation", "captions",
+        "כתוביות", "תרגום", "תמלול", "הפקה", "עריכה", "סנכרון", "subtitles", "translation", "captions",
     ]
 
     /// Nobody says these to someone across a dinner table: they are

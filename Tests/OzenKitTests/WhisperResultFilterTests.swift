@@ -91,6 +91,18 @@ struct WhisperResultFilterTests {
         #expect(filter.isKnownHallucination("[תרגום: מיכל]"))
     }
 
+    @Test("credit lines in the abbreviated written form, and translated-and-synced credits, are dropped")
+    func abbreviatedCreditLines() {
+        let filter = WhisperResultFilter()
+        #expect(filter.isKnownHallucination("כתוביות ע״י ישראל ישראלי"))
+        #expect(filter.isKnownHallucination("תורגם ע\"י: דנה"))
+        #expect(filter.isKnownHallucination("תורגם וסונכרן ע\"י אבי"))
+        #expect(filter.isKnownHallucination("סונכרן על ידי: הצוות"))
+        #expect(filter.isKnownHallucination("סנכרון: מיכל"))
+        // Somebody talking about syncing something is still somebody talking.
+        #expect(filter.isKnownHallucination("סנכרון של הטלפון לקח המון זמן") == false)
+    }
+
     @Test("real speech that merely starts with a credit word passes")
     func creditWordsInRealSpeech() {
         let filter = WhisperResultFilter()
