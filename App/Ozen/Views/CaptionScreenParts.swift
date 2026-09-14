@@ -187,9 +187,16 @@ struct AlertFlashOverlay: View {
                 guard let alert = flashing,
                       let flash = AlertFlash.pattern(for: alert.event.importance, reduceMotion: reduceMotion)
                 else { return }
+                // A newer alert cancels this run, but a cancelled task still
+                // wakes up: only the run for the alert still flashing may
+                // touch the light, or this one's "off" could land on the
+                // newer one's first flash.
+                let id = alert.id
                 for _ in 0..<flash.count {
+                    guard flashing?.id == id else { return }
                     withAnimation(.easeOut(duration: 0.08)) { isLit = true }
                     try? await Task.sleep(for: .seconds(flash.litSeconds))
+                    guard flashing?.id == id else { return }
                     withAnimation(.easeIn(duration: 0.15)) { isLit = false }
                     if Task.isCancelled { return }
                     try? await Task.sleep(for: .seconds(flash.darkSeconds))
