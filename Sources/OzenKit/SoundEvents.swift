@@ -159,9 +159,9 @@ public struct SoundAlertPreferences: Codable, Sendable, Equatable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = SoundAlertPreferences.default
-        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? defaults.isEnabled
-        minimumImportance = try container.decodeIfPresent(SoundEvent.Importance.self, forKey: .minimumImportance) ?? defaults.minimumImportance
-        mutedIdentifiers = try container.decodeIfPresent(Set<String>.self, forKey: .mutedIdentifiers) ?? defaults.mutedIdentifiers
+        isEnabled = container.lenient(Bool.self, forKey: .isEnabled) ?? defaults.isEnabled
+        minimumImportance = container.lenient(SoundEvent.Importance.self, forKey: .minimumImportance) ?? defaults.minimumImportance
+        mutedIdentifiers = container.lenient(Set<String>.self, forKey: .mutedIdentifiers) ?? defaults.mutedIdentifiers
     }
 }
 

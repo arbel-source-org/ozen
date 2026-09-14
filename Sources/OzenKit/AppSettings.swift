@@ -81,13 +81,13 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = DisplayPreferences.default
-        fontSize = try container.decodeIfPresent(Double.self, forKey: .fontSize) ?? defaults.fontSize
-        theme = try container.decodeIfPresent(Theme.self, forKey: .theme) ?? defaults.theme
-        boldText = try container.decodeIfPresent(Bool.self, forKey: .boldText) ?? defaults.boldText
-        showSpeakerNames = try container.decodeIfPresent(Bool.self, forKey: .showSpeakerNames) ?? defaults.showSpeakerNames
-        keepScreenAwake = try container.decodeIfPresent(Bool.self, forKey: .keepScreenAwake) ?? defaults.keepScreenAwake
-        markUncertainLines = try container.decodeIfPresent(Bool.self, forKey: .markUncertainLines) ?? defaults.markUncertainLines
-        announceNewLines = try container.decodeIfPresent(Bool.self, forKey: .announceNewLines) ?? defaults.announceNewLines
+        fontSize = container.lenient(Double.self, forKey: .fontSize) ?? defaults.fontSize
+        theme = container.lenient(Theme.self, forKey: .theme) ?? defaults.theme
+        boldText = container.lenient(Bool.self, forKey: .boldText) ?? defaults.boldText
+        showSpeakerNames = container.lenient(Bool.self, forKey: .showSpeakerNames) ?? defaults.showSpeakerNames
+        keepScreenAwake = container.lenient(Bool.self, forKey: .keepScreenAwake) ?? defaults.keepScreenAwake
+        markUncertainLines = container.lenient(Bool.self, forKey: .markUncertainLines) ?? defaults.markUncertainLines
+        announceNewLines = container.lenient(Bool.self, forKey: .announceNewLines) ?? defaults.announceNewLines
         fontSize = min(max(fontSize, Self.minimumFontSize), Self.maximumFontSize)
     }
 }
@@ -226,33 +226,33 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = AppSettings.default
-        engine = try container.decodeIfPresent(TranscriptionEngineKind.self, forKey: .engine) ?? defaults.engine
-        languageCode = try container.decodeIfPresent(String.self, forKey: .languageCode) ?? defaults.languageCode
-        preferredInputUID = try container.decodeIfPresent(String.self, forKey: .preferredInputUID)
-        speakerProfiles = try container.decodeIfPresent([SpeakerProfile].self, forKey: .speakerProfiles) ?? []
+        engine = container.lenient(TranscriptionEngineKind.self, forKey: .engine) ?? defaults.engine
+        languageCode = container.lenient(String.self, forKey: .languageCode) ?? defaults.languageCode
+        preferredInputUID = container.lenient(String.self, forKey: .preferredInputUID)
+        speakerProfiles = container.lenientArray(of: SpeakerProfile.self, forKey: .speakerProfiles)?.filter(\.isUsable) ?? []
         // The credit line is not user-editable; whatever an old file says,
         // the current build's text wins.
         creditLine = defaults.creditLine
-        whisperModelVariant = try container.decodeIfPresent(String.self, forKey: .whisperModelVariant) ?? defaults.whisperModelVariant
-        allowServerFallbackForAppleSpeech = try container.decodeIfPresent(Bool.self, forKey: .allowServerFallbackForAppleSpeech) ?? defaults.allowServerFallbackForAppleSpeech
-        display = try container.decodeIfPresent(DisplayPreferences.self, forKey: .display) ?? defaults.display
-        hapticOnSpeechResume = try container.decodeIfPresent(Bool.self, forKey: .hapticOnSpeechResume) ?? defaults.hapticOnSpeechResume
-        speakerSimilarityThreshold = try container.decodeIfPresent(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold
+        whisperModelVariant = container.lenient(String.self, forKey: .whisperModelVariant) ?? defaults.whisperModelVariant
+        allowServerFallbackForAppleSpeech = container.lenient(Bool.self, forKey: .allowServerFallbackForAppleSpeech) ?? defaults.allowServerFallbackForAppleSpeech
+        display = container.lenient(DisplayPreferences.self, forKey: .display) ?? defaults.display
+        hapticOnSpeechResume = container.lenient(Bool.self, forKey: .hapticOnSpeechResume) ?? defaults.hapticOnSpeechResume
+        speakerSimilarityThreshold = container.lenient(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold
         // The Settings slider's range; a file saying otherwise gets the nearest edge.
         speakerSimilarityThreshold = speakerSimilarityThreshold.isFinite
             ? min(max(speakerSimilarityThreshold, 0.5), 0.95)
             : defaults.speakerSimilarityThreshold
-        keywordAlerts = try container.decodeIfPresent([KeywordAlert].self, forKey: .keywordAlerts) ?? defaults.keywordAlerts
-        soundAlerts = try container.decodeIfPresent(SoundAlertPreferences.self, forKey: .soundAlerts) ?? defaults.soundAlerts
-        saveHistory = try container.decodeIfPresent(Bool.self, forKey: .saveHistory) ?? defaults.saveHistory
-        quickPhrases = try container.decodeIfPresent([String].self, forKey: .quickPhrases) ?? defaults.quickPhrases
-        speechRate = try container.decodeIfPresent(Float.self, forKey: .speechRate) ?? defaults.speechRate
+        keywordAlerts = container.lenientArray(of: KeywordAlert.self, forKey: .keywordAlerts) ?? defaults.keywordAlerts
+        soundAlerts = container.lenient(SoundAlertPreferences.self, forKey: .soundAlerts) ?? defaults.soundAlerts
+        saveHistory = container.lenient(Bool.self, forKey: .saveHistory) ?? defaults.saveHistory
+        quickPhrases = container.lenient([String].self, forKey: .quickPhrases) ?? defaults.quickPhrases
+        speechRate = container.lenient(Float.self, forKey: .speechRate) ?? defaults.speechRate
         speechRate = min(max(speechRate, 0.2), 0.7)
-        vocabulary = VocabularyHints.normalized(try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? [])
-        hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
-        notifyWhenInBackground = try container.decodeIfPresent(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
-        allowCellularModelDownload = try container.decodeIfPresent(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
-        historyRetention = try container.decodeIfPresent(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
+        vocabulary = VocabularyHints.normalized(container.lenient([String].self, forKey: .vocabulary) ?? [])
+        hasCompletedOnboarding = container.lenient(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        notifyWhenInBackground = container.lenient(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
+        allowCellularModelDownload = container.lenient(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
+        historyRetention = container.lenient(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
     }
 }
 
@@ -283,5 +283,43 @@ public struct SettingsStore: Sendable {
         let data = try JSONEncoder().encode(settings)
         try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: fileURL, options: .atomic)
+    }
+}
+
+extension SpeakerProfile {
+    /// A voice print that can be compared and written back to disk: JSON
+    /// has no NaN, so one non-finite number would make every later settings
+    /// save fail.
+    var isUsable: Bool {
+        !embedding.isEmpty && embedding.allSatisfy(\.isFinite)
+    }
+}
+
+extension KeyedDecodingContainer {
+    /// The value under `key`, or nil when it's missing or can't be read.
+    ///
+    /// Settings are read leniently one value at a time: a single value a
+    /// build doesn't understand (an engine name from a newer version, a
+    /// damaged field) falls back to its default instead of failing the
+    /// whole file. Failing the whole file meant starting from defaults, and
+    /// the next save then overwrote the enrolled voices, vocabulary and
+    /// alerts that were still perfectly readable.
+    func lenient<T: Decodable>(_ type: T.Type, forKey key: Key) -> T? {
+        try? decodeIfPresent(type, forKey: key)
+    }
+
+    /// Like `lenient`, but for a list: an entry that can't be read is
+    /// dropped and the rest are kept.
+    func lenientArray<T: Decodable>(of type: T.Type, forKey key: Key) -> [T]? {
+        guard let entries = try? decodeIfPresent([LenientEntry<T>].self, forKey: key) else { return nil }
+        return entries.compactMap(\.value)
+    }
+}
+
+private struct LenientEntry<T: Decodable>: Decodable {
+    let value: T?
+
+    init(from decoder: any Decoder) throws {
+        value = try? T(from: decoder)
     }
 }

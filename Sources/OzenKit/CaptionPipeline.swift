@@ -438,7 +438,14 @@ public final class CaptionPipeline {
     /// Computes an embedding from an enrollment recording, or nil if the
     /// recording was too short to say anything about the voice.
     public func embedding(forEnrollmentSamples samples: [Float]) -> [Float]? {
-        embedder.embed(samples: samples, sampleRate: Self.sampleRate)
+        // A voice print with a NaN in it can't be compared, and can't be
+        // saved either (JSON has no NaN): better no profile than one that
+        // makes every later settings save fail.
+        guard let embedding = embedder.embed(samples: samples, sampleRate: Self.sampleRate),
+              !embedding.isEmpty,
+              embedding.allSatisfy(\.isFinite)
+        else { return nil }
+        return embedding
     }
 
     /// Records `seconds` of audio for voice enrollment through the *same*
