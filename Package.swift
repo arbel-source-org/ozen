@@ -39,11 +39,13 @@ targets.append(contentsOf: [
             "OzenKit",
             .product(name: "WhisperKit", package: "WhisperKit"),
         ],
+        resources: [.copy("CAMPlusPlus.mlpackage")],
         swiftSettings: [.swiftLanguageMode(.v6)]
     ),
     .testTarget(
         name: "OzenPlatformTests",
         dependencies: ["OzenPlatform"],
+        resources: [.copy("Fixtures")],
         swiftSettings: [.swiftLanguageMode(.v6)]
     ),
 ])

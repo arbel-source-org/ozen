@@ -115,7 +115,10 @@ public final class LiveCaptionViewModel {
                     return CloudSpeechEngine(model: settings.cloudModel, apiKey: { CloudKeyStore.read() })
                 }
             },
-            embedder: MFCCSpeakerEmbedder(),
+            // CAM++ needs its bundled CoreML model to actually load; a
+            // corrupt install falls back to the older, always-available
+            // MFCC embedder rather than failing to launch.
+            embedder: CAMPlusPlusSpeakerEmbedder() ?? MFCCSpeakerEmbedder(),
             soundDetector: SoundAnalysisDetector(),
             network: PathNetworkMonitor(),
             availableStorageBytes: { DeviceStorage.availableBytes() }

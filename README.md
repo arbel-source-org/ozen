@@ -24,7 +24,11 @@ things, for Hebrew conversation, entirely on-device.
 - **Speaker detection**, always on, with optional one-time voice enrollment
   so a person's turns are labeled by name. Unnamed voices are numbered from
   1 in each conversation, so a phone listening all week doesn't reach
-  "speaker 140".
+  "speaker 140". Voices are told apart by [WeSpeaker CAM++](https://huggingface.co/Wespeaker/wespeaker-voxceleb-campplus-LM),
+  a small (7.3M-parameter) neural speaker-embedding model run entirely
+  on-device via CoreML. On a LibriSpeech clustering test it separates a
+  simulated four-person table correctly 96.8% of the time, against 45.8%
+  for the classic MFCC print it replaced.
 - **Two swappable on-device engines, plus the cloud** — [WhisperKit](https://github.com/argmaxinc/WhisperKit)
   (Whisper via CoreML) and Apple's own on-device Speech framework — picked
   in Settings, since which one is actually better for Hebrew on a given
