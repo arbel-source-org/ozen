@@ -370,7 +370,7 @@ struct SettingsView: View {
                 Label("להשמיע דוגמה", systemImage: "speaker.wave.2")
             }
             if !viewModel.hasHebrewVoice {
-                Text("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר → נגישות → תוכן מדובר → קולות → עברית.")
+                Text("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר ← נגישות ← תוכן מדובר ← קולות ← עברית.")
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }

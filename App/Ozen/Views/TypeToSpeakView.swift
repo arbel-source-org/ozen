@@ -122,7 +122,7 @@ struct TypeToSpeakView: View {
             .accessibilityHint("כדי שמישהו יכתוב לך, או כדי להראות למי שמולך מה כתבת")
 
             if !viewModel.hasHebrewVoice {
-                Label("אין קול עברי מותקן. הגדרות → נגישות → תוכן מדובר → קולות → עברית.", systemImage: "exclamationmark.triangle")
+                Label("אין קול עברי מותקן. הגדרות ← נגישות ← תוכן מדובר ← קולות ← עברית.", systemImage: "exclamationmark.triangle")
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }

@@ -29,7 +29,7 @@ struct KeywordAlertsView: View {
 
             Section("הרשימה") {
                 if viewModel.keywordAlerts.isEmpty {
-                    Text("עדיין אין מילים. הוסיפו את השם שלכם, שמות של נכדים, או מילים כמו \"תרופה\".")
+                    Text("עדיין אין מילים. הוסיפו את השם שלך, שמות של נכדים, או מילים כמו \"תרופה\".")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(viewModel.keywordAlerts) { alert in
