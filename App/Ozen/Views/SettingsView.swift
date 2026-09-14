@@ -485,6 +485,11 @@ struct SettingsView: View {
         Section {
             LabeledContent("נוצר על ידי", value: viewModel.settings.creditLine)
             LabeledContent("גרסה", value: Self.versionString)
+            if let expiresAt = InstallExpiryStatus.shared.expiresAt {
+                // Installed with a free Apple ID: when it has to be
+                // installed again, for whoever does that.
+                LabeledContent("ההתקנה תקפה עד", value: expiresAt.formatted(date: .abbreviated, time: .shortened))
+            }
             Link(destination: URL(string: "https://github.com/arbelonson-source/ozen")!) {
                 Label("קוד המקור בגיטהאב", systemImage: "chevron.left.forwardslash.chevron.right")
             }

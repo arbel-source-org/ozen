@@ -53,8 +53,8 @@ same command again to refresh it (a paid developer account removes the limit).
 ## Refreshing
 
 Ozen warns on its own caption screen two days before it stops opening, and sends
-a reminder notification the day before; Diagnostics shows the exact moment under
-"ההתקנה תקפה עד". Settings shows the installed build as "0.2.0 (N)", N being
+a reminder notification the day before; Settings → אודות shows the exact moment
+under "ההתקנה תקפה עד". Settings shows the installed build as "0.2.0 (N)", N being
 the release's build number.
 
 Refresh with the **same Apple ID** as last time: AltServer then installs over
