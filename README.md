@@ -31,7 +31,8 @@ things, for Hebrew conversation, entirely on-device.
   exception is an explicit, off-by-default switch to let Apple's recognizer
   use Apple's servers when iOS has no on-device Hebrew model.)
 - **A status control that always says what's happening** — asking for the
-  microphone, downloading the model (with a percentage), loading it,
+  microphone, downloading the model (with a percentage and the time left
+  at its current pace), loading it,
   listening, paused, or exactly what failed and what to do about it
   (retry, open Settings, switch engine). First-launch model download is the
   slowest thing the app ever does and is never silent.
