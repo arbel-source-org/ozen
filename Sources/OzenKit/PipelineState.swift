@@ -116,6 +116,18 @@ public struct PipelineStats: Sendable, Equatable {
     /// Sound alerts are being listened for right now. False while
     /// captions run means the classifier stopped on its own.
     public var soundDetectionRunning = false
+    /// How loud the microphone's chunks have been since launch.
+    public var inputLevels = AudioLevelHistogram()
+    /// Chunks the voice detector counted as someone talking.
+    public var speechChunks: Int = 0
+
+    /// The share of audio the voice detector counted as speech, 0...1.
+    /// Near zero through a conversation means speech arrives too quietly
+    /// to clear its threshold.
+    public var speechShare: Double? {
+        guard inputLevels.total > 0 else { return nil }
+        return Double(speechChunks) / Double(inputLevels.total)
+    }
 
     public init() {}
 

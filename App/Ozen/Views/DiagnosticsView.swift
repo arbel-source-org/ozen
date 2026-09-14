@@ -39,6 +39,8 @@ struct DiagnosticsView: View {
                 LabeledContent("שניות אודיו", value: String(format: "%.1f", viewModel.stats.audioSecondsReceived))
                 LabeledContent("החלפות מיקרופון", value: "\(viewModel.stats.inputChanges)")
                 LabeledContent("המיקרופון נתקע", value: "\(viewModel.stats.audioStalls)")
+                LabeledContent("רמות קול (dBFS)", value: Self.levelsText(viewModel.stats.inputLevels))
+                LabeledContent("נשמע כדיבור", value: viewModel.stats.speechShare.map { String(format: "%.0f%%", $0 * 100) } ?? "—")
                 LabeledContent("זיהוי צלילים", value: viewModel.stats.soundDetectionRunning ? "פועל" : (viewModel.isListening ? "נעצר" : "—"))
             }
 
@@ -204,6 +206,7 @@ struct DiagnosticsView: View {
         engine: \(viewModel.pipeline.activeEngineKind?.rawValue ?? "-") model: \(viewModel.settings.whisperModelVariant) lang: \(viewModel.settings.languageCode)
         input: \(viewModel.selectedInput?.portName ?? "-") of \(viewModel.availableInputs.map { "\($0.portName) [\($0.portType.rawValue)]" }.joined(separator: ", "))
         audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges) stalls: \(stats.audioStalls)
+        levels: \(stats.inputLevels.summary ?? "-") speech: \(stats.speechShare.map { String(format: "%.1f%%", $0 * 100) } ?? "-")
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)
@@ -215,6 +218,16 @@ struct DiagnosticsView: View {
         events (oldest first):
         \(eventLines)
         """
+    }
+
+    /// The quiet, middle and loud ends of what the microphone heard, in
+    /// Hebrew reading order: quiet first.
+    static func levelsText(_ levels: AudioLevelHistogram) -> String {
+        guard let quiet = levels.decibels(atFraction: 0.1),
+              let middle = levels.decibels(atFraction: 0.5),
+              let loud = levels.decibels(atFraction: 0.9)
+        else { return "—" }
+        return "שקט \(quiet) · אמצע \(middle) · חזק \(loud)"
     }
 
     static func describe(_ network: NetworkConditions?) -> String {

@@ -724,8 +724,11 @@ public final class CaptionPipeline {
             stats.lastAudioAt = now()
 
             buffer.append(contentsOf: chunk)
-            if embeddingVoiceDetector.isSpeech(chunk) {
+            let isSpeech = embeddingVoiceDetector.isSpeech(chunk)
+            stats.inputLevels.add(rms: embeddingVoiceDetector.lastLevel)
+            if isSpeech {
                 speechSamples += chunk.count
+                stats.speechChunks += 1
             }
             guard buffer.count >= windowSamples else { continue }
             let window = buffer
