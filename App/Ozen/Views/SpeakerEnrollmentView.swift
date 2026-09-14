@@ -29,7 +29,10 @@ struct SpeakerEnrollmentView: View {
                         ProgressView(value: progress) {
                             Text("מקליט… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) שניות")
                         }
-                        Text("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. הכתוביות מושהות בזמן ההקלטה.")
+                        // Thirty seconds is long to find out afterwards that
+                        // the wrong microphone was listening.
+                        LevelMeter(level: viewModel.inputLevel, isActive: true)
+                        Text("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
