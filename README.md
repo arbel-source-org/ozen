@@ -48,7 +48,8 @@ things, for Hebrew conversation, entirely on-device.
   engine itself was unsure of (so she knows when to ask again), numbers
   (the time of an appointment, how many pills, a phone number) in a
   heavier weight and a second colour, whether written in digits or in
-  words ("and six" (u-ve-shesh), "three pills" (shlosha kadurim)), long
+  words ("and six" (u-ve-shesh), "three pills" (shlosha kadurim), "twice"
+  (pa'amayim), "in two weeks" (be'od shvu'ayim)), long
   stretches of speech
   broken into short paragraphs at sentence ends, screen stays awake while
   listening (and locks as usual after a quarter hour with nothing said, while
