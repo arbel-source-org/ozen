@@ -35,6 +35,9 @@ public struct SpeechPauseCoordinator: Sendable, Equatable {
     /// True while captions are paused because of speech (and not by hand).
     public private(set) var isHoldingCaptions = false
     public private(set) var generation = 0
+    /// Someone paused, resumed, started or stopped captions by hand since
+    /// the last phrase was asked for.
+    private var userChoseSinceSpeaking = false
 
     public init() {}
 
@@ -42,6 +45,7 @@ public struct SpeechPauseCoordinator: Sendable, Equatable {
     /// caller should pause them now.
     public mutating func willSpeak(captionsListening: Bool) -> Bool {
         generation += 1
+        userChoseSinceSpeaking = false
         guard captionsListening else { return false }
         isHoldingCaptions = true
         return true
@@ -65,5 +69,17 @@ public struct SpeechPauseCoordinator: Sendable, Equatable {
     /// choice wins over any automatic resume still pending.
     public mutating func userTookControl() {
         isHoldingCaptions = false
+        userChoseSinceSpeaking = true
+    }
+
+    /// Captions came on while the phone was still talking: they were
+    /// still starting up (loading a model takes seconds) when the phrase
+    /// was asked for, or an automatic retry landed mid-phrase. True means:
+    /// pause them now, and they come back when the phone is done. Not when
+    /// someone turned them on by hand meanwhile; that choice wins.
+    public mutating func captionsCameOnWhileSpeaking() -> Bool {
+        guard !userChoseSinceSpeaking else { return false }
+        isHoldingCaptions = true
+        return true
     }
 }

@@ -408,6 +408,31 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.phase == .paused)
     }
 
+    @Test("a phrase tapped while captions are still starting holds them once they come on, until it ends")
+    func phraseDuringStartup() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        let starting = Task { await viewModel.start() }
+        viewModel.speak("רגע")
+        synthesizer.startNext()
+        await starting.value
+        #expect(await eventually { viewModel.phase == .paused })
+        synthesizer.finishCurrent()
+        #expect(await eventually { viewModel.phase.isListening })
+    }
+
+    @Test("a call that cuts off the phone's voice doesn't leave captions paused for good")
+    func callDuringPhrase() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        viewModel.speak("רגע")
+        synthesizer.startNext()
+        #expect(viewModel.phase == .paused)
+        viewModel.systemInterruptionChanged(began: true)
+        #expect(synthesizer.isBusy == false)
+        synthesizer.deliverCallbacks()
+        #expect(await eventually { viewModel.phase != .paused })
+    }
+
     @Test("launched by Siri to say something: the phone talks first, then captions start")
     func launchWithSpeech() async throws {
         let (viewModel, synthesizer) = makeViewModel()

@@ -182,7 +182,10 @@ public final class LiveCaptionViewModel {
         pipeline.onPhaseChange = { [weak self] _ in
             // A failure's automatic retry is lined up right after its phase
             // is set, so look once the pipeline has finished reacting.
-            Task { @MainActor [weak self] in self?.checkCaptionsStillRunning() }
+            Task { @MainActor [weak self] in
+                self?.holdCaptionsIfStillSpeaking()
+                self?.checkCaptionsStillRunning()
+            }
         }
         phoneCalls?.onChange = { [weak self] inProgress in
             self?.phoneCallsChanged(inProgress: inProgress)
@@ -241,6 +244,14 @@ public final class LiveCaptionViewModel {
     func systemInterruptionChanged(began: Bool) {
         isInterruptedBySystem = began
         callEndedDuringInterruption = false
+        // A call cuts the phone off mid-phrase, and the voice can be left
+        // paused rather than finished: never saying it's done, it would
+        // hold captions paused for good. The rest of a phrase said after
+        // the call is no use to anyone, so end it; captions then come back
+        // the way running captions do after a call.
+        if began, speechPause.isHoldingCaptions {
+            synthesizer?.stop()
+        }
         if !began {
             reclaimAfterCallTask?.cancel()
             reclaimAfterCallTask = nil
@@ -827,6 +838,17 @@ public final class LiveCaptionViewModel {
 
     public func stopSpeaking() {
         synthesizer?.stop()
+    }
+
+    /// Captions that come on while the phone is still talking (they were
+    /// starting up when she tapped a phrase) would caption the phone's own
+    /// voice; they pause until it's done, like captions already running.
+    private func holdCaptionsIfStillSpeaking() {
+        guard pipeline.phase.isListening, synthesizer?.isBusy == true,
+              speechPause.captionsCameOnWhileSpeaking()
+        else { return }
+        pipeline.pause()
+        historySessionDidChangePhase()
     }
 
     private func speakingDidChange(_ speaking: Bool) {

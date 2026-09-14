@@ -52,6 +52,31 @@ struct SpeechPauseCoordinatorTests {
         #expect(coordinator.speechWentQuiet() == nil)
     }
 
+    @Test("captions that finish starting up mid-phrase are held, and return when the phrase ends")
+    func captionsCameOnMidPhrase() {
+        var coordinator = SpeechPauseCoordinator()
+        _ = coordinator.willSpeak(captionsListening: false)
+        let hold = coordinator.captionsCameOnWhileSpeaking()
+        #expect(hold)
+        let generation = coordinator.speechWentQuiet()
+        let resume = coordinator.shouldResume(generation: generation ?? -1, synthesizerBusy: false, captionsPaused: true)
+        #expect(resume)
+    }
+
+    @Test("captions turned on by hand mid-phrase are not held; the next phrase asked for starts afresh")
+    func captionsTurnedOnByHandMidPhrase() {
+        var coordinator = SpeechPauseCoordinator()
+        _ = coordinator.willSpeak(captionsListening: false)
+        coordinator.userTookControl()
+        let holdAfterManualStart = coordinator.captionsCameOnWhileSpeaking()
+        #expect(holdAfterManualStart == false)
+        #expect(coordinator.isHoldingCaptions == false)
+
+        _ = coordinator.willSpeak(captionsListening: false)
+        let holdForNewPhrase = coordinator.captionsCameOnWhileSpeaking()
+        #expect(holdForNewPhrase)
+    }
+
     @Test("a manual pause, stop or resume during speech cancels the automatic resume")
     func userTakesControl() {
         var coordinator = SpeechPauseCoordinator()
