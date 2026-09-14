@@ -22,6 +22,25 @@ struct AudioFanOutTests {
         }
     }
 
+    @Test("a glitched sample, NaN or infinite, reaches every output as silence; the rest of the chunk is untouched")
+    func glitchedSamplesBecomeSilence() async {
+        let (source, continuation) = AsyncStream<[Float]>.makeStream()
+        let fan = AudioFanOut(source: source, count: 2)
+
+        continuation.yield([0.5, .nan, -0.25])
+        continuation.yield([.infinity, 0.125, -.infinity])
+        continuation.yield([0.75])
+        continuation.finish()
+
+        for output in fan.outputs {
+            var received: [[Float]] = []
+            for await chunk in output {
+                received.append(chunk)
+            }
+            #expect(received == [[0.5, 0, -0.25], [0, 0.125, 0], [0.75]])
+        }
+    }
+
     @Test("a slow consumer does not lose chunks while the fast one races ahead")
     func slowConsumerKeepsEverything() async {
         let (source, continuation) = AsyncStream<[Float]>.makeStream()

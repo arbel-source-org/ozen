@@ -881,6 +881,24 @@ struct CaptionPipelineEnrollmentTests {
         #expect(pipeline.phase == .idle)
     }
 
+    @Test("a glitched buffer during enrollment is recorded as silence, so the voice print can still be made")
+    func enrollmentGlitch() async {
+        let (pipeline, audio, _) = makePipeline()
+        let recording = Task { @MainActor in
+            await pipeline.captureEnrollmentSamples(seconds: 0.5)
+        }
+        #expect(await eventually { audio.calls.contains("startCapture") })
+        var glitched = [Float](repeating: 0.1, count: 8_000)
+        glitched[100] = .nan
+        glitched[200] = .infinity
+        audio.push(glitched)
+        let samples = await recording.value
+
+        #expect(samples.count == 8_000)
+        #expect(samples.allSatisfy { $0.isFinite })
+        #expect(samples[100] == 0 && samples[101] == 0.1)
+    }
+
     @Test("enrollment before captions ever ran sets up the audio session itself")
     func enrollmentWithoutSession() async {
         let (pipeline, audio, _) = makePipeline()

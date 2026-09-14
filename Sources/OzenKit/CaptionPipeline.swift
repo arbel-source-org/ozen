@@ -628,7 +628,7 @@ public final class CaptionPipeline {
                 audio.stopCapture()
             }
             for await chunk in stream {
-                collected.append(contentsOf: chunk)
+                collected.append(contentsOf: AudioFanOut.withoutGlitches(chunk))
                 onProgress(min(Double(collected.count) / Double(target), 1))
                 if collected.count >= target { break }
             }

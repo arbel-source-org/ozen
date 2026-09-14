@@ -13,6 +13,11 @@ import Foundation
 /// mid-conversation, say) would otherwise pile up every sample for the
 /// rest of the evening: about 230 MB an hour. Past the limit an output
 /// keeps the newest audio and lets the oldest go.
+///
+/// A glitched buffer (a Bluetooth microphone reconnecting, a converter
+/// hiccup) can carry NaN or infinite samples, which spoil everything they
+/// touch: a Whisper window turns to nonsense, a voice print never matches.
+/// They reach the consumers as silence.
 public struct AudioFanOut: Sendable {
     public let outputs: [AsyncStream<[Float]>]
     private let pump: Task<Void, Never>
@@ -36,6 +41,7 @@ public struct AudioFanOut: Sendable {
         pump = Task {
             for await chunk in source {
                 if Task.isCancelled { break }
+                let chunk = Self.withoutGlitches(chunk)
                 for sink in sinks {
                     sink.yield(chunk)
                 }
@@ -44,6 +50,11 @@ public struct AudioFanOut: Sendable {
                 sink.finish()
             }
         }
+    }
+
+    static func withoutGlitches(_ chunk: [Float]) -> [Float] {
+        guard !chunk.allSatisfy(\.isFinite) else { return chunk }
+        return chunk.map { $0.isFinite ? $0 : 0 }
     }
 
     /// Stops forwarding and finishes every output. The source stream is
