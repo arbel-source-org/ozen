@@ -18,6 +18,17 @@ struct HistoryView: View {
                 Text("השיחות נשמרות רק בטלפון הזה (\(ModelManagerView.format(bytes: totalSize))). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע.")
             }
 
+            if query.isEmpty, sessions.contains(where: { $0.starredCount > 0 }) {
+                Section {
+                    NavigationLink {
+                        StarredLinesView(viewModel: viewModel, onDelete: reload)
+                    } label: {
+                        Label("השורות המסומנות", systemImage: "star.fill")
+                            .badge(sessions.reduce(0) { $0 + $1.starredCount })
+                    }
+                }
+            }
+
             Section {
                 if sessions.isEmpty {
                     Text(query.isEmpty ? "עדיין אין שיחות שמורות." : "לא נמצא כלום עבור \"\(query)\".")
@@ -141,6 +152,8 @@ struct HistoryDetailView: View {
     /// The search that led here, if any: its lines are highlighted and
     /// the first one is scrolled into view.
     var searchQuery: String = ""
+    /// A line to open at, when arriving from the starred lines list.
+    var initialLineID: UUID?
     let onDelete: () -> Void
     @State private var record: TranscriptSessionRecord?
     @State private var stats: ConversationStats?
@@ -199,9 +212,9 @@ struct HistoryDetailView: View {
                 .task {
                     // Give the list a moment to lay out, then open where the
                     // search found something instead of at the top.
-                    guard isSearch, let first = matches.first else { return }
+                    guard let target = isSearch ? matches.first : initialLineID else { return }
                     try? await Task.sleep(for: .milliseconds(150))
-                    withAnimation { proxy.scrollTo(first, anchor: .center) }
+                    withAnimation { proxy.scrollTo(target, anchor: .center) }
                 }
                 .onChange(of: scrollRequest) { _, _ in
                     guard matches.indices.contains(currentMatch) else { return }
@@ -327,5 +340,74 @@ private struct ConversationSummarySection: View {
         } header: {
             Text("סיכום")
         }
+    }
+}
+
+/// Every starred line from every saved conversation, newest first: the
+/// quick way back to "what did the doctor say about the pills".
+struct StarredLinesView: View {
+    let viewModel: LiveCaptionViewModel
+    let onDelete: () -> Void
+    @State private var lines: [StarredLine] = []
+    @State private var hasLoaded = false
+
+    var body: some View {
+        Group {
+            if !hasLoaded {
+                ProgressView()
+            } else if lines.isEmpty {
+                ContentUnavailableView("אין שורות מסומנות", systemImage: "star", description: Text("לחיצה ארוכה על שורה בזמן השיחה מסמנת אותה כחשובה."))
+            } else {
+                List {
+                    ForEach(groups) { group in
+                        Section {
+                            ForEach(group.lines) { line in
+                                NavigationLink {
+                                    HistoryDetailView(viewModel: viewModel, sessionID: line.sessionID, initialLineID: line.id, onDelete: onDelete)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        if let name = line.segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
+                                            Text(name)
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID))
+                                        }
+                                        Text(CaptionLayout.readableText(line.segment.text))
+                                            .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
+                                    }
+                                }
+                            }
+                        } header: {
+                            Text(Date(timeIntervalSince1970: group.startedAt).formatted(date: .long, time: .shortened))
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("שורות מסומנות")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            let store = viewModel.historyStore
+            lines = await Task.detached(priority: .userInitiated) { store.starredLines() }.value
+            hasLoaded = true
+        }
+    }
+
+    private struct ConversationStars: Identifiable {
+        let sessionID: UUID
+        let startedAt: TimeInterval
+        var lines: [StarredLine]
+        var id: UUID { sessionID }
+    }
+
+    private var groups: [ConversationStars] {
+        var result: [ConversationStars] = []
+        for line in lines {
+            if let last = result.indices.last, result[last].sessionID == line.sessionID {
+                result[last].lines.append(line)
+            } else {
+                result.append(ConversationStars(sessionID: line.sessionID, startedAt: line.sessionStartedAt, lines: [line]))
+            }
+        }
+        return result
     }
 }

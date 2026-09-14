@@ -144,6 +144,20 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
     }
 }
 
+/// One line marked as important, with the conversation it came from.
+public struct StarredLine: Sendable, Equatable, Identifiable {
+    public let sessionID: UUID
+    public let sessionStartedAt: TimeInterval
+    public let segment: SavedSegment
+    public var id: UUID { segment.id }
+
+    public init(sessionID: UUID, sessionStartedAt: TimeInterval, segment: SavedSegment) {
+        self.sessionID = sessionID
+        self.sessionStartedAt = sessionStartedAt
+        self.segment = segment
+    }
+}
+
 /// A lightweight stand-in for a `TranscriptSessionRecord` used for listing
 /// and searching, so browsing years of history never has to decode every
 /// segment of every session just to show a list of dates and previews.
@@ -223,7 +237,7 @@ extension TranscriptSessionSummary {
     }
 
     /// "דובר 3", "דובר לא ידוע", and the English labels older builds saved.
-    static func isGenericLabel(_ name: String) -> Bool {
+    public static func isGenericLabel(_ name: String) -> Bool {
         if name == EmbeddingClusterer.unknownSpeakerName || name == "Unknown speaker" { return true }
         for prefix in ["דובר ", "Speaker "] where name.hasPrefix(prefix) {
             if Int(name.dropFirst(prefix.count)) != nil { return true }
@@ -453,6 +467,20 @@ public struct TranscriptHistoryStore: Sendable {
                 return Self.record(record, matches: needle) ? summary : nil
             }
             .sorted { $0.startedAt > $1.startedAt }
+    }
+
+    /// Every starred line in saved history, newest conversation first and
+    /// in spoken order within one. Only conversations whose summary counts
+    /// a star are opened.
+    public func starredLines() -> [StarredLine] {
+        listSummaries()
+            .filter { $0.starredCount > 0 }
+            .compactMap { load(id: $0.id) }
+            .flatMap { record in
+                record.segments
+                    .filter(\.isStarred)
+                    .map { StarredLine(sessionID: record.id, sessionStartedAt: record.startedAt, segment: $0) }
+            }
     }
 
     public func delete(id: UUID) throws {

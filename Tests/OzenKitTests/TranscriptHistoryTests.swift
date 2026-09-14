@@ -646,3 +646,38 @@ struct TranscriptHistoryStarredTests {
         #expect(store.listSummaries().first?.starredCount == 1)
     }
 }
+
+@Suite("Transcript history starred lines across conversations")
+struct TranscriptHistoryAllStarredTests {
+    private func line(_ text: String, starred: Bool) -> SavedSegment {
+        SavedSegment(id: UUID(), text: text, speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true, isStarred: starred)
+    }
+
+    @Test("starred lines come newest conversation first, in spoken order, and unstarred conversations are left out")
+    func allStarred() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-all-stars-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let morning = TranscriptSessionRecord(startedAt: 100, engine: .whisperKit, modelVariant: nil, inputName: nil,
+                                              segments: [line("כדור בבוקר", starred: true), line("טוב", starred: false), line("ובערב שניים", starred: true)])
+        let evening = TranscriptSessionRecord(startedAt: 900, engine: .whisperKit, modelVariant: nil, inputName: nil,
+                                              segments: [line("התור ביום שלישי", starred: true)])
+        let chat = TranscriptSessionRecord(startedAt: 500, engine: .whisperKit, modelVariant: nil, inputName: nil,
+                                           segments: [line("מה נשמע", starred: false)])
+        for record in [morning, evening, chat] { try store.save(record) }
+
+        let starred = store.starredLines()
+        #expect(starred.map(\.segment.text) == ["התור ביום שלישי", "כדור בבוקר", "ובערב שניים"])
+        #expect(starred.map(\.sessionID) == [evening.id, morning.id, morning.id])
+        #expect(starred.first?.sessionStartedAt == 900)
+    }
+
+    @Test("no stars anywhere gives an empty list")
+    func none() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-no-stars-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        try store.save(TranscriptSessionRecord(startedAt: 1, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [line("שלום", starred: false)]))
+        #expect(store.starredLines().isEmpty)
+    }
+}
