@@ -49,6 +49,16 @@ final class FakeAudioCapturer: AudioCapturing {
         continuation = nil
     }
 
+    /// Inputs the system would report if asked again right now.
+    var inputsOnRefresh: [AudioInputDescriptor]?
+
+    func refreshInputs() {
+        calls.append("refreshInputs")
+        if let inputsOnRefresh {
+            availableInputs = inputsOnRefresh
+        }
+    }
+
     func selectInput(uid: String) throws {
         calls.append("selectInput:\(uid)")
         guard availableInputs.contains(where: { $0.uid == uid }) else {
@@ -1011,5 +1021,24 @@ struct CaptionPipelineSoundStatusTests {
         await pipeline.start(settings: .default)
         pipeline.stop()
         #expect(pipeline.stats.soundDetectionRunning == false)
+    }
+}
+
+@Suite("CaptionPipeline mic picker refresh")
+@MainActor
+struct CaptionPipelineRefreshTests {
+    @Test("refresh asks the system again even when captions never started, without recording")
+    func refreshWhileIdle() {
+        let audio = FakeAudioCapturer()
+        audio.availableInputs = []
+        let builtIn = AudioInputDescriptor(uid: "built-in", portName: "iPhone Microphone", portType: .builtInMic)
+        audio.inputsOnRefresh = [builtIn]
+        let (pipeline, _, _) = makePipeline(audio: audio)
+        #expect(pipeline.availableInputs.isEmpty)
+
+        pipeline.refreshInputs()
+        #expect(pipeline.availableInputs == [builtIn])
+        #expect(audio.calls == ["refreshInputs"])
+        #expect(pipeline.phase == .idle)
     }
 }

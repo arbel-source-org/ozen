@@ -352,7 +352,11 @@ public final class CaptionPipeline {
 
     /// Re-reads the input list from the audio layer. Public so the mic
     /// picker can refresh on demand ("I just plugged it in").
+    /// For the mic picker's refresh button: asks the system again rather
+    /// than re-reading the last list, which is empty if captions never got
+    /// as far as setting up the microphone.
     public func refreshInputs() {
+        audio.refreshInputs()
         syncInputs()
     }
 

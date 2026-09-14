@@ -131,6 +131,27 @@ public final class AVAudioInputManager: AudioCapturing {
         try? engine.start()
     }
 
+    public func refreshInputs() {
+        if !sessionPrepared {
+            // The input list is only meaningful for a recording category.
+            // Setting the category without activating the session changes
+            // nothing audible and records nothing.
+            try? session.setCategory(
+                .playAndRecord,
+                mode: .measurement,
+                options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
+            )
+        }
+        refreshAvailableInputs()
+        if selectedInputUID == nil {
+            selectedInputUID = AudioRoutePolicy.resolveSelection(
+                available: availableInputs,
+                preferredUID: preferredInputUID,
+                currentUID: nil
+            )
+        }
+    }
+
     private func refreshAvailableInputs() {
         availableInputs = (session.availableInputs ?? []).map { port in
             AudioInputDescriptor(
