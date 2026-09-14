@@ -82,3 +82,22 @@ struct CaptionLayoutSavedSpeakerLabelTests {
         #expect(CaptionLayout.showsSpeakerLabel(for: line("שרה"), after: line(EmbeddingClusterer.unknownSpeakerName)))
     }
 }
+
+@Suite("CaptionLayout time marks in saved conversations")
+struct CaptionLayoutTimeMarkTests {
+    private func line(at seconds: TimeInterval) -> SavedSegment {
+        SavedSegment(id: UUID(), text: "x", speakerName: nil, speakerClusterID: nil, startTimestamp: seconds, isCommitted: true)
+    }
+
+    @Test("the first line, then the first line five minutes after the last time shown")
+    func marks() {
+        let lines = [line(at: 0), line(at: 60), line(at: 299), line(at: 300), line(at: 400), line(at: 700), line(at: 2_000)]
+        let marked = CaptionLayout.timeMarkedLineIDs(in: lines)
+        #expect(lines.map { marked.contains($0.id) } == [true, false, false, true, false, true, true])
+    }
+
+    @Test("no lines, no marks")
+    func empty() {
+        #expect(CaptionLayout.timeMarkedLineIDs(in: []).isEmpty)
+    }
+}

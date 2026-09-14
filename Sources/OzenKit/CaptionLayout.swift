@@ -98,3 +98,20 @@ extension CaptionLayout {
         return name
     }
 }
+
+extension CaptionLayout {
+    /// The lines of a saved conversation that carry a clock time: the first
+    /// one, then the first line at least `interval` after the last time
+    /// shown. Enough to answer "when did the doctor say that" without a
+    /// timestamp cluttering every line.
+    public static func timeMarkedLineIDs(in segments: [SavedSegment], interval: TimeInterval = 300) -> Set<UUID> {
+        var marked = Set<UUID>()
+        var lastShown: TimeInterval?
+        for segment in segments {
+            if let last = lastShown, segment.startTimestamp - last < interval { continue }
+            marked.insert(segment.id)
+            lastShown = segment.startTimestamp
+        }
+        return marked
+    }
+}

@@ -14,6 +14,7 @@ struct HistoryDetailView: View {
     @State private var record: TranscriptSessionRecord?
     @State private var stats: ConversationStats?
     @State private var matches: [UUID] = []
+    @State private var timeMarks: Set<UUID> = []
     @State private var currentMatch = 0
     @State private var hasJumped = false
     @State private var scrollRequest = 0
@@ -40,6 +41,11 @@ struct HistoryDetailView: View {
                     Section {
                         ForEach(Array(record.segments.enumerated()), id: \.element.id) { index, segment in
                             VStack(alignment: .leading, spacing: 2) {
+                                if timeMarks.contains(segment.id) {
+                                    Text(Date(timeIntervalSince1970: segment.startTimestamp).formatted(date: .omitted, time: .shortened))
+                                        .font(.caption2.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                }
                                 if let name = segment.speakerName,
                                    CaptionLayout.showsSpeakerLabel(for: segment, after: index > 0 ? record.segments[index - 1] : nil) {
                                     Text(name)
@@ -167,7 +173,7 @@ struct HistoryDetailView: View {
             let store = viewModel.historyStore
             let id = sessionID
             let query = searchQuery
-            let (loaded, summary, found) = await Task.detached(priority: .userInitiated) {
+            let (loaded, summary, found, marks) = await Task.detached(priority: .userInitiated) {
                 let loaded = store.load(id: id)
                 return (
                     loaded,
@@ -177,12 +183,14 @@ struct HistoryDetailView: View {
                         query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             ? record.segments.filter(\.isStarred).map(\.id)
                             : TranscriptHistoryStore.matchingSegmentIDs(in: record, query: query)
-                    } ?? []
+                    } ?? [],
+                    loaded.map { CaptionLayout.timeMarkedLineIDs(in: $0.segments) } ?? []
                 )
             }.value
             record = loaded
             stats = summary
             matches = found
+            timeMarks = marks
             // Opened at a starred line: "next" continues from that one.
             if let initialLineID, let index = found.firstIndex(of: initialLineID) {
                 currentMatch = index
