@@ -147,7 +147,9 @@ things, for Hebrew conversation, entirely on-device.
   when the phone runs hot or Low Power Mode is on, instead of throttling
   and falling behind; the careful end-of-sentence pass is never skipped.
 - **Conversation history.** Conversations are saved as they happen,
-  searchable, shareable as text (a long one opens with its lines that had
+  searchable (every word typed has to be in the conversation, in any order
+  and on any line, and opening a result jumps to where they were said),
+  shareable as text (a long one opens with its lines that had
   numbers in them), can be given a name ("Visit to the doctor" (bikur etzel
   harofe)), list who took part, and open with a summary: length, how much
   each person said, speaking pace, longest turn, and every line with a
