@@ -12,6 +12,9 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
     public var speakerClusterID: Int?
     public var startTimestamp: TimeInterval
     public var isCommitted: Bool
+    /// Marked as important while it was said ("what the doctor said about
+    /// the pills"), so it can be found again.
+    public var isStarred: Bool
 
     public init(
         id: UUID,
@@ -19,7 +22,8 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
         speakerName: String?,
         speakerClusterID: Int?,
         startTimestamp: TimeInterval,
-        isCommitted: Bool
+        isCommitted: Bool,
+        isStarred: Bool = false
     ) {
         self.id = id
         self.text = text
@@ -27,6 +31,23 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
         self.speakerClusterID = speakerClusterID
         self.startTimestamp = startTimestamp
         self.isCommitted = isCommitted
+        self.isStarred = isStarred
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, text, speakerName, speakerClusterID, startTimestamp, isCommitted, isStarred
+    }
+
+    /// Lines saved before stars existed load as not starred.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        speakerName = try container.decodeIfPresent(String.self, forKey: .speakerName)
+        speakerClusterID = try container.decodeIfPresent(Int.self, forKey: .speakerClusterID)
+        startTimestamp = try container.decode(TimeInterval.self, forKey: .startTimestamp)
+        isCommitted = try container.decode(Bool.self, forKey: .isCommitted)
+        isStarred = try container.decodeIfPresent(Bool.self, forKey: .isStarred) ?? false
     }
 }
 
@@ -75,7 +96,8 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
         endedAt: TimeInterval?,
         engine: TranscriptionEngineKind,
         modelVariant: String?,
-        inputName: String?
+        inputName: String?,
+        starred: Set<UUID> = []
     ) -> TranscriptSessionRecord {
         let saved = segments.compactMap { segment -> SavedSegment? in
             guard !segment.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -87,7 +109,8 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
                 speakerName: speakerName(segment),
                 speakerClusterID: segment.speakerClusterID,
                 startTimestamp: segment.startTimestamp,
-                isCommitted: segment.isCommitted
+                isCommitted: segment.isCommitted,
+                isStarred: starred.contains(segment.id)
             )
         }
         return TranscriptSessionRecord(
@@ -135,6 +158,8 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
     /// Generic labels ("דובר 2") say nothing about who was there and are
     /// left out.
     public var speakerNames: [String]
+    /// Lines marked as important.
+    public var starredCount: Int
 
     public init(
         id: UUID,
@@ -143,7 +168,8 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
         segmentCount: Int,
         preview: String,
         engine: TranscriptionEngineKind,
-        speakerNames: [String] = []
+        speakerNames: [String] = [],
+        starredCount: Int = 0
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -152,6 +178,7 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
         self.preview = preview
         self.engine = engine
         self.speakerNames = speakerNames
+        self.starredCount = starredCount
     }
 
     public var durationSeconds: TimeInterval? {
@@ -177,7 +204,8 @@ extension TranscriptSessionSummary {
             segmentCount: record.segments.count,
             preview: Self.truncated(firstNonEmpty?.text ?? ""),
             engine: record.engine,
-            speakerNames: Self.realNames(in: record.segments)
+            speakerNames: Self.realNames(in: record.segments),
+            starredCount: record.segments.filter(\.isStarred).count
         )
     }
 
@@ -226,7 +254,7 @@ public struct TranscriptHistoryStore: Sendable {
 
     /// Bumped whenever `TranscriptSessionSummary` changes meaning, so
     /// summaries written by an older build are rebuilt instead of trusted.
-    static let summaryFormat = 1
+    static let summaryFormat = 2
     static let summariesFolderName = "summaries"
 
     private struct CachedSummary: Codable {
@@ -473,10 +501,11 @@ public struct TranscriptHistoryStore: Sendable {
         record.segments
             .map { segment in
                 let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
+                let star = segment.isStarred ? "★ " : ""
                 if let name = segment.speakerName, !name.isEmpty {
-                    return "[\(time)] \(name): \(segment.text)"
+                    return "\(star)[\(time)] \(name): \(segment.text)"
                 }
-                return "[\(time)] \(segment.text)"
+                return "\(star)[\(time)] \(segment.text)"
             }
             .joined(separator: "\n")
     }

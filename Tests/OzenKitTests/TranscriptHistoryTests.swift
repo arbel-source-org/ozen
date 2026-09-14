@@ -586,3 +586,63 @@ struct TranscriptHistoryMatchingLinesTests {
         #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "להתראות").isEmpty)
     }
 }
+
+@Suite("Transcript history starred lines")
+struct TranscriptHistoryStarredTests {
+    private func live(_ text: String) -> TranscriptSegment {
+        TranscriptSegment(id: UUID(), text: text, isCommitted: true, speakerClusterID: nil, startTimestamp: 3_600, lastUpdateTimestamp: 3_600)
+    }
+
+    @Test("starred lines are saved as starred, counted in the summary, and marked in shared text")
+    func starredRoundTrip() throws {
+        let lines = [live("שלום"), live("לקחת כדור אחד בבוקר"), live("ביי")]
+        let record = TranscriptSessionRecord.make(
+            from: lines,
+            speakerName: { _ in nil },
+            id: UUID(),
+            startedAt: 3_600,
+            endedAt: nil,
+            engine: .whisperKit,
+            modelVariant: nil,
+            inputName: nil,
+            starred: [lines[1].id]
+        )
+        #expect(record.segments.map(\.isStarred) == [false, true, false])
+
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-stars-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        try store.save(record)
+        #expect(store.load(id: record.id)?.segments.map(\.isStarred) == [false, true, false])
+        #expect(store.listSummaries().first?.starredCount == 1)
+
+        let text = TranscriptHistoryStore.exportText(record)
+        #expect(text == "[01:00:00] שלום\n★ [01:00:00] לקחת כדור אחד בבוקר\n[01:00:00] ביי")
+    }
+
+    @Test("a line saved before stars existed loads as not starred")
+    func olderLineDecodes() throws {
+        let json = #"{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","text":"ישן","startTimestamp":1,"isCommitted":true}"#
+        let line = try JSONDecoder().decode(SavedSegment.self, from: Data(json.utf8))
+        #expect(line.isStarred == false)
+        #expect(line.speakerName == nil)
+    }
+
+    @Test("a summary file from before stars were counted is rebuilt")
+    func oldSummaryRebuilt() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-stars-cache-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let record = TranscriptSessionRecord(
+            startedAt: 1, engine: .whisperKit, modelVariant: nil, inputName: nil,
+            segments: [SavedSegment(id: UUID(), text: "חשוב", speakerName: nil, speakerClusterID: nil, startTimestamp: 1, isCommitted: true, isStarred: true)]
+        )
+        try store.save(record)
+        // What a build with format 1 wrote: no starredCount at all.
+        let summaryURL = dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName).appendingPathComponent("\(record.id.uuidString).json")
+        let old = #"{"format":1,"summary":{"id":"\#(record.id.uuidString)","startedAt":1,"segmentCount":1,"preview":"חשוב","engine":"whisperKit","speakerNames":[]}}"#
+        try Data(old.utf8).write(to: summaryURL)
+
+        #expect(store.listSummaries().first?.starredCount == 1)
+    }
+}
