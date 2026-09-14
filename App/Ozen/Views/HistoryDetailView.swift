@@ -44,6 +44,7 @@ struct HistoryDetailView: View {
                             showsTime: timeMarks.contains(segment.id),
                             markUncertain: viewModel.display.markUncertainLines,
                             fontSize: viewModel.display.fontSize,
+                            emphasizeNumbers: viewModel.display.emphasizeNumbers,
                             isMatch: isMatch
                         )
                         .listRowBackground(isMatch ? Color.yellow.opacity(0.3) : nil)
@@ -257,6 +258,7 @@ private struct SavedLineRow: View {
     let showsTime: Bool
     let markUncertain: Bool
     let fontSize: Double
+    let emphasizeNumbers: Bool
     let isMatch: Bool
 
     var body: some View {
@@ -281,7 +283,12 @@ private struct SavedLineRow: View {
                         .foregroundStyle(.secondary)
                         .accessibilityLabel("ייתכן שלא נשמע נכון")
                 }
-                Text(CaptionLayout.displayText(segment.text))
+                Text(
+                    caption: CaptionLayout.displayText(segment.text),
+                    emphasizingNumbers: emphasizeNumbers,
+                    size: max(17, fontSize * 0.7),
+                    numberColor: nil
+                )
                     .font(.system(size: max(17, fontSize * 0.7)))
             }
         }

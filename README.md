@@ -43,7 +43,10 @@ things, for Hebrew conversation, entirely on-device.
   the captions to change it), white-on-black / yellow-on-black /
   black-on-white, bold, speaker names on/off (shown once at the start of
   each person's turn, like a chat), a small question mark on lines the
-  engine itself was unsure of (so she knows when to ask again), long
+  engine itself was unsure of (so she knows when to ask again), numbers
+  (the time of an appointment, how many pills, a phone number) in a
+  heavier weight and a second colour, whether written in digits or in
+  words ("ובשש", "שלושה כדורים"), long
   stretches of speech
   broken into short paragraphs at sentence ends, screen stays awake while
   listening (and locks as usual after a quarter hour with nothing said, while
@@ -215,7 +218,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (425 tests). The platform layer (WhisperKit/Speech engines, real
+logic (431 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 74 tests).

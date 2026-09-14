@@ -42,6 +42,9 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
     /// With VoiceOver on, finished lines are read out (or sent to a braille
     /// display) as they arrive. See `CaptionAnnouncer`.
     public var announceNewLines: Bool
+    /// Numbers (times, amounts, phone numbers) drawn heavier and in their
+    /// own colour. See `NumberEmphasis`.
+    public var emphasizeNumbers: Bool
 
     public static let minimumFontSize: Double = 20
     public static let maximumFontSize: Double = 64
@@ -53,7 +56,8 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         showSpeakerNames: Bool = true,
         keepScreenAwake: Bool = true,
         markUncertainLines: Bool = true,
-        announceNewLines: Bool = true
+        announceNewLines: Bool = true,
+        emphasizeNumbers: Bool = true
     ) {
         self.fontSize = fontSize
         self.theme = theme
@@ -62,6 +66,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         self.keepScreenAwake = keepScreenAwake
         self.markUncertainLines = markUncertainLines
         self.announceNewLines = announceNewLines
+        self.emphasizeNumbers = emphasizeNumbers
     }
 
     public static let `default` = DisplayPreferences()
@@ -75,7 +80,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case fontSize, theme, boldText, showSpeakerNames, keepScreenAwake, markUncertainLines, announceNewLines
+        case fontSize, theme, boldText, showSpeakerNames, keepScreenAwake, markUncertainLines, announceNewLines, emphasizeNumbers
     }
 
     public init(from decoder: any Decoder) throws {
@@ -88,6 +93,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         keepScreenAwake = container.lenient(Bool.self, forKey: .keepScreenAwake) ?? defaults.keepScreenAwake
         markUncertainLines = container.lenient(Bool.self, forKey: .markUncertainLines) ?? defaults.markUncertainLines
         announceNewLines = container.lenient(Bool.self, forKey: .announceNewLines) ?? defaults.announceNewLines
+        emphasizeNumbers = container.lenient(Bool.self, forKey: .emphasizeNumbers) ?? defaults.emphasizeNumbers
         fontSize = min(max(fontSize, Self.minimumFontSize), Self.maximumFontSize)
     }
 }

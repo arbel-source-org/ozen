@@ -200,11 +200,12 @@ struct SettingsView: View {
             Toggle("להציג שמות דוברים", isOn: $viewModel.display.showSpeakerNames)
             Toggle("המסך לא נכבה בזמן האזנה", isOn: $viewModel.display.keepScreenAwake)
             Toggle("סימן שאלה ליד שורות שהמנוע לא בטוח בהן", isOn: $viewModel.display.markUncertainLines)
+            Toggle("מספרים בולטים (שעות, כמויות, טלפונים)", isOn: $viewModel.display.emphasizeNumbers)
             Toggle("VoiceOver מקריא שורות חדשות", isOn: $viewModel.display.announceNewLines)
         } header: {
             Text("תצוגה")
         } footer: {
-            Text("סימן שאלה ליד שורה אומר שייתכן שהיא לא נשמעה נכון. לחיצה ארוכה על השורה מאפשרת לבקש שיחזרו עליה. כש-VoiceOver פועל, כל שורה שהסתיימה מוקראת או נשלחת לצג ברייל מעצמה. אחרי רבע שעה בלי דיבור המסך ננעל כרגיל, והכתוביות וההתראות ממשיכות.")
+            Text("סימן שאלה ליד שורה אומר שייתכן שהיא לא נשמעה נכון. מספרים כמו שעה, כמות כדורים או מספר טלפון מודגשים בצבע אחר, כדי שלא יתפספסו. לחיצה ארוכה על השורה מאפשרת לבקש שיחזרו עליה. כש-VoiceOver פועל, כל שורה שהסתיימה מוקראת או נשלחת לצג ברייל מעצמה. אחרי רבע שעה בלי דיבור המסך ננעל כרגיל, והכתוביות וההתראות ממשיכות.")
         }
     }
 

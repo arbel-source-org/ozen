@@ -8,6 +8,9 @@ struct CaptionTheme {
     let background: Color
     let text: Color
     let pendingText: Color
+    /// Numbers in a finished line (see `NumberEmphasis`): a second colour
+    /// as easy to read on the background as the text itself.
+    let numberText: Color
     let chrome: Color
     let colorScheme: ColorScheme
 
@@ -17,18 +20,24 @@ struct CaptionTheme {
             background = .black
             text = .white
             pendingText = .white.opacity(0.62)
+            // About 15:1 on black, like the yellow-on-black theme's text.
+            numberText = Color(red: 1.0, green: 0.88, blue: 0.2)
             chrome = .white
             colorScheme = .dark
         case .highContrast:
             background = .black
             text = Color(red: 1.0, green: 0.88, blue: 0.2)
             pendingText = Color(red: 1.0, green: 0.88, blue: 0.2).opacity(0.6)
+            // White is the one colour brighter than this yellow on black.
+            numberText = .white
             chrome = Color(red: 1.0, green: 0.88, blue: 0.2)
             colorScheme = .dark
         case .light:
             background = .white
             text = .black
             pendingText = .black.opacity(0.55)
+            // A deep blue, close to 9:1 on white.
+            numberText = Color(red: 0, green: 0.25, blue: 0.7)
             chrome = .black
             colorScheme = .light
         }

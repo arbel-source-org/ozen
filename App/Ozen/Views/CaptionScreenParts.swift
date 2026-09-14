@@ -50,7 +50,14 @@ struct CaptionRow: View {
                         .font(.system(size: max(14, display.fontSize * 0.6)))
                         .foregroundStyle(theme.pendingText)
                 }
-                Text(CaptionLayout.displayText(segment.text))
+                Text(
+                    caption: CaptionLayout.displayText(segment.text),
+                    emphasizingNumbers: display.emphasizeNumbers,
+                    size: display.fontSize,
+                    // A line still being written keeps its dimmer colour
+                    // throughout, numbers included, so it reads as unfinished.
+                    numberColor: segment.isCommitted ? theme.numberText : nil
+                )
                     .font(.system(size: display.fontSize, weight: display.boldText ? .bold : .medium))
                     .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
                     .multilineTextAlignment(.leading)
