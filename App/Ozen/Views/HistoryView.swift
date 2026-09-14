@@ -14,61 +14,80 @@ struct HistoryView: View {
     @State private var pendingRetention: HistoryRetention?
     @State private var deleteError: String?
 
+    private var savingSection: some View {
+        Section {
+            if viewModel.saveHistory, viewModel.historySaveFailure != nil {
+                Label("השמירה האחרונה של שיחה נכשלה, כנראה כי אין מקום פנוי בטלפון. מה שנאמר מאז אולי לא נשמר.", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            }
+            Toggle("לשמור שיחות", isOn: $viewModel.saveHistory)
+            Picker("מחיקה אוטומטית", selection: retentionChoice) {
+                ForEach(HistoryRetention.allCases, id: \.self) { retention in
+                    Text(Self.name(for: retention)).tag(retention)
+                }
+            }
+        } footer: {
+            Text(savingFooter)
+        }
+    }
+
+    private var savingFooter: String {
+        let size = ModelManagerView.format(bytes: totalSize)
+        let base = "השיחות נשמרות רק בטלפון הזה (\(size)). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע."
+        guard viewModel.historyRetention != .forever else { return base }
+        return base + " שיחות עם שורה מסומנת או עם שם נשמרות תמיד."
+    }
+
+    private var starredSection: some View {
+        Section {
+            NavigationLink {
+                StarredLinesView(viewModel: viewModel, onHistoryChanged: reload)
+            } label: {
+                Label("השורות המסומנות", systemImage: "star.fill")
+                    .badge(sessions.reduce(0) { $0 + $1.starredCount })
+            }
+        }
+    }
+
+    private var conversationsSection: some View {
+        Section {
+            if sessions.isEmpty {
+                Text(query.isEmpty ? "עדיין אין שיחות שמורות." : "לא נמצא כלום עבור \"\(query)\".")
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(sessions) { session in
+                NavigationLink {
+                    HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onHistoryChanged: reload)
+                } label: {
+                    SessionRow(session: session)
+                }
+            }
+            .onDelete(perform: delete(at:))
+        } header: {
+            Text("שיחות")
+        }
+    }
+
+    private func delete(at offsets: IndexSet) {
+        do {
+            for offset in offsets {
+                try viewModel.deleteConversation(id: sessions[offset].id)
+            }
+        } catch {
+            deleteError = error.localizedDescription
+        }
+        reload()
+    }
+
     var body: some View {
         List {
             if query.isEmpty {
-                Section {
-                    if viewModel.saveHistory, viewModel.historySaveFailure != nil {
-                        Label("השמירה האחרונה של שיחה נכשלה, כנראה כי אין מקום פנוי בטלפון. מה שנאמר מאז אולי לא נשמר.", systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.red)
-                    }
-                    Toggle("לשמור שיחות", isOn: $viewModel.saveHistory)
-                    Picker("מחיקה אוטומטית", selection: retentionChoice) {
-                        ForEach(HistoryRetention.allCases, id: \.self) { retention in
-                            Text(Self.name(for: retention)).tag(retention)
-                        }
-                    }
-                } footer: {
-                    Text("השיחות נשמרות רק בטלפון הזה (\(ModelManagerView.format(bytes: totalSize))). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע." + (viewModel.historyRetention == .forever ? "" : " שיחות עם שורה מסומנת או עם שם נשמרות תמיד."))
-                }
+                savingSection
             }
-
             if query.isEmpty, sessions.contains(where: { $0.starredCount > 0 }) {
-                Section {
-                    NavigationLink {
-                        StarredLinesView(viewModel: viewModel, onHistoryChanged: reload)
-                    } label: {
-                        Label("השורות המסומנות", systemImage: "star.fill")
-                            .badge(sessions.reduce(0) { $0 + $1.starredCount })
-                    }
-                }
+                starredSection
             }
-
-            Section {
-                if sessions.isEmpty {
-                    Text(query.isEmpty ? "עדיין אין שיחות שמורות." : "לא נמצא כלום עבור \"\(query)\".")
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(sessions) { session in
-                    NavigationLink {
-                        HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onHistoryChanged: reload)
-                    } label: {
-                        SessionRow(session: session)
-                    }
-                }
-                .onDelete { offsets in
-                    do {
-                        for offset in offsets {
-                            try viewModel.deleteConversation(id: sessions[offset].id)
-                        }
-                    } catch {
-                        deleteError = error.localizedDescription
-                    }
-                    reload()
-                }
-            } header: {
-                Text("שיחות")
-            }
+            conversationsSection
         }
         .searchable(text: $query, prompt: "חיפוש במה שנאמר")
         .task(id: query) {
