@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import OzenKit
 
 /// Every starred line from every saved conversation, newest first: the
@@ -47,6 +48,13 @@ struct StarredLinesView: View {
                                             numberColor: nil
                                         )
                                             .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
+                                    }
+                                }
+                                .contextMenu {
+                                    Button {
+                                        UIPasteboard.general.string = line.segment.text
+                                    } label: {
+                                        Label("העתקה", systemImage: "doc.on.doc")
                                     }
                                 }
                             }
