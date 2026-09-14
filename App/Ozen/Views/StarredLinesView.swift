@@ -4,6 +4,7 @@ import OzenKit
 /// Every starred line from every saved conversation, newest first: the
 /// quick way back to "what did the doctor say about the pills".
 struct StarredLinesView: View {
+    @Environment(\.colorScheme) private var colorScheme
     let viewModel: LiveCaptionViewModel
     /// Something in saved history changed here (a deletion, a new name).
     let onHistoryChanged: () -> Void
@@ -36,7 +37,7 @@ struct StarredLinesView: View {
                                             if let name = line.segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
                                                 Text(name)
                                                     .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID))
+                                                    .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID, on: colorScheme))
                                             }
                                         }
                                         Text(CaptionLayout.displayText(line.segment.text))

@@ -26,7 +26,7 @@ struct CaptionRow: View {
                     Circle()
                         .frame(width: 10, height: 10)
                 }
-                .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID))
+                .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID, on: theme.colorScheme))
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 8) {

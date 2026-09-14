@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// A small, fixed, high-contrast, colorblind-checked palette — not
-/// generated per speaker — so a color always carries the same identity
-/// meaning it did a moment ago instead of drifting with hue math.
+/// A small, fixed, colorblind-checked palette — not generated per
+/// speaker — so a color always carries the same identity meaning it did a
+/// moment ago instead of drifting with hue math.
 enum SpeakerColor {
+    /// For the dark themes: 9-12.5:1 against black.
     private static let palette: [Color] = [
         Color(red: 0.98, green: 0.75, blue: 0.18),  // amber
         Color(red: 0.45, green: 0.78, blue: 0.98),  // sky
@@ -12,8 +13,19 @@ enum SpeakerColor {
         Color(red: 0.80, green: 0.65, blue: 0.98),  // violet
     ]
 
-    static func color(forClusterID id: Int?) -> Color {
-        guard let id else { return .gray }
-        return palette[id % palette.count]
+    /// The same hues in the same order for the white theme, where the
+    /// pastels above fall to 1.7-2.3:1 and a name is barely there: 5.8-7:1.
+    private static let deepPalette: [Color] = [
+        Color(red: 0.55, green: 0.36, blue: 0.0),   // amber
+        Color(red: 0.0, green: 0.36, blue: 0.62),   // sky
+        Color(red: 0.70, green: 0.15, blue: 0.25),  // rose
+        Color(red: 0.10, green: 0.45, blue: 0.15),  // green
+        Color(red: 0.42, green: 0.25, blue: 0.70),  // violet
+    ]
+
+    static func color(forClusterID id: Int?, on scheme: ColorScheme) -> Color {
+        guard let id else { return scheme == .light ? Color(white: 0.4) : .gray }
+        let colors = scheme == .light ? deepPalette : palette
+        return colors[id % colors.count]
     }
 }
