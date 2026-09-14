@@ -92,8 +92,9 @@ things, for Hebrew conversation, entirely on-device.
   when the phone runs hot or Low Power Mode is on, instead of throttling
   and falling behind; the careful end-of-sentence pass is never skipped.
 - **Conversation history.** Conversations are saved as they happen,
-  searchable, shareable as text, list who took part, and open with a
-  summary: length, how much each person said, speaking pace, longest turn.
+  searchable, shareable as text, can be given a name ("ביקור אצל
+  הרופא"), list who took part, and open with a summary: length, how much
+  each person said, speaking pace, longest turn.
   The list reads a small summary per conversation, so it opens quickly
   even after months of daily use, and autosaving never stutters the
   captions.
@@ -165,10 +166,10 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (302 tests). The platform layer (WhisperKit/Speech engines, real
+logic (307 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 35 tests).
+the same fakes (another 49 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
