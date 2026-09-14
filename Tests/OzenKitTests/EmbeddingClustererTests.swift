@@ -200,8 +200,8 @@ struct AppSettingsThresholdDecodingTests {
         func decode(_ value: String) throws -> Float {
             try JSONDecoder().decode(AppSettings.self, from: Data(#"{"speakerSimilarityThreshold":\#(value)}"#.utf8)).speakerSimilarityThreshold
         }
-        #expect(try decode("0") == 0.5)
-        #expect(try decode("-3") == 0.5)
+        #expect(try decode("0") == 0.2)
+        #expect(try decode("-3") == 0.2)
         #expect(try decode("7") == 0.95)
         #expect(try decode("0.8") == 0.8)
     }

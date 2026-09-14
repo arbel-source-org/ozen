@@ -166,6 +166,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var hapticOnSpeechResume: Bool
     /// Cosine-similarity threshold for the speaker clusterer; lower merges
     /// more aggressively (fewer phantom "Speaker 3"s), higher splits more.
+    /// 0.45 is tuned for the CAM++ neural embedder, whose similarity scores
+    /// run much lower between the same speaker than the old MFCC embedder's
+    /// did: on LibriSpeech, CAM++ clusters correctly 96.8% of the time at
+    /// 0.45, against MFCC's 45.8% at the old default of 0.75.
     public var speakerSimilarityThreshold: Float
     /// Words and names that buzz and highlight when spoken.
     public var keywordAlerts: [KeywordAlert]
@@ -219,7 +223,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         cloudModel: String = CloudSpeech.fastModel,
         display: DisplayPreferences = .default,
         hapticOnSpeechResume: Bool = true,
-        speakerSimilarityThreshold: Float = 0.75,
+        speakerSimilarityThreshold: Float = 0.45,
         keywordAlerts: [KeywordAlert] = [],
         soundAlerts: SoundAlertPreferences = .default,
         saveHistory: Bool = true,
@@ -310,7 +314,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         speakerSimilarityThreshold = container.lenient(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold
         // The Settings slider's range; a file saying otherwise gets the nearest edge.
         speakerSimilarityThreshold = speakerSimilarityThreshold.isFinite
-            ? min(max(speakerSimilarityThreshold, 0.5), 0.95)
+            ? min(max(speakerSimilarityThreshold, 0.2), 0.95)
             : defaults.speakerSimilarityThreshold
         keywordAlerts = container.lenientArray(of: KeywordAlert.self, forKey: .keywordAlerts) ?? defaults.keywordAlerts
         soundAlerts = container.lenient(SoundAlertPreferences.self, forKey: .soundAlerts) ?? defaults.soundAlerts

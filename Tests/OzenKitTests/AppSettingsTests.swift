@@ -133,7 +133,7 @@ struct AppSettingsTests {
         #expect(decoded.allowServerFallbackForAppleSpeech == false)
         #expect(decoded.display == .default)
         #expect(decoded.hapticOnSpeechResume == true)
-        #expect(decoded.speakerSimilarityThreshold == 0.75)
+        #expect(decoded.speakerSimilarityThreshold == 0.45)
         #expect(decoded.keywordAlerts.isEmpty)
         #expect(decoded.soundAlerts == .default)
         #expect(decoded.saveHistory == true)

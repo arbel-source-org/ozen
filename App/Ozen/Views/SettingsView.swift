@@ -556,7 +556,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
-                Slider(value: $viewModel.speakerSimilarityThreshold, in: 0.5...0.95, step: 0.01)
+                Slider(value: $viewModel.speakerSimilarityThreshold, in: 0.2...0.95, step: 0.01)
                     .accessibilityLabel(tr("רגישות הפרדת דוברים", "Speaker separation sensitivity"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
                 HStack {
