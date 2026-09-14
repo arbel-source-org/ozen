@@ -1,10 +1,10 @@
 import Foundation
 
 /// Names and words the recognizers should expect. Family members' names
-/// are the single biggest source of wrong captions in a home — "אבי"
-/// becomes "אבל", "רותי" becomes "רותם" — and both engines accept hints:
-/// Apple's recognizer via `contextualStrings`, Whisper via a text prompt
-/// the decoder is conditioned on before it hears any audio.
+/// are the single biggest source of wrong captions in a home — "Avi"
+/// becomes "aval" ("but"), "Ruti" becomes "Rotem" — and both engines
+/// accept hints: Apple's recognizer via `contextualStrings`, Whisper via
+/// a text prompt the decoder is conditioned on before it hears any audio.
 public enum VocabularyHints {
     public static let maximumTerms = 200
     public static let maximumTermLength = 40
@@ -41,12 +41,12 @@ public enum VocabularyHints {
 }
 
 /// Whisper conditioned on a prompt sometimes "hears" the prompt itself in
-/// a quiet window: the names list comes back as a caption ("אבי, רותי,
-/// דני."). Real speech almost never lists several of those names in
+/// a quiet window: the names list comes back as a caption ("Avi, Ruti,
+/// Dani."). Real speech almost never lists several of those names in
 /// exactly the order they were typed in, so a caption made only of a run
 /// of consecutive list entries is treated as an echo.
 ///
-/// One name on its own is never an echo. Someone calling "אבי!" across
+/// One name on its own is never an echo. Someone calling "Avi!" across
 /// the room is exactly the caption the list exists to get right.
 public struct PromptEchoDetector: Sendable, Equatable {
     /// Each term as normalized words, in list order.

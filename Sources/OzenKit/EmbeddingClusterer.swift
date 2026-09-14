@@ -1,8 +1,8 @@
 import Foundation
 
 /// One inferred (or enrolled) speaker. `name` is nil until either the user
-/// enrolls a real profile ahead of time or tags this cluster after the
-/// fact — until then the UI shows "דובר \(id + 1)".
+/// enrolls a real profile ahead of time or tags this cluster after the fact
+/// — until then the UI shows "dover \(id + 1)" ("speaker N").
 public struct SpeakerCluster: Sendable, Equatable, Identifiable {
     public let id: Int
     public var centroid: [Float]

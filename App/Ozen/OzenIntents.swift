@@ -2,7 +2,7 @@ import AppIntents
 import Foundation
 import Observation
 
-/// "היי סירי, התחל כתוביות באוזן" — the whole app is one screen, so the
+/// "Hey Siri, start captions in Ozen" — the whole app is one screen, so the
 /// intents just open it and leave a note for the view to act on. They
 /// run in the app's own process (`openAppWhenRun`), so nothing has to be
 /// shared across an extension boundary.
@@ -30,7 +30,7 @@ struct StopCaptionsIntent: AppIntent {
     }
 }
 
-/// "היי סירי, תגיד באוזן שאני כבר באה" — for the moments she can't reach
+/// "Hey Siri, say in Ozen that I'm coming" — for the moments she can't reach
 /// the keyboard.
 struct SpeakIntent: AppIntent {
     static let title: LocalizedStringResource = "להגיד משהו בקול"
@@ -51,7 +51,7 @@ struct SpeakIntent: AppIntent {
     }
 }
 
-/// "כתבו לי": the big-letters pad, straight from Siri or the Action
+/// "Write to me": the big-letters pad, straight from Siri or the Action
 /// button, for when captions can't keep up and someone needs to type.
 struct ShowBigTextIntent: AppIntent {
     static let title: LocalizedStringResource = "כתבו לי"

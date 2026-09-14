@@ -267,7 +267,7 @@ struct HistoryDetailView: View {
 }
 
 /// One line under "numbers said": who said it, when known, and the line
-/// with its numbers standing out. "3 כדורים" means more with "הרופא" on it.
+/// with its numbers standing out. "3 pills" means more with "the doctor" on it.
 private struct NumberLineLabel: View {
     let segment: SavedSegment
 

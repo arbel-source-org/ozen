@@ -3,7 +3,7 @@ import OzenKit
 
 /// The names list: family, neighbours, the doctor, the pharmacy, the
 /// medicines. Both engines are told to expect these words, which is the
-/// difference between "אבי" and "אבל" in the captions.
+/// difference between "Avi" (a name) and "aval" ("but") in the captions.
 struct VocabularyView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var newTerm = ""

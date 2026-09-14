@@ -1,4 +1,4 @@
-# Ozen (אוזן)
+# Ozen ("ear" in Hebrew)
 
 Live, on-device captions for conversation — built for a grandmother with
 hearing loss who found every existing transcription app either unreliable
@@ -46,7 +46,7 @@ things, for Hebrew conversation, entirely on-device.
   engine itself was unsure of (so she knows when to ask again), numbers
   (the time of an appointment, how many pills, a phone number) in a
   heavier weight and a second colour, whether written in digits or in
-  words ("ובשש", "שלושה כדורים"), long
+  words ("and six" (u-ve-shesh), "three pills" (shlosha kadurim)), long
   stretches of speech
   broken into short paragraphs at sentence ends, screen stays awake while
   listening (and locks as usual after a quarter hour with nothing said, while
@@ -80,12 +80,13 @@ things, for Hebrew conversation, entirely on-device.
   timer, and starts the download by itself when she comes back to the app
   with enough room. The model list marks the models that won't fit.
 - **Type to speak.** The other half of a conversation: type a reply, or
-  tap one of the ready-made phrases ("רגע, לא הבנתי", "אפשר לחזור על
-  זה?"), and the phone says it in Hebrew. Captions pause while the phone
+  tap one of the ready-made phrases ("Wait, I didn't understand" (rega, lo
+  hevanti), "Can you repeat that?" (efshar lachzor al ze?)), and the phone
+  says it in Hebrew. Captions pause while the phone
   talks, so it doesn't caption itself, and come back on their own. A
   full-screen pad in huge letters lets someone type to her where captions
   can't keep up, or turns what she typed upside down for the person facing
-  her to read. "כתבו לי" opens it straight from Siri or the Action button.
+  her to read. "Write to me" (kitvu li) opens it straight from Siri or the Action button.
 - **Names and words list.** Family names, the doctor, the medicines.
   Both engines are primed with the list (Apple's recognizer via
   contextual strings, Whisper via a decoder prompt), edits apply from the
@@ -93,7 +94,7 @@ things, for Hebrew conversation, entirely on-device.
   dropped.
 - **Keyword alerts.** Her name, or any word she picks, buzzes the phone
   and highlights the line, matching through Hebrew's attached prefixes
-  ("ולרותי" still matches "רותי"). Said over and over at the table, it
+  ("ve-le-Ruti" still matches "Ruti"). Said over and over at the table, it
   buzzes at most once every 15 seconds, while every line it's in stays
   highlighted.
 - **Sound alerts.** Doorbell, knocking, a baby crying, a smoke alarm, a
@@ -122,15 +123,16 @@ things, for Hebrew conversation, entirely on-device.
 - **Warns before the install runs out.** Installed with a free Apple ID,
   the app stops opening after seven days without a word. It reads its own
   provisioning profile, says on the caption screen two days ahead when that
-  will happen ("אוזן תפסיק להיפתח מחר בשעה 07:24"), and sends a reminder
+  will happen ("Ozen will stop opening tomorrow at 07:24" (Ozen tafsik
+  lehipatach machar be-sha'a 07:24)), and sends a reminder
   notification the day before, in daytime.
 - **Keeps its cool.** Whisper refreshes the in-progress line less often
   when the phone runs hot or Low Power Mode is on, instead of throttling
   and falling behind; the careful end-of-sentence pass is never skipped.
 - **Conversation history.** Conversations are saved as they happen,
   searchable, shareable as text (a long one opens with its lines that had
-  numbers in them), can be given a name ("ביקור אצל
-  הרופא"), list who took part, and open with a summary: length, how much
+  numbers in them), can be given a name ("Visit to the doctor" (bikur etzel
+  harofe)), list who took part, and open with a summary: length, how much
   each person said, speaking pace, longest turn, and every line with a
   time, an amount or a phone number in it, each a tap from where it was
   said.
@@ -158,13 +160,14 @@ things, for Hebrew conversation, entirely on-device.
   already on screen and into the names list.
 - **First-launch walkthrough** in large type that explains the engines and
   the one-time model download before it happens, asks for the
-  microphone with a reason, and asks for her name (with "סבתא" one tap
+  microphone with a reason, and asks for her name (with "Grandma" (savta) one tap
   away), so the name alert works from the first conversation instead of
   waiting for someone to find it in Settings. A phone set up before that
   page existed gets the same question as a card on the empty caption
   screen, until a word is added or it's turned down.
-- **Siri and Shortcuts.** "היי סירי, התחל כתוביות באוזן", "עצור כתוביות",
-  and "תגיד באוזן ..." to have the phone say something aloud.
+- **Siri and Shortcuts.** "Hey Siri, start captions in Ozen" (hey Siri,
+  hatchel ktuviyot be-Ozen), "Stop captions" (atzor ktuviyot),
+  and "Say in Ozen ..." (tagid be-Ozen ...) to have the phone say something aloud.
 - **Diagnostics screen** with every pipeline counter (audio chunks, tokens,
   caption lag, restarts, speaker clusters), free space, memory use, a
   timeline of the last failures, retries, microphone stalls, phone calls

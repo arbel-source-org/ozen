@@ -1,7 +1,7 @@
 import SwiftUI
 import OzenKit
 
-/// Type her name (or tap "סבתא") and the phone buzzes when it's said. Used
+/// Type her name (or tap "savta", grandma) and the phone buzzes when it's said. Used
 /// by the walkthrough and by the caption screen's offer to phones set up
 /// before the walkthrough asked.
 struct NameAlertForm: View {

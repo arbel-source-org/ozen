@@ -187,8 +187,9 @@ input source).
   verify Hebrew transcription quality against a real conversation; verify
   two real family members enroll and get correctly told apart. Added
   2026-09-14, since the simulator has no haptics or real microphone: with
-  captions running, each alert vibration (Settings → צלילים בבית → "איך כל
-  התראה מרגישה", then a real doorbell or a keyword) is actually felt; with
+  captions running, each alert vibration (Settings → Sounds at home
+  (tzlilim ba-bayit) → "How each alert feels" (eich kol hatra'a margisha),
+  then a real doorbell or a keyword) is actually felt; with
   the phone face down on a table, the three-second alarm buzz does not
   raise a phone, alarm-clock, beep or knock alert of its own; the soft hum
   when someone starts talking after a quiet (on by default) doesn't garble

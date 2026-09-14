@@ -133,8 +133,8 @@ public struct ConversationStats: Sendable, Equatable {
 
     // MARK: - Wording
 
-    /// "12 דקות · 3 דוברים · 840 מילים", with Hebrew's special forms for
-    /// one and two.
+    /// "12 dakot · 3 dovrim · 840 milim" ("12 minutes · 3 speakers ·
+    /// 840 words"), with Hebrew's special forms for one and two.
     public var hebrewSummary: String {
         var parts = [Self.minutesText(durationSeconds)]
         if !speakers.isEmpty {

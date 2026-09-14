@@ -35,11 +35,11 @@ public enum CaptionLayout {
     /// `readableText`, ready to draw: in a right-to-left language each
     /// paragraph starts with an invisible right-to-left mark.
     ///
-    /// A paragraph takes its reading direction from its first letter.
-    /// "OK, אז נתראה מחר" starts with a Latin one, so it was laid out left
-    /// to right, and read from the right it came out as "אז נתראה מחר"
-    /// followed by "OK": the words in the wrong order. Same for a line that
-    /// opens with a name like "WhatsApp". The mark makes Hebrew the
+    /// A paragraph takes its reading direction from its first letter. "OK, az
+    /// nitra'e machar" ("OK, see you tomorrow") starts with a Latin one, so it
+    /// was laid out left to right, and read from the right it came out as "az
+    /// nitra'e machar" followed by "OK": the words in the wrong order. Same for
+    /// a line that opens with a name like "WhatsApp". The mark makes Hebrew the
     /// paragraph's direction whatever word comes first. For display only:
     /// copied, shared and spoken text stays as recognized.
     public static func displayText(_ text: String, languageCode: String = "he") -> String {
@@ -81,8 +81,9 @@ public enum CaptionLayout {
     }
 
     /// Splits after ".", "?", "!" or "…" (and any closing quote or bracket
-    /// right after it) when whitespace follows. "3.5" and "ד״ר" never
-    /// split, because no space follows the dot or the gershayim.
+    /// right after it) when whitespace follows. "3.5" and "d\"r" ("doctor",
+    /// using a gershayim instead of a period) never split, because no space
+    /// follows the dot or the gershayim.
     static func splitSentences(_ text: String) -> [String] {
         let enders: Set<Character> = [".", "?", "!", "…"]
         let closers: Set<Character> = ["\"", "'", "”", "’", ")", "]", "״", "׳"]
@@ -119,9 +120,9 @@ extension CaptionLayout {
     /// Whether a line shows its speaker's name above it.
     ///
     /// Like a chat, the name appears when the speaker changes, not on every
-    /// line: a run of lines by one person reads as one block and leaves
-    /// more of the screen for words. A line with no identified speaker
-    /// shows no label at all rather than "דובר לא ידוע" on every row.
+    /// line: a run of lines by one person reads as one block and leaves more of
+    /// the screen for words. A line with no identified speaker shows no label
+    /// at all rather than "dover lo yadu'a" ("unknown speaker") on every row.
     public static func showsSpeakerLabel(for segment: TranscriptSegment, after previous: TranscriptSegment?) -> Bool {
         guard let cluster = segment.speakerClusterID else { return false }
         return previous?.speakerClusterID != cluster

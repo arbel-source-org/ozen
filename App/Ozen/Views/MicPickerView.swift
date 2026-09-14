@@ -113,7 +113,7 @@ struct MicPickerView: View {
     }
 
     /// What fits in the control bar: the system's own name for the port
-    /// is fine for accessories ("AirPods של סבתא"), but the built-in one
+    /// is fine for accessories ("Grandma's AirPods"), but the built-in one
     /// is called "iPhone Microphone", which is too long and says nothing.
     static func shortName(for input: AudioInputDescriptor) -> String {
         switch input.portType {

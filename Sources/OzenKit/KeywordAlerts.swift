@@ -1,9 +1,10 @@
 import Foundation
 
 /// One word or phrase the reader has asked to be alerted about — her own
-/// name, a grandchild's name, "אמבולנס", "תרופה", "אוכל". Kept as plain
-/// data (no matching logic here) so it can be stored in `AppSettings`-style
-/// JSON and edited from a simple list screen.
+/// name, a grandchild's name, "ambulans" ("ambulance"), "trufa"
+/// ("medicine"), "ochel" ("food"). Kept as plain data (no matching logic
+/// here) so it can be stored in `AppSettings`-style JSON and edited from a
+/// simple list screen.
 public struct KeywordAlert: Codable, Sendable, Equatable, Identifiable {
     public let id: UUID
     public var phrase: String
@@ -32,11 +33,12 @@ public struct KeywordAlert: Codable, Sendable, Equatable, Identifiable {
 }
 
 /// One place a keyword was found in a caption: which alert fired, the
-/// alert's own phrase (for display, e.g. "your alert for 'סבתא'"), the
-/// text as it actually appeared in the caption (which may carry an
-/// attached prefix, e.g. "לסבתא"), and the index of its first word within
-/// the caption's word list, used by `KeywordAlertDeduplicator` to tell a
-/// repeated partial update from a genuinely new occurrence.
+/// alert's own phrase (for display, e.g. "your alert for 'savta'" —
+/// "grandma"), the text as it actually appeared in the caption (which may
+/// carry an attached prefix, e.g. "le-savta" — "to grandma"), and the index
+/// of its first word within the caption's word list, used by
+/// `KeywordAlertDeduplicator` to tell a repeated partial update from a
+/// genuinely new occurrence.
 public struct KeywordMatch: Sendable, Equatable {
     public var alertID: UUID
     public var phrase: String
@@ -70,8 +72,9 @@ public enum HebrewText {
     /// Hyphen, Hebrew maqaf, hyphen variants, en and em dashes, slash.
     static let wordJoiners: Set<Unicode.Scalar> = ["-", "\u{05BE}", "\u{2010}", "\u{2011}", "\u{2013}", "\u{2014}", "/"]
 
-    /// Turns characters that join two words into spaces, so "תל-אביב",
-    /// "תל־אביב" (maqaf) and "תל אביב" split into the same two words. Must
+    /// Turns characters that join two words into spaces, so a hyphenated
+    /// "Tel-Aviv", the same with a maqaf (the Hebrew dash) in place of the
+    /// hyphen, and a plain "Tel Aviv" all split into the same two words. Must
     /// run before `stripNiqqud`: the maqaf sits inside the niqqud block and
     /// would otherwise vanish and glue the words together.
     public static func separatingJoiners(_ text: String) -> String {
@@ -101,23 +104,22 @@ public enum HebrewText {
         normalize(text).split(separator: " ").map(String.init)
     }
 
-    /// Hebrew attaches single-letter prepositions and conjunctions
-    /// directly to the following word with no space — ו ("and"), ה
-    /// ("the"), ב ("in/with"), ל ("to"), מ ("from"), ש ("that"), כ ("as")
-    /// — and these stack, e.g. "וכש" ("and when"). This list is a
-    /// heuristic tuned for the prefixes that show up before names and
-    /// everyday nouns in speech, not a morphological analyzer: it will
-    /// miss rarer stackings and, in principle, could strip a letter that
-    /// happens to start the word itself, but that trade-off is the right
-    /// one for an alert that must not stay silent just because a caption
-    /// said "לסבתא" instead of "סבתא".
+    /// Hebrew attaches single-letter prepositions and conjunctions directly to
+    /// the following word with no space — vav ("and"), he ("the"), bet
+    /// ("in/with"), lamed ("to"), mem ("from"), shin ("that"), kaf ("as") — and
+    /// these stack, e.g. "vichshe" ("and when"). This list is a heuristic tuned
+    /// for the prefixes that show up before names and everyday nouns in speech,
+    /// not a morphological analyzer: it will miss rarer stackings and, in
+    /// principle, could strip a letter that happens to start the word itself,
+    /// but that trade-off is the right one for an alert that must not stay
+    /// silent just because a caption said "le-savta" instead of "savta".
     ///
-    /// Deliberately missing: ב, כ and ל swallowing the article, as in
-    /// "לרופא" for "to the doctor". Matching that against a phrase that
-    /// starts with ה would also fire the name "הילה" on every "לילה"
-    /// (night) and "הלל" on every "כלל", so a phrase saved as "הרופא"
-    /// catches "הרופא" and "שהרופא" but not "לרופא"; saved as "רופא" it
-    /// catches all of them.
+    /// Deliberately missing: bet, kaf and lamed swallowing the article, as in
+    /// "le-rofe" ("to the doctor"). Matching that against a phrase that starts
+    /// with he would also fire the name "Hila" on every "layla" ("night") and
+    /// "Hillel" on every "klal" ("rule"), so a phrase saved as "ha-rofe" ("the
+    /// doctor") catches "ha-rofe" and "she-ha-rofe" but not "le-rofe"; saved as
+    /// "rofe" ("doctor") it catches all of them.
     public static let attachedPrefixes: Set<String> = [
         "ו", "ה", "ב", "ל", "מ", "ש", "כ",
         "וה", "וב", "ול", "ומ", "וש", "וכ",
@@ -125,13 +127,14 @@ public enum HebrewText {
         "כש", "בה", "לה", "מה",
         "וכש", "ולכ", "ושה",
         // "when the", "and when the", "and from the", "that from the":
-        // "כשהרופא אמר" is how a doctor's visit gets retold.
+        // "kshe-ha-rofe amar" ("when the doctor said") is how a doctor's
+        // visit gets retold.
         "כשה", "וכשה", "ומה", "שמה",
     ]
 
     /// True if `word` is `stem` on its own, or `stem` with one of the
     /// attached prefixes glued to the front. Deliberately does not touch
-    /// the end of the word, so a *suffix* change ("סבתאות") is correctly
+    /// the end of the word, so a *suffix* change ("savta'ot") is correctly
     /// left unmatched.
     public static func stripAttachedPrefix(from word: String, leaving stem: String) -> Bool {
         if word == stem { return true }
@@ -144,7 +147,7 @@ public enum HebrewText {
 
 /// Finds every place a caption mentions a keyword the reader cares about.
 /// Multi-word phrases must match consecutively, whole caption words only
-/// (so "דן" never matches "דנה"), and the attached-prefix rule applies
+/// (so "Dan" never matches "Dana"), and the attached-prefix rule applies
 /// only to a phrase's first word — a caption is far more likely to attach
 /// a prefix to the word right after a preposition than in the middle of a
 /// fixed phrase.
@@ -200,10 +203,10 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
             .map(\.match)
     }
 
-    /// Strips only leading and trailing punctuation/symbol characters,
-    /// leaving case and niqqud untouched, so `matchedText` reads as the
-    /// word actually looked in the caption ("סבתא" out of "\"סבתא\"" or
-    /// "סבתא,") rather than the fully normalized comparison form.
+    /// Strips only leading and trailing punctuation/symbol characters, leaving
+    /// case and niqqud untouched, so `matchedText` reads as the word actually
+    /// looked in the caption ("savta" out of "\"savta\"" or "savta,") rather
+    /// than the fully normalized comparison form.
     private static func trimmingEdgePunctuation(_ word: String) -> String {
         var scalars = Array(word.unicodeScalars)
         func isEdgeCharacter(_ scalar: Unicode.Scalar) -> Bool {
@@ -220,10 +223,11 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
 }
 
 /// Suppresses repeat alerts on the same match as a caption's partial
-/// updates keep arriving for one utterance ("היום" → "היום סבתא" → "היום
-/// סבתא אכלה"): without this, buzzing/highlighting would fire again on
-/// every single token the engine emits for the same utterance instead of
-/// once when the keyword first appears.
+/// updates keep arriving for one utterance ("hayom" → "hayom savta" →
+/// "hayom savta achla" — "today" → "today grandma" → "today grandma ate"):
+/// without this, buzzing/highlighting would fire again on every single
+/// token the engine emits for the same utterance instead of once when the
+/// keyword first appears.
 public struct KeywordAlertDeduplicator: Sendable {
     private struct MatchKey: Hashable, Sendable {
         let alertID: UUID
@@ -285,12 +289,13 @@ public struct KeywordAlertDeduplicator: Sendable {
 /// Whether a keyword said again should get her attention again.
 ///
 /// Her name is the most common keyword, and at a family dinner it is said
-/// over and over. A buzz, the "נאמר: ..." pill and a VoiceOver announcement
-/// every time would soon be switched off altogether. So each word gets her
-/// attention at most once every `cooldownSeconds`; every line it is said in
-/// is still highlighted with a bell, so nothing is lost scrolling back.
-/// Shorter than the 30 seconds between notifications: someone repeating her
-/// name because she didn't react is exactly when the buzz helps.
+/// over and over. A buzz, the "ne'emar: ..." ("said: ...") pill and a
+/// VoiceOver announcement every time would soon be switched off altogether.
+/// So each word gets her attention at most once every `cooldownSeconds`;
+/// every line it is said in is still highlighted with a bell, so nothing is
+/// lost scrolling back. Shorter than the 30 seconds between notifications:
+/// someone repeating her name because she didn't react is exactly when the
+/// buzz helps.
 public struct KeywordAttentionPolicy: Sendable, Equatable {
     public var cooldownSeconds: TimeInterval
     private var lastAttentionAt: [UUID: TimeInterval] = [:]

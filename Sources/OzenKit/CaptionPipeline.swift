@@ -96,8 +96,8 @@ public final class CaptionPipeline {
     /// and background noise must not open phantom speakers or drag a real
     /// person's voice profile toward the fridge hum.
     private var embeddingVoiceDetector = EnergyVoiceDetector()
-    /// The speaker of the most recent window that held speech. A short
-    /// reply ("כן") is often over before its caption line exists, so a new
+    /// The speaker of the most recent window that held speech. A short reply
+    /// ("ken" — "yes") is often over before its caption line exists, so a new
     /// line with no speaker yet takes this one if it is recent.
     private var recentSpeechCluster: (id: Int, at: TimeInterval)?
     private static let minimumSpeechFractionForEmbedding = 0.4

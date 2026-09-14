@@ -58,8 +58,9 @@ public enum InstallExpiry {
         return chosen > now ? chosen : nil
     }
 
-    /// When it stops opening, as she'd say it, seen from `now`: "היום בשעה
-    /// 10:30", "מחר בשעה 10:30" or "ביום שלישי בשעה 10:30".
+    /// When it stops opening, as she'd say it, seen from `now`: "hayom besha'a
+    /// 10:30" ("today at 10:30"), "machar besha'a 10:30" ("tomorrow at 10:30")
+    /// or "beyom shlishi besha'a 10:30" ("on Tuesday at 10:30").
     public static func whenText(expiresAt: Date, now: Date, utcOffsetSeconds: Int) -> String {
         let expiryLocal = Int(expiresAt.timeIntervalSince1970.rounded(.down)) + utcOffsetSeconds
         let nowLocal = Int(now.timeIntervalSince1970.rounded(.down)) + utcOffsetSeconds
@@ -87,7 +88,8 @@ public enum InstallExpiry {
     public static let warningDetail = "צריך להתקין אותה מחדש מהמחשב לפני כן, כדי שהכתוביות לא ייעלמו."
 
     /// The reminder notification, worded for the moment it is delivered
-    /// rather than the moment it was scheduled, so "מחר" means tomorrow.
+    /// rather than the moment it was scheduled, so "machar" ("tomorrow")
+    /// means tomorrow.
     public static func reminderContent(expiresAt: Date, remindAt: Date, utcOffsetSeconds: Int) -> AlertNotificationContent {
         AlertNotificationContent(
             identifier: reminderIdentifier,

@@ -220,8 +220,8 @@ struct LiveCaptionView: View {
         }
         .onChange(of: viewModel.segments.count) { _, _ in
             noteSpeechActivity()
-            // A new line whose text happens to equal the previous one ("כן",
-            // then "כן" again) doesn't change the last line's text, so it
+            // A new line whose text happens to equal the previous one ("yes",
+            // then "yes" again) doesn't change the last line's text, so it
             // has to scroll here too or it lands below the fold.
             scrollToLatestIfPinned()
         }
@@ -554,7 +554,7 @@ struct LiveCaptionView: View {
         UIAccessibility.post(notification: .announcement, argument: text)
     }
 
-    /// "לפני דקה", "לפני שתי דקות", "לפני 7 דקות".
+    /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago".
     static func minutesAgoText(_ minutes: Int) -> String {
         switch minutes {
         case ...1: return "לפני דקה"

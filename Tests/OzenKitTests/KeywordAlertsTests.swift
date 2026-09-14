@@ -52,7 +52,7 @@ struct KeywordAlertMatcherTests {
         }
     }
 
-    @Test("a name starting with ה does not fire on an everyday word that only looks like it with a preposition swapped in")
+    @Test("a name starting with the letter he does not fire on an everyday word that only looks like it with a preposition swapped in")
     func nameStartingWithHeDoesNotMatchSwappedLetter() {
         let matcher = KeywordAlertMatcher(alerts: [alert("הילה"), alert("הלל")])
         #expect(matcher.matches(in: "לילה טוב, זה בכלל לא חשוב").isEmpty)

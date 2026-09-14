@@ -30,7 +30,7 @@ struct WhisperResultFilterTests {
         #expect(!filter.accepts(segment("[מוזיקה]")))
     }
 
-    @Test("'תודה' inside a real sentence is not a hallucination")
+    @Test("'toda' (thanks) inside a real sentence is not a hallucination")
     func thanksInsideSentenceKept() {
         #expect(filter.accepts(segment("תודה רבה על העזרה עם הקניות")))
     }
@@ -107,13 +107,13 @@ struct WhisperResultFilterTests {
         #expect(filter.isKnownHallucination("הפקה של הצגה בבית הספר") == false)
     }
 
-    @Test("a clearly heard 'תודה רבה' is real conversation and is kept")
+    @Test("a clearly heard 'toda raba' (thank you very much) is real conversation and is kept")
     func clearThanksKept() {
         #expect(filter.accepts(segment("תודה רבה.", noSpeech: 0.05, logprob: -0.35)))
         #expect(filter.accepts(segment("תודה!", noSpeech: 0.1, logprob: -0.5)))
     }
 
-    @Test("'תודה רבה' that the model barely heard or guessed at is dropped as invented")
+    @Test("'toda raba' (thank you very much) that the model barely heard or guessed at is dropped as invented")
     func doubtfulThanksDropped() {
         #expect(!filter.accepts(segment("תודה רבה.", noSpeech: 0.45, logprob: -0.4)))
         #expect(!filter.accepts(segment("[תודה רבה]", noSpeech: 0.1, logprob: -1.0)))

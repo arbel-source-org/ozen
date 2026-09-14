@@ -7,13 +7,14 @@ import Foundation
 /// times a day" is what she would have to ask about again, and what she
 /// most needs to have right afterwards. So numbers stand out on screen:
 /// written with digits ("10:30", "050-1234567", "20%") or in words, with
-/// Hebrew's attached prefixes ("ובשש", "לשלושה").
+/// Hebrew's attached prefixes ("u-veshesh" — "and at six", "lishlosha" —
+/// "to three").
 public enum NumberEmphasis {
     /// The stretches of `text` that are numbers, in order. Each covers a
     /// whole word (with its prefix), or for digits, from the first digit
     /// to the last, with a percent sign right after; and the unit that
-    /// follows, when one does ("3 כדורים", "חצי כדור", "500 מ״ג"), since
-    /// the amount alone doesn't say what of.
+    /// follows, when one does ("3 kadurim" — "3 pills", "chatzi kadur" —
+    /// "half a pill", "500 mg"), since the amount alone doesn't say what of.
     public static func ranges(in text: String) -> [Range<String.Index>] {
         let words = self.words(in: text)
         var result: [Range<String.Index>] = []
@@ -21,8 +22,9 @@ public enum NumberEmphasis {
         for (position, word) in words.enumerated() {
             guard position != skipUnitAt else { continue }
             guard let found = numberRange(of: word, at: position, in: words) else { continue }
-            // "3 כדורים": the unit joins the number, unless punctuation
-            // ends the number's word first ("בשעה 10:30, כדורים").
+            // "3 kadurim" ("3 pills"): the unit joins the number, unless
+            // punctuation ends the number's word first ("be-sha'a 10:30,
+            // kadurim" — "at 10:30, pills").
             if found.upperBound == word.text.endIndex, position + 1 < words.count,
                let unit = words[position + 1].coreRange, let unitWord = words[position + 1].core,
                units.contains(unitWord) {
@@ -47,15 +49,17 @@ public enum NumberEmphasis {
         let previous = position > 0 ? words[position - 1].core : nil
         let following = words[(position + 1)...].prefix(3).compactMap(\.core)
         if onesWords.contains(reading.number) {
-            // "אף אחד" is nobody and "כל אחד" everybody, and "אחד
-            // את השני" is each other: none of them a count of one.
+            // "af echad" ("nobody") and "kol echad" ("everybody"), and "echad
+            // et ha-sheni" ("each other", lit. "one to the other"): none of
+            // them a count of one.
             if let previous, notACountBefore.contains(previous) { return nil }
             if following.contains(where: otherOneWords.contains) { return nil }
         }
         if twoWords.contains(reading.number) {
-            // "השני" is the other one or the second, never a count of two.
+            // "ha-sheni" ("the other one" / "the second") is never a count of
+            // two.
             if reading.prefixes.contains("ה") { return nil }
-            // "לשני" after "אחד" is "to each other"; alone it's "to two"
+            // "lishnei" after "echad" is "to each other"; alone it's "to two"
             // or "on Monday".
             let earlier = words[max(0, position - 3)..<position].compactMap(\.core)
             if otherOneWords.contains(core), earlier.contains(where: onesWords.contains) { return nil }
@@ -65,8 +69,9 @@ public enum NumberEmphasis {
 
     /// Whether a line is worth listing under "numbers said" in a saved
     /// conversation: it has digits, or a counting word beyond one and two.
-    /// Those two are mostly idioms ("פעם אחת", "ביום שני"); a list of every
-    /// line with them in it would be most of the conversation.
+    /// Those two are mostly idioms ("pa'am achat" — "once", "be-yom sheni" —
+    /// "on Monday"); a list of every line with them in it would be most of
+    /// the conversation.
     public static func hasListableNumber(_ text: String) -> Bool {
         ranges(in: text).contains { range in
             let found = text[range]
@@ -109,7 +114,8 @@ public enum NumberEmphasis {
     }
 
     /// Whitespace always ends a word. A hyphen, maqaf, dash or slash does
-    /// too ("שלושה-עשר", "ב-3"), except between two digits, where it is
+    /// too ("shlosha-asar" — "thirteen", "be-3" — "in 3"), except between two
+    /// digits, where it is
     /// part of the number ("050-1234567", "3/4", "10:30-11:00").
     private static func separates(at index: String.Index, in text: String) -> Bool {
         let character = text[index]
@@ -124,7 +130,8 @@ public enum NumberEmphasis {
     }
 
     /// The number word inside `word` and the prefixes attached in front
-    /// of it (at most two: "ו" + "ב" + "שש"), or nil when it isn't one.
+    /// of it (at most two: vav + bet + "shesh" — "and" + "at" + "six"), or nil
+    /// when it isn't one.
     private static func numberReading(of word: String) -> (number: String, prefixes: String)? {
         if numberWords.contains(word) { return (word, "") }
         var rest = Substring(word)
@@ -152,14 +159,14 @@ public enum NumberEmphasis {
     static let onesWords: Set<String> = ["אחד", "אחת"]
     static let twoWords: Set<String> = ["שני", "שתי"]
     static let notACountBefore: Set<String> = ["אף", "ואף", "באף", "לאף", "כל", "וכל", "לכל", "בכל", "מכל", "בבת"]
-    /// The second half of "each other": "אחד לשני", "אחת מהשנייה".
+    /// The second half of "each other": "echad le-sheni", "achat me-hashniya".
     static let otherOneWords: Set<String> = [
         "השני", "לשני", "מהשני", "בשני", "והשני",
         "השנייה", "לשנייה", "מהשנייה", "בשנייה",
         "השניה", "לשניה", "מהשניה", "בשניה",
     ]
 
-    /// Counting words only. "שנים" (years), "שבוע" (a week) and ordinals
+    /// Counting words only. "shanim" (years), "shavua" (a week) and ordinals
     /// stay out, and so does anything that is mostly used as another word.
     static let numberWords: Set<String> = [
         "אפס",

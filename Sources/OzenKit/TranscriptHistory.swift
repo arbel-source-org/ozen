@@ -2,9 +2,10 @@ import Foundation
 
 /// One committed or pending caption line as saved to disk. `speakerName` is
 /// a snapshot of whatever was actually shown onscreen at save time (a
-/// profile's name, or a generic "דובר 2") rather than a live reference to a
-/// `SpeakerProfile` — a profile can be renamed or deleted later, and
-/// history should keep reading the way the conversation actually looked.
+/// profile's name, or a generic "dover 2" — "speaker 2") rather than a live
+/// reference to a `SpeakerProfile` — a profile can be renamed or deleted
+/// later, and history should keep reading the way the conversation actually
+/// looked.
 public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
     public let id: UUID
     public var text: String
@@ -69,7 +70,8 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
     public var modelVariant: String?
     public var inputName: String?
     public var segments: [SavedSegment]
-    /// A name the reader gave the conversation ("ביקור אצל הרופא").
+    /// A name the reader gave the conversation ("bikur etzel harofe" — "visit
+    /// to the doctor").
     public var title: String?
 
     public init(
@@ -182,8 +184,8 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
     public var segmentCount: Int
     public var preview: String
     public var engine: TranscriptionEngineKind
-    /// The real names that took part, in order of first appearance.
-    /// Generic labels ("דובר 2") say nothing about who was there and are
+    /// The real names that took part, in order of first appearance. Generic
+    /// labels ("dover 2" — "speaker 2") say nothing about who was there and are
     /// left out.
     public var speakerNames: [String]
     /// Lines marked as important.
@@ -261,7 +263,8 @@ extension TranscriptSessionSummary {
         return names
     }
 
-    /// "דובר 3", "דובר לא ידוע", and the English labels older builds saved.
+    /// "dover 3" ("speaker 3"), "dover lo yadu'a" ("unknown speaker"), and the
+    /// English labels older builds saved.
     public static func isGenericLabel(_ name: String) -> Bool {
         if name == EmbeddingClusterer.unknownSpeakerName || name == "Unknown speaker" { return true }
         for prefix in ["דובר ", "Speaker "] where name.hasPrefix(prefix) {

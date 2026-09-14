@@ -10,8 +10,8 @@ public struct WhisperSegmentSummary: Sendable, Equatable {
     /// Mean log-probability of the emitted tokens; very negative means the
     /// model was guessing.
     public var avgLogprob: Float
-    /// gzip compression ratio of the text — high values mean repetitive
-    /// output, the signature of a decoding loop ("תודה תודה תודה ...").
+    /// gzip compression ratio of the text — high values mean repetitive output,
+    /// the signature of a decoding loop ("toda toda toda ...").
     public var compressionRatio: Float
 
     public init(text: String, noSpeechProb: Float, avgLogprob: Float, compressionRatio: Float) {
@@ -23,22 +23,23 @@ public struct WhisperSegmentSummary: Sendable, Equatable {
 }
 
 /// Whisper is famous for hallucinating on silence and background noise:
-/// given a quiet room it will happily emit "תודה רבה", "כתוביות על ידי ...",
-/// or "Subtitles by the Amara.org community". For a captioning app that's
-/// worse than showing nothing — the reader can't tell an invented sentence
-/// from a real one. This applies the same three statistical checks the
-/// reference Whisper implementation uses to decide a window is junk, plus a
-/// short list of phrases the model is known to invent on silence in Hebrew
-/// and English.
+/// given a quiet room it will happily emit "toda raba" ("thanks"), "ktuviot
+/// al yedei ..." ("captions by ..."), or "Subtitles by the Amara.org
+/// community". For a captioning app that's worse than showing nothing — the
+/// reader can't tell an invented sentence from a real one. This applies the
+/// same three statistical checks the reference Whisper implementation uses
+/// to decide a window is junk, plus a short list of phrases the model is
+/// known to invent on silence in Hebrew and English.
 public struct WhisperResultFilter: Sendable, Equatable {
     public var noSpeechThreshold: Float
     public var logprobThreshold: Float
     public var compressionRatioThreshold: Float
     public var knownHallucinations: Set<String>
     /// Phrases Whisper invents on noise that people also genuinely say in
-    /// conversation ("תודה", "תודה רבה"). Dropped only when the segment's
-    /// own statistics look like noise, never when the model heard them
-    /// clearly: missing a real "thank you" is its own kind of wrong.
+    /// conversation ("toda", "toda raba" — "thanks", "thank you very much").
+    /// Dropped only when the segment's own statistics look like noise, never
+    /// when the model heard them clearly: missing a real "thank you" is its own
+    /// kind of wrong.
     public var ambiguousHallucinations: Set<String>
     /// Above this no-speech probability an ambiguous phrase is treated as
     /// invented. Real short speech sits far below it.
@@ -46,16 +47,17 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// Below this mean log-probability an ambiguous phrase is treated as
     /// a guess.
     public var ambiguousLogprobThreshold: Float
-    /// Openings of the credit lines Whisper invents on silence, which come
-    /// with an arbitrary name attached ("כתוביות על ידי <name>"), so an
-    /// exact-phrase list can't catch them.
+    /// Openings of the credit lines Whisper invents on silence, which come with
+    /// an arbitrary name attached ("ktuviot al yedei <name>" — "captions by
+    /// <name>"), so an exact-phrase list can't catch them.
     public var hallucinatedCreditPrefixes: [String]
     /// A credit prefix only condemns a short segment; a long one that
     /// happens to start the same way is someone actually talking.
     public var maximumCreditLineWords: Int
 
-    /// Bare labels ("כתוביות", "תרגום") are ordinary words too, so they
-    /// only count as a credit when a colon follows, as in "תרגום: מיכל".
+    /// Bare labels ("ktuviot" / "captions", "targum" / "translation") are
+    /// ordinary words too, so they only count as a credit when a colon follows,
+    /// as in "targum: Michal" ("translation: Michal").
     public var hallucinatedCreditLabels: [String]
 
     public static let defaultCreditPrefixes: [String] = [
@@ -125,13 +127,13 @@ public struct WhisperResultFilter: Sendable, Equatable {
         return Self.collapsingRepeats(joined)
     }
 
-    /// A decoding loop that stays short enough to pass the compression
-    /// check still puts "לבוא לבוא לבוא לבוא לבוא לבוא" on screen. Any word
-    /// or short phrase repeated back to back more than `maxRepeats` times
-    /// is cut down to that many: people do say "לא, לא, לא", but nobody
-    /// says it six times. The kept copies are the first ones and the last,
-    /// so the sentence keeps its closing punctuation. Text with nothing to
-    /// collapse comes back exactly as it was.
+    /// A decoding loop that stays short enough to pass the compression check
+    /// still puts "lavo lavo lavo lavo lavo lavo" ("come come come...") on
+    /// screen. Any word or short phrase repeated back to back more than
+    /// `maxRepeats` times is cut down to that many: people do say "lo, lo, lo"
+    /// ("no, no, no"), but nobody says it six times. The kept copies are the
+    /// first ones and the last, so the sentence keeps its closing punctuation.
+    /// Text with nothing to collapse comes back exactly as it was.
     public static func collapsingRepeats(_ text: String, maxRepeats: Int = 3, maxPhraseWords: Int = 4) -> String {
         var words = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
         guard maxRepeats >= 1, words.count > maxRepeats else { return text }
@@ -187,18 +189,18 @@ public struct WhisperResultFilter: Sendable, Equatable {
         return true
     }
 
-    /// Case-, punctuation- and bracket-insensitive lookup, so "[תודה רבה]",
-    /// "תודה רבה." and "תודה רבה!" all match one entry.
+    /// Case-, punctuation- and bracket-insensitive lookup, so "[toda raba]",
+    /// "toda raba." and "toda raba!" all match one entry.
     public func isKnownHallucination(_ text: String) -> Bool {
         let normalized = Self.normalize(text)
         if knownHallucinations.contains(normalized) { return true }
         return isCreditLine(raw: text, normalized: normalized)
     }
 
-    /// "כתוביות: ישראל ישראלי", "Subtitles by XYZ": a short segment that
-    /// opens with a credit phrase, followed by a separator (the
-    /// normalizer already turned ":" into nothing) or a name. Whole words
-    /// only, so "כתוביותיים" or "תרגומים" never match.
+    /// "ktuviot: Yisrael Yisraeli" ("captions: Israel Israeli"), "Subtitles by
+    /// XYZ": a short segment that opens with a credit phrase, followed by a
+    /// separator (the normalizer already turned ":" into nothing) or a name.
+    /// Whole words only, so "ktuviotayim" or "targumim" never match.
     func isCreditLine(raw: String, normalized: String) -> Bool {
         let words = normalized.split(separator: " ")
         guard !words.isEmpty, words.count <= maximumCreditLineWords else { return false }

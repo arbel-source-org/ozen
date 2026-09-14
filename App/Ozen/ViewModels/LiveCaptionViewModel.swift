@@ -1025,7 +1025,7 @@ public final class LiveCaptionViewModel {
     /// pill and be announced, or nil when they should only highlight their
     /// lines (see `KeywordAttentionPolicy`). Every new hit is considered,
     /// not just the newest: one line can hold two words from the list
-    /// ("סבתא, קראי לאמבולנס"), and each starts its own quiet period.
+    /// ("grandma, call an ambulance"), and each starts its own quiet period.
     public func claimAttentionForNewKeywordHits() -> KeywordHit? {
         let fresh = keywordHits.filter { !handledKeywordHitIDs.contains($0.id) }
         // keywordHits is capped, so this set stays small.

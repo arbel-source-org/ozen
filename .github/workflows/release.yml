@@ -74,7 +74,10 @@ jobs:
             if [ -n "$PREVIOUS" ]; then
               echo "## Changes since $PREVIOUS"
               echo
-              git log --no-merges --pretty='- %s' "$PREVIOUS..${{ github.sha }}"
+              # Hebrew quoted in a commit subject is replaced with a marker:
+              # the repository's pages are kept free of Hebrew text.
+              git log --no-merges --pretty='- %s' "$PREVIOUS..${{ github.sha }}" \
+                | perl -CSD -pe 's/[\x{0590}-\x{05FF}]+(?:[\s,\x{05F3}\x{05F4}"\x27\-]+[\x{0590}-\x{05FF}]+)*/(Hebrew)/g'
             fi
           } > release-notes.md
           # --target: without it the tag lands on the default branch's

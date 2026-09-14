@@ -162,7 +162,7 @@ struct DiagnosticsView: View {
         TimeZone.current.secondsFromGMT(for: Date())
     }
 
-    /// "812 MB בשימוש · עוד 1.9 GB": what the app uses, and how much more
+    /// "812 MB in use · 1.9 GB more": what the app uses, and how much more
     /// iOS lets it have before ending it.
     private static var memoryText: String {
         var parts: [String] = []
