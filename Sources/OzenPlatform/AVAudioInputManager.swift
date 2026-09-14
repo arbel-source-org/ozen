@@ -146,6 +146,25 @@ public final class AVAudioInputManager: AudioCapturing {
 
     private static let configurationRetryLimit = 5
 
+    /// iOS does not promise to announce the end of an interruption: after
+    /// a phone call the "ended" notice can simply never come. Called when
+    /// the app is back on screen while still marked interrupted. Taking
+    /// the session back fails while the call still holds it, so success
+    /// means the interruption is over. Returns whether it is.
+    public func reclaimSessionAfterInterruption() -> Bool {
+        guard sessionPrepared else { return true }
+        do {
+            try session.setActive(true)
+        } catch {
+            return false
+        }
+        if activeTap != nil, !engine.isRunning {
+            engine.prepare()
+            try? engine.start()
+        }
+        return true
+    }
+
     public func refreshInputs() {
         if !sessionPrepared {
             // The input list is only meaningful for a recording category.

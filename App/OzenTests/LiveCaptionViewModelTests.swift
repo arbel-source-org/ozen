@@ -595,3 +595,85 @@ struct LiveCaptionViewModelConversationBreakTests {
         #expect(viewModel.checkForConversationBreak() == false)
     }
 }
+
+@Suite("LiveCaptionViewModel interruption whose end was never announced")
+@MainActor
+struct LiveCaptionViewModelMissedInterruptionEndTests {
+    private final class Reclaimer {
+        var answer: Bool
+        var calls = 0
+        init(answer: Bool) { self.answer = answer }
+    }
+
+    private func makeViewModel(reclaimer: Reclaimer, engine: FakeEngine = FakeEngine()) -> LiveCaptionViewModel {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-interrupt-\(UUID())", isDirectory: true)
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: [])
+        )
+        return LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathExtension("json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: directory),
+            reclaimAudioSession: {
+                reclaimer.calls += 1
+                return reclaimer.answer
+            }
+        )
+    }
+
+    private func waitFor(_ condition: @MainActor () -> Bool) async -> Bool {
+        let deadline = ContinuousClock.now + .seconds(2)
+        while ContinuousClock.now < deadline {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        return condition()
+    }
+
+    @Test("back on screen after the call, captions that failed during it recover")
+    func reclaimsAndRecovers() async {
+        let reclaimer = Reclaimer(answer: true)
+        let engine = FakeEngine()
+        let viewModel = makeViewModel(reclaimer: reclaimer, engine: engine)
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.systemInterruptionChanged(began: true)
+        engine.endStream(throwing: TestError())
+        #expect(await waitFor { viewModel.pipeline.phase.failure != nil })
+        // No retry while the call holds the microphone.
+        #expect(viewModel.pipeline.scheduledRetry == nil)
+
+        viewModel.sceneActivityChanged(isActive: true)
+
+        #expect(reclaimer.calls == 1)
+        #expect(viewModel.isInterruptedBySystem == false)
+        #expect(await waitFor { viewModel.pipeline.phase.isListening })
+    }
+
+    @Test("while the call still holds the microphone, it stays interrupted")
+    func callStillGoing() async {
+        let reclaimer = Reclaimer(answer: false)
+        let viewModel = makeViewModel(reclaimer: reclaimer)
+        viewModel.systemInterruptionChanged(began: true)
+
+        viewModel.sceneActivityChanged(isActive: true)
+
+        #expect(reclaimer.calls == 1)
+        #expect(viewModel.isInterruptedBySystem)
+    }
+
+    @Test("the audio session is left alone when nothing was interrupted, or when leaving the screen")
+    func leftAlone() async {
+        let reclaimer = Reclaimer(answer: true)
+        let viewModel = makeViewModel(reclaimer: reclaimer)
+        viewModel.sceneActivityChanged(isActive: true)
+        viewModel.systemInterruptionChanged(began: true)
+        viewModel.sceneActivityChanged(isActive: false)
+
+        #expect(reclaimer.calls == 0)
+        #expect(viewModel.isInterruptedBySystem)
+    }
+}

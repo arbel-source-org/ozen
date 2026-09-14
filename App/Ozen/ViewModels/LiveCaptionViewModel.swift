@@ -35,6 +35,9 @@ public final class LiveCaptionViewModel {
     public private(set) var isAppActive = true
     private var backgroundAlerts = BackgroundAlertPolicy()
     private let postNotification: ((AlertNotificationContent) -> Void)?
+    /// Tries to take the audio session back after an interruption whose
+    /// end was never announced; true when it worked.
+    private let reclaimAudioSession: (@MainActor () -> Bool)?
     private var historySessionID = UUID()
     private var historySessionStartedAt: TimeInterval?
     /// Lines before this index in `pipeline.segments` belong to an earlier
@@ -82,7 +85,8 @@ public final class LiveCaptionViewModel {
         knownSoundIdentifiers: Set<String>? = nil,
         audioManager: AVAudioInputManager? = nil,
         synthesizer: (any SpeechSynthesizing)? = nil,
-        postNotification: ((AlertNotificationContent) -> Void)? = nil
+        postNotification: ((AlertNotificationContent) -> Void)? = nil,
+        reclaimAudioSession: (@MainActor () -> Bool)? = nil
     ) {
         self.settingsStore = settingsStore
         self.pipeline = pipeline
@@ -94,14 +98,20 @@ public final class LiveCaptionViewModel {
         self.audioManager = audioManager
         self.synthesizer = synthesizer
         self.postNotification = postNotification
+        if let reclaimAudioSession {
+            self.reclaimAudioSession = reclaimAudioSession
+        } else if let audioManager {
+            self.reclaimAudioSession = { @MainActor in audioManager.reclaimSessionAfterInterruption() }
+        } else {
+            self.reclaimAudioSession = nil
+        }
         self.settings = settingsStore.load()
         backgroundAlerts.isEnabled = settings.notifyWhenInBackground
         for profile in settings.speakerProfiles {
             pipeline.enroll(profile: profile)
         }
         audioManager?.onInterruption = { [weak self] began in
-            self?.isInterruptedBySystem = began
-            self?.pipeline.systemInterruptionChanged(active: began)
+            self?.systemInterruptionChanged(began: began)
         }
         synthesizer?.onSpeakingChanged = { [weak self] speaking in
             self?.speakingDidChange(speaking)
@@ -118,6 +128,18 @@ public final class LiveCaptionViewModel {
 
     public func sceneActivityChanged(isActive: Bool) {
         isAppActive = isActive
+        // After a phone call iOS may never say the interruption ended.
+        // Back on screen, try to take the microphone back: if that works
+        // the call is over, and captions (and automatic recovery) resume.
+        if isActive, isInterruptedBySystem, reclaimAudioSession?() == true {
+            systemInterruptionChanged(began: false)
+        }
+    }
+
+    /// The system took (`true`) or gave back (`false`) the audio session.
+    func systemInterruptionChanged(began: Bool) {
+        isInterruptedBySystem = began
+        pipeline.systemInterruptionChanged(active: began)
     }
 
     public var notifyWhenInBackground: Bool {
