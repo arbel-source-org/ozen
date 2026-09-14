@@ -290,10 +290,19 @@ public actor WhisperKitEngine: TranscriptionEngine {
             var options = isFinal ? finalPass : livePass
             options.promptTokens = promptTokens(using: pipe)
             let passStarted = ContinuousClock.now
-            let results: [TranscriptionResult] = try await pipe.transcribe(
-                audioArray: window,
-                decodeOptions: options
-            )
+            let results: [TranscriptionResult]
+            do {
+                results = try await pipe.transcribe(audioArray: window, decodeOptions: options)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // One pass failing (the Neural Engine busy, memory tight for
+                // a moment) used to end the stream: the pipeline restarted
+                // the engine and the sentence being spoken was lost with the
+                // buffer. The same window gets one more try first.
+                try await Task.sleep(for: .milliseconds(250))
+                results = try await pipe.transcribe(audioArray: window, decodeOptions: options)
+            }
             if !isFinal {
                 // Only live passes: a final pass may retry at higher
                 // temperatures and would overstate how slow the phone is.
