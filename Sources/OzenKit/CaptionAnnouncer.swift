@@ -16,6 +16,8 @@ public struct CaptionAnnouncer: Sendable, Equatable {
     /// What each line said when it was last announced (or skipped).
     private var announced: [UUID: String] = [:]
     private var lastSpeaker: String?
+    /// The line announced (or skipped) last, for the quiet before the next.
+    private var lastLine: TranscriptSegment?
     /// Where the next look starts (`scanStart`): lines before it were
     /// finished and handled, and nothing corrects a line that far back.
     private var scannedCount = 0
@@ -45,12 +47,14 @@ public struct CaptionAnnouncer: Sendable, Equatable {
             announced[segment.id] = text
             guard !text.isEmpty else { continue }
             let name = speakerName(segment)
-            if let name, name != lastSpeaker {
+            // After a quiet stretch the name comes again, as on screen.
+            if let name, name != lastSpeaker || CaptionLayout.startsAfterQuiet(segment, previous: lastLine) {
                 parts.append("\(name): \(text)")
             } else {
                 parts.append(text)
             }
             lastSpeaker = name
+            lastLine = segment
         }
         return parts.isEmpty ? nil : parts.joined(separator: "\n")
     }
@@ -89,6 +93,7 @@ public struct CaptionAnnouncer: Sendable, Equatable {
         if segments.isEmpty {
             announced = [:]
             lastSpeaker = nil
+            lastLine = nil
         } else if announced.count > segments.count {
             let shown = Set(segments.map(\.id))
             announced = announced.filter { shown.contains($0.key) }

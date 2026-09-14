@@ -48,6 +48,17 @@ struct CaptionAnnouncerTests {
         #expect(announcer.announcement(for: [first, second, third, fourth], speakerName: names) == "יופי")
     }
 
+    @Test("after five quiet minutes the same speaker is named again")
+    func nameAgainAfterQuiet() {
+        var announcer = CaptionAnnouncer()
+        let before = TranscriptSegment(id: UUID(), text: "לילה טוב", isCommitted: true, speakerClusterID: 1, startTimestamp: 1000, lastUpdateTimestamp: 1002)
+        let soon = TranscriptSegment(id: UUID(), text: "ונשיקות", isCommitted: true, speakerClusterID: 1, startTimestamp: 1010, lastUpdateTimestamp: 1011)
+        let later = TranscriptSegment(id: UUID(), text: "בוקר טוב", isCommitted: true, speakerClusterID: 1, startTimestamp: 1400, lastUpdateTimestamp: 1402)
+        #expect(announcer.announcement(for: [before], speakerName: names) == "דנה: לילה טוב")
+        #expect(announcer.announcement(for: [before, soon], speakerName: names) == "ונשיקות")
+        #expect(announcer.announcement(for: [before, soon, later], speakerName: names) == "דנה: בוקר טוב")
+    }
+
     @Test("blank finished lines are skipped and never announced later")
     func blankLines() {
         var announcer = CaptionAnnouncer()
