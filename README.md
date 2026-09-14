@@ -148,7 +148,7 @@ vocabulary, model-download, recovery, battery, notification and layout
 logic (226 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 36 tests).
+the same fakes (another 33 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
