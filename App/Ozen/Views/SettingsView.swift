@@ -13,6 +13,9 @@ struct SettingsView: View {
     /// screen is off" switch can't do anything until they're allowed.
     @State private var notificationsBlocked = false
     @State private var testNotificationSent = false
+    /// iOS has Live Activities for Ozen switched off, so the lock screen
+    /// captions switch can't show anything until they're allowed.
+    @State private var lockScreenBlocked = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
@@ -209,11 +212,31 @@ struct SettingsView: View {
             Toggle("סימן שאלה ליד שורות שהמנוע לא בטוח בהן", isOn: $viewModel.display.markUncertainLines)
             Toggle("מספרים בולטים (שעות, כמויות, טלפונים)", isOn: $viewModel.display.emphasizeNumbers)
             Toggle("כתוביות גם במסך הנעילה", isOn: $viewModel.display.lockScreenCaptions)
+            if viewModel.display.lockScreenCaptions && lockScreenBlocked {
+                lockScreenBlockedNotice
+            }
             Toggle("VoiceOver מקריא שורות חדשות", isOn: $viewModel.display.announceNewLines)
         } header: {
             Text("תצוגה")
         } footer: {
             Text("סימן שאלה ליד שורה אומר שייתכן שהיא לא נשמעה נכון. מספרים כמו שעה, כמות כדורים או מספר טלפון מודגשים בצבע אחר, כדי שלא יתפספסו. לחיצה ארוכה על השורה מאפשרת לבקש שיחזרו עליה. כש-VoiceOver פועל, כל שורה שהסתיימה מוקראת או נשלחת לצג ברייל מעצמה. אחרי רבע שעה בלי דיבור המסך ננעל כרגיל, והכתוביות וההתראות ממשיכות. השורות האחרונות מופיעות גם במסך הנעילה, בלי לפתוח את הטלפון; מי שמסתכל על הטלפון יכול לקרוא אותן.")
+        }
+        .task(id: scenePhase) {
+            // Again on coming back from the Settings app, as for notifications.
+            guard scenePhase == .active else { return }
+            lockScreenBlocked = !viewModel.lockScreenCaptionsAllowedBySystem
+        }
+    }
+
+    private var lockScreenBlockedNotice: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("פעילויות בזמן אמת כבויות לאוזן בהגדרות הטלפון, אז הכתוביות לא יופיעו במסך הנעילה.", systemImage: "lock.slash.fill")
+                .foregroundStyle(.red)
+            Button("לפתוח את הגדרות הטלפון") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    openURL(url)
+                }
+            }
         }
     }
 

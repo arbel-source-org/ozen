@@ -544,8 +544,6 @@ public final class LiveCaptionViewModel {
         historySessionDidChangePhase()
     }
 
-    /// Ends the current history session (saving it) and starts a fresh,
-    /// empty one.
     /// Marks a line as important, or unmarks it, and saves right away so
     /// the mark isn't lost if the app is closed before the next autosave.
     public func toggleStar(_ segment: TranscriptSegment) {
@@ -650,6 +648,17 @@ public final class LiveCaptionViewModel {
     }
 
     static let lockScreenKeepAliveSeconds: Double = 50
+
+    /// False when iOS Settings has Live Activities off for Ozen, so the
+    /// lock screen captions setting can't show anything. Read when the
+    /// settings screen appears; it isn't observed.
+    public var lockScreenCaptionsAllowedBySystem: Bool {
+        lockScreen?.isAllowedBySystem ?? true
+    }
+
+    /// Whether the lines are on the lock screen as far as the app knows,
+    /// for the diagnostics report.
+    public var lockScreenCaptionsShowing: Bool { lockScreenShowing }
 
     /// She has seen where the lines she missed begin.
     func acknowledgeAwayLines() {

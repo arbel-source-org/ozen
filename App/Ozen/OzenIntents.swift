@@ -2,22 +2,13 @@ import AppIntents
 import Foundation
 import Observation
 
-/// "Hey Siri, start captions in Ozen" — the whole app is one screen, so the
-/// intents just open it and leave a note for the view to act on. They
-/// run in the app's own process (`openAppWhenRun`), so nothing has to be
-/// shared across an extension boundary.
-struct StartCaptionsIntent: AppIntent {
-    static let title: LocalizedStringResource = "התחלת כתוביות"
-    static let description = IntentDescription("פותח את אוזן ומתחיל לכתב את השיחה.")
-    static let openAppWhenRun = true
+// "Hey Siri, start captions in Ozen" — the whole app is one screen, so the
+// intents just open it and leave a note for the view to act on. They
+// run in the app's own process (`openAppWhenRun`), so nothing has to be
+// shared across an extension boundary. `StartCaptionsIntent` lives in
+// App/Shared, since the Control Center button runs it too.
 
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        PendingAppAction.shared.post(.startCaptions)
-        return .result()
-    }
-}
-
+/// "Hey Siri, stop captions in Ozen".
 struct StopCaptionsIntent: AppIntent {
     static let title: LocalizedStringResource = "עצירת כתוביות"
     static let description = IntentDescription("מפסיק את הכתוביות ושומר את השיחה בהיסטוריה.")

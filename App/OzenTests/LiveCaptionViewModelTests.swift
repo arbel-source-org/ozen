@@ -1474,10 +1474,11 @@ struct LiveCaptionViewModelLockScreenTests {
         var shown: [LockScreenCaptionContent] = []
         var isShowing = false
         var ends = 0
+        var isAllowedBySystem = true
 
         func show(_ content: LockScreenCaptionContent, mayStart: Bool) -> Bool {
             if !isShowing {
-                guard mayStart else { return false }
+                guard mayStart, isAllowedBySystem else { return false }
                 isShowing = true
             }
             shown.append(content)
@@ -1529,6 +1530,24 @@ struct LiveCaptionViewModelLockScreenTests {
         #expect(!lockScreen.isShowing)
 
         viewModel.sceneActivityChanged(isActive: true)
+        #expect(lockScreen.isShowing)
+    }
+
+    @Test("with Live Activities off in iOS Settings nothing shows, and settings can say so")
+    func offInSystemSettings() async {
+        let lockScreen = FakeLockScreen()
+        lockScreen.isAllowedBySystem = false
+        let (viewModel, _) = makeViewModel(lockScreen: lockScreen)
+        #expect(!viewModel.lockScreenCaptionsAllowedBySystem)
+        await viewModel.start()
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(!lockScreen.isShowing)
+
+        // Switched on in Settings: coming back to the app starts them.
+        lockScreen.isAllowedBySystem = true
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.sceneActivityChanged(isActive: true)
+        #expect(viewModel.lockScreenCaptionsAllowedBySystem)
         #expect(lockScreen.isShowing)
     }
 

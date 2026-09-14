@@ -12,6 +12,9 @@ public protocol LockScreenCaptionsDisplaying: AnyObject {
     @discardableResult
     func show(_ content: LockScreenCaptionContent, mayStart: Bool) -> Bool
     func end()
+    /// False when Live Activities are switched off for the app in iOS
+    /// Settings, where nothing the app does can show them.
+    var isAllowedBySystem: Bool { get }
 }
 
 /// The Live Activity itself (see `CaptionActivityAttributes`).
@@ -33,7 +36,16 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
     init() {
         // One left from a previous run (the app was closed while it
         // showed) would sit on the lock screen with that run's last lines.
-        Task.detached { await Self.end(id: nil) }
+        // Which ones is read here, before anything can start a new one: read
+        // later, in the task, the list could include the one the first
+        // `show` just started.
+        let leftovers = Activity<CaptionActivityAttributes>.activities.map(\.id)
+        guard !leftovers.isEmpty else { return }
+        Task.detached { await Self.end(ids: leftovers) }
+    }
+
+    var isAllowedBySystem: Bool {
+        ActivityAuthorizationInfo().areActivitiesEnabled
     }
 
     @discardableResult
@@ -51,7 +63,7 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
         }
         // Ended by iOS (they last eight hours) or swiped away.
         activityID = nil
-        guard mayStart, ActivityAuthorizationInfo().areActivitiesEnabled else { return false }
+        guard mayStart, isAllowedBySystem else { return false }
         activityID = Self.start(state: state, staleDate: staleDate)
         return activityID != nil
     }
@@ -59,7 +71,7 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
     func end() {
         guard let activityID else { return }
         self.activityID = nil
-        Task.detached { await Self.end(id: activityID) }
+        Task.detached { await Self.end(ids: [activityID]) }
     }
 
     private nonisolated static func isRunning(id: String) -> Bool {
@@ -78,9 +90,9 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
         await activity.update(ActivityContent(state: state, staleDate: staleDate))
     }
 
-    /// Ends the activity with `id`, or every one of them when nil.
-    private nonisolated static func end(id: String?) async {
-        for activity in Activity<CaptionActivityAttributes>.activities where id == nil || activity.id == id {
+    /// Ends the activities with these ids.
+    private nonisolated static func end(ids: [String]) async {
+        for activity in Activity<CaptionActivityAttributes>.activities where ids.contains(activity.id) {
             await activity.end(nil, dismissalPolicy: .immediate)
         }
     }

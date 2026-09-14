@@ -1,4 +1,5 @@
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -6,6 +7,25 @@ import WidgetKit
 struct OzenWidgetBundle: WidgetBundle {
     var body: some Widget {
         CaptionLiveActivity()
+        if #available(iOS 18.0, *) {
+            StartCaptionsControl()
+        }
+    }
+}
+
+/// A button for Control Center, or in place of the flashlight or camera on
+/// the lock screen, that opens Ozen and starts captions: one press when
+/// someone starts talking, instead of finding the app.
+@available(iOS 18.0, *)
+struct StartCaptionsControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "com.arbelonson.ozen.Ozen.Captions.start") {
+            ControlWidgetButton(action: StartCaptionsIntent()) {
+                Label("כתוביות", systemImage: "captions.bubble.fill")
+            }
+        }
+        .displayName("התחלת כתוביות")
+        .description("פותח את אוזן ומתחיל לכתב את השיחה.")
     }
 }
 

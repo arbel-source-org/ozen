@@ -51,12 +51,20 @@ leave the phone.
 - **Captions on the lock screen.** The newest lines show there while
   captions run, and stay (saying "paused because of a call" or "captions
   stopped") when something interrupts them. If none appear: iOS Settings →
-  Ozen → Live Activities must be on, and captions have to be started (or the
+  Ozen → Live Activities must be on (when it is off, Ozen's own Settings
+  shows a red note under the switch with a button that opens that page),
+  and captions have to be started (or the
   app opened once) with the phone unlocked, since iOS only lets an app put a
   new one on the lock screen from the front. They also end by themselves
   after eight hours; opening the app brings them back. Settings → Display
   (tetzuga) → "Captions on the lock screen too" (ktuviyot gam be-masach
   ha-ne'ila) turns them off.
+- **Adding the start button to Control Center or the lock screen.** On iOS
+  18 or later: open Control Center, press and hold an empty spot, tap "Add
+  a Control" and search for Ozen. For the lock screen: press and hold the
+  lock screen, tap Customize, then Lock Screen, remove the flashlight or
+  camera button and add Ozen's in its place. The button opens the app,
+  so the phone asks for Face ID or the code first.
 - **The screen turned off while listening.** After fifteen minutes with
   nothing said, the phone locks as usual to save the battery. Captions and
   doorbell or alarm alerts keep running; unlock to read.
