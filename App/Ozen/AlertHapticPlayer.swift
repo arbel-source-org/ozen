@@ -14,18 +14,25 @@ final class AlertHapticPlayer {
     static let shared = AlertHapticPlayer()
 
     private var engine: CHHapticEngine?
-    private let supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
+    let supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
+    /// Why the latest alert vibration fell back to the plain warning buzz,
+    /// or nil when it played as designed. For Diagnostics: the fallback
+    /// still buzzes, so nobody would otherwise know the patterns aren't.
+    private(set) var lastFailure: String?
 
     func play(_ vibration: AlertVibration) {
         guard supportsHaptics else { return }
         do {
             try start(vibration)
+            lastFailure = nil
         } catch {
             engine = nil
             do {
                 try start(vibration)
+                lastFailure = nil
             } catch {
                 engine = nil
+                lastFailure = String(describing: error)
                 UINotificationFeedbackGenerator().notificationOccurred(.warning)
             }
         }
