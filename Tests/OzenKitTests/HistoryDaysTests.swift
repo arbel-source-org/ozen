@@ -22,6 +22,9 @@ struct HistoryDaysTests {
         #expect(HistoryDays.title(day: today - 7, today: today) == "יום שני, 7 בספטמבר")
         #expect(HistoryDays.title(day: today - 258, today: today) == "יום שלישי, 30 בדצמבר 2025")
         #expect(HistoryDays.title(day: today + 1, today: today) == "יום שלישי, 15 בספטמבר")
+        let lateSundayUTC = mondayNoonUTC - 13.5 * 3_600
+        #expect(HistoryDays.title(of: lateSundayUTC, now: mondayNoonUTC, utcOffsetSeconds: { _ in israel }) == "היום")
+        #expect(HistoryDays.title(of: lateSundayUTC, now: mondayNoonUTC, utcOffsetSeconds: { _ in 0 }) == "אתמול")
     }
 
     @Test("conversations keep their order under their local day, even when a day comes round again out of order")

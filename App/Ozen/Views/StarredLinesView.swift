@@ -59,7 +59,7 @@ struct StarredLinesView: View {
                                 }
                             }
                         } header: {
-                            Text(Date(timeIntervalSince1970: group.startedAt).formatted(date: .long, time: .shortened))
+                            Text(Self.heading(startedAt: group.startedAt))
                         }
                     }
                 }
@@ -80,6 +80,14 @@ struct StarredLinesView: View {
             }
         }
         .task { await load() }
+    }
+
+    /// "Yesterday at 18:30", like the day headings in History.
+    static func heading(startedAt: TimeInterval) -> String {
+        let day = HistoryDays.title(of: startedAt, now: Date().timeIntervalSince1970) {
+            TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: $0))
+        }
+        return "\(day) בשעה \(Date(timeIntervalSince1970: startedAt).formatted(date: .omitted, time: .shortened))"
     }
 
     private func load() async {

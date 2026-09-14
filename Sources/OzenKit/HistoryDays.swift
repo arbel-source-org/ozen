@@ -27,6 +27,13 @@ public enum HistoryDays {
         return days
     }
 
+    public static func title(of timestamp: TimeInterval, now: TimeInterval, utcOffsetSeconds: (TimeInterval) -> Int) -> String {
+        title(
+            day: CivilDate.localDay(of: timestamp, utcOffsetSeconds: utcOffsetSeconds(timestamp)),
+            today: CivilDate.localDay(of: now, utcOffsetSeconds: utcOffsetSeconds(now))
+        )
+    }
+
     public static func title(day: Int, today: Int) -> String {
         let weekday = "יום \(weekdayNames[CivilDate.weekday(ofDay: day)])"
         switch today - day {
