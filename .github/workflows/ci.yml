@@ -60,6 +60,24 @@ jobs:
             -scheme Ozen \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
             2>&1 | tee xcodebuild-raw.log | xcpretty
+      - name: Show why it failed
+        # xcpretty prints nothing useful when a test fails in a way it
+        # doesn't recognise, or the test host crashes: the run just ends
+        # after "All tests" with exit code 65. The raw log has the answer.
+        if: failure()
+        run: |
+          if [ -f xcodebuild-raw.log ]; then
+            grep -nE "error:|failed|✘|recorded an issue|Fatal error|crashed|Terminating app|Restarting after unexpected exit|Test session results" xcodebuild-raw.log | head -80 || true
+            echo "----- last 80 lines -----"
+            tail -n 80 xcodebuild-raw.log
+          fi
+      - name: Keep the raw test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-raw-log
+          path: xcodebuild-raw.log
+          if-no-files-found: ignore
       - name: Verify tests actually ran (don't just trust a green exit code)
         # xcpretty's filtered output showed no per-test lines at all on an
         # earlier run, which turned out to hide a real gap (OzenPlatform's
