@@ -282,6 +282,19 @@ public final class LiveCaptionViewModel {
     /// request that launched the app shapes it: "stop" starts nothing,
     /// "say" talks first and only then opens the microphone, anything
     /// else starts captions as usual.
+    /// Siri and Shortcuts requests that arrived together, in order. On the
+    /// first appearance the first one decides how the app starts (see
+    /// `launch(pending:)`); the rest follow as ordinary requests.
+    public func handle(pending actions: [AppAction], isFirstAppearance: Bool) async {
+        var remaining = actions[...]
+        if isFirstAppearance {
+            await launch(pending: remaining.popFirst())
+        }
+        for action in remaining {
+            await perform(action)
+        }
+    }
+
     public func launch(pending: AppAction?) async {
         switch pending {
         case .stopCaptions:
@@ -827,18 +840,21 @@ public final class LiveCaptionViewModel {
     /// saved: the next words start a new conversation, so the autosave
     /// can't quietly bring the deleted one back.
     public func deleteConversation(id: UUID) throws {
+        // Disk first: if the delete fails, the conversation on screen keeps
+        // saving to the record that is still there. Nothing can queue an
+        // autosave in between, since this runs on the main actor.
+        try historyWriter.deleteNow(id: id)
         closedHistorySessions.removeAll { $0.id == id }
         if id == historySessionID {
             forgetCurrentConversation()
         }
-        try historyWriter.deleteNow(id: id)
     }
 
     /// Deletes every saved conversation, including the one in progress.
     public func deleteAllConversations() throws {
+        try historyWriter.deleteAllNow()
         closedHistorySessions = []
         forgetCurrentConversation()
-        try historyWriter.deleteAllNow()
     }
 
     private func forgetCurrentConversation() {

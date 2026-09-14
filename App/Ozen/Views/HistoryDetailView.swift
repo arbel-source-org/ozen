@@ -20,6 +20,7 @@ struct HistoryDetailView: View {
     @State private var scrollRequest = 0
     @State private var hasLoaded = false
     @State private var confirmingDelete = false
+    @State private var deleteError: String?
     @State private var renaming = false
     @State private var newTitle = ""
     @Environment(\.dismiss) private var dismiss
@@ -157,11 +158,20 @@ struct HistoryDetailView: View {
         } message: {
             Text("השם יופיע ברשימת השיחות, ואפשר יהיה לחפש לפיו.")
         }
+        .alert("המחיקה נכשלה", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("סגור", role: .cancel) {}
+        } message: {
+            Text("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")")
+        }
         .confirmationDialog("למחוק את השיחה הזו?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("מחיקה", role: .destructive) {
-                try? viewModel.deleteConversation(id: sessionID)
-                onHistoryChanged()
-                dismiss()
+                do {
+                    try viewModel.deleteConversation(id: sessionID)
+                    onHistoryChanged()
+                    dismiss()
+                } catch {
+                    deleteError = error.localizedDescription
+                }
             }
             Button("ביטול", role: .cancel) {}
         }

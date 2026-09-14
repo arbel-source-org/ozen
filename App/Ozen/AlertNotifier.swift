@@ -15,6 +15,17 @@ nonisolated final class AlertNotifier: Sendable {
         (try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
+    /// Whether iOS will actually show the app's notifications: false when
+    /// they were turned off for Ozen, nil when nobody has been asked yet.
+    func isAllowed() async -> Bool? {
+        switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
+        case .notDetermined: return nil
+        case .denied: return false
+        case .authorized, .provisional, .ephemeral: return true
+        @unknown default: return true
+        }
+    }
+
     func post(_ content: AlertNotificationContent) {
         let body = UNMutableNotificationContent()
         body.title = content.title

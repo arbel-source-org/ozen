@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import AppIntents
 import OzenKit
 
@@ -8,7 +9,12 @@ struct SettingsView: View {
     @State private var confirmingClear = false
     @State private var renamingProfile: SpeakerProfile?
     @State private var renameText = ""
+    /// iOS has notifications for Ozen switched off, so the "notify when the
+    /// screen is off" switch can't do anything until they're allowed.
+    @State private var notificationsBlocked = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -230,16 +236,36 @@ struct SettingsView: View {
                 set: { enabled in
                     viewModel.notifyWhenInBackground = enabled
                     if enabled {
-                        Task { _ = await AlertNotifier.shared.requestAuthorization() }
+                        Task {
+                            let allowed = await AlertNotifier.shared.requestAuthorization()
+                            notificationsBlocked = !allowed
+                        }
                     }
                 }
             )) {
                 Label("התראה בטלפון כשהמסך כבוי", systemImage: "iphone.radiowaves.left.and.right")
             }
+            if viewModel.notifyWhenInBackground && notificationsBlocked {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("ההודעות של אוזן כבויות בהגדרות הטלפון, אז כשהמסך כבוי לא תגיע שום התראה.", systemImage: "bell.slash.fill")
+                        .foregroundStyle(.red)
+                    Button("לפתוח את הגדרות הטלפון") {
+                        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                            openURL(url)
+                        }
+                    }
+                }
+            }
         } header: {
             Text("התראות")
         } footer: {
             Text("רטט והדגשה כשנאמרת מילה חשובה; כרזה כשנשמע פעמון דלת, טלפון, אזעקה ועוד. כשהטלפון בכיס או נעול, אותן התראות מגיעות כהודעה בטלפון.")
+        }
+        .task(id: scenePhase) {
+            // Checked on opening and again on coming back from the
+            // Settings app, where she may just have switched them on.
+            guard scenePhase == .active else { return }
+            notificationsBlocked = await AlertNotifier.shared.isAllowed() == false
         }
     }
 

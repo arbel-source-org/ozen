@@ -92,18 +92,23 @@ struct OzenShortcuts: AppShortcutsProvider {
 final class PendingAppAction {
     static let shared = PendingAppAction()
 
-    private(set) var action: AppAction?
+    /// Every request not yet handed over, oldest first. A Shortcut can run
+    /// two Ozen actions back to back ("stop captions", then "say I'm
+    /// leaving") before the screen has had a chance to look; keeping only
+    /// the newest would silently drop the first.
+    private(set) var actions: [AppAction] = []
     /// Bumped on every post so an identical action twice in a row still
     /// triggers `onChange`.
     private(set) var serial = 0
 
     func post(_ action: AppAction) {
-        self.action = action
+        actions.append(action)
         serial += 1
     }
 
-    func take() -> AppAction? {
-        defer { action = nil }
-        return action
+    /// Hands over everything waiting, in the order it arrived, once.
+    func takeAll() -> [AppAction] {
+        defer { actions = [] }
+        return actions
     }
 }

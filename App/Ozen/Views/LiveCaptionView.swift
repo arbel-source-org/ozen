@@ -123,15 +123,12 @@ struct LiveCaptionView: View {
             // and in order. The work runs in its own task: a new request
             // changing `serial` cancels this closure, and that must not
             // cancel a model download that is halfway through.
-            let pending = PendingAppAction.shared.take()
+            let pending = PendingAppAction.shared.takeAll()
             let isFirstAppearance = !hasLaunched
             hasLaunched = true
+            guard isFirstAppearance || !pending.isEmpty else { return }
             Task {
-                if isFirstAppearance {
-                    await viewModel.launch(pending: pending)
-                } else if let pending {
-                    await viewModel.perform(pending)
-                }
+                await viewModel.handle(pending: pending, isFirstAppearance: isFirstAppearance)
             }
         }
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in

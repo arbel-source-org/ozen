@@ -12,6 +12,7 @@ struct HistoryView: View {
     /// A shorter keep-for choice that would delete conversations already
     /// saved, waiting for a yes.
     @State private var pendingRetention: HistoryRetention?
+    @State private var deleteError: String?
 
     var body: some View {
         List {
@@ -52,8 +53,12 @@ struct HistoryView: View {
                     }
                 }
                 .onDelete { offsets in
-                    for offset in offsets {
-                        try? viewModel.deleteConversation(id: sessions[offset].id)
+                    do {
+                        for offset in offsets {
+                            try viewModel.deleteConversation(id: sessions[offset].id)
+                        }
+                    } catch {
+                        deleteError = error.localizedDescription
                     }
                     reload()
                 }
@@ -98,9 +103,18 @@ struct HistoryView: View {
         } message: {
             Text("שיחות עם שורה מסומנת או עם שם לא יימחקו.")
         }
+        .alert("המחיקה נכשלה", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("סגור", role: .cancel) {}
+        } message: {
+            Text("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")")
+        }
         .confirmationDialog("למחוק את כל השיחות השמורות?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
             Button("מחיקת הכול", role: .destructive) {
-                try? viewModel.deleteAllConversations()
+                do {
+                    try viewModel.deleteAllConversations()
+                } catch {
+                    deleteError = error.localizedDescription
+                }
                 reload()
             }
             Button("ביטול", role: .cancel) {}

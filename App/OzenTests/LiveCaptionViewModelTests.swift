@@ -349,15 +349,16 @@ struct LiveCaptionViewModelOnboardingTests {
         #expect(viewModel.phase == .idle)
     }
 
-    @Test("the pending-action mailbox hands each action over exactly once")
+    @Test("the pending-action mailbox hands every action over exactly once, oldest first")
     func mailbox() {
         let box = PendingAppAction.shared
-        _ = box.take()
+        _ = box.takeAll()
         let before = box.serial
         box.post(.stopCaptions)
-        #expect(box.serial == before + 1)
-        #expect(box.take() == .stopCaptions)
-        #expect(box.take() == nil)
+        box.post(.speak("יוצאת עכשיו"))
+        #expect(box.serial == before + 2)
+        #expect(box.takeAll() == [.stopCaptions, .speak("יוצאת עכשיו")])
+        #expect(box.takeAll().isEmpty)
     }
 }
 
@@ -441,6 +442,23 @@ struct LiveCaptionViewModelSpeechTests {
         synthesizer.finishCurrent()
         await launch.value
         #expect(viewModel.phase.isListening)
+    }
+
+    @Test("two requests that launched the app together both happen, in order")
+    func launchWithTwoRequests() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.handle(pending: [.stopCaptions, .speak("יוצאת עכשיו")], isFirstAppearance: true)
+        #expect(viewModel.phase == .idle)
+        #expect(synthesizer.requests == ["יוצאת עכשיו"])
+    }
+
+    @Test("requests arriving while the app is open are all carried out")
+    func laterRequests() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        await viewModel.handle(pending: [.speak("רגע"), .stopCaptions], isFirstAppearance: false)
+        #expect(synthesizer.requests == ["רגע"])
+        #expect(viewModel.phase == .idle)
     }
 
     @Test("launched by Siri to stop: nothing starts")
