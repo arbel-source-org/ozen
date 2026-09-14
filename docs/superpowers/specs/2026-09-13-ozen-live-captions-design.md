@@ -190,7 +190,9 @@ input source).
   captions running, each alert vibration (Settings → צלילים בבית → "איך כל
   התראה מרגישה", then a real doorbell or a keyword) is actually felt; with
   the phone face down on a table, the three-second alarm buzz does not
-  raise a phone, alarm-clock, beep or knock alert of its own; a refused
+  raise a phone, alarm-clock, beep or knock alert of its own; the soft hum
+  when someone starts talking after a quiet (on by default) doesn't garble
+  the words captioned right after it on the phone's own microphone; a refused
   Bluetooth microphone leaves the picker's check mark on the one really
   recording; the white theme's status line and speaker names are easy to
   read in daylight.
