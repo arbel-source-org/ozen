@@ -8,6 +8,14 @@ on:
   pull_request:
     paths-ignore: ['docs/**', '**/*.md', 'LICENSE']
 
+# A newer push to the same branch tests everything an older run would
+# have, so the older one is cancelled: a morning of small commits
+# otherwise queues one macOS runner after another and the result for the
+# latest commit arrives an hour late.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ozenkit-linux:
     name: OzenKit (Linux, portable core)
