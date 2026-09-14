@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import OzenKit
 
@@ -36,5 +37,26 @@ struct CaptionLayoutTests {
     func oneLongSentence() {
         let text = String(repeating: "מילה ", count: 40).trimmingCharacters(in: .whitespaces)
         #expect(CaptionLayout.readableText(text) == text)
+    }
+}
+
+@Suite("CaptionLayout speaker labels")
+struct CaptionLayoutSpeakerLabelTests {
+    private func line(_ cluster: Int?) -> TranscriptSegment {
+        TranscriptSegment(id: UUID(), text: "שלום", isCommitted: true, speakerClusterID: cluster, startTimestamp: 0, lastUpdateTimestamp: 0)
+    }
+
+    @Test("the name appears when the speaker changes, not on every line")
+    func onChangeOnly() {
+        let lines = [line(0), line(0), line(1), line(1), line(0)]
+        let shown = lines.indices.map { CaptionLayout.showsSpeakerLabel(for: lines[$0], after: $0 > 0 ? lines[$0 - 1] : nil) }
+        #expect(shown == [true, false, true, false, true])
+    }
+
+    @Test("a line with no identified speaker has no label, and the next identified line gets one")
+    func unknownSpeaker() {
+        #expect(CaptionLayout.showsSpeakerLabel(for: line(nil), after: nil) == false)
+        #expect(CaptionLayout.showsSpeakerLabel(for: line(nil), after: line(2)) == false)
+        #expect(CaptionLayout.showsSpeakerLabel(for: line(2), after: line(nil)))
     }
 }

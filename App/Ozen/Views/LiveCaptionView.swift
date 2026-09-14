@@ -215,10 +215,18 @@ struct LiveCaptionView: View {
                     if viewModel.segments.isEmpty {
                         emptyState
                     }
-                    ForEach(viewModel.segments) { segment in
+                    ForEach(Array(viewModel.segments.enumerated()), id: \.element.id) { index, segment in
+                        let name = viewModel.display.showSpeakerNames && segment.speakerClusterID != nil
+                            ? viewModel.displayName(for: segment) : nil
                         CaptionRow(
                             segment: segment,
-                            speakerName: viewModel.display.showSpeakerNames ? viewModel.displayName(for: segment) : nil,
+                            speakerName: name,
+                            // Like a chat: the name heads a run of lines by
+                            // one person instead of repeating on each.
+                            showsSpeakerLabel: name != nil && CaptionLayout.showsSpeakerLabel(
+                                for: segment,
+                                after: index > 0 ? viewModel.segments[index - 1] : nil
+                            ),
                             display: liveDisplay,
                             theme: theme,
                             isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id)
@@ -438,13 +446,14 @@ struct LiveCaptionView: View {
 private struct CaptionRow: View {
     let segment: TranscriptSegment
     let speakerName: String?
+    let showsSpeakerLabel: Bool
     let display: DisplayPreferences
     let theme: CaptionTheme
     let isKeywordHit: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if let speakerName {
+            if showsSpeakerLabel, let speakerName {
                 HStack(spacing: 6) {
                     Text(speakerName)
                         .font(.system(size: max(15, display.fontSize * 0.5), weight: .semibold))
@@ -472,8 +481,16 @@ private struct CaptionRow: View {
                 )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
+        // VoiceOver reads the speaker on every line, even where the
+        // screen leaves the repeated name out.
+        .accessibilityLabel(accessibilityText)
         .accessibilityHint(isKeywordHit ? "מכיל מילה חשובה" : "")
+    }
+
+    private var accessibilityText: String {
+        guard let speakerName else { return segment.text }
+        return "\(speakerName): \(segment.text)"
     }
 
     private var weight: Font.Weight {

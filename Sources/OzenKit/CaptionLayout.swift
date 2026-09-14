@@ -66,3 +66,16 @@ public enum CaptionLayout {
         return sentences
     }
 }
+
+extension CaptionLayout {
+    /// Whether a line shows its speaker's name above it.
+    ///
+    /// Like a chat, the name appears when the speaker changes, not on every
+    /// line: a run of lines by one person reads as one block and leaves
+    /// more of the screen for words. A line with no identified speaker
+    /// shows no label at all rather than "דובר לא ידוע" on every row.
+    public static func showsSpeakerLabel(for segment: TranscriptSegment, after previous: TranscriptSegment?) -> Bool {
+        guard let cluster = segment.speakerClusterID else { return false }
+        return previous?.speakerClusterID != cluster
+    }
+}
