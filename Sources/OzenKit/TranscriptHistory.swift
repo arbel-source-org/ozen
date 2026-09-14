@@ -636,11 +636,14 @@ public struct TranscriptHistoryStore: Sendable {
                 currentSession = line.sessionID
             }
             let time = formattedClockTime(line.segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
+            let text: String
             if let name = line.segment.speakerName, !name.isEmpty, !TranscriptSessionSummary.isGenericLabel(name) {
-                block.append("[\(time)] \(name): \(line.segment.text)")
+                text = "[\(time)] \(name): \(line.segment.text)"
             } else {
-                block.append("[\(time)] \(line.segment.text)")
+                text = "[\(time)] \(line.segment.text)"
             }
+            // As in `exportText`: read in order when pasted into a chat.
+            block.append(CaptionLayout.opensLeftToRight(text) ? CaptionLayout.rightToLeftMark + text : text)
         }
         if !block.isEmpty { blocks.append(block.joined(separator: "\n")) }
         return blocks.joined(separator: "\n\n")

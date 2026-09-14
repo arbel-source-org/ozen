@@ -705,12 +705,18 @@ struct TranscriptHistoryStarredExportTests {
     @Test("the date follows the phone's time zone across midnight")
     func dateUsesOffset() {
         let lateUTC: TimeInterval = 1_740_785_400 // 2025-02-28 23:30 UTC
-        let line = StarredLine(sessionID: UUID(), sessionStartedAt: lateUTC, segment: SavedSegment(id: UUID(), text: "x", speakerName: nil, speakerClusterID: nil, startTimestamp: lateUTC, isCommitted: true, isStarred: true))
-        #expect(TranscriptHistoryStore.exportStarredText([line], utcOffsetSeconds: 2 * 3_600) == "01.03.2025\n[01:30:00] x")
+        let line = StarredLine(sessionID: UUID(), sessionStartedAt: lateUTC, segment: SavedSegment(id: UUID(), text: "א", speakerName: nil, speakerClusterID: nil, startTimestamp: lateUTC, isCommitted: true, isStarred: true))
+        #expect(TranscriptHistoryStore.exportStarredText([line], utcOffsetSeconds: 2 * 3_600) == "01.03.2025\n[01:30:00] א")
         #expect(TranscriptHistoryStore.exportStarredText([]) == "")
         let leapDay: TimeInterval = 1_709_208_000 // 2024-02-29 12:00 UTC
-        let leap = StarredLine(sessionID: UUID(), sessionStartedAt: leapDay, segment: SavedSegment(id: UUID(), text: "y", speakerName: nil, speakerClusterID: nil, startTimestamp: leapDay, isCommitted: true, isStarred: true))
-        #expect(TranscriptHistoryStore.exportStarredText([leap]) == "29.02.2024\n[12:00:00] y")
+        let leap = StarredLine(sessionID: UUID(), sessionStartedAt: leapDay, segment: SavedSegment(id: UUID(), text: "ב", speakerName: nil, speakerClusterID: nil, startTimestamp: leapDay, isCommitted: true, isStarred: true))
+        #expect(TranscriptHistoryStore.exportStarredText([leap]) == "29.02.2024\n[12:00:00] ב")
+    }
+
+    @Test("a starred line opening with an English word gets a right-to-left mark when shared")
+    func starredRightToLeft() {
+        let line = StarredLine(sessionID: UUID(), sessionStartedAt: 0, segment: SavedSegment(id: UUID(), text: "OK, מחר", speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true, isStarred: true))
+        #expect(TranscriptHistoryStore.exportStarredText([line]) == "01.01.1970\n\u{200F}[00:00:00] OK, מחר")
     }
 }
 
