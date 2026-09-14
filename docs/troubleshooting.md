@@ -53,8 +53,11 @@ leave the phone.
   Audio & Visual → LED Flash for Alerts: the camera light then blinks for
   every notification, Ozen's included. With the app open, sirens and the
   doorbell already flash the edge of the screen.
-- **History says the last save failed.** The phone is out of storage; free
-  some space and saving resumes by itself.
+- **A banner "השמירה בטלפון נכשלה", or History says the last save failed.**
+  The phone is out of storage, so new conversations and settings changes
+  aren't being kept, though captions still work. Free some space (Settings →
+  General → iPhone Storage) and saving resumes by itself; the banner comes
+  back only if it fails again.
 
 ## Reinstalling
 
