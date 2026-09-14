@@ -18,8 +18,9 @@ public final class LiveCaptionViewModel {
     /// Autosaves off the main thread, final saves in order behind them.
     private let historyWriter: TranscriptHistoryWriter
     /// Labels this device's sound classifier actually supports, or nil
-    /// when unknown (tests, or a device without the classifier).
-    public let knownSoundIdentifiers: Set<String>?
+    /// when unknown (tests, a device without the classifier, or the first
+    /// moment after launch while they're still being read).
+    public private(set) var knownSoundIdentifiers: Set<String>?
     public private(set) var settings: AppSettings
     /// Set while the system has the audio session (an incoming call), so
     /// the screen can say why captions stopped instead of looking broken.
@@ -90,7 +91,9 @@ public final class LiveCaptionViewModel {
             settingsStore: settingsStore,
             pipeline: pipeline,
             historyStore: TranscriptHistoryStore(directoryURL: support.appendingPathComponent("ozen-history", isDirectory: true)),
-            knownSoundIdentifiers: SoundAnalysisDetector.knownIdentifiers(),
+            // Reading them loads the classifier's model: not on the main
+            // thread while the app is trying to draw its first screen.
+            loadKnownSoundIdentifiers: { SoundAnalysisDetector.knownIdentifiers() },
             audioManager: audio,
             synthesizer: SpeechSynthesizer(),
             postNotification: { AlertNotifier.shared.post($0) }
@@ -103,6 +106,7 @@ public final class LiveCaptionViewModel {
         pipeline: CaptionPipeline,
         historyStore: TranscriptHistoryStore? = nil,
         knownSoundIdentifiers: Set<String>? = nil,
+        loadKnownSoundIdentifiers: (@Sendable () -> Set<String>?)? = nil,
         audioManager: AVAudioInputManager? = nil,
         synthesizer: (any SpeechSynthesizing)? = nil,
         postNotification: ((AlertNotificationContent) -> Void)? = nil,
@@ -141,6 +145,12 @@ public final class LiveCaptionViewModel {
         }
         pipeline.onKeywordHits = { [weak self] hits, segment in
             self?.alertRaised(keywords: hits, in: segment)
+        }
+        if let loadKnownSoundIdentifiers {
+            Task { [weak self] in
+                let identifiers = await Task.detached(priority: .utility) { loadKnownSoundIdentifiers() }.value
+                self?.knownSoundIdentifiers = identifiers
+            }
         }
     }
 

@@ -815,3 +815,26 @@ struct LiveCaptionViewModelAskToRepeatTests {
         #expect(pipeline.phase == .paused)
     }
 }
+
+@Suite("LiveCaptionViewModel startup work")
+@MainActor
+struct LiveCaptionViewModelStartupTests {
+    @Test("the sound classifier's labels are read in the background after launch, not while building the screen")
+    func labelsLoadInBackground() async {
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-startup-\(UUID())", isDirectory: true)
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            loadKnownSoundIdentifiers: { ["door_bell", "siren"] }
+        )
+        // Not read yet: building the view model didn't wait for it.
+        #expect(viewModel.knownSoundIdentifiers == nil)
+
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.knownSoundIdentifiers == nil && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(viewModel.knownSoundIdentifiers == ["door_bell", "siren"])
+    }
+}
