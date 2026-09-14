@@ -43,7 +43,7 @@ struct HistoryView: View {
                 }
                 .onDelete { offsets in
                     for offset in offsets {
-                        try? viewModel.historyStore.delete(id: sessions[offset].id)
+                        try? viewModel.deleteConversation(id: sessions[offset].id)
                     }
                     reload()
                 }
@@ -76,7 +76,7 @@ struct HistoryView: View {
         }
         .confirmationDialog("למחוק את כל השיחות השמורות?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
             Button("מחיקת הכול", role: .destructive) {
-                try? viewModel.historyStore.deleteAll()
+                try? viewModel.deleteAllConversations()
                 reload()
             }
             Button("ביטול", role: .cancel) {}

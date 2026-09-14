@@ -44,6 +44,21 @@ public final class TranscriptHistoryWriter: Sendable {
         }
     }
 
+    /// Deletes a conversation after any autosave of it already queued, so
+    /// that autosave can't write it back a moment after it was deleted.
+    public func deleteNow(id: UUID) throws {
+        try queue.sync { [store] in
+            try store.delete(id: id)
+        }
+    }
+
+    /// Deletes every conversation, after the saves already queued.
+    public func deleteAllNow() throws {
+        try queue.sync { [store] in
+            try store.deleteAll()
+        }
+    }
+
     /// Returns once every queued save has been written.
     public func waitUntilIdle() {
         queue.sync {}

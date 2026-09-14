@@ -102,4 +102,50 @@ struct TranscriptHistoryWriterTests {
         #expect(summary?.segmentCount == 3)
         #expect(summary?.endedAt == 200)
     }
+
+    @Test("a delete waits for an autosave of the same conversation, so the autosave can't bring it back")
+    func deleteQueuesBehindAutosave() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let queue = DispatchQueue(label: "test.writer")
+        let writer = TranscriptHistoryWriter(store: store, queue: queue)
+        let id = UUID()
+        writer.saveNow(record(id: id, lines: 1, ended: false))
+
+        queue.suspend()
+        let autosaved = offThread { writer.saveInBackground(self.record(id: id, lines: 2, ended: false)) }
+        let autosaveReturned = autosaved.wait(timeout: .now() + .seconds(1)) == .success
+        let deleted = offThread { try? writer.deleteNow(id: id) }
+        let deleteReturnedEarly = deleted.wait(timeout: .now() + .milliseconds(200)) == .success
+        queue.resume()
+        if !autosaveReturned { autosaved.wait() }
+        if !deleteReturnedEarly { deleted.wait() }
+        writer.waitUntilIdle()
+
+        #expect(deleteReturnedEarly == false)
+        #expect(store.load(id: id) == nil)
+        #expect(store.listSummaries().isEmpty)
+    }
+
+    @Test("delete all waits for queued autosaves too")
+    func deleteAllQueuesBehindAutosave() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let queue = DispatchQueue(label: "test.writer")
+        let writer = TranscriptHistoryWriter(store: store, queue: queue)
+        writer.saveNow(record(id: UUID(), lines: 1, ended: true))
+
+        queue.suspend()
+        let autosaved = offThread { writer.saveInBackground(self.record(id: UUID(), lines: 2, ended: false)) }
+        let autosaveReturned = autosaved.wait(timeout: .now() + .seconds(1)) == .success
+        let deleted = offThread { try? writer.deleteAllNow() }
+        let deleteReturnedEarly = deleted.wait(timeout: .now() + .milliseconds(200)) == .success
+        queue.resume()
+        if !autosaveReturned { autosaved.wait() }
+        if !deleteReturnedEarly { deleted.wait() }
+        writer.waitUntilIdle()
+
+        #expect(deleteReturnedEarly == false)
+        #expect(store.listSummaries().isEmpty)
+    }
 }

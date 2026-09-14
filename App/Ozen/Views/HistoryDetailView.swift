@@ -159,7 +159,7 @@ struct HistoryDetailView: View {
         }
         .confirmationDialog("למחוק את השיחה הזו?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("מחיקה", role: .destructive) {
-                try? viewModel.historyStore.delete(id: sessionID)
+                try? viewModel.deleteConversation(id: sessionID)
                 onHistoryChanged()
                 dismiss()
             }

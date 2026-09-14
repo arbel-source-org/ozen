@@ -838,3 +838,86 @@ struct LiveCaptionViewModelStartupTests {
         #expect(viewModel.knownSoundIdentifiers == ["door_bell", "siren"])
     }
 }
+
+@Suite("LiveCaptionViewModel deleting conversations")
+@MainActor
+struct LiveCaptionViewModelDeleteConversationTests {
+    private func makeViewModel() -> (LiveCaptionViewModel, FakeEngine, TranscriptHistoryStore) {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-delete-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: history
+        )
+        return (viewModel, engine, history)
+    }
+
+    private func say(_ text: String, at timestamp: TimeInterval, into engine: FakeEngine, until viewModel: LiveCaptionViewModel, count: Int) async {
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: text, isFinal: true, timestamp: timestamp))
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.segments.count < count && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    @Test("deleting the conversation still being captioned keeps it deleted through autosaves and stopping")
+    func deleteLiveConversation() async throws {
+        let (viewModel, engine, history) = makeViewModel()
+        await viewModel.start()
+        await say("סוד בינינו", at: Date().timeIntervalSince1970, into: engine, until: viewModel, count: 1)
+        viewModel.persistHistory(ended: false)
+        let saved = try #require(history.listSummaries().first)
+
+        try viewModel.deleteConversation(id: saved.id)
+        viewModel.persistHistory(ended: false, inBackground: true)
+        await viewModel.togglePause()
+        #expect(history.listSummaries().isEmpty)
+        // The words stay on screen; only the saved copy is gone.
+        #expect(viewModel.segments.count == 1)
+
+        await viewModel.togglePause()
+        await say("מה שלומך", at: Date().timeIntervalSince1970, into: engine, until: viewModel, count: 2)
+        viewModel.persistHistory(ended: false)
+        let next = history.listSummaries()
+        #expect(next.count == 1)
+        #expect(next.first?.id != saved.id)
+        #expect(next.first?.preview == "מה שלומך")
+        #expect(next.first?.segmentCount == 1)
+    }
+
+    @Test("starring a line from an earlier, deleted conversation doesn't bring it back")
+    func starOnDeletedEarlierConversation() async throws {
+        let (viewModel, engine, history) = makeViewModel()
+        await viewModel.start()
+        await say("הרופא אמר כדור אחד", at: Date().timeIntervalSince1970 - 30 * 60, into: engine, until: viewModel, count: 1)
+        #expect(viewModel.checkForConversationBreak())
+        await say("ערב טוב", at: Date().timeIntervalSince1970, into: engine, until: viewModel, count: 2)
+        viewModel.persistHistory(ended: false)
+        let earlier = try #require(history.listSummaries().first(where: { $0.preview == "הרופא אמר כדור אחד" }))
+
+        try viewModel.deleteConversation(id: earlier.id)
+        viewModel.toggleStar(viewModel.segments[0])
+        viewModel.persistHistory(ended: false)
+
+        let summaries = history.listSummaries()
+        #expect(summaries.count == 1)
+        #expect(summaries.first?.preview == "ערב טוב")
+    }
+
+    @Test("delete all also retires the conversation in progress")
+    func deleteAllIncludesLive() async throws {
+        let (viewModel, engine, history) = makeViewModel()
+        await viewModel.start()
+        await say("שלום", at: Date().timeIntervalSince1970, into: engine, until: viewModel, count: 1)
+        viewModel.persistHistory(ended: false)
+        #expect(history.listSummaries().count == 1)
+
+        try viewModel.deleteAllConversations()
+        viewModel.persistHistory(ended: false, inBackground: true)
+        viewModel.persistHistory(ended: true)
+        #expect(history.listSummaries().isEmpty)
+    }
+}

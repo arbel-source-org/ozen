@@ -734,6 +734,31 @@ public final class LiveCaptionViewModel {
         historyWriter.renameNow(id: id, title: title)
     }
 
+    /// Deletes a saved conversation. If it is the one still being
+    /// captioned, the lines already on screen stay there but are no longer
+    /// saved: the next words start a new conversation, so the autosave
+    /// can't quietly bring the deleted one back.
+    public func deleteConversation(id: UUID) throws {
+        closedHistorySessions.removeAll { $0.id == id }
+        if id == historySessionID {
+            forgetCurrentConversation()
+        }
+        try historyWriter.deleteNow(id: id)
+    }
+
+    /// Deletes every saved conversation, including the one in progress.
+    public func deleteAllConversations() throws {
+        closedHistorySessions = []
+        forgetCurrentConversation()
+        try historyWriter.deleteAllNow()
+    }
+
+    private func forgetCurrentConversation() {
+        historySessionID = UUID()
+        historySegmentOffset = pipeline.segments.count
+        historySessionStartedAt = nil
+    }
+
     private var currentHistorySegments: [TranscriptSegment] {
         let segments = pipeline.segments
         guard historySegmentOffset > 0 else { return segments }
