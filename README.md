@@ -156,7 +156,8 @@ things, for Hebrew conversation, entirely on-device.
   Activity, the top line always saying who is talking, so the last sentence can
   be read without unlocking the phone. A call or a failure keeps it there
   and says why the lines stopped; if iOS closes the app it says the lines
-  aren't updating rather than showing an old sentence as new. Settings can
+  aren't updating rather than showing an old sentence as new, and after a
+  quiet minute it says how long ago the last line was said. Settings can
   turn it off, since anyone looking at the phone can read it.
 - **Picks up where she stopped reading.** Captions carry on with the phone
   locked or another app open; coming back, a line across the captions marks

@@ -6,11 +6,14 @@ public struct LockScreenCaptionLine: Sendable, Equatable, Hashable, Codable {
     public var speaker: String?
     public var text: String
     public var isFinal: Bool
+    /// When the line last changed.
+    public var lastUpdate: TimeInterval
 
-    public init(speaker: String?, text: String, isFinal: Bool) {
+    public init(speaker: String?, text: String, isFinal: Bool, lastUpdate: TimeInterval = 0) {
         self.speaker = speaker
         self.text = text
         self.isFinal = isFinal
+        self.lastUpdate = lastUpdate
     }
 }
 
@@ -56,7 +59,8 @@ public enum LockScreenCaptions {
             return LockScreenCaptionLine(
                 speaker: speaker,
                 text: tail(of: segment.text, maximumCharacters: room),
-                isFinal: segment.isCommitted
+                isFinal: segment.isCommitted,
+                lastUpdate: segment.lastUpdateTimestamp
             )
         }
     }
@@ -82,12 +86,60 @@ public struct LockScreenCaptionContent: Sendable, Equatable {
     /// Set while captions aren't running but will again by themselves or
     /// with a tap ("paused because of a call", "stopped").
     public var status: String?
+    /// How long ago the newest line was said, once that is a while
+    /// (`LockScreenCaptions.quiet`).
+    public var ageNote: String?
     public var textSize: LockScreenTextSize
 
-    public init(lines: [LockScreenCaptionLine], status: String? = nil, textSize: LockScreenTextSize = .regular) {
+    public init(lines: [LockScreenCaptionLine], status: String? = nil, ageNote: String? = nil, textSize: LockScreenTextSize = .regular) {
         self.lines = lines
         self.status = status
+        self.ageNote = ageNote
         self.textSize = textSize
+    }
+}
+
+extension LockScreenCaptions {
+    /// How the lock screen treats lines when nobody has spoken for a while.
+    public enum Quiet: Sendable, Equatable {
+        /// Said just now: shown as they are.
+        case recent
+        /// Said this many minutes ago: the newest line only, saying so.
+        case minutesAgo(Int)
+        /// Long enough ago that it isn't the conversation any more: no lines.
+        case over
+    }
+
+    /// From this long after the newest line, it says how long ago it was.
+    /// Kept on the lock screen as if just said, a sentence from twenty
+    /// minutes ago reads as the latest thing someone said to her.
+    public static let ageNoteAfterSeconds: TimeInterval = 60
+    /// From this long after the newest line, no lines are shown.
+    public static let clearAfterSeconds: TimeInterval = 15 * 60
+
+    public static func quiet(newestLineAt: TimeInterval?, now: TimeInterval) -> Quiet {
+        guard let newestLineAt else { return .recent }
+        let age = now - newestLineAt
+        if age >= clearAfterSeconds { return .over }
+        if age >= ageNoteAfterSeconds { return .minutesAgo(Int(age / 60)) }
+        return .recent
+    }
+
+    /// "said 3 minutes ago", for the lock screen.
+    public static func ageNote(minutes: Int) -> String {
+        "נאמר \(HebrewTime.minutesAgo(minutes))"
+    }
+}
+
+/// Times said the way Hebrew says them.
+public enum HebrewTime {
+    /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago".
+    public static func minutesAgo(_ minutes: Int) -> String {
+        switch minutes {
+        case ...1: return "לפני דקה"
+        case 2: return "לפני שתי דקות"
+        default: return "לפני \(minutes) דקות"
+        }
     }
 }
 

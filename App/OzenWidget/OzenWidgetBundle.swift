@@ -95,19 +95,23 @@ struct CaptionLinesView: View {
                 // The app stopped updating the lines (iOS closed it, say):
                 // they may be long out of date.
                 note("הכתוביות לא מתעדכנות. פתחו את אוזן.")
+            } else if let ageNote = state.ageNote {
+                // Captions run, but nobody has spoken for a while.
+                note(ageNote, color: .white.opacity(0.7))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .environment(\.layoutDirection, .rightToLeft)
     }
 
-    /// Why the lines stopped coming. Follows the phone's text size, up to
+    /// A note under the lines: why they stopped coming, or how long ago
+    /// they were said. Follows the phone's text size, up to
     /// where it would crowd the lines out of the lock screen's room.
-    private func note(_ text: String) -> some View {
+    private func note(_ text: String, color: Color = .orange) -> some View {
         Text(text)
             .font(.system(.subheadline, weight: .semibold))
             .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-            .foregroundStyle(.orange)
+            .foregroundStyle(color)
             .lineLimit(2)
             .minimumScaleFactor(0.8)
     }

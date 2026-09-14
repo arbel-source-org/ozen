@@ -58,6 +58,7 @@ public final class LockScreenCaptionsCoordinator {
     /// Nothing said for a while sends nothing, and the lines would turn
     /// stale on the lock screen while captions are in fact running; they
     /// are sent again this often, so "not updating" means the app stopped.
+    /// It also moves the "said N minutes ago" note on.
     private let keepAliveSeconds: TimeInterval
 
     private var throttle = LockScreenUpdateThrottle(minimumInterval: LockScreenUpdateThrottle.foregroundInterval)
@@ -115,14 +116,23 @@ public final class LockScreenCaptionsCoordinator {
             return
         }
         let textSize = LockScreenTextSize(captionSize: situation.captionSize)
-        let content = LockScreenCaptionContent(
-            // Under a note ("paused because of a call") there is room for
-            // the newest line only.
-            lines: lines(presence.status == nil ? LockScreenCaptions.lineCount : 1, textSize),
-            status: presence.status,
-            textSize: textSize
-        )
         let time = now()
+        // Under a note ("paused because of a call") there is room for the
+        // newest line only.
+        var shown = lines(presence.status == nil ? LockScreenCaptions.lineCount : 1, textSize)
+        var ageNote: String?
+        if presence.status == nil {
+            switch LockScreenCaptions.quiet(newestLineAt: shown.map(\.lastUpdate).max(), now: time) {
+            case .recent:
+                break
+            case .minutesAgo(let minutes):
+                shown = lines(1, textSize)
+                ageNote = LockScreenCaptions.ageNote(minutes: minutes)
+            case .over:
+                shown = []
+            }
+        }
+        let content = LockScreenCaptionContent(lines: shown, status: presence.status, ageNote: ageNote, textSize: textSize)
         switch throttle.decide(content, now: time) {
         case .nothingNew where isShowing:
             return

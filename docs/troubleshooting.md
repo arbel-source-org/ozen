@@ -60,7 +60,9 @@ leave the phone.
   (tetzuga) → "Captions on the lock screen too" (ktuviyot gam be-masach
   ha-ne'ila) turns them off. With the caption text size at 34 or more, the
   lock screen's lines are larger too, and show fewer words of the line
-  before the newest.
+  before the newest. After a minute with nothing said, only the newest line
+  stays, with "said N minutes ago" (ne'emar lifnei N dakot) under it; after
+  a quarter of an hour it gives way to "Listening" (makshiv).
 - **Adding the start button to Control Center or the lock screen.** On iOS
   18 or later: open Control Center, press and hold an empty spot, tap "Add
   a Control" and search for Ozen. For the lock screen: press and hold the

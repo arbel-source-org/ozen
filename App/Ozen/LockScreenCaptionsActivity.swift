@@ -41,6 +41,7 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
                 CaptionActivityAttributes.ContentState.Line(speaker: $0.speaker, text: $0.text, isFinal: $0.isFinal)
             },
             status: content.status,
+            ageNote: content.ageNote,
             large: content.textSize == .large
         )
         let staleDate = Date().addingTimeInterval(Self.staleAfterSeconds)

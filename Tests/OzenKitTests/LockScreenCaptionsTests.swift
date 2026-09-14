@@ -72,6 +72,20 @@ struct LockScreenCaptionsTests {
         #expect(LockScreenTextSize(captionSize: 64) == .large)
     }
 
+    @Test("quiet for a minute says how long ago; for a quarter of an hour, no lines")
+    func quietThresholds() {
+        #expect(LockScreenCaptions.quiet(newestLineAt: nil, now: 1000) == .recent)
+        #expect(LockScreenCaptions.quiet(newestLineAt: 1000, now: 1059) == .recent)
+        #expect(LockScreenCaptions.quiet(newestLineAt: 1000, now: 1060) == .minutesAgo(1))
+        #expect(LockScreenCaptions.quiet(newestLineAt: 1000, now: 1000 + 14 * 60 + 59) == .minutesAgo(14))
+        #expect(LockScreenCaptions.quiet(newestLineAt: 1000, now: 1000 + 15 * 60) == .over)
+        // A clock that went back shows the lines rather than hiding them.
+        #expect(LockScreenCaptions.quiet(newestLineAt: 1000, now: 900) == .recent)
+        #expect(LockScreenCaptions.ageNote(minutes: 2) == "נאמר לפני שתי דקות")
+        #expect(HebrewTime.minutesAgo(0) == "לפני דקה")
+        #expect(HebrewTime.minutesAgo(7) == "לפני 7 דקות")
+    }
+
     @Test("a long line keeps its newest words, from a word boundary, marked as cut")
     func longLineTail() {
         let words = (1...60).map { "word\($0)" }.joined(separator: " ")

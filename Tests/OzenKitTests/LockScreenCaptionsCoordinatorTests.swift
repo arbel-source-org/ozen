@@ -40,6 +40,8 @@ struct LockScreenCaptionsCoordinatorTests {
         )
         var texts: [String] = []
         var askedCounts: [Int] = []
+        /// How long ago the lines were said.
+        var age: TimeInterval = 0
     }
 
     private func make(keepAliveSeconds: TimeInterval = 50) -> (LockScreenCaptionsCoordinator, FakeDisplay, Captions) {
@@ -51,7 +53,8 @@ struct LockScreenCaptionsCoordinatorTests {
             situation: { captions.situation },
             lines: { count, _ in
                 captions.askedCounts.append(count)
-                return captions.texts.suffix(count).map { LockScreenCaptionLine(speaker: nil, text: $0, isFinal: true) }
+                let at = Date().timeIntervalSince1970 - captions.age
+                return captions.texts.suffix(count).map { LockScreenCaptionLine(speaker: nil, text: $0, isFinal: true, lastUpdate: at) }
             }
         )
         return (coordinator, display, captions)
@@ -151,6 +154,35 @@ struct LockScreenCaptionsCoordinatorTests {
         let afterStop = display.shown.count
         try await Task.sleep(for: .milliseconds(500))
         #expect(display.shown.count == afterStop)
+    }
+
+    @Test("after a quiet minute only the newest line shows, saying how long ago; after a quarter of an hour none")
+    func quietRoom() async {
+        let (coordinator, display, captions) = make()
+        captions.texts = ["the pills are on the table", "see you tomorrow"]
+        coordinator.refresh()
+        #expect(display.shown.last?.lines.count == 2)
+        #expect(display.shown.last?.ageNote == nil)
+        // Out of sight, at the lock screen's own pace.
+        coordinator.appActivityChanged(isActive: false)
+
+        captions.age = 3.5 * 60
+        coordinator.refresh()
+        #expect(await eventually { display.shown.last?.ageNote == LockScreenCaptions.ageNote(minutes: 3) })
+        #expect(display.shown.last?.lines.map(\.text) == ["see you tomorrow"])
+        #expect(display.shown.last?.status == nil)
+
+        captions.age = 16 * 60
+        coordinator.refresh()
+        #expect(await eventually { display.shown.last?.lines == [] })
+        #expect(display.shown.last?.ageNote == nil)
+        #expect(display.isRunning)
+
+        // A call's note takes the room; no age is added under it.
+        captions.age = 3.5 * 60
+        captions.situation.interruptedByCall = true
+        coordinator.refresh()
+        #expect(display.shown.last?.status != nil && display.shown.last?.ageNote == nil)
     }
 
     @Test("captions large in the app make the lock screen large")

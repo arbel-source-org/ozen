@@ -18,6 +18,8 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
         var lines: [Line]
         /// Why captions aren't running right now, when they aren't.
         var status: String?
+        /// "said 3 minutes ago", once the newest line is a while old.
+        var ageNote: String?
         /// Larger lines, for someone who reads the captions large in the
         /// app (see `LockScreenTextSize`); the app cuts them shorter to fit.
         var large: Bool
@@ -26,7 +28,7 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
 
 extension CaptionActivityAttributes.ContentState {
     enum CodingKeys: String, CodingKey {
-        case lines, status, large
+        case lines, status, ageNote, large
     }
 
     /// Lines sent by an older build, still on the lock screen after an
@@ -37,6 +39,7 @@ extension CaptionActivityAttributes.ContentState {
         self.init(
             lines: try container.decode([Line].self, forKey: .lines),
             status: try container.decodeIfPresent(String.self, forKey: .status),
+            ageNote: try container.decodeIfPresent(String.self, forKey: .ageNote),
             large: try container.decodeIfPresent(Bool.self, forKey: .large) ?? false
         )
     }

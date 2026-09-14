@@ -662,11 +662,7 @@ struct LiveCaptionView: View {
 
     /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago".
     static func minutesAgoText(_ minutes: Int) -> String {
-        switch minutes {
-        case ...1: return "לפני דקה"
-        case 2: return "לפני שתי דקות"
-        default: return "לפני \(minutes) דקות"
-        }
+        HebrewTime.minutesAgo(minutes)
     }
 
     private var jumpToLatestPill: some View {
