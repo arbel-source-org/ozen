@@ -74,7 +74,8 @@ struct LiveCaptionView: View {
         )
     }
 
-    var body: some View {
+    /// The screen itself: captions, banners and the control bar.
+    private var screen: some View {
         ZStack(alignment: .bottom) {
             theme.background.ignoresSafeArea()
 
@@ -125,6 +126,12 @@ struct LiveCaptionView: View {
             .padding(.top, 8)
         }
         .preferredColorScheme(theme.colorScheme)
+    }
+
+    /// Everything that reacts to what happens: Siri requests, alerts,
+    /// new lines, the phase and the app coming and going.
+    private var reactingScreen: some View {
+        screen
         .task(id: PendingAppAction.shared.serial) {
             // One hook for both the first appearance and every later Siri
             // request, so a request that launched the app is handled once
@@ -204,9 +211,12 @@ struct LiveCaptionView: View {
             viewModel.sceneActivityChanged(isActive: phase == .active)
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active, case .failed = viewModel.phase {
+            if phase == .active, case .failed(let failure) = viewModel.phase,
+               failure.engineUnavailability?.kind != .notEnoughStorage {
                 // Coming back from the system Settings app after granting
-                // a permission: try again without making them tap.
+                // a permission: try again without making them tap. A full
+                // phone is rechecked by the view model, which only retries
+                // once there is room.
                 Task { await viewModel.retry() }
             }
             if phase == .background {
@@ -214,6 +224,10 @@ struct LiveCaptionView: View {
             }
         }
         .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
+    }
+
+    var body: some View {
+        reactingScreen
         .sheet(item: $openedRecentConversation) { recent in
             NavigationStack {
                 HistoryDetailView(viewModel: viewModel, sessionID: recent.id) {
