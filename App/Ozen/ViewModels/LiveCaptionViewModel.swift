@@ -27,6 +27,8 @@ public final class LiveCaptionViewModel {
     /// Why the last settings save failed, for the diagnostics screen; nil
     /// when the last save worked.
     public private(set) var settingsSaveError: String?
+    /// Lines marked as important in the conversation on screen.
+    public private(set) var starredSegmentIDs: Set<UUID> = []
 
     private let settingsStore: SettingsStore
     private let audioManager: AVAudioInputManager?
@@ -306,8 +308,18 @@ public final class LiveCaptionViewModel {
 
     /// Ends the current history session (saving it) and starts a fresh,
     /// empty one.
+    /// Marks a line as important, or unmarks it, and saves right away so
+    /// the mark isn't lost if the app is closed before the next autosave.
+    public func toggleStar(_ segment: TranscriptSegment) {
+        if starredSegmentIDs.remove(segment.id) == nil {
+            starredSegmentIDs.insert(segment.id)
+        }
+        persistHistory(ended: false, inBackground: true)
+    }
+
     public func clearTranscript() {
         persistHistory(ended: true)
+        starredSegmentIDs = []
         pipeline.clearTranscript()
         historySessionID = UUID()
         historySegmentOffset = 0
@@ -650,7 +662,8 @@ public final class LiveCaptionViewModel {
             endedAt: ended ? (endedAt ?? Date().timeIntervalSince1970) : nil,
             engine: settings.engine,
             modelVariant: settings.engine == .whisperKit ? settings.whisperModelVariant : nil,
-            inputName: selectedInput?.portName
+            inputName: selectedInput?.portName,
+            starred: starredSegmentIDs
         )
         if inBackground {
             historyWriter.saveInBackground(record)

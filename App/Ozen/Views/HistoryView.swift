@@ -114,9 +114,16 @@ private struct SessionRow: View {
                 .font(.body)
                 .lineLimit(2)
                 .foregroundStyle(.secondary)
-            Text("\(session.segmentCount) שורות")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 10) {
+                Text("\(session.segmentCount) שורות")
+                if session.starredCount > 0 {
+                    Label("\(session.starredCount)", systemImage: "star.fill")
+                        .foregroundStyle(.yellow)
+                        .accessibilityLabel("\(session.starredCount) שורות מסומנות")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
         }
     }
 
@@ -139,9 +146,15 @@ struct HistoryDetailView: View {
     @State private var stats: ConversationStats?
     @State private var matches: [UUID] = []
     @State private var currentMatch = 0
+    @State private var hasJumped = false
+    @State private var scrollRequest = 0
     @State private var hasLoaded = false
     @State private var confirmingDelete = false
     @Environment(\.dismiss) private var dismiss
+
+    private var isSearch: Bool {
+        !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         Group {
@@ -162,13 +175,19 @@ struct HistoryDetailView: View {
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID))
                                 }
-                                Text(CaptionLayout.readableText(segment.text))
-                                    .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
+                                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                    if segment.isStarred {
+                                        Image(systemName: "star.fill")
+                                            .foregroundStyle(.yellow)
+                                    }
+                                    Text(CaptionLayout.readableText(segment.text))
+                                        .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
+                                }
                             }
                             .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(segment.speakerName.map { "\($0): \(segment.text)" } ?? segment.text)
-                            .accessibilityHint(matches.contains(segment.id) ? "מכיל את מה שחיפשת" : "")
-                            .listRowBackground(matches.contains(segment.id) ? Color.yellow.opacity(0.3) : nil)
+                            .accessibilityLabel((segment.isStarred ? "מסומן כחשוב. " : "") + (segment.speakerName.map { "\($0): \(segment.text)" } ?? segment.text))
+                            .accessibilityHint(isSearch && matches.contains(segment.id) ? "מכיל את מה שחיפשת" : "")
+                            .listRowBackground(isSearch && matches.contains(segment.id) ? Color.yellow.opacity(0.3) : nil)
                             .id(segment.id)
                         }
                     } header: {
@@ -180,13 +199,13 @@ struct HistoryDetailView: View {
                 .task {
                     // Give the list a moment to lay out, then open where the
                     // search found something instead of at the top.
-                    guard let first = matches.first else { return }
+                    guard isSearch, let first = matches.first else { return }
                     try? await Task.sleep(for: .milliseconds(150))
                     withAnimation { proxy.scrollTo(first, anchor: .center) }
                 }
-                .onChange(of: currentMatch) { _, index in
-                    guard matches.indices.contains(index) else { return }
-                    withAnimation { proxy.scrollTo(matches[index], anchor: .center) }
+                .onChange(of: scrollRequest) { _, _ in
+                    guard matches.indices.contains(currentMatch) else { return }
+                    withAnimation { proxy.scrollTo(matches[currentMatch], anchor: .center) }
                 }
                 }
             } else {
@@ -196,13 +215,22 @@ struct HistoryDetailView: View {
         .navigationTitle("שיחה")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if matches.count > 1 {
+            if matches.count > (isSearch ? 1 : 0) {
                 ToolbarItem(placement: .bottomBar) {
                     Button {
-                        currentMatch = (currentMatch + 1) % matches.count
+                        // Stars start from the first one; a search is
+                        // already showing its first match.
+                        currentMatch = isSearch || hasJumped ? (currentMatch + 1) % matches.count : 0
+                        hasJumped = true
+                        scrollRequest += 1
                     } label: {
-                        Label("המקום הבא (\(currentMatch + 1) מתוך \(matches.count))", systemImage: "chevron.down")
-                            .labelStyle(.titleAndIcon)
+                        Label(
+                            isSearch
+                                ? "המקום הבא (\(currentMatch + 1) מתוך \(matches.count))"
+                                : (hasJumped ? "הסימון הבא (\(currentMatch + 1) מתוך \(matches.count))" : "לשורות המסומנות (\(matches.count))"),
+                            systemImage: isSearch ? "chevron.down" : "star.fill"
+                        )
+                        .labelStyle(.titleAndIcon)
                     }
                 }
             }
@@ -246,7 +274,12 @@ struct HistoryDetailView: View {
                 return (
                     loaded,
                     loaded.map(ConversationStats.compute(from:)),
-                    loaded.map { TranscriptHistoryStore.matchingSegmentIDs(in: $0, query: query) } ?? []
+                    // With no search, the button steps through starred lines.
+                    loaded.map { record in
+                        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? record.segments.filter(\.isStarred).map(\.id)
+                            : TranscriptHistoryStore.matchingSegmentIDs(in: record, query: query)
+                    } ?? []
                 )
             }.value
             record = loaded

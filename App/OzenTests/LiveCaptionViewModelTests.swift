@@ -706,3 +706,44 @@ struct LiveCaptionViewModelSettingsSaveTests {
         #expect(working.settingsSaveError == nil)
     }
 }
+
+@Suite("LiveCaptionViewModel starred lines")
+@MainActor
+struct LiveCaptionViewModelStarTests {
+    @Test("starring a line saves it starred, unstarring clears it, and a new conversation starts with none")
+    func starAndUnstar() async {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-star-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: history
+        )
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "כדור אחד בבוקר", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        guard let line = viewModel.segments.first else {
+            Issue.record("no caption line arrived")
+            return
+        }
+
+        viewModel.toggleStar(line)
+        #expect(viewModel.starredSegmentIDs == [line.id])
+        viewModel.persistHistory(ended: false)
+        #expect(history.listSummaries().first?.starredCount == 1)
+
+        viewModel.toggleStar(line)
+        #expect(viewModel.starredSegmentIDs.isEmpty)
+        viewModel.persistHistory(ended: false)
+        #expect(history.listSummaries().first?.starredCount == 0)
+
+        viewModel.toggleStar(line)
+        viewModel.clearTranscript()
+        #expect(viewModel.starredSegmentIDs.isEmpty)
+    }
+}

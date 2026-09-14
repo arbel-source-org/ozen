@@ -242,10 +242,32 @@ struct LiveCaptionView: View {
                             ),
                             display: liveDisplay,
                             theme: theme,
-                            isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id)
+                            isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id),
+                            isStarred: viewModel.starredSegmentIDs.contains(segment.id)
                         )
                         .id(segment.id)
                         .onTapGesture { namingSegment = segment }
+                        .contextMenu {
+                            let starred = viewModel.starredSegmentIDs.contains(segment.id)
+                            Button {
+                                viewModel.toggleStar(segment)
+                            } label: {
+                                Label(starred ? "ביטול הסימון" : "סימון כחשוב", systemImage: starred ? "star.slash" : "star")
+                            }
+                            Button {
+                                namingSegment = segment
+                            } label: {
+                                Label("מי מדבר?", systemImage: "person.crop.circle.badge.questionmark")
+                            }
+                            Button {
+                                UIPasteboard.general.string = segment.text
+                            } label: {
+                                Label("העתקה", systemImage: "doc.on.doc")
+                            }
+                        }
+                        .accessibilityAction(named: viewModel.starredSegmentIDs.contains(segment.id) ? "ביטול הסימון" : "סימון כחשוב") {
+                            viewModel.toggleStar(segment)
+                        }
                     }
                     // A sentinel at the very end: while it's on screen the
                     // reader is at the bottom and auto-scroll stays on;
@@ -471,6 +493,7 @@ private struct CaptionRow: View {
     let display: DisplayPreferences
     let theme: CaptionTheme
     let isKeywordHit: Bool
+    let isStarred: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -484,22 +507,29 @@ private struct CaptionRow: View {
                 .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID))
             }
 
-            Text(CaptionLayout.readableText(segment.text))
-                .font(.system(size: display.fontSize, weight: weight))
-                .italic(!segment.isCommitted)
-                .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
-                .multilineTextAlignment(.leading)
-                .lineSpacing(display.fontSize * 0.15)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, isKeywordHit ? 8 : 0)
-                .padding(.vertical, isKeywordHit ? 4 : 0)
-                .background(
-                    // A keyword line keeps a soft yellow field behind it,
-                    // so the reader can find "where my name was said"
-                    // after the buzz, even a screenful later.
-                    isKeywordHit ? Color.yellow.opacity(theme.colorScheme == .dark ? 0.22 : 0.35) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 8)
-                )
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                if isStarred {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: max(14, display.fontSize * 0.6)))
+                        .foregroundStyle(.yellow)
+                }
+                Text(CaptionLayout.readableText(segment.text))
+                    .font(.system(size: display.fontSize, weight: weight))
+                    .italic(!segment.isCommitted)
+                    .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(display.fontSize * 0.15)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, isKeywordHit ? 8 : 0)
+                    .padding(.vertical, isKeywordHit ? 4 : 0)
+                    .background(
+                        // A keyword line keeps a soft yellow field behind it,
+                        // so the reader can find "where my name was said"
+                        // after the buzz, even a screenful later.
+                        isKeywordHit ? Color.yellow.opacity(theme.colorScheme == .dark ? 0.22 : 0.35) : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 8)
+                    )
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
@@ -510,8 +540,8 @@ private struct CaptionRow: View {
     }
 
     private var accessibilityText: String {
-        guard let speakerName else { return segment.text }
-        return "\(speakerName): \(segment.text)"
+        let line = speakerName.map { "\($0): \(segment.text)" } ?? segment.text
+        return isStarred ? "מסומן כחשוב. \(line)" : line
     }
 
     private var weight: Font.Weight {
