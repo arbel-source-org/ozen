@@ -120,3 +120,38 @@ struct WhisperResultFilterTests {
         #expect(!filter.accepts(segment("Thank you.", noSpeech: 0.6, logprob: -0.3)))
     }
 }
+
+@Suite("Whisper repeated-word loops")
+struct WhisperRepeatCollapseTests {
+    @Test("a word said up to three times is left alone, exactly as written")
+    func naturalRepeatsKept() {
+        #expect(WhisperResultFilter.collapsingRepeats("לא, לא, לא") == "לא, לא, לא")
+        #expect(WhisperResultFilter.collapsingRepeats("כן  כן כן") == "כן  כן כן")
+        #expect(WhisperResultFilter.collapsingRepeats("שלום מה שלומך היום") == "שלום מה שלומך היום")
+    }
+
+    @Test("a word looped more than three times is cut to three, keeping the closing punctuation")
+    func wordLoop() {
+        #expect(WhisperResultFilter.collapsingRepeats("אני לא יכול לבוא לבוא לבוא לבוא לבוא לבוא") == "אני לא יכול לבוא לבוא לבוא")
+        #expect(WhisperResultFilter.collapsingRepeats("כן, כן, כן, כן, כן.") == "כן, כן, כן.")
+    }
+
+    @Test("a short phrase looped over and over is cut the same way")
+    func phraseLoop() {
+        #expect(WhisperResultFilter.collapsingRepeats("אני הולך אני הולך אני הולך אני הולך אני הולך הביתה") == "אני הולך אני הולך אני הולך הביתה")
+        #expect(WhisperResultFilter.collapsingRepeats("מה? מה? מה? מה? טוב") == "מה? מה? מה? טוב")
+    }
+
+    @Test("repeats that aren't back to back aren't touched")
+    func notConsecutive() {
+        let text = "כן אמרתי כן אמרתי לו כן ואז כן"
+        #expect(WhisperResultFilter.collapsingRepeats(text) == text)
+    }
+
+    @Test("accepted text from Whisper comes out collapsed")
+    func appliedToAcceptedText() {
+        let filter = WhisperResultFilter()
+        let segment = WhisperSegmentSummary(text: "תבואי תבואי תבואי תבואי תבואי מחר", noSpeechProb: 0.01, avgLogprob: -0.2, compressionRatio: 1.5)
+        #expect(filter.acceptedText(from: [segment]) == "תבואי תבואי תבואי מחר")
+    }
+}

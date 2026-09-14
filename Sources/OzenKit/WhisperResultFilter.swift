@@ -117,11 +117,56 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// `echo` drops segments that are just the vocabulary prompt read back
     /// (see `PromptEchoDetector`).
     public func acceptedText(from segments: [WhisperSegmentSummary], echo: PromptEchoDetector? = nil) -> String {
-        segments
+        let joined = segments
             .filter { accepts($0) && !(echo?.isEcho(Self.stripSpecialTokens($0.text)) ?? false) }
             .map { Self.stripSpecialTokens($0.text).trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+        return Self.collapsingRepeats(joined)
+    }
+
+    /// A decoding loop that stays short enough to pass the compression
+    /// check still puts "לבוא לבוא לבוא לבוא לבוא לבוא" on screen. Any word
+    /// or short phrase repeated back to back more than `maxRepeats` times
+    /// is cut down to that many: people do say "לא, לא, לא", but nobody
+    /// says it six times. The kept copies are the first ones and the last,
+    /// so the sentence keeps its closing punctuation. Text with nothing to
+    /// collapse comes back exactly as it was.
+    public static func collapsingRepeats(_ text: String, maxRepeats: Int = 3, maxPhraseWords: Int = 4) -> String {
+        var words = text.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+        guard maxRepeats >= 1, words.count > maxRepeats else { return text }
+        var changed = false
+        for phraseLength in 1...maxPhraseWords {
+            let keys = words.map(normalize)
+            var result: [String] = []
+            var index = 0
+            while index < words.count {
+                let phraseEnd = index + phraseLength
+                guard phraseEnd <= words.count, !keys[index..<phraseEnd].allSatisfy(\.isEmpty) else {
+                    result.append(words[index])
+                    index += 1
+                    continue
+                }
+                let phrase = keys[index..<phraseEnd]
+                var repeats = 1
+                while index + (repeats + 1) * phraseLength <= words.count,
+                      keys[(index + repeats * phraseLength)..<(index + (repeats + 1) * phraseLength)].elementsEqual(phrase) {
+                    repeats += 1
+                }
+                if repeats > maxRepeats {
+                    result.append(contentsOf: words[index..<(index + (maxRepeats - 1) * phraseLength)])
+                    let lastStart = index + (repeats - 1) * phraseLength
+                    result.append(contentsOf: words[lastStart..<(lastStart + phraseLength)])
+                    index += repeats * phraseLength
+                    changed = true
+                } else {
+                    result.append(words[index])
+                    index += 1
+                }
+            }
+            words = result
+        }
+        return changed ? words.joined(separator: " ") : text
     }
 
     public func accepts(_ segment: WhisperSegmentSummary) -> Bool {
