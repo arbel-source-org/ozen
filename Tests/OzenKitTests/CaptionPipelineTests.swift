@@ -1069,9 +1069,12 @@ struct CaptionPipelineAudioStallTests {
 
     @Test("a quiet room still delivers audio, so captions keep listening")
     func silenceIsNotAStall() async throws {
-        let (pipeline, audio, _) = makePipeline(audioWatchdog: quickWatchdog)
+        // A wider window than the other tests, so a busy CI machine that
+        // delays one 50 ms sleep past a tick doesn't fail it, while the
+        // audio still runs twice as long as the window.
+        let (pipeline, audio, _) = makePipeline(audioWatchdog: AudioStallWatchdog(stallSeconds: 1))
         await pipeline.start(settings: .default)
-        for _ in 0..<24 {
+        for _ in 0..<40 {
             audio.push([Float](repeating: 0, count: 800))
             try await Task.sleep(for: .milliseconds(50))
         }
