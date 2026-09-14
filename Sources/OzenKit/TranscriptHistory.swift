@@ -667,18 +667,8 @@ public struct TranscriptHistoryStore: Sendable {
 
     /// Day.month.year of a timestamp in the given UTC offset.
     private static func formattedDate(_ timestamp: TimeInterval, utcOffsetSeconds: Int) -> String {
-        let days = Int((Double(Int(timestamp.rounded(.down)) + utcOffsetSeconds) / 86_400).rounded(.down))
-        // Civil-from-days (Howard Hinnant's algorithm), valid for any day count.
-        let z = days + 719_468
-        let era = (z >= 0 ? z : z - 146_096) / 146_097
-        let dayOfEra = z - era * 146_097
-        let yearOfEra = (dayOfEra - dayOfEra / 1_460 + dayOfEra / 36_524 - dayOfEra / 146_096) / 365
-        let dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100)
-        let mp = (5 * dayOfYear + 2) / 153
-        let day = dayOfYear - (153 * mp + 2) / 5 + 1
-        let month = mp < 10 ? mp + 3 : mp - 9
-        let year = yearOfEra + era * 400 + (month <= 2 ? 1 : 0)
-        return "\(twoDigits(day)).\(twoDigits(month)).\(year)"
+        let date = CivilDate(daysSinceEpoch: CivilDate.localDay(of: timestamp, utcOffsetSeconds: utcOffsetSeconds))
+        return "\(twoDigits(date.day)).\(twoDigits(date.month)).\(date.year)"
     }
 
     /// "14:02:07": the clock time of `timestamp` at the given offset from UTC.

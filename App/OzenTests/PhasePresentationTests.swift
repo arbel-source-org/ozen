@@ -136,9 +136,10 @@ struct ScreenWordingTests {
         #expect(LiveCaptionView.minutesAgoText(7) == "לפני 7 דקות")
     }
 
-    @Test("the auto-delete warning counts one conversation in the singular")
+    @Test("the auto-delete warning counts one and two conversations in words")
     func expiryWarning() {
         #expect(HistoryView.expiryWarning(count: 1) == "שיחה ישנה אחת תימחק עכשיו")
+        #expect(HistoryView.expiryWarning(count: 2) == "שתי שיחות ישנות יימחקו עכשיו")
         #expect(HistoryView.expiryWarning(count: 12) == "12 שיחות ישנות יימחקו עכשיו")
     }
 

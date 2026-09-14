@@ -52,31 +52,50 @@ struct HistoryView: View {
         }
     }
 
+    /// Under "today", "yesterday", a weekday or a date: "what the doctor
+    /// said on Tuesday" is found by the day, not by reading every date.
+    @ViewBuilder
     private var conversationsSection: some View {
-        Section {
-            if sessions.isEmpty {
+        if sessions.isEmpty {
+            Section {
                 Text(query.isEmpty ? "עדיין אין שיחות שמורות." : "לא נמצא כלום עבור \"\(query)\".")
                     .foregroundStyle(.secondary)
+            } header: {
+                Text("שיחות")
             }
-            ForEach(sessions) { session in
-                NavigationLink {
-                    HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onHistoryChanged: reload)
-                } label: {
-                    SessionRow(session: session)
+        }
+        ForEach(sessionDays) { day in
+            Section {
+                ForEach(day.sessions) { session in
+                    sessionLink(session)
                 }
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    // No destructive role: that role animates the row away
-                    // before the question is even answered.
-                    Button {
-                        pendingDeletion = session
-                    } label: {
-                        Label("מחיקה", systemImage: "trash")
-                    }
-                    .tint(.red)
-                }
+            } header: {
+                Text(day.title)
             }
-        } header: {
-            Text("שיחות")
+        }
+    }
+
+    private var sessionDays: [HistoryDay] {
+        HistoryDays.grouped(sessions, now: Date().timeIntervalSince1970) {
+            TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: $0))
+        }
+    }
+
+    private func sessionLink(_ session: TranscriptSessionSummary) -> some View {
+        NavigationLink {
+            HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onHistoryChanged: reload)
+        } label: {
+            SessionRow(session: session)
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            // No destructive role: that role animates the row away
+            // before the question is even answered.
+            Button {
+                pendingDeletion = session
+            } label: {
+                Label("מחיקה", systemImage: "trash")
+            }
+            .tint(.red)
         }
     }
 
@@ -196,7 +215,11 @@ struct HistoryView: View {
     }
 
     static func expiryWarning(count: Int) -> String {
-        count == 1 ? "שיחה ישנה אחת תימחק עכשיו" : "\(count) שיחות ישנות יימחקו עכשיו"
+        switch count {
+        case 1: return "שיחה ישנה אחת תימחק עכשיו"
+        case 2: return "שתי שיחות ישנות יימחקו עכשיו"
+        default: return "\(count) שיחות ישנות יימחקו עכשיו"
+        }
     }
 
     static func name(for retention: HistoryRetention) -> String {
@@ -237,7 +260,7 @@ private struct SessionRow: View {
                     .font(.headline)
             }
             HStack {
-                Text(Date(timeIntervalSince1970: session.startedAt).formatted(date: .abbreviated, time: .shortened))
+                Text(Date(timeIntervalSince1970: session.startedAt).formatted(date: .omitted, time: .shortened))
                     .font(session.title == nil ? .subheadline.weight(.semibold) : .subheadline)
                 Spacer()
                 if let duration = session.durationSeconds {
