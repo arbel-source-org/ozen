@@ -25,6 +25,16 @@ struct AlertFlashTests {
         }
     }
 
+    @Test("a flash gives way only to an alert at least as important, and a dark screen to any that flashes")
+    func takingOver() {
+        #expect(AlertFlash.takesOver(from: nil, with: .high, reduceMotion: false))
+        #expect(!AlertFlash.takesOver(from: nil, with: .medium, reduceMotion: false))
+        #expect(!AlertFlash.takesOver(from: .critical, with: .high, reduceMotion: false))
+        #expect(!AlertFlash.takesOver(from: .critical, with: .low, reduceMotion: true))
+        #expect(AlertFlash.takesOver(from: .high, with: .critical, reduceMotion: true))
+        #expect(AlertFlash.takesOver(from: .high, with: .high, reduceMotion: false))
+    }
+
     @Test("with Reduce Motion the edge lights once instead of blinking, for about as long")
     func reduceMotion() throws {
         for importance in [SoundEvent.Importance.critical, .high] {

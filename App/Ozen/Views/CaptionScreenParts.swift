@@ -181,20 +181,26 @@ struct AlertFlashOverlay: View {
     let alert: SoundAlert?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var flashing: SoundAlert?
+    /// Kept after a flash ends, so its last fade doesn't change colour.
+    @State private var tint = SoundEvent.Importance.critical
     @State private var isLit = false
 
     var body: some View {
         Rectangle()
-            .strokeBorder(SoundAlertsView.tint(flashing?.event.importance ?? .critical), lineWidth: 22)
-            .background(SoundAlertsView.tint(flashing?.event.importance ?? .critical).opacity(0.2))
+            .strokeBorder(SoundAlertsView.tint(tint), lineWidth: 22)
+            .background(SoundAlertsView.tint(tint).opacity(0.2))
             .ignoresSafeArea()
             .opacity(isLit ? 1 : 0)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
             .onChange(of: alert?.id) { _, _ in
-                // A kettle heard during a siren's flash doesn't cut it short.
-                guard let alert, AlertFlash.pattern(for: alert.event.importance, reduceMotion: reduceMotion) != nil else { return }
+                // A kettle, or the door, heard during a siren's flash doesn't
+                // cut it short.
+                guard let alert,
+                      AlertFlash.takesOver(from: flashing?.event.importance, with: alert.event.importance, reduceMotion: reduceMotion)
+                else { return }
                 flashing = alert
+                tint = alert.event.importance
             }
             .task(id: flashing?.id) {
                 guard let alert = flashing,
@@ -205,6 +211,9 @@ struct AlertFlashOverlay: View {
                 // touch the light, or this one's "off" could land on the
                 // newer one's first flash.
                 let id = alert.id
+                // Over, or the screen went away: the next alert flashes
+                // whatever it is, and coming back doesn't replay this one.
+                defer { if flashing?.id == id { flashing = nil } }
                 for _ in 0..<flash.count {
                     guard flashing?.id == id else { return }
                     withAnimation(.easeOut(duration: 0.08)) { isLit = true }
