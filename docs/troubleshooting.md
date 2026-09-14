@@ -57,6 +57,15 @@ leave the phone.
   a phone number) stand out so they aren't missed: yellow among white text,
   white among yellow text, dark blue on a white background. Settings → Display (tetzuga) →
   "Bold numbers" (misparim boltim) turns it off.
+- **One person gets two speaker numbers, or two people share one.** Voices
+  are told apart by how they sound, which is rough: expect a wrong label now
+  and then, more often in a noisy room. Settings → Behaviour (hitnahagut) →
+  "Speaker separation sensitivity" (regishut hafradat dovrim) adjusts it:
+  towards "merges more" (me'ached yoter) if the same person keeps getting a
+  new number, towards "separates more" (mafrid yoter) if two people are
+  joined. Build 13 and earlier put everyone under one label (and a
+  saved voice's name on everybody's lines); updating fixes that, and saved
+  voices keep working.
 - **A small question mark next to a line.** The engine wasn't sure it heard
   that line right. Holding the line offers to ask the speaker to repeat it.
 - **No phone notifications when the screen is off.** Settings → Notifications (hatra'ot) shows

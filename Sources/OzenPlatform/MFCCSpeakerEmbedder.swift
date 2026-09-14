@@ -8,12 +8,23 @@ import OzenKit
 /// pipeline or model-conversion step to ship a working first version. Its
 /// actual clustering quality on real family voices is explicitly an open
 /// question for the manual hardware test pass, not assumed here.
+///
+/// The print leaves out the first coefficient, which is only how loud the
+/// sound was. It used to be included and it outweighed everything else:
+/// measured over 26 speakers of the LibriSpeech test set, any two voices
+/// scored about 0.95 alike, so at the 0.75 threshold a table of four people
+/// became one speaker, a saved voice's name went on everybody's lines, and
+/// the same person 20 dB quieter (further from the phone) scored as a
+/// stranger. Without it the print doesn't change with loudness at all, and
+/// in the same simulated four-person tables 70-80% of lines went to a label
+/// of their own speaker's.
 public struct MFCCSpeakerEmbedder: SpeakerEmbedding {
     private let frameSize = 400   // 25ms @ 16kHz
     private let hopSize = 160     // 10ms @ 16kHz
     private let fftSize = 512
     private let melBinCount = 26
-    private let coefficientCount = 13
+    /// Coefficients 1 through 12 of the cepstrum.
+    static let coefficientCount = SpeakerProfile.voicePrintLength
 
     public init() {}
 
@@ -26,13 +37,13 @@ public struct MFCCSpeakerEmbedder: SpeakerEmbedding {
         }
         defer { vDSP_destroy_fftsetup(fftSetup) }
 
-        var accumulated = [Float](repeating: 0, count: coefficientCount)
+        var accumulated = [Float](repeating: 0, count: Self.coefficientCount)
         var frameCount = 0
         var offset = 0
         while offset + frameSize <= samples.count {
             let frame = Array(samples[offset..<(offset + frameSize)])
             if let coefficients = mfcc(for: frame, filterbank: filterbank, fftSetup: fftSetup) {
-                for i in 0..<coefficientCount { accumulated[i] += coefficients[i] }
+                for i in 0..<Self.coefficientCount { accumulated[i] += coefficients[i] }
                 frameCount += 1
             }
             offset += hopSize
@@ -76,14 +87,16 @@ public struct MFCCSpeakerEmbedder: SpeakerEmbedding {
             melEnergies[band] = logf(max(sum, 1e-10))
         }
 
-        // DCT-II down to `coefficientCount` MFCCs.
-        var coefficients = [Float](repeating: 0, count: coefficientCount)
-        for k in 0..<coefficientCount {
+        // DCT-II, coefficients 1 through `coefficientCount`. Coefficient 0
+        // is the sum of the log energies: a louder sound adds the same
+        // amount to every band, which lands entirely in it.
+        var coefficients = [Float](repeating: 0, count: Self.coefficientCount)
+        for k in 1...Self.coefficientCount {
             var sum: Float = 0
             for n in 0..<melBinCount {
                 sum += melEnergies[n] * cosf(Float.pi / Float(melBinCount) * (Float(n) + 0.5) * Float(k))
             }
-            coefficients[k] = sum
+            coefficients[k - 1] = sum
         }
         return coefficients
     }

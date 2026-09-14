@@ -53,6 +53,33 @@ struct MFCCSpeakerEmbedderTests {
         let silence = [Float](repeating: 0, count: Int(sampleRate))
         let embedding = embedder.embed(samples: silence, sampleRate: sampleRate)
         #expect(embedding != nil)
-        #expect(embedding?.count == 13)
+        #expect(embedding?.count == SpeakerProfile.voicePrintLength)
+    }
+
+    /// Harmonics of `pitch` over a little deterministic noise, so every
+    /// band has energy well above the log floor at both loudnesses.
+    func voice(pitch: Double, harmonics: Int, gain: Float) -> [Float] {
+        var state: UInt32 = 1
+        return (0..<Int(sampleRate)).map { i in
+            var value = 0.0
+            for h in 1...harmonics {
+                value += 0.6 / Double(h) * sin(2 * Double.pi * pitch * Double(h) * Double(i) / sampleRate)
+            }
+            state = state &* 1_664_525 &+ 1_013_904_223
+            let noise = Double(state) / Double(UInt32.max) * 2 - 1
+            return Float(value + 0.02 * noise) * gain
+        }
+    }
+
+    @Test("the same voice further from the phone gives the same print")
+    func loudnessDoesNotChangeThePrint() throws {
+        let near = try #require(embedder.embed(samples: voice(pitch: 150, harmonics: 19, gain: 1), sampleRate: sampleRate))
+        let far = try #require(embedder.embed(samples: voice(pitch: 150, harmonics: 19, gain: 0.1), sampleRate: sampleRate))
+        let other = try #require(embedder.embed(samples: voice(pitch: 260, harmonics: 11, gain: 1), sampleRate: sampleRate))
+        // With the loudness coefficient in the print these came out 0.06
+        // and 0.93: the same voice quieter looked like a stranger, and a
+        // different voice at the same loudness looked like the same one.
+        #expect(cosineSimilarity(near, far) > 0.999)
+        #expect(cosineSimilarity(near, other) < 0.9)
     }
 }

@@ -249,7 +249,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
         engine = container.lenient(TranscriptionEngineKind.self, forKey: .engine) ?? defaults.engine
         languageCode = container.lenient(String.self, forKey: .languageCode) ?? defaults.languageCode
         preferredInputUID = container.lenient(String.self, forKey: .preferredInputUID)
-        speakerProfiles = container.lenientArray(of: SpeakerProfile.self, forKey: .speakerProfiles)?.filter(\.isUsable) ?? []
+        speakerProfiles = container.lenientArray(of: SpeakerProfile.self, forKey: .speakerProfiles)?
+            .filter(\.isUsable)
+            .map(\.withCurrentVoicePrint) ?? []
         // The credit line is not user-editable; whatever an old file says,
         // the current build's text wins.
         creditLine = defaults.creditLine
@@ -313,6 +315,22 @@ extension SpeakerProfile {
     /// save fail.
     var isUsable: Bool {
         !embedding.isEmpty && embedding.allSatisfy(\.isFinite)
+    }
+
+    /// How many numbers a voice print from the MFCC embedder has.
+    public static let voicePrintLength = 12
+
+    /// This profile as the current embedder would have made it. Prints
+    /// saved by earlier builds had one more number in front, the loudness
+    /// of the recording, which made every voice look alike (see
+    /// `MFCCSpeakerEmbedder`). The rest of the print is exactly what the
+    /// embedder makes now, so dropping it keeps a saved voice working
+    /// instead of silently never matching anyone again.
+    var withCurrentVoicePrint: SpeakerProfile {
+        guard embedding.count == Self.voicePrintLength + 1 else { return self }
+        var profile = self
+        profile.embedding.removeFirst()
+        return profile
     }
 }
 

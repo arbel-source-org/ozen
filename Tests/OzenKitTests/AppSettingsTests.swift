@@ -28,6 +28,26 @@ struct AppSettingsTests {
         #expect(decoded == original)
     }
 
+    @Test("a voice saved with the old loudness number keeps matching: that number is dropped on load")
+    func oldVoicePrintMigrates() throws {
+        let oldPrint: [Float] = [-180, 12, -3, 4, -5, 6, -7, 8, -9, 10, -11, 1.5, -0.5]
+        let other: [Float] = [1, 2, 3]
+        let saved = AppSettings(
+            engine: .whisperKit,
+            languageCode: "he",
+            preferredInputUID: nil,
+            speakerProfiles: [
+                SpeakerProfile(name: "old", embedding: oldPrint),
+                SpeakerProfile(name: "current", embedding: Array(oldPrint.dropFirst())),
+                SpeakerProfile(name: "other", embedding: other),
+            ],
+            creditLine: "Made by Arbel"
+        )
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(saved))
+        #expect(decoded.speakerProfiles.map(\.embedding) == [Array(oldPrint.dropFirst()), Array(oldPrint.dropFirst()), other])
+        #expect(decoded.speakerProfiles.map(\.embedding.count).prefix(2).allSatisfy { $0 == SpeakerProfile.voicePrintLength })
+    }
+
     @Test("loading with no file on disk yet returns defaults instead of throwing")
     func loadWithMissingFileReturnsDefault() {
         let missingURL = FileManager.default.temporaryDirectory
