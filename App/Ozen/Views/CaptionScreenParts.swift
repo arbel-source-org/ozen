@@ -153,7 +153,12 @@ struct NameSpeakerSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .onAppear { typing = segment.speakerClusterID != nil && savedNames.isEmpty }
+        .task {
+            // Focus asked for while the sheet is still sliding up is often
+            // dropped: wait for it to settle.
+            try? await Task.sleep(for: .milliseconds(400))
+            typing = segment.speakerClusterID != nil && savedNames.isEmpty
+        }
     }
 
     private func save() {
