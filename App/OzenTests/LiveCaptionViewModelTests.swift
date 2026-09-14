@@ -461,6 +461,18 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.phase == .idle)
     }
 
+    @Test("\"write to me\" opens the big-letters pad, with captions running behind it")
+    func bigText() async {
+        let (viewModel, _) = makeViewModel()
+        await viewModel.launch(pending: .showBigText)
+        #expect(viewModel.isShowingBigText)
+        #expect(viewModel.phase.isListening)
+
+        viewModel.isShowingBigText = false
+        await viewModel.handle(pending: [.showBigText], isFirstAppearance: false)
+        #expect(viewModel.isShowingBigText)
+    }
+
     @Test("launched by Siri to stop: nothing starts")
     func launchWithStop() async {
         let (viewModel, _) = makeViewModel()

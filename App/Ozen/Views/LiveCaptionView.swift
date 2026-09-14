@@ -27,6 +27,8 @@ struct LiveCaptionView: View {
     @State private var battery = BatteryMonitor()
     private let installExpiry = InstallExpiryStatus.shared
     @State private var installExpiryDismissed = false
+    /// What was typed on the big-letters pad opened by a Shortcut.
+    @State private var bigText = ""
     @State private var confirmingCellularDownload = false
     @State private var openedRecentConversation: TranscriptSessionSummary?
     /// Live scale while a pinch is in progress; 1 otherwise.
@@ -283,6 +285,14 @@ struct LiveCaptionView: View {
         }
         .sheet(isPresented: $showingTypeToSpeak) {
             TypeToSpeakView(viewModel: viewModel)
+        }
+        .fullScreenCover(isPresented: $viewModel.isShowingBigText) {
+            BigTextView(
+                text: $bigText,
+                display: viewModel.display,
+                canSpeak: viewModel.hasHebrewVoice,
+                onSpeak: { viewModel.speak($0) }
+            )
         }
         .sheet(item: $namingSegment) { segment in
             NameSpeakerSheet(segment: segment, viewModel: viewModel)

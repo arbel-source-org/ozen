@@ -51,6 +51,20 @@ struct SpeakIntent: AppIntent {
     }
 }
 
+/// "כתבו לי": the big-letters pad, straight from Siri or the Action
+/// button, for when captions can't keep up and someone needs to type.
+struct ShowBigTextIntent: AppIntent {
+    static let title: LocalizedStringResource = "כתבו לי"
+    static let description = IntentDescription("פותח את אוזן במסך מלא באותיות גדולות, כדי שמישהו יכתוב לך.")
+    static let openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        PendingAppAction.shared.post(.showBigText)
+        return .result()
+    }
+}
+
 struct OzenShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -80,6 +94,15 @@ struct OzenShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "להגיד משהו",
             systemImageName: "speaker.wave.2"
+        )
+        AppShortcut(
+            intent: ShowBigTextIntent(),
+            phrases: [
+                "כתבו לי ב\(.applicationName)",
+                "Big text in \(.applicationName)",
+            ],
+            shortTitle: "כתבו לי",
+            systemImageName: "textformat.size.larger"
         )
     }
 }

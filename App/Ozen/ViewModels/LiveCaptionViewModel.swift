@@ -25,6 +25,9 @@ public final class LiveCaptionViewModel {
     /// Set while the system has the audio session (an incoming call), so
     /// the screen can say why captions stopped instead of looking broken.
     public private(set) var isInterruptedBySystem = false
+    /// The big-letters pad is up (see `BigTextView`); set by a Shortcut or
+    /// the Action button, cleared when the pad closes.
+    public var isShowingBigText = false
     /// Why the last settings save failed, for the diagnostics screen; nil
     /// when the last save worked.
     public private(set) var settingsSaveError: String?
@@ -402,6 +405,10 @@ public final class LiveCaptionViewModel {
             speak(text)
             await waitUntilSpeechEnds()
             await start()
+        case .showBigText:
+            // Captions run behind the pad, as they would have anyway.
+            isShowingBigText = true
+            await start()
         case .startCaptions, nil:
             await start()
         }
@@ -444,6 +451,8 @@ public final class LiveCaptionViewModel {
             historySessionDidChangePhase()
         case .speak(let text):
             speak(text)
+        case .showBigText:
+            isShowingBigText = true
         }
     }
 
@@ -1045,4 +1054,6 @@ public enum AppAction: Equatable, Sendable {
     case startCaptions
     case stopCaptions
     case speak(String)
+    /// The full-screen pad in big letters, for someone to type to her.
+    case showBigText
 }

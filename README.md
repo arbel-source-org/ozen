@@ -81,7 +81,7 @@ things, for Hebrew conversation, entirely on-device.
   talks, so it doesn't caption itself, and come back on their own. A
   full-screen pad in huge letters lets someone type to her where captions
   can't keep up, or turns what she typed upside down for the person facing
-  her to read.
+  her to read. "כתבו לי" opens it straight from Siri or the Action button.
 - **Names and words list.** Family names, the doctor, the medicines.
   Both engines are primed with the list (Apple's recognizer via
   contextual strings, Whisper via a decoder prompt), edits apply from the
@@ -207,7 +207,7 @@ vocabulary, model-download, recovery, battery, notification and layout
 logic (390 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 65 tests).
+the same fakes (another 66 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
