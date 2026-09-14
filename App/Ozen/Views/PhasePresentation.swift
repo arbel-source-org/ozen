@@ -32,7 +32,8 @@ struct PhasePresentation {
         phase: PipelinePhase,
         engine: TranscriptionEngineKind?,
         interruptedBySystem: Bool,
-        scheduledRetry: ScheduledRetry? = nil
+        scheduledRetry: ScheduledRetry? = nil,
+        downloadSecondsRemaining: Double? = nil
     ) {
         if interruptedBySystem {
             self.init(
@@ -53,7 +54,7 @@ struct PhasePresentation {
             self.init(title: "מבקש גישה למיקרופון", detail: "אשרו בחלון שנפתח", systemImage: "mic.badge.plus", tint: .yellow, isBusy: true)
 
         case .preparingEngine(let progress):
-            self.init(preparation: progress, engine: engine)
+            self.init(preparation: progress, engine: engine, secondsRemaining: downloadSecondsRemaining)
 
         case .startingAudio:
             self.init(title: "מפעיל את המיקרופון", detail: nil, systemImage: "mic", tint: .yellow, isBusy: true)
@@ -99,7 +100,7 @@ struct PhasePresentation {
         self.action = action
     }
 
-    private init(preparation: EnginePreparationProgress, engine: TranscriptionEngineKind?) {
+    private init(preparation: EnginePreparationProgress, engine: TranscriptionEngineKind?, secondsRemaining: Double?) {
         let modelName = preparation.detail.flatMap { WhisperModelCatalog.option(for: $0)?.displayName } ?? preparation.detail
         switch preparation.stage {
         case .checkingSupport:
@@ -111,7 +112,9 @@ struct PhasePresentation {
             let title = percent.map { "מוריד את מודל השפה · \($0)%" } ?? "מוריד את מודל השפה"
             // The download only runs while the app is open; the screen is
             // kept on meanwhile, but she might still switch away.
-            let detail = modelName.map { "\($0) · פעם אחת בלבד · השאירו את האפליקציה פתוחה" } ?? "פעם אחת בלבד · השאירו את האפליקציה פתוחה"
+            let detail = [secondsRemaining.map(Self.remainingText), modelName, "פעם אחת בלבד", "השאירו את האפליקציה פתוחה"]
+                .compactMap { $0 }
+                .joined(separator: " · ")
             self.init(title: title, detail: detail, systemImage: "arrow.down.circle", tint: .yellow, progress: preparation.fraction, isBusy: true)
         case .loadingModel:
             self.init(title: "טוען את המודל", detail: "בפעם הראשונה זה יכול לקחת דקה או שתיים", systemImage: "cpu", tint: .yellow, isBusy: true)
@@ -208,6 +211,18 @@ struct PhasePresentation {
     /// "450 MB", or "1.3 GB" once it's that big, in the same decimal
     /// units as the model list and the Settings app. Rounded up: this is
     /// how much room to free, and freeing a little less wouldn't do.
+    /// How long a download has left, in words and never falsely precise.
+    static func remainingText(seconds: Double) -> String {
+        switch seconds {
+        case ..<60: return "עוד פחות מדקה"
+        case ..<90: return "עוד כדקה"
+        case ..<(59.5 * 60):
+            let minutes = Int((seconds / 60).rounded())
+            return minutes == 2 ? "עוד כשתי דקות" : "עוד כ-\(minutes) דקות"
+        default: return "עוד יותר משעה"
+        }
+    }
+
     static func sizeText(megabytes: Int) -> String {
         guard megabytes >= 1_000 else { return "\(megabytes) MB" }
         let tenths = (megabytes + 99) / 100

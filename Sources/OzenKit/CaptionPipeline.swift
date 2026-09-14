@@ -54,6 +54,10 @@ public final class CaptionPipeline {
     public private(set) var activeSettings: AppSettings?
     /// Set while a failure is waiting to be retried automatically.
     public private(set) var scheduledRetry: ScheduledRetry?
+    /// How long the model download has left at its current pace, while
+    /// one runs and there's enough to go on (see `DownloadEstimator`).
+    public private(set) var downloadSecondsRemaining: Double?
+    @ObservationIgnored private var downloadEstimator = DownloadEstimator()
     /// Called for every new sound alert, e.g. to post a notification while
     /// the app isn't on screen.
     public var onSoundAlert: ((SoundAlert) -> Void)?
@@ -198,6 +202,9 @@ public final class CaptionPipeline {
         let engine = cachedEngine(for: settings)
         activeEngineKind = engine.kind
         phase = .preparingEngine(EnginePreparationProgress(stage: .checkingSupport))
+        // A download that failed earlier and is starting again is timed afresh.
+        downloadEstimator.reset()
+        downloadSecondsRemaining = nil
         if let megabytes = await engine.pendingDownloadMegabytes() {
             guard runID == run else { return }
             let allowCellular = settings.allowCellularModelDownload || cellularDownloadApproved
@@ -232,6 +239,7 @@ public final class CaptionPipeline {
             Task { @MainActor [weak self] in
                 guard let self, self.runID == run, case .preparingEngine = self.phase else { return }
                 self.phase = .preparingEngine(progress)
+                self.trackDownload(progress)
             }
         }
         guard runID == run else { return }
@@ -722,6 +730,16 @@ public final class CaptionPipeline {
         activeSettings?.vocabulary = cleaned
         guard let currentEngine, phase.isListening || phase == .paused else { return }
         await currentEngine.setVocabulary(cleaned)
+    }
+
+    private func trackDownload(_ progress: EnginePreparationProgress) {
+        guard progress.stage == .downloadingModel, let fraction = progress.fraction else {
+            downloadEstimator.reset()
+            downloadSecondsRemaining = nil
+            return
+        }
+        downloadEstimator.record(fraction: fraction, at: now())
+        downloadSecondsRemaining = downloadEstimator.secondsRemaining()
     }
 
     private func cachedEngine(for settings: AppSettings) -> any TranscriptionEngine {

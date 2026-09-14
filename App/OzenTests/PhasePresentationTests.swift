@@ -95,6 +95,23 @@ struct PhasePresentationTests {
         )
         #expect(downloading.progress == 0.42)
         #expect(downloading.title.contains("42%"))
+
+        let timed = PhasePresentation(
+            phase: .preparingEngine(EnginePreparationProgress(stage: .downloadingModel, fraction: 0.42, detail: "small")),
+            engine: .whisperKit,
+            interruptedBySystem: false,
+            downloadSecondsRemaining: 200
+        )
+        #expect(timed.detail?.hasPrefix("עוד כ-3 דקות · ") == true)
+    }
+
+    @Test("time left reads as words, never falsely precise")
+    func remainingText() {
+        #expect(PhasePresentation.remainingText(seconds: 20) == "עוד פחות מדקה")
+        #expect(PhasePresentation.remainingText(seconds: 75) == "עוד כדקה")
+        #expect(PhasePresentation.remainingText(seconds: 125) == "עוד כשתי דקות")
+        #expect(PhasePresentation.remainingText(seconds: 1_500) == "עוד כ-25 דקות")
+        #expect(PhasePresentation.remainingText(seconds: 3_600) == "עוד יותר משעה")
     }
 }
 

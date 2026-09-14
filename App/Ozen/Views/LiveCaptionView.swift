@@ -84,7 +84,8 @@ struct LiveCaptionView: View {
             phase: viewModel.phase,
             engine: viewModel.pipeline.activeEngineKind,
             interruptedBySystem: viewModel.isInterruptedBySystem,
-            scheduledRetry: viewModel.pipeline.scheduledRetry
+            scheduledRetry: viewModel.pipeline.scheduledRetry,
+            downloadSecondsRemaining: viewModel.pipeline.downloadSecondsRemaining
         )
     }
 
