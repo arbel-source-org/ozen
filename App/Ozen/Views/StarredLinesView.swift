@@ -29,10 +29,15 @@ struct StarredLinesView: View {
                                     }
                                 } label: {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        if let name = line.segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
-                                            Text(name)
-                                                .font(.caption.weight(.semibold))
-                                                .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID))
+                                        HStack(spacing: 6) {
+                                            Text(Date(timeIntervalSince1970: line.segment.startTimestamp).formatted(date: .omitted, time: .shortened))
+                                                .font(.caption2.monospacedDigit())
+                                                .foregroundStyle(.secondary)
+                                            if let name = line.segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
+                                                Text(name)
+                                                    .font(.caption.weight(.semibold))
+                                                    .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID))
+                                            }
                                         }
                                         Text(CaptionLayout.readableText(line.segment.text))
                                             .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
