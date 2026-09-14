@@ -45,6 +45,15 @@ struct PhasePresentationTests {
         #expect(presentation.tint == .red)
     }
 
+    @Test("paused while the phone talks says so, and that captions come back by themselves")
+    func pausedForSpeech() {
+        let speaking = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false, pausedForSpeech: true)
+        #expect(speaking.title == "הטלפון מדבר")
+        #expect(speaking.action == .resume)
+        let byHand = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false)
+        #expect(byHand.title == "מושהה")
+    }
+
     @Test("sizes read as MB below a gigabyte and as GB with one decimal above")
     func sizeText() {
         #expect(PhasePresentation.sizeText(megabytes: 450) == "450 MB")

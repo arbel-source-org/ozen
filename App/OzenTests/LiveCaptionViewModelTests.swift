@@ -369,10 +369,12 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.phase.isListening)
         viewModel.speak("כן")
         #expect(viewModel.phase == .paused)
+        #expect(viewModel.captionsHeldForSpeech)
         synthesizer.startNext()
         synthesizer.finishCurrent()
         await eventually { viewModel.phase.isListening }
         #expect(viewModel.phase.isListening)
+        #expect(viewModel.captionsHeldForSpeech == false)
     }
 
     @Test("a second phrase tapped while the first plays keeps captions paused until the last one ends")

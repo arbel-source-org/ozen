@@ -722,6 +722,12 @@ public final class LiveCaptionViewModel {
         keywordAlertsChanged()
     }
 
+    /// Captions are paused only while the phone says something aloud, and
+    /// come back by themselves after.
+    public var captionsHeldForSpeech: Bool {
+        speechPause.isHoldingCaptions && pipeline.phase == .paused
+    }
+
     /// "Not now" on the caption screen's offer to set up her name alert.
     public func dismissNameAlertOffer() {
         settings.nameAlertOfferDismissed = true

@@ -33,7 +33,8 @@ struct PhasePresentation {
         engine: TranscriptionEngineKind?,
         interruptedBySystem: Bool,
         scheduledRetry: ScheduledRetry? = nil,
-        downloadSecondsRemaining: Double? = nil
+        downloadSecondsRemaining: Double? = nil,
+        pausedForSpeech: Bool = false
     ) {
         if interruptedBySystem {
             self.init(
@@ -61,6 +62,11 @@ struct PhasePresentation {
 
         case .listening:
             self.init(title: "מקשיב", detail: "הקישו להשהיה", systemImage: "waveform", tint: .green, action: .pause)
+
+        case .paused where pausedForSpeech:
+            // Not "paused": that reads as something to fix, and tapping it
+            // would open the microphone onto the phone's own voice.
+            self.init(title: "הטלפון מדבר", detail: "הכתוביות ימשיכו לבד כשיסיים", systemImage: "speaker.wave.2.fill", tint: .orange, action: .resume)
 
         case .paused:
             self.init(title: "מושהה", detail: "הקישו להמשיך", systemImage: "pause.circle.fill", tint: .orange, action: .resume)
