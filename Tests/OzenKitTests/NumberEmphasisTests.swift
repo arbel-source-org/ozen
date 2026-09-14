@@ -18,9 +18,21 @@ struct NumberEmphasisTests {
 
     @Test("numbers in words, with Hebrew's attached prefixes and around punctuation")
     func words() {
-        #expect(emphasized("לקחת שלושה כדורים, ובשש בערב עוד חצי.") == ["שלושה", "ובשש", "חצי"])
-        #expect(emphasized("שלושה-עשר יום") == ["שלושה", "עשר"])
+        #expect(emphasized("לקחת שלושה כדורים, ובשש בערב עוד חצי.") == ["שלושה כדורים", "ובשש", "חצי"])
+        #expect(emphasized("שלושה-עשר אנשים") == ["שלושה", "עשר"])
         #expect(emphasized("\u{200F}\"לשניים\"") == ["לשניים"])
+    }
+
+    @Test("the unit right after an amount stands out with it")
+    func units() {
+        #expect(emphasized("לקחת 3 כדורים ביום") == ["3 כדורים"])
+        #expect(emphasized("חצי כדור בערב, ו-500 מ״ג בבוקר") == ["חצי כדור", "500 מ״ג"])
+        #expect(emphasized("שלוש פעמים ביום") == ["שלוש פעמים"])
+        // Punctuation after the number ends it; a unit before it isn't one.
+        #expect(emphasized("בשעה 10:30, דקות ספורות") == ["10:30"])
+        #expect(emphasized("פעם אחת ביום") == ["אחת"])
+        #expect(NumberEmphasis.hasListableNumber("חצי כדור בערב"))
+        #expect(NumberEmphasis.hasListableNumber("שני ימים") == false)
     }
 
     @Test("nobody, everybody and at once are not a count of one; once is")

@@ -11,39 +11,56 @@ import Foundation
 public enum NumberEmphasis {
     /// The stretches of `text` that are numbers, in order. Each covers a
     /// whole word (with its prefix), or for digits, from the first digit
-    /// to the last, with a percent sign right after.
+    /// to the last, with a percent sign right after; and the unit that
+    /// follows, when one does ("3 כדורים", "חצי כדור", "500 מ״ג"), since
+    /// the amount alone doesn't say what of.
     public static func ranges(in text: String) -> [Range<String.Index>] {
         let words = self.words(in: text)
         var result: [Range<String.Index>] = []
+        var skipUnitAt: Int?
         for (position, word) in words.enumerated() {
-            if let firstDigit = word.text.firstIndex(where: \.isNumber), let lastDigit = word.text.lastIndex(where: \.isNumber) {
-                var end = word.text.index(after: lastDigit)
-                if end < word.text.endIndex, word.text[end] == "%" {
-                    end = word.text.index(after: end)
-                }
-                result.append(firstDigit..<end)
-                continue
+            guard position != skipUnitAt else { continue }
+            guard let found = numberRange(of: word, at: position, in: words) else { continue }
+            // "3 כדורים": the unit joins the number, unless punctuation
+            // ends the number's word first ("בשעה 10:30, כדורים").
+            if found.upperBound == word.text.endIndex, position + 1 < words.count,
+               let unit = words[position + 1].coreRange, let unitWord = words[position + 1].core,
+               units.contains(unitWord) {
+                result.append(found.lowerBound..<unit.upperBound)
+                skipUnitAt = position + 1
+            } else {
+                result.append(found)
             }
-            guard let coreRange = word.coreRange, let core = word.core, let reading = numberReading(of: core) else { continue }
-            let previous = position > 0 ? words[position - 1].core : nil
-            let following = words[(position + 1)...].prefix(3).compactMap(\.core)
-            if onesWords.contains(reading.number) {
-                // "אף אחד" is nobody and "כל אחד" everybody, and "אחד
-                // את השני" is each other: none of them a count of one.
-                if let previous, notACountBefore.contains(previous) { continue }
-                if following.contains(where: otherOneWords.contains) { continue }
-            }
-            if twoWords.contains(reading.number) {
-                // "השני" is the other one or the second, never a count of two.
-                if reading.prefixes.contains("ה") { continue }
-                // "לשני" after "אחד" is "to each other"; alone it's "to two"
-                // or "on Monday".
-                let earlier = words[max(0, position - 3)..<position].compactMap(\.core)
-                if otherOneWords.contains(core), earlier.contains(where: onesWords.contains) { continue }
-            }
-            result.append(coreRange)
         }
         return result
+    }
+
+    private static func numberRange(of word: Word, at position: Int, in words: [Word]) -> Range<String.Index>? {
+        if let firstDigit = word.text.firstIndex(where: \.isNumber), let lastDigit = word.text.lastIndex(where: \.isNumber) {
+            var end = word.text.index(after: lastDigit)
+            if end < word.text.endIndex, word.text[end] == "%" {
+                end = word.text.index(after: end)
+            }
+            return firstDigit..<end
+        }
+        guard let coreRange = word.coreRange, let core = word.core, let reading = numberReading(of: core) else { return nil }
+        let previous = position > 0 ? words[position - 1].core : nil
+        let following = words[(position + 1)...].prefix(3).compactMap(\.core)
+        if onesWords.contains(reading.number) {
+            // "אף אחד" is nobody and "כל אחד" everybody, and "אחד
+            // את השני" is each other: none of them a count of one.
+            if let previous, notACountBefore.contains(previous) { return nil }
+            if following.contains(where: otherOneWords.contains) { return nil }
+        }
+        if twoWords.contains(reading.number) {
+            // "השני" is the other one or the second, never a count of two.
+            if reading.prefixes.contains("ה") { return nil }
+            // "לשני" after "אחד" is "to each other"; alone it's "to two"
+            // or "on Monday".
+            let earlier = words[max(0, position - 3)..<position].compactMap(\.core)
+            if otherOneWords.contains(core), earlier.contains(where: onesWords.contains) { return nil }
+        }
+        return coreRange
     }
 
     /// Whether a line is worth listing under "numbers said" in a saved
@@ -54,7 +71,8 @@ public enum NumberEmphasis {
         ranges(in: text).contains { range in
             let found = text[range]
             if found.contains(where: \.isNumber) { return true }
-            guard let reading = numberReading(of: String(found)) else { return false }
+            // The number is the first word; a unit may follow it.
+            guard let reading = numberReading(of: String(found.prefix(while: { !$0.isWhitespace }))) else { return false }
             return !onesWords.contains(reading.number) && !twoWords.contains(reading.number)
         }
     }
@@ -121,6 +139,15 @@ public enum NumberEmphasis {
     }
 
     static let prefixes: Set<Character> = ["ו", "ב", "ל", "מ", "ה", "ש", "כ"]
+
+    /// What an amount is usually of, said right after it.
+    static let units: Set<String> = [
+        "כדור", "כדורים", "טיפה", "טיפות", "כפית", "כפיות", "זריקה", "זריקות",
+        "מ״ג", "מ\"ג", "מג", "מ״ל", "מ\"ל", "מל", "גרם", "קילו", "ק״ג", "מטר", "קילומטר",
+        "שקל", "שקלים", "אחוז", "אחוזים",
+        "דקה", "דקות", "שעה", "שעות", "יום", "ימים", "שבוע", "שבועות", "חודש", "חודשים", "שנה", "שנים",
+        "פעם", "פעמים",
+    ]
 
     static let onesWords: Set<String> = ["אחד", "אחת"]
     static let twoWords: Set<String> = ["שני", "שתי"]
