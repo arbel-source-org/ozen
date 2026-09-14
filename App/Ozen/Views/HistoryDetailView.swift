@@ -217,41 +217,61 @@ struct HistoryDetailView: View {
             }
             Button("ביטול", role: .cancel) {}
         }
-        .task {
-            // Loaded and summarised once, off the main thread: a long
-            // conversation's words shouldn't be counted on every redraw, or
-            // hold up the screen sliding in.
-            guard !hasLoaded else { return }
-            let store = viewModel.historyStore
-            let id = sessionID
-            let query = searchQuery
-            let (loaded, summary, found, marks, numbers) = await Task.detached(priority: .userInitiated) {
-                let loaded = store.load(id: id)
-                return (
-                    loaded,
-                    loaded.map(ConversationStats.compute(from:)),
-                    // With no search, the button steps through starred lines.
-                    loaded.map { record in
-                        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                            ? record.segments.filter(\.isStarred).map(\.id)
-                            : TranscriptHistoryStore.matchingSegmentIDs(in: record, query: query)
-                    } ?? [],
-                    loaded.map { CaptionLayout.timeMarkedLineIDs(in: $0.segments) } ?? [],
-                    loaded.map { $0.segments.filter { NumberEmphasis.hasListableNumber($0.text) }.map(\.id) } ?? []
-                )
-            }.value
+        .task { await load() }
+    }
+
+    /// Everything the screen shows about one saved conversation, worked
+    /// out together off the main thread.
+    nonisolated private struct Loaded: Sendable {
+        let record: TranscriptSessionRecord?
+        let stats: ConversationStats?
+        let matches: [UUID]
+        let timeMarks: Set<UUID>
+        let numberLineIDs: [UUID]
+
+        init(store: TranscriptHistoryStore, id: UUID, query: String) {
+            let loaded = store.load(id: id)
             record = loaded
-            stats = summary
-            matches = found
-            timeMarks = marks
-            numberLineIDs = numbers
-            // Opened at a starred line: "next" continues from that one.
-            if let initialLineID, let index = found.firstIndex(of: initialLineID) {
-                currentMatch = index
-                hasJumped = true
+            stats = loaded.map(ConversationStats.compute(from:))
+            guard let loaded else {
+                matches = []
+                timeMarks = []
+                numberLineIDs = []
+                return
             }
-            hasLoaded = true
+            // With no search, the button steps through starred lines.
+            if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                matches = loaded.segments.filter(\.isStarred).map(\.id)
+            } else {
+                matches = TranscriptHistoryStore.matchingSegmentIDs(in: loaded, query: query)
+            }
+            timeMarks = CaptionLayout.timeMarkedLineIDs(in: loaded.segments)
+            numberLineIDs = loaded.segments.filter { NumberEmphasis.hasListableNumber($0.text) }.map(\.id)
         }
+    }
+
+    /// Loaded and summarised once, off the main thread: a long
+    /// conversation's words shouldn't be counted on every redraw, or hold
+    /// up the screen sliding in.
+    private func load() async {
+        guard !hasLoaded else { return }
+        let store = viewModel.historyStore
+        let id = sessionID
+        let query = searchQuery
+        let loaded = await Task.detached(priority: .userInitiated) {
+            Loaded(store: store, id: id, query: query)
+        }.value
+        record = loaded.record
+        stats = loaded.stats
+        matches = loaded.matches
+        timeMarks = loaded.timeMarks
+        numberLineIDs = loaded.numberLineIDs
+        // Opened at a starred line: "next" continues from that one.
+        if let initialLineID, let index = loaded.matches.firstIndex(of: initialLineID) {
+            currentMatch = index
+            hasJumped = true
+        }
+        hasLoaded = true
     }
 }
 
