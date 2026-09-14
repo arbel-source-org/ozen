@@ -194,6 +194,7 @@ things, for Hebrew conversation, entirely on-device.
 - **Siri and Shortcuts.** "Hey Siri, start captions in Ozen" (hey Siri,
   hatchel ktuviyot be-Ozen), "Stop captions" (atzor ktuviyot),
   and "Say in Ozen ..." (tagid be-Ozen ...) to have the phone say something aloud.
+  Each also in the feminine (hatchili, itzri, tagidi).
 - **A start button in Control Center** (iOS 18): "Start captions" (hatchalat
   ktuviyot) opens Ozen and starts listening in one press. It can also
   replace the flashlight or camera button at the bottom of the lock screen.
