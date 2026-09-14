@@ -21,7 +21,7 @@ struct HistoryView: View {
             if query.isEmpty, sessions.contains(where: { $0.starredCount > 0 }) {
                 Section {
                     NavigationLink {
-                        StarredLinesView(viewModel: viewModel, onDelete: reload)
+                        StarredLinesView(viewModel: viewModel, onHistoryChanged: reload)
                     } label: {
                         Label("השורות המסומנות", systemImage: "star.fill")
                             .badge(sessions.reduce(0) { $0 + $1.starredCount })
@@ -36,7 +36,7 @@ struct HistoryView: View {
                 }
                 ForEach(sessions) { session in
                     NavigationLink {
-                        HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onDelete: reload)
+                        HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onHistoryChanged: reload)
                     } label: {
                         SessionRow(session: session)
                     }
@@ -105,9 +105,13 @@ private struct SessionRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            if let title = session.title {
+                Text(title)
+                    .font(.headline)
+            }
             HStack {
                 Text(Date(timeIntervalSince1970: session.startedAt).formatted(date: .abbreviated, time: .shortened))
-                    .font(.subheadline.weight(.semibold))
+                    .font(session.title == nil ? .subheadline.weight(.semibold) : .subheadline)
                 Spacer()
                 if let duration = session.durationSeconds {
                     Text(Self.durationLabel(duration))
@@ -154,7 +158,8 @@ struct HistoryDetailView: View {
     var searchQuery: String = ""
     /// A line to open at, when arriving from the starred lines list.
     var initialLineID: UUID?
-    let onDelete: () -> Void
+    /// Something in saved history changed here (a deletion, a new name).
+    let onHistoryChanged: () -> Void
     @State private var record: TranscriptSessionRecord?
     @State private var stats: ConversationStats?
     @State private var matches: [UUID] = []
@@ -163,6 +168,8 @@ struct HistoryDetailView: View {
     @State private var scrollRequest = 0
     @State private var hasLoaded = false
     @State private var confirmingDelete = false
+    @State private var renaming = false
+    @State private var newTitle = ""
     @Environment(\.dismiss) private var dismiss
 
     private var isSearch: Bool {
@@ -231,7 +238,7 @@ struct HistoryDetailView: View {
                 ContentUnavailableView("השיחה לא נמצאה", systemImage: "questionmark.folder")
             }
         }
-        .navigationTitle("שיחה")
+        .navigationTitle(record?.title ?? "שיחה")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if matches.count > (isSearch ? 1 : 0) {
@@ -264,6 +271,14 @@ struct HistoryDetailView: View {
                     }
                 }
                 ToolbarItem(placement: .secondaryAction) {
+                    Button {
+                        newTitle = record.title ?? ""
+                        renaming = true
+                    } label: {
+                        Label("מתן שם לשיחה", systemImage: "pencil")
+                    }
+                }
+                ToolbarItem(placement: .secondaryAction) {
                     Button(role: .destructive) {
                         confirmingDelete = true
                     } label: {
@@ -272,10 +287,23 @@ struct HistoryDetailView: View {
                 }
             }
         }
+        .alert("שם לשיחה", isPresented: $renaming) {
+            TextField("למשל: ביקור אצל הרופא", text: $newTitle)
+            Button("שמירה") {
+                try? viewModel.historyStore.rename(id: sessionID, title: newTitle)
+                let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                record?.title = trimmed.isEmpty ? nil : trimmed
+                // The list behind this screen shows the name too.
+                onHistoryChanged()
+            }
+            Button("ביטול", role: .cancel) {}
+        } message: {
+            Text("השם יופיע ברשימת השיחות, ואפשר יהיה לחפש לפיו.")
+        }
         .confirmationDialog("למחוק את השיחה הזו?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("מחיקה", role: .destructive) {
                 try? viewModel.historyStore.delete(id: sessionID)
-                onDelete()
+                onHistoryChanged()
                 dismiss()
             }
             Button("ביטול", role: .cancel) {}
@@ -358,7 +386,8 @@ private struct ConversationSummarySection: View {
 /// quick way back to "what did the doctor say about the pills".
 struct StarredLinesView: View {
     let viewModel: LiveCaptionViewModel
-    let onDelete: () -> Void
+    /// Something in saved history changed here (a deletion, a new name).
+    let onHistoryChanged: () -> Void
     @State private var lines: [StarredLine] = []
     @State private var hasLoaded = false
 
@@ -377,7 +406,7 @@ struct StarredLinesView: View {
                                     HistoryDetailView(viewModel: viewModel, sessionID: line.sessionID, initialLineID: line.id) {
                                         // Deleted from inside: both lists drop it.
                                         Task { await load() }
-                                        onDelete()
+                                        onHistoryChanged()
                                     }
                                 } label: {
                                     VStack(alignment: .leading, spacing: 2) {
