@@ -29,6 +29,7 @@ struct LiveCaptionView: View {
     @State private var installExpiryDismissed = false
     /// What was typed on the big-letters pad opened by a Shortcut.
     @State private var bigText = ""
+    @State private var showingBigText = false
     @State private var confirmingCellularDownload = false
     @State private var openedRecentConversation: TranscriptSessionSummary?
     /// Live scale while a pinch is in progress; 1 otherwise.
@@ -286,7 +287,10 @@ struct LiveCaptionView: View {
         .sheet(isPresented: $showingTypeToSpeak) {
             TypeToSpeakView(viewModel: viewModel)
         }
-        .fullScreenCover(isPresented: $viewModel.isShowingBigText) {
+        .onChange(of: viewModel.isShowingBigText, initial: true) { _, asked in
+            if asked { presentBigText() }
+        }
+        .fullScreenCover(isPresented: $showingBigText) {
             BigTextView(
                 text: $bigText,
                 display: viewModel.display,
@@ -630,6 +634,25 @@ struct LiveCaptionView: View {
         .disabled(current.action == .none)
         .accessibilityLabel(current.title)
         .accessibilityHint(current.detail ?? "")
+    }
+
+    /// Opens the big-letters pad a Shortcut asked for. Only one sheet can
+    /// be up at a time: with Settings or the typing sheet already open, the
+    /// pad would silently fail to appear, so whatever is open closes first.
+    private func presentBigText() {
+        viewModel.isShowingBigText = false
+        let somethingOpen = showingMicPicker || showingSettings || showingTypeToSpeak
+            || namingSegment != nil || openedRecentConversation != nil
+        showingMicPicker = false
+        showingSettings = false
+        showingTypeToSpeak = false
+        namingSegment = nil
+        openedRecentConversation = nil
+        Task {
+            // Give the closing sheet its animation before the next one.
+            if somethingOpen { try? await Task.sleep(for: .milliseconds(700)) }
+            showingBigText = true
+        }
     }
 
     private var cellularDownloadMessage: String {

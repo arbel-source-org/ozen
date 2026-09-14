@@ -25,8 +25,8 @@ public final class LiveCaptionViewModel {
     /// Set while the system has the audio session (an incoming call), so
     /// the screen can say why captions stopped instead of looking broken.
     public private(set) var isInterruptedBySystem = false
-    /// The big-letters pad is up (see `BigTextView`); set by a Shortcut or
-    /// the Action button, cleared when the pad closes.
+    /// A Shortcut or the Action button asked for the big-letters pad (see
+    /// `BigTextView`). The caption screen opens it and clears this.
     public var isShowingBigText = false
     /// Why the last settings save failed, for the diagnostics screen; nil
     /// when the last save worked.
