@@ -38,6 +38,16 @@ things were broken along the way, none of them in Ozen itself.
    Auto-Lock to Never while installing, `sudo systemctl restart usbmuxd`, and run
    the same command again — the 2FA code will be asked for again.
 
+## Getting the build
+
+Each run of the release workflow attaches `Ozen.ipa` to a GitHub Release named
+`build-N`. The repository is private, so downloading needs an account with
+access: sign in on the Releases page, or with the GitHub CLI logged in,
+
+```
+gh release download build-N -R arbelonson-source/ozen -p Ozen.ipa --clobber
+```
+
 ## The command
 
 ```
