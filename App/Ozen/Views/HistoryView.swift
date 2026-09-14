@@ -204,6 +204,7 @@ struct HistoryView: View {
 }
 
 private struct SessionRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     let session: TranscriptSessionSummary
 
     var body: some View {
@@ -236,7 +237,7 @@ private struct SessionRow: View {
                 Text("\(session.segmentCount) שורות")
                 if session.starredCount > 0 {
                     Label("\(session.starredCount)", systemImage: "star.fill")
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(Color.yellow.readable(on: colorScheme))
                         .accessibilityLabel("\(session.starredCount) שורות מסומנות")
                 }
             }

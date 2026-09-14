@@ -601,7 +601,7 @@ struct LiveCaptionView: View {
                     if current.isBusy {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(current.tint)
+                            .tint(current.tint.readable(on: theme.colorScheme))
                     } else {
                         Image(systemName: current.systemImage)
                     }
@@ -611,7 +611,9 @@ struct LiveCaptionView: View {
                         .minimumScaleFactor(0.75)
                         .multilineTextAlignment(.center)
                 }
-                .foregroundStyle(current.tint)
+                // "Loading the model" in plain yellow is close to invisible
+                // on the white theme.
+                .foregroundStyle(current.tint.readable(on: theme.colorScheme))
 
                 if let detail = current.detail {
                     Text(detail)
@@ -624,7 +626,7 @@ struct LiveCaptionView: View {
 
                 if let progress = current.progress {
                     ProgressView(value: progress)
-                        .tint(current.tint)
+                        .tint(current.tint.readable(on: theme.colorScheme))
                         .frame(maxWidth: 160)
                 }
             }

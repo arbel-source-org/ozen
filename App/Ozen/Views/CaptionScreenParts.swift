@@ -33,7 +33,7 @@ struct CaptionRow: View {
                 if isStarred {
                     Image(systemName: "star.fill")
                         .font(.system(size: max(14, display.fontSize * 0.6)))
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(Color.yellow.readable(on: theme.colorScheme))
                 }
                 if isKeywordHit {
                     // The yellow field alone is easy to miss scrolling back
@@ -154,7 +154,9 @@ struct SoundAlertBanner: View {
             .padding(.horizontal, 18)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity)
-            .background(SoundAlertsView.tint(alert.event.importance).opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
+            // White on the system orange of a doorbell alert is under 3:1;
+            // the deeper shade keeps the words readable at a glance.
+            .background(SoundAlertsView.tint(alert.event.importance).deepShade.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
             .foregroundStyle(.white)
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }

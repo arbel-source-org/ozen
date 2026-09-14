@@ -250,6 +250,7 @@ private struct ConversationSummarySection: View {
 /// One saved caption line: the time now and then, the speaker at the start
 /// of their turn, a star, and the question mark for an unsure line.
 private struct SavedLineRow: View {
+    @Environment(\.colorScheme) private var colorScheme
     let segment: SavedSegment
     let previous: SavedSegment?
     let showsTime: Bool
@@ -272,7 +273,7 @@ private struct SavedLineRow: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 if segment.isStarred {
                     Image(systemName: "star.fill")
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(Color.yellow.readable(on: colorScheme))
                 }
                 if isUncertain {
                     Image(systemName: "questionmark.circle")
