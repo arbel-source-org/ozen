@@ -1270,13 +1270,36 @@ struct LiveCaptionViewModelKeywordAttentionTests {
 
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, בואי", isFinal: true, timestamp: 1))
         await eventually { viewModel.keywordHits.count == 1 }
+        let first = viewModel.claimAttentionForNewKeywordHits()
+        #expect(first?.id == viewModel.keywordHits.first?.id)
+        // Screens over the captions show the one that got her attention.
+        #expect(viewModel.attentionKeywordHit?.id == first?.id)
+
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, את שומעת?", isFinal: true, timestamp: 2))
         await eventually { viewModel.keywordHits.count == 2 }
-
-        let attention = viewModel.keywordHits.map { viewModel.claimAttention(for: $0) }
-        #expect(attention == [true, false])
+        #expect(viewModel.claimAttentionForNewKeywordHits() == nil)
         #expect(viewModel.keywordHitSegmentIDs.count == 2)
-        // Screens over the captions show the one that got her attention.
-        #expect(viewModel.attentionKeywordHit?.id == viewModel.keywordHits.first?.id)
+        // Asking again with nothing new is not a second buzz either.
+        #expect(viewModel.claimAttentionForNewKeywordHits() == nil)
+    }
+
+    @Test("two words from the list in one line both count, and the first one leads")
+    func twoWordsInOneLine() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-attention-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline)
+        viewModel.addKeywordAlert(phrase: "סבתא")
+        viewModel.addKeywordAlert(phrase: "אמבולנס")
+        await viewModel.start()
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, קראי לאמבולנס", isFinal: true, timestamp: 1))
+        await eventually { viewModel.keywordHits.count == 2 }
+        #expect(viewModel.claimAttentionForNewKeywordHits()?.match.phrase == "סבתא")
+
+        // Both words started their quiet period, not only the one shown.
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "האמבולנס בדרך", isFinal: true, timestamp: 2))
+        await eventually { viewModel.keywordHits.count == 3 }
+        #expect(viewModel.claimAttentionForNewKeywordHits() == nil)
     }
 }

@@ -34,6 +34,7 @@ public final class LiveCaptionViewModel {
     /// Whether the caption screen says saving is failing (a full phone).
     public private(set) var savingTrouble = SavingTroubleNotice()
     @ObservationIgnored private var keywordAttention = KeywordAttentionPolicy()
+    @ObservationIgnored private var handledKeywordHitIDs: Set<UUID> = []
     /// The latest keyword hit that got her attention, for screens covering
     /// the captions to show its pill too.
     public private(set) var attentionKeywordHit: KeywordHit?
@@ -982,12 +983,21 @@ public final class LiveCaptionViewModel {
         refreshSavingTrouble()
     }
 
-    /// Whether a keyword hit should buzz, show its pill and be announced,
-    /// or only highlight its line (see `KeywordAttentionPolicy`).
-    public func claimAttention(for hit: KeywordHit) -> Bool {
-        guard keywordAttention.claimAttention(for: hit) else { return false }
-        attentionKeywordHit = hit
-        return true
+    /// The first keyword hit since the last call that should buzz, show its
+    /// pill and be announced, or nil when they should only highlight their
+    /// lines (see `KeywordAttentionPolicy`). Every new hit is considered,
+    /// not just the newest: one line can hold two words from the list
+    /// ("סבתא, קראי לאמבולנס"), and each starts its own quiet period.
+    public func claimAttentionForNewKeywordHits() -> KeywordHit? {
+        let fresh = keywordHits.filter { !handledKeywordHitIDs.contains($0.id) }
+        // keywordHits is capped, so this set stays small.
+        handledKeywordHitIDs = Set(keywordHits.map(\.id))
+        var claimed: KeywordHit?
+        for hit in fresh where keywordAttention.claimAttention(for: hit) {
+            claimed = claimed ?? hit
+        }
+        if let claimed { attentionKeywordHit = claimed }
+        return claimed
     }
 
     /// Hides the saving-failed banner until saving works and fails again.

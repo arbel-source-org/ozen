@@ -152,7 +152,11 @@ struct LiveCaptionView: View {
             .padding(.top, 8)
         }
         .overlay {
-            AlertFlashOverlay(alert: viewModel.soundAlerts.last)
+            // Removed rather than fed nil while covered, so closing the
+            // covering screen doesn't replay the last flash.
+            if !isCoveredByAlertScreen {
+                AlertFlashOverlay(alert: viewModel.soundAlerts.last)
+            }
         }
         .preferredColorScheme(theme.colorScheme)
     }
@@ -177,7 +181,9 @@ struct LiveCaptionView: View {
         }
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
             guard let alert = viewModel.soundAlerts.last else { return }
-            withAnimation { visibleSoundAlert = alert }
+            if !isCoveredByAlertScreen {
+                withAnimation { visibleSoundAlert = alert }
+            }
             vibrate(.pattern(for: alert.event.importance))
             announceAlert(alert.event.importance == .critical ? "שימו לב! \(alert.event.name)" : "התראה: \(alert.event.name)")
         }
@@ -193,8 +199,10 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.keywordHits.last?.id) { _, _ in
             // Every line with the word keeps its highlight; the buzz, pill
             // and announcement don't repeat for each mention at the table.
-            guard let hit = viewModel.keywordHits.last, viewModel.claimAttention(for: hit) else { return }
-            withAnimation { visibleKeywordHit = hit }
+            guard let hit = viewModel.claimAttentionForNewKeywordHits() else { return }
+            if !isCoveredByAlertScreen {
+                withAnimation { visibleKeywordHit = hit }
+            }
             vibrate(.keyword)
             announceAlert("נאמר: \(hit.match.phrase)")
         }
@@ -647,6 +655,14 @@ struct LiveCaptionView: View {
         .disabled(current.action == .none)
         .accessibilityLabel(current.title)
         .accessibilityHint(current.detail ?? "")
+    }
+
+    /// A screen with its own `alertOverlay` is over the captions. The
+    /// caption screen then leaves the banner, pill and flash to it: behind a
+    /// half-height sheet both would show, twice, for one doorbell. The
+    /// vibration and the VoiceOver announcement still come from here, once.
+    private var isCoveredByAlertScreen: Bool {
+        showingMicPicker || showingSettings || showingTypeToSpeak || showingBigText
     }
 
     /// Vibrates for an alert while the sound classifier looks away, so the

@@ -17,9 +17,10 @@ private struct AlertOverlay: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .top) {
-                // Nothing at all when there's nothing to show, so no empty
-                // padded box sits over the sheet's own controls.
+            .safeAreaInset(edge: .top, spacing: 0) {
+                // Pushes the screen down rather than covering it: drawn on
+                // top, the banner would sit right over a sheet's Close
+                // button. Nothing at all when there's nothing to show.
                 if shown != nil || shownHit != nil {
                     VStack(spacing: 8) {
                         if let shown {
