@@ -62,6 +62,25 @@ struct DiagnosticsView: View {
                 LabeledContent("חיבור לאינטרנט", value: Self.describe(viewModel.pipeline.networkConditions))
             }
 
+            Section {
+                let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds)
+                if lines.isEmpty {
+                    Text("עוד לא קרה כלום")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(Array(lines.suffix(12).reversed().enumerated()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(.caption.monospaced())
+                            .environment(\.layoutDirection, .leftToRight)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            } header: {
+                Text("אירועים אחרונים")
+            } footer: {
+                Text("החדש ביותר למעלה. הדוח המועתק כולל את כל הרשימה.")
+            }
+
             Section("מודל ומילים") {
                 LabeledContent("מצב המודל", value: Self.describe(modelState))
                 LabeledContent("טוקנייזר שמור", value: store.hasCachedTokenizer() ? "כן" : "לא (צריך אינטרנט פעם אחת)")
@@ -115,6 +134,15 @@ struct DiagnosticsView: View {
         ModelManagerView.format(bytes: bytes)
     }
 
+    private var eventLines: String {
+        let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds)
+        return lines.isEmpty ? "-" : lines.joined(separator: "\n")
+    }
+
+    private static var utcOffsetSeconds: Int {
+        TimeZone.current.secondsFromGMT(for: Date())
+    }
+
     private static var freeSpaceText: String {
         guard let bytes = DeviceStorage.availableBytes() else { return "—" }
         return format(bytes: bytes)
@@ -155,6 +183,8 @@ struct DiagnosticsView: View {
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText) free space: \(Self.freeSpaceText)
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString)
+        events (oldest first):
+        \(eventLines)
         """
     }
 

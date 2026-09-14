@@ -1105,6 +1105,32 @@ struct CaptionPipelineAudioStallTests {
         #expect(await eventually { audio.calls.filter { $0 == "startCapture" }.count == 2 })
         #expect(await eventually { pipeline.phase.isListening })
         #expect(pipeline.stats.audioStalls == 1)
+
+        // The report tells the story in order.
+        let story = pipeline.eventLog.events.prefix(5).map { event -> String in
+            switch event.kind {
+            case .listening: return "listening"
+            case .microphoneStalled: return "stalled"
+            case .failed(let failure): return "failed \(failure.kind.rawValue)"
+            case .retryScheduled(let attempt, _): return "retry \(attempt)"
+            case .phoneCall: return "call"
+            }
+        }
+        #expect(Array(story) == ["listening", "stalled", "failed audioSessionFailed", "retry 1", "listening"])
+    }
+
+    @Test("a phone call is logged when it starts and ends, once each")
+    func phoneCallLogged() async {
+        let (pipeline, _, _) = makePipeline(audioWatchdog: .disabled)
+        await pipeline.start(settings: .default)
+        pipeline.systemInterruptionChanged(active: true)
+        pipeline.systemInterruptionChanged(active: true)
+        pipeline.systemInterruptionChanged(active: false)
+        let calls = pipeline.eventLog.events.compactMap { event -> Bool? in
+            if case .phoneCall(let began) = event.kind { return began }
+            return nil
+        }
+        #expect(calls == [true, false])
     }
 }
 

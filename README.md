@@ -126,8 +126,9 @@ things, for Hebrew conversation, entirely on-device.
 - **Siri and Shortcuts.** "היי סירי, התחל כתוביות באוזן", "עצור כתוביות",
   and "תגיד באוזן ..." to have the phone say something aloud.
 - **Diagnostics screen** with every pipeline counter (audio chunks, tokens,
-  caption lag, restarts, speaker clusters) and one-tap copy for asking for
-  help.
+  caption lag, restarts, speaker clusters), free space, a timeline of the
+  last failures, retries, microphone stalls and phone calls with clock
+  times, and one-tap copy of all of it for asking for help.
 
 ## Repo layout
 
@@ -179,7 +180,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (342 tests). The platform layer (WhisperKit/Speech engines, real
+logic (347 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 55 tests).

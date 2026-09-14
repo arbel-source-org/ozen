@@ -26,6 +26,8 @@ public final class CaptionPipeline {
     public private(set) var activeEngineKind: TranscriptionEngineKind?
     public private(set) var speakerClusters: [SpeakerCluster] = []
     public private(set) var stats = PipelineStats()
+    /// Failures, retries and recoveries in order, for the diagnostics report.
+    public private(set) var eventLog = PipelineEventLog()
 
     /// Keywords the reader asked to be told about, as they're spotted in
     /// captions. Each entry fires once per utterance (partial updates of
@@ -246,6 +248,7 @@ public final class CaptionPipeline {
 
         stats.sessionStartedAt = now()
         phase = .listening
+        eventLog.record(.listening, at: now())
         listeningSince = now()
         audioWatchdog.reset()
 
@@ -634,6 +637,7 @@ public final class CaptionPipeline {
         guard phase.isListening else { return }
         guard audioWatchdog.tick(chunksReceived: stats.audioChunksReceived, systemInterrupted: systemInterrupted) else { return }
         stats.audioStalls += 1
+        eventLog.record(.microphoneStalled, at: now())
         fail(.audioSessionFailed, detail: "no audio from the microphone for \(Int(audioWatchdog.stallSeconds)) s")
     }
 
@@ -641,6 +645,7 @@ public final class CaptionPipeline {
         tearDownSession()
         let failure = PipelineFailure(kind: kind, detail: detail, engineUnavailability: engineUnavailability)
         phase = .failed(failure)
+        eventLog.record(.failed(failure), at: now())
         scheduleAutoRecovery(for: failure)
     }
 
@@ -708,6 +713,9 @@ public final class CaptionPipeline {
     /// the audio session. While it's held no retry runs; when it's
     /// released a failed pipeline gets a fresh set of attempts.
     public func systemInterruptionChanged(active: Bool) {
+        if active != systemInterrupted {
+            eventLog.record(.phoneCall(began: active), at: now())
+        }
         systemInterrupted = active
         if active {
             cancelScheduledRetry()
@@ -728,6 +736,7 @@ public final class CaptionPipeline {
         let token = UUID()
         retryToken = token
         scheduledRetry = ScheduledRetry(at: now() + delay, attempt: recovery.attempts)
+        eventLog.record(.retryScheduled(attempt: recovery.attempts, afterSeconds: delay), at: now())
         retryTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
             guard let self, !Task.isCancelled, self.retryToken == token, case .failed = self.phase else { return }
