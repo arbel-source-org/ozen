@@ -96,6 +96,7 @@ struct DiagnosticsView: View {
                 LabeledContent("מצב חיסכון בסוללה", value: ProcessInfo.processInfo.isLowPowerModeEnabled ? "פעיל" : "כבוי")
                 LabeledContent("סוללה", value: Self.batteryText)
                 LabeledContent("מקום פנוי", value: Self.freeSpaceText)
+                LabeledContent("זיכרון", value: Self.memoryText)
                 LabeledContent("דגם", value: UIDevice.current.model)
                 LabeledContent("iOS", value: UIDevice.current.systemVersion)
                 LabeledContent("אפליקציה", value: SettingsView.versionString)
@@ -161,6 +162,15 @@ struct DiagnosticsView: View {
         TimeZone.current.secondsFromGMT(for: Date())
     }
 
+    /// "812 MB בשימוש · עוד 1.9 GB": what the app uses, and how much more
+    /// iOS lets it have before ending it.
+    private static var memoryText: String {
+        var parts: [String] = []
+        if let used = DeviceMemory.footprintBytes() { parts.append("\(format(bytes: used)) בשימוש") }
+        if let left = DeviceMemory.availableBytes() { parts.append("עוד \(format(bytes: left))") }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
     private static var freeSpaceText: String {
         guard let bytes = DeviceStorage.availableBytes() else { return "—" }
         return format(bytes: bytes)
@@ -200,6 +210,7 @@ struct DiagnosticsView: View {
         settings save error: \(viewModel.settingsSaveError ?? "-") history save error: \(viewModel.historySaveFailure ?? "-") notification error: \(AlertNotifier.shared.lastFailure ?? "-") haptics: \(AlertHapticPlayer.shared.supportsHaptics ? (AlertHapticPlayer.shared.lastFailure ?? "ok") : "unsupported") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText) free space: \(Self.freeSpaceText)
+        memory: used \(DeviceMemory.footprintBytes().map(Self.format(bytes:)) ?? "-") left \(DeviceMemory.availableBytes().map(Self.format(bytes:)) ?? "-")
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString) install expires: \(InstallExpiryStatus.shared.expiresAt.map { String(describing: $0) } ?? "-")
         events (oldest first):
         \(eventLines)

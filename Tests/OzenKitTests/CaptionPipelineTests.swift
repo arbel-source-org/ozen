@@ -246,10 +246,6 @@ final class FactoryLog {
     var calls = 0
 }
 
-/// Polls until `condition` holds or the deadline passes. The pipeline
-/// hops through Tasks internally, so state lands a few run-loop turns
-/// after the triggering call; waiting on the condition rather than a fixed
-/// sleep keeps these tests both fast and non-flaky.
 @MainActor
 private func token(_ id: UUID, _ text: String, final: Bool = false, at time: TimeInterval = 1_000) -> TranscriptToken {
     TranscriptToken(utteranceID: id, text: text, isFinal: final, timestamp: time)
@@ -629,6 +625,55 @@ struct CaptionPipelineLifecycleTests {
         await pipeline.restart(settings: .default)
         #expect(built.count == 3)
         #expect(pipeline.phase == .listening)
+    }
+
+    @Test("a memory warning with captions stopped lets go of the loaded engine; starting again builds it anew")
+    func memoryWarningWhileStoppedReleasesEngine() async {
+        let built = BuiltEngines()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                let engine = FakeEngine(kind: settings.engine)
+                built.add(engine)
+                return engine
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await pipeline.start(settings: .default)
+        pipeline.stop()
+        pipeline.handleMemoryWarning(footprintBytes: 812 * 1_048_576)
+        #expect(await eventually { built.aliveCount == 0 })
+        #expect(pipeline.eventLog.events.last?.kind == .memoryWarning(footprintMegabytes: 812))
+
+        await pipeline.start(settings: .default)
+        #expect(built.count == 2)
+        #expect(pipeline.phase == .listening)
+    }
+
+    @Test("a memory warning while captions run or are paused keeps the engine, so resuming is instant")
+    func memoryWarningWhileRunningKeepsEngine() async {
+        let built = BuiltEngines()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                let engine = FakeEngine(kind: settings.engine)
+                built.add(engine)
+                return engine
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await pipeline.start(settings: .default)
+        pipeline.handleMemoryWarning()
+        #expect(pipeline.phase == .listening)
+
+        pipeline.pause()
+        pipeline.handleMemoryWarning()
+        await pipeline.resume()
+        #expect(pipeline.phase == .listening)
+        #expect(built.count == 1)
+        #expect(built.aliveCount == 1)
     }
 
     @Test("retry after a failure starts again with the same settings")
@@ -1214,6 +1259,7 @@ struct CaptionPipelineAudioStallTests {
             case .failed(let failure): return "failed \(failure.kind.rawValue)"
             case .retryScheduled(let attempt, _): return "retry \(attempt)"
             case .phoneCall: return "call"
+            case .memoryWarning: return "memory"
             }
         }
         #expect(Array(story) == ["listening", "stalled", "failed audioSessionFailed", "retry 1", "listening"])

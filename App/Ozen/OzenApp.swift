@@ -1,5 +1,8 @@
 import SwiftUI
+import UIKit
+import Combine
 import OzenKit
+import OzenPlatform
 import Foundation
 
 @main
@@ -29,6 +32,10 @@ struct OzenApp: App {
             .task { await InstallExpiryStatus.shared.load() }
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { InstallExpiryStatus.shared.refreshReminder() }
+            }
+            // iOS is about to end apps for memory; see handleMemoryWarning.
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                viewModel.pipeline.handleMemoryWarning(footprintBytes: DeviceMemory.footprintBytes())
             }
             // Hebrew first, whatever the phone's language. Under this,
             // SwiftUI's `.leading` is the right edge: Hebrew text and a

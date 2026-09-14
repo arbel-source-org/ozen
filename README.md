@@ -138,7 +138,9 @@ things, for Hebrew conversation, entirely on-device.
 - **Nothing lost when iOS closes the app.** A speech model is one of the
   biggest things in a phone's memory, so iOS may end the app in the
   background mid-conversation. Coming back, the empty screen offers the
-  conversation from a few minutes ago, one tap away.
+  conversation from a few minutes ago, one tap away. When iOS warns it is
+  short of memory and captions are off, the app lets go of the loaded
+  model first, so it is less likely to be the app iOS ends.
 - **Star what matters.** Hold a caption line to mark it as important
   (what the doctor said about the pills), copy it, or say who is talking.
   Stars are saved with the conversation, counted in the history list,
@@ -154,9 +156,10 @@ things, for Hebrew conversation, entirely on-device.
 - **Siri and Shortcuts.** "היי סירי, התחל כתוביות באוזן", "עצור כתוביות",
   and "תגיד באוזן ..." to have the phone say something aloud.
 - **Diagnostics screen** with every pipeline counter (audio chunks, tokens,
-  caption lag, restarts, speaker clusters), free space, a timeline of the
-  last failures, retries, microphone stalls and phone calls with clock
-  times, and one-tap copy of all of it for asking for help.
+  caption lag, restarts, speaker clusters), free space, memory use, a
+  timeline of the last failures, retries, microphone stalls, phone calls
+  and low-memory warnings with clock times, and one-tap copy of all of it
+  for asking for help.
 
 ## Repo layout
 
@@ -212,7 +215,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (420 tests). The platform layer (WhisperKit/Speech engines, real
+logic (423 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 72 tests).

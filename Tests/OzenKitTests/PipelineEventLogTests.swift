@@ -48,6 +48,12 @@ struct PipelineEventLogTests {
         #expect(log.events.last?.at == TimeInterval(PipelineEventLog.capacity + 9))
     }
 
+    @Test("a memory warning says how much the app was using, when that could be read")
+    func memoryWarningLine() {
+        #expect(PipelineEvent(at: 0, kind: .memoryWarning(footprintMegabytes: 812)).description == "iOS low on memory (app using 812 MB)")
+        #expect(PipelineEvent(at: 0, kind: .memoryWarning(footprintMegabytes: nil)).description == "iOS low on memory")
+    }
+
     @Test("listening twice in a row is recorded once")
     func repeatedListening() {
         var log = PipelineEventLog()

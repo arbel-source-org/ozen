@@ -8,6 +8,8 @@ public struct PipelineEvent: Sendable, Equatable {
         case listening
         case microphoneStalled
         case phoneCall(began: Bool)
+        /// iOS said memory is running out; it ends the biggest apps next.
+        case memoryWarning(footprintMegabytes: Int?)
     }
 
     public let at: TimeInterval
@@ -45,6 +47,8 @@ public struct PipelineEvent: Sendable, Equatable {
             return "microphone stopped delivering audio"
         case .phoneCall(let began):
             return began ? "audio taken by a call or another app" : "audio given back"
+        case .memoryWarning(let megabytes):
+            return "iOS low on memory" + (megabytes.map { " (app using \($0) MB)" } ?? "")
         }
     }
 }
