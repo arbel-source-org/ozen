@@ -145,9 +145,10 @@ struct HistoryDetailView: View {
                         ConversationSummarySection(stats: stats)
                     }
                     Section {
-                        ForEach(record.segments) { segment in
+                        ForEach(Array(record.segments.enumerated()), id: \.element.id) { index, segment in
                             VStack(alignment: .leading, spacing: 2) {
-                                if let name = segment.speakerName {
+                                if let name = segment.speakerName,
+                                   CaptionLayout.showsSpeakerLabel(for: segment, after: index > 0 ? record.segments[index - 1] : nil) {
                                     Text(name)
                                         .font(.caption.weight(.semibold))
                                         .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID))
@@ -155,6 +156,8 @@ struct HistoryDetailView: View {
                                 Text(CaptionLayout.readableText(segment.text))
                                     .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
                             }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(segment.speakerName.map { "\($0): \(segment.text)" } ?? segment.text)
                         }
                     } header: {
                         Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .long, time: .shortened))

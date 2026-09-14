@@ -60,3 +60,25 @@ struct CaptionLayoutSpeakerLabelTests {
         #expect(CaptionLayout.showsSpeakerLabel(for: line(2), after: line(nil)))
     }
 }
+
+@Suite("CaptionLayout speaker labels in saved conversations")
+struct CaptionLayoutSavedSpeakerLabelTests {
+    private func line(_ name: String?) -> SavedSegment {
+        SavedSegment(id: UUID(), text: "שלום", speakerName: name, speakerClusterID: nil, startTimestamp: 0, isCommitted: true)
+    }
+
+    @Test("a saved conversation shows each name when the speaker changes")
+    func onChangeOnly() {
+        let lines = [line("שרה"), line("שרה"), line("דובר 2"), line("שרה")]
+        let shown = lines.indices.map { CaptionLayout.showsSpeakerLabel(for: lines[$0], after: $0 > 0 ? lines[$0 - 1] : nil) }
+        #expect(shown == [true, false, true, true])
+    }
+
+    @Test("unknown-speaker lines have no label and don't break a run")
+    func unknownSpeaker() {
+        #expect(CaptionLayout.showsSpeakerLabel(for: line(EmbeddingClusterer.unknownSpeakerName), after: nil) == false)
+        #expect(CaptionLayout.showsSpeakerLabel(for: line("Unknown speaker"), after: nil) == false)
+        #expect(CaptionLayout.showsSpeakerLabel(for: line(nil), after: line("שרה")) == false)
+        #expect(CaptionLayout.showsSpeakerLabel(for: line("שרה"), after: line(EmbeddingClusterer.unknownSpeakerName)))
+    }
+}

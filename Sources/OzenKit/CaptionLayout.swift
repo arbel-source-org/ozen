@@ -79,3 +79,22 @@ extension CaptionLayout {
         return previous?.speakerClusterID != cluster
     }
 }
+
+extension CaptionLayout {
+    /// The same rule for a saved conversation, where each line carries the
+    /// name it had when it was saved. An unknown-speaker name counts as no
+    /// name, so it isn't repeated down the page.
+    public static func showsSpeakerLabel(for segment: SavedSegment, after previous: SavedSegment?) -> Bool {
+        guard let name = labelName(segment) else { return false }
+        return previous.flatMap(labelName) != name
+    }
+
+    private static func labelName(_ segment: SavedSegment) -> String? {
+        guard let name = segment.speakerName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty,
+              name != EmbeddingClusterer.unknownSpeakerName,
+              name != "Unknown speaker"
+        else { return nil }
+        return name
+    }
+}
