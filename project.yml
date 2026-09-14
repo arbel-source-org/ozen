@@ -27,6 +27,10 @@ targets:
         UILaunchScreen: {}
         CFBundleDevelopmentRegion: he
         CFBundleDisplayName: "אוזן"
+        # Spelled out so a release build's number (set by release.yml)
+        # is what Settings and Diagnostics show.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleLocalizations: [he, en]
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         UIBackgroundModes: [audio]

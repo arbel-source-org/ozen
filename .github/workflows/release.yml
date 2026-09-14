@@ -40,6 +40,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             2>&1 | tee xcodebuild-release.log | xcpretty
       - name: Package as an .ipa
         run: |
