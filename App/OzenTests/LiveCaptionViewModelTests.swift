@@ -350,10 +350,10 @@ struct LiveCaptionViewModelOnboardingTests {
 @Suite("LiveCaptionViewModel speaking over captions")
 @MainActor
 struct LiveCaptionViewModelSpeechTests {
-    private func makeViewModel() -> (LiveCaptionViewModel, FakeSynthesizer) {
+    private func makeViewModel(audio: FakeAudioCapturer = FakeAudioCapturer()) -> (LiveCaptionViewModel, FakeSynthesizer) {
         let synthesizer = FakeSynthesizer()
         let pipeline = CaptionPipeline(
-            audio: FakeAudioCapturer(),
+            audio: audio,
             engineFactory: { settings in FakeEngine(kind: settings.engine) },
             embedder: FakeEmbedder()
         )
@@ -420,17 +420,27 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(await eventually { viewModel.phase.isListening })
     }
 
-    @Test("a call that cuts off the phone's voice doesn't leave captions paused for good")
+    @Test("a call that cuts off the phone's voice doesn't leave captions paused for good; they return after it")
     func callDuringPhrase() async {
-        let (viewModel, synthesizer) = makeViewModel()
+        let audio = FakeAudioCapturer()
+        let (viewModel, synthesizer) = makeViewModel(audio: audio)
         await viewModel.start()
         viewModel.speak("רגע")
         synthesizer.startNext()
         #expect(viewModel.phase == .paused)
+
         viewModel.systemInterruptionChanged(began: true)
         #expect(synthesizer.isBusy == false)
+        // The call holds the microphone: the try to bring captions back
+        // is refused, and nothing is retried while the call goes on.
+        audio.prepareError = TestError()
         synthesizer.deliverCallbacks()
-        #expect(await eventually { viewModel.phase != .paused })
+        #expect(await eventually { viewModel.phase.failure != nil })
+        #expect(viewModel.pipeline.scheduledRetry == nil)
+
+        audio.prepareError = nil
+        viewModel.systemInterruptionChanged(began: false)
+        #expect(await eventually { viewModel.phase.isListening })
     }
 
     @Test("launched by Siri to say something: the phone talks first, then captions start")
