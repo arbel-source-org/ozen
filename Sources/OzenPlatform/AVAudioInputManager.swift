@@ -114,7 +114,13 @@ public final class AVAudioInputManager: AudioCapturing {
         // 2048 frames at 48 kHz is ~43 ms per callback: small enough to
         // feel live, large enough that the converter isn't called
         // hundreds of times a second.
-        engine.inputNode.installTap(onBus: 0, bufferSize: 2_048, format: tap.inputFormat) { buffer, _ in
+        //
+        // Explicitly @Sendable, so the block doesn't belong to the main
+        // actor: written inside this main-actor class and handed to an
+        // Objective-C API whose block type may not be marked sendable, Swift
+        // 6 would add a main-actor check to it (SE-0423), and the audio
+        // thread calling it would fail that check.
+        engine.inputNode.installTap(onBus: 0, bufferSize: 2_048, format: tap.inputFormat) { @Sendable buffer, _ in
             tap.process(buffer)
         }
     }

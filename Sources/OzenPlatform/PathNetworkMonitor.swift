@@ -11,7 +11,10 @@ public final class PathNetworkMonitor: NetworkMonitoring {
     private let monitor = NWPathMonitor()
 
     public init() {
-        monitor.pathUpdateHandler = { [weak self] path in
+        // Called on the monitor's own queue: @Sendable so it can't be taken
+        // to belong to the main actor (which Swift 6 checks at run time for
+        // framework callbacks). It hops to the main actor itself.
+        monitor.pathUpdateHandler = { @Sendable [weak self] path in
             let conditions = NetworkConditions(
                 isConnected: path.status == .satisfied,
                 isExpensive: path.isExpensive,
