@@ -22,7 +22,12 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
     /// both reached it 96-97% of the time. Whisper itself doesn't mind the
     /// level: its word error rate was the same at -26 and -56 dBFS.
     public var absoluteThreshold: Float
-    /// Speech must exceed the tracked noise floor by this factor.
+    /// Speech must exceed the tracked noise floor by this factor (8 dB).
+    ///
+    /// 2.0 (6 dB) was tried in the simulation: speech 6 dB above a steady
+    /// -55 dBFS hum reached Whisper 87% of the time instead of 63%, but in a
+    /// room of ordinary fluctuating noise 28% of the silence between
+    /// sentences went to Whisper instead of 6%.
     public var noiseFloorRatio: Float
     /// How quickly the floor follows a *quieter* signal (per chunk).
     public var floorFallRate: Float
