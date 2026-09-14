@@ -35,7 +35,7 @@ struct InstallExpiryBanner: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            .background(Color.purple.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
+            .background(Color.purple.deepShade.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
             .foregroundStyle(.white)
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }

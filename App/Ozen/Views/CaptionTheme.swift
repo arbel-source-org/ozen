@@ -46,7 +46,8 @@ struct CaptionTheme {
 extension Color {
     /// The system yellow, orange, green and red read well on black but
     /// fade out on white: yellow on white is about 1.5:1, green about 2:1.
-    /// These deeper shades of the same hues stay at least 5:1 against white.
+    /// These deeper shades of the same hues (and purple's) stay at least 5:1
+    /// against white, which also holds for white words drawn on them.
     /// Any other colour comes back unchanged.
     var deepShade: Color {
         switch self {
@@ -54,6 +55,7 @@ extension Color {
         case .orange: return Color(red: 0.70, green: 0.30, blue: 0)
         case .green: return Color(red: 0, green: 0.45, blue: 0.15)
         case .red: return Color(red: 0.75, green: 0, blue: 0)
+        case .purple: return Color(red: 0.45, green: 0.18, blue: 0.65)
         default: return self
         }
     }
