@@ -116,7 +116,10 @@ leave the phone.
   to fix it. If there's no warning, tap "Check that a notification arrives when the phone is locked" (livdok she-hatra'a magi'a k'she-ha-telefon na'ul)
   and lock the phone: a sample doorbell alert arrives within 10 seconds. If
   it doesn't, a Focus mode or Scheduled Summary in iOS is holding it back.
-- **The doorbell rang and no alert came at all.** Look at the report's
+- **The doorbell rang and no alert came at all.** First the report's
+  `alerts:` line: `sounds false` means sound alerts are off, `from critical`
+  means only alarms and sirens alert, and `muted` counts sounds switched off
+  one by one (Settings → Sounds at home (tzlilim ba-bayit)). Then its
   `sounds heard below the alert level:` line, or Diagnostics → "Sounds heard
   too faintly to alert" (tzlilim she-nishme'u chalash midai le-hatra'a). A
   doorbell listed there was heard, but under the 60% sureness an alert
