@@ -31,9 +31,11 @@ public struct SoundAnalysisDetector: SoundEventDetecting {
         return Set(request.knownClassifications)
     }
 
-    /// How many times a failed classifier is set up again in one session
-    /// before sound alerts are left off (Diagnostics then says so).
+    /// How many times a failed classifier is set up again in any ten
+    /// minutes. Past that it's left alone until the oldest attempt is ten
+    /// minutes old, then tried again (see `RestartBudget`).
     static let maximumRestarts = 5
+    static let restartWindowSeconds: TimeInterval = 600
 
     public func observations(audio: AsyncStream<[Float]>) -> AsyncStream<SoundObservation> {
         let forwardingConfidence = forwardingConfidence
@@ -48,13 +50,12 @@ public struct SoundAnalysisDetector: SoundEventDetecting {
                 // conversation; a new analyzer picks up from the next chunk,
                 // so a doorbell later in the evening still gets through.
                 var session = Self.makeSession(format: format, continuation: continuation, forwardingConfidence: forwardingConfidence, windowSeconds: windowSeconds)
-                var restarts = 0
+                var budget = RestartBudget(limit: Self.maximumRestarts, windowSeconds: Self.restartWindowSeconds)
                 var framePosition: AVAudioFramePosition = 0
                 for await chunk in audio {
                     if Task.isCancelled { break }
                     if session == nil || session?.observer.hasFailed == true {
-                        guard restarts < Self.maximumRestarts else { break }
-                        restarts += 1
+                        guard budget.spend(at: ProcessInfo.processInfo.systemUptime) else { continue }
                         session = Self.makeSession(format: format, continuation: continuation, forwardingConfidence: forwardingConfidence, windowSeconds: windowSeconds)
                         framePosition = 0
                         guard session != nil else { continue }
