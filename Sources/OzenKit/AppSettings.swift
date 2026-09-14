@@ -349,13 +349,27 @@ public struct SettingsStore: Sendable {
         self.fileURL = fileURL
     }
 
+    /// The saved settings, or the defaults when there are none or the file
+    /// can't be read as settings at all. A damaged file is moved aside
+    /// first (see `damagedCopyURL`): the next save would otherwise write
+    /// the defaults over the only copy of recorded voices, names and alert
+    /// words, which take real effort to make again.
     public func load() -> AppSettings {
-        guard let data = try? Data(contentsOf: fileURL),
-              let settings = try? JSONDecoder().decode(AppSettings.self, from: data)
-        else {
-            return .default
+        guard let data = try? Data(contentsOf: fileURL) else { return .default }
+        if let settings = try? JSONDecoder().decode(AppSettings.self, from: data) {
+            return settings
         }
-        return settings
+        try? FileManager.default.removeItem(at: damagedCopyURL)
+        try? FileManager.default.moveItem(at: fileURL, to: damagedCopyURL)
+        return .default
+    }
+
+    /// Where a settings file that couldn't be read is kept, next to it:
+    /// "ozen-settings.json" becomes "ozen-settings.damaged.json". Only the
+    /// latest one is kept.
+    public var damagedCopyURL: URL {
+        let name = fileURL.deletingPathExtension().lastPathComponent
+        return fileURL.deletingLastPathComponent().appendingPathComponent("\(name).damaged.json")
     }
 
     /// Creates the folder first: on a fresh install iOS hasn't made

@@ -80,7 +80,41 @@ struct AppSettingsTests {
 
         try Data("not valid json".utf8).write(to: url)
         let store = SettingsStore(fileURL: url)
+        defer { try? FileManager.default.removeItem(at: store.damagedCopyURL) }
         #expect(store.load() == AppSettings.default)
+    }
+
+    @Test("a damaged settings file is kept aside, so saving the defaults doesn't destroy it")
+    func damagedFileKeptAside() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-settings-\(UUID())", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appendingPathComponent("ozen-settings.json")
+        try Data("{\"speakerProfiles\": [trunc".utf8).write(to: url)
+        let store = SettingsStore(fileURL: url)
+
+        let loaded = store.load()
+        try store.save(loaded)
+        let keptAfterSave = try String(contentsOf: store.damagedCopyURL, encoding: .utf8)
+        try Data("second damage".utf8).write(to: url)
+        _ = store.load()
+
+        #expect(loaded == AppSettings.default)
+        #expect(store.damagedCopyURL.lastPathComponent == "ozen-settings.damaged.json")
+        #expect(keptAfterSave == "{\"speakerProfiles\": [trunc")
+        let kept = try String(contentsOf: store.damagedCopyURL, encoding: .utf8)
+        #expect(kept == "second damage")
+    }
+
+    @Test("a readable file, or no file at all, leaves nothing aside")
+    func nothingAsideWhenFine() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-settings-\(UUID())", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let store = SettingsStore(fileURL: folder.appendingPathComponent("ozen-settings.json"))
+        _ = store.load()
+        try store.save(.default)
+        _ = store.load()
+        #expect(!FileManager.default.fileExists(atPath: store.damagedCopyURL.path))
     }
 
     @Test("a settings file from an older build (missing every newer key) still loads, keeping its speaker profiles")
