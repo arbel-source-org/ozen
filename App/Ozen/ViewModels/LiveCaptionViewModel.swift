@@ -948,6 +948,15 @@ public final class LiveCaptionViewModel {
         persist()
     }
 
+    /// Deletes a person from the saved speakers: every voice print with
+    /// that name.
+    public func removeSpeaker(named name: String) {
+        guard settings.speakerProfiles.contains(where: { $0.name == name }) else { return }
+        settings.speakerProfiles.removeAll { $0.name == name }
+        persist()
+        pipeline.forgetSpeakerName(name)
+    }
+
     public func removeProfile(id: UUID) {
         guard let removed = settings.speakerProfiles.first(where: { $0.id == id }) else { return }
         settings.speakerProfiles.removeAll { $0.id == id }
@@ -961,6 +970,8 @@ public final class LiveCaptionViewModel {
 
     /// Fixes a misspelled or changed name: the saved profile, the lines on
     /// screen, and the names list all follow.
+    /// Renames the person `id` belongs to: every saved voice print with
+    /// that name, like the labels on screen.
     public func renameProfile(id: UUID, to newName: String) {
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
@@ -968,7 +979,9 @@ public final class LiveCaptionViewModel {
               settings.speakerProfiles[index].name != trimmed
         else { return }
         let oldName = settings.speakerProfiles[index].name
-        settings.speakerProfiles[index].name = trimmed
+        for other in settings.speakerProfiles.indices where settings.speakerProfiles[other].name == oldName {
+            settings.speakerProfiles[other].name = trimmed
+        }
         if let term = settings.vocabulary.firstIndex(of: oldName) {
             settings.vocabulary[term] = trimmed
             settings.vocabulary = VocabularyHints.normalized(settings.vocabulary)

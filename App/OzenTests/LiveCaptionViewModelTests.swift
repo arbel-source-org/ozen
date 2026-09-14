@@ -543,6 +543,24 @@ struct LiveCaptionViewModelSpeakerTests {
         #expect(viewModel.pipeline.speakerClusters.contains { $0.name == "אבי" } == false)
     }
 
+    @Test("a person saved with two voice prints is renamed and deleted as one")
+    func twoPrintsOnePerson() {
+        let (viewModel, file) = makeViewModel()
+        #expect(viewModel.enroll(name: "Dana", samples: [Float](repeating: 0.3, count: 96_000)))
+        #expect(viewModel.enroll(name: "Avi", samples: [Float](repeating: 0.3, count: 96_000)))
+        #expect(viewModel.enroll(name: "Dana", samples: [Float](repeating: 0.3, count: 96_000)))
+
+        viewModel.renameProfile(id: viewModel.settings.speakerProfiles[2].id, to: "Daniela")
+        #expect(viewModel.settings.speakerProfiles.map(\.name) == ["Daniela", "Avi", "Daniela"])
+        #expect(SettingsStore(fileURL: file).load().speakerProfiles.map(\.name) == ["Daniela", "Avi", "Daniela"])
+        #expect(!viewModel.pipeline.speakerClusters.contains { $0.name == "Dana" })
+
+        viewModel.removeSpeaker(named: "Daniela")
+        #expect(viewModel.settings.speakerProfiles.map(\.name) == ["Avi"])
+        #expect(SettingsStore(fileURL: file).load().speakerProfiles.map(\.name) == ["Avi"])
+        #expect(!viewModel.pipeline.speakerClusters.contains { $0.name == "Daniela" })
+    }
+
     @Test("a blank new name is ignored")
     func blankRename() {
         let (viewModel, _) = makeViewModel()

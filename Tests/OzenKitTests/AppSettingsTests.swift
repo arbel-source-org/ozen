@@ -205,3 +205,18 @@ struct NameAlertOfferTests {
         #expect(AppSettings.default.offersNameAlert == false)
     }
 }
+
+@Suite("Saved speakers list")
+struct SavedSpeakerTests {
+    @Test("a name saved for several voices is one person, listed where it was first saved")
+    func groupsByName() {
+        let first = SpeakerProfile(name: "Dana", embedding: [1])
+        let other = SpeakerProfile(name: "Avi", embedding: [2])
+        let second = SpeakerProfile(name: "Dana", embedding: [3])
+        let speakers = SavedSpeaker.grouping([first, other, second])
+        #expect(speakers.map(\.name) == ["Dana", "Avi"])
+        #expect(speakers.first?.profileIDs == [first.id, second.id])
+        #expect(speakers.last?.profileIDs == [other.id])
+        #expect(SavedSpeaker.grouping([]).isEmpty)
+    }
+}

@@ -379,13 +379,13 @@ struct SettingsView: View {
 
     private var speakersSection: some View {
         Section {
-            ForEach(viewModel.settings.speakerProfiles) { profile in
+            ForEach(SavedSpeaker.grouping(viewModel.settings.speakerProfiles)) { speaker in
                 Button {
-                    renameText = profile.name
-                    renamingProfile = profile
+                    renameText = speaker.name
+                    renamingProfile = viewModel.settings.speakerProfiles.first { $0.name == speaker.name }
                 } label: {
                     HStack {
-                        Label(profile.name, systemImage: "person.wave.2")
+                        Label(speaker.name, systemImage: "person.wave.2")
                         Spacer()
                         Image(systemName: "pencil")
                             .foregroundStyle(.secondary)
@@ -395,11 +395,12 @@ struct SettingsView: View {
                 .accessibilityHint("הקישו כדי לשנות את השם")
             }
             .onDelete { offsets in
-                // Resolve ids before removing anything: each removal shifts
-                // the indices the remaining offsets refer to.
-                let ids = offsets.map { viewModel.settings.speakerProfiles[$0].id }
-                for id in ids {
-                    viewModel.removeProfile(id: id)
+                // Resolve names before removing anything: each removal
+                // shifts the rows the remaining offsets refer to.
+                let speakers = SavedSpeaker.grouping(viewModel.settings.speakerProfiles)
+                let names = offsets.compactMap { speakers.indices.contains($0) ? speakers[$0].name : nil }
+                for name in names {
+                    viewModel.removeSpeaker(named: name)
                 }
             }
             Button {

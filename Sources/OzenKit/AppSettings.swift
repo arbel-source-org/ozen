@@ -16,6 +16,29 @@ public struct SpeakerProfile: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
+/// One person in the saved speakers list, however many voice prints they
+/// have. Naming a second voice with a name already saved (the same person
+/// heard from across the room, or on a cold day) adds a print rather than
+/// a person, so the list shows the name once, and renaming or deleting it
+/// covers every print: renaming just one left the other to bring the old
+/// name back on the next launch.
+public struct SavedSpeaker: Sendable, Equatable, Identifiable {
+    public let name: String
+    public let profileIDs: [UUID]
+    public var id: String { name }
+
+    /// The profiles grouped by name, in the order each name was first saved.
+    public static func grouping(_ profiles: [SpeakerProfile]) -> [SavedSpeaker] {
+        var order: [String] = []
+        var ids: [String: [UUID]] = [:]
+        for profile in profiles {
+            if ids[profile.name] == nil { order.append(profile.name) }
+            ids[profile.name, default: []].append(profile.id)
+        }
+        return order.map { SavedSpeaker(name: $0, profileIDs: ids[$0] ?? []) }
+    }
+}
+
 /// How the caption screen looks. Every one of these exists because the
 /// primary reader is an older person following a conversation in real
 /// time: text size and contrast are accessibility controls here, not
