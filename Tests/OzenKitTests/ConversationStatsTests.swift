@@ -97,6 +97,22 @@ struct ConversationStatsTests {
         #expect(ConversationStats.minutesText(60) == "דקה אחת")
         #expect(ConversationStats.minutesText(125) == "שתי דקות")
         #expect(ConversationStats.minutesText(12 * 60) == "12 דקות")
+        #expect(ConversationStats.minutesText(59 * 60) == "59 דקות")
+    }
+
+    @Test("an hour or more is said the way people say it: an hour and a quarter, two and a half hours")
+    func hours() {
+        let minute: Double = 60
+        #expect(ConversationStats.minutesText(60 * minute) == "שעה")
+        #expect(ConversationStats.minutesText(61 * minute) == "שעה ודקה")
+        #expect(ConversationStats.minutesText(62 * minute) == "שעה ושתי דקות")
+        #expect(ConversationStats.minutesText(75 * minute) == "שעה ורבע")
+        #expect(ConversationStats.minutesText(90 * minute) == "שעה וחצי")
+        #expect(ConversationStats.minutesText(95 * minute) == "שעה ו-35 דקות")
+        #expect(ConversationStats.minutesText(120 * minute) == "שעתיים")
+        #expect(ConversationStats.minutesText(150 * minute + 20) == "שעתיים וחצי")
+        #expect(ConversationStats.minutesText(180 * minute) == "3 שעות")
+        #expect(ConversationStats.minutesText(200 * minute) == "3 שעות ו-20 דקות")
         #expect(ConversationStats.speakersText(1) == "דובר אחד")
         #expect(ConversationStats.speakersText(2) == "שני דוברים")
         #expect(ConversationStats.speakersText(5) == "5 דוברים")

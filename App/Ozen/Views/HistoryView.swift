@@ -262,7 +262,7 @@ private struct SessionRow: View {
                     .font(session.title == nil ? .subheadline.weight(.semibold) : .subheadline)
                 Spacer()
                 if let duration = session.durationSeconds {
-                    Text(Self.durationLabel(duration))
+                    Text(ConversationStats.minutesText(duration))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
@@ -288,12 +288,5 @@ private struct SessionRow: View {
             .font(.caption2)
             .foregroundStyle(.tertiary)
         }
-    }
-
-    static func durationLabel(_ seconds: TimeInterval) -> String {
-        let minutes = Int(seconds / 60)
-        if minutes < 1 { return "פחות מדקה" }
-        if minutes < 60 { return "\(minutes) דק׳" }
-        return "\(minutes / 60) שע׳ \(minutes % 60) דק׳"
     }
 }

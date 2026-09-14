@@ -144,13 +144,32 @@ public struct ConversationStats: Sendable, Equatable {
         return parts.joined(separator: " · ")
     }
 
+    /// How long, in words: "12 dakot", and from an hour on the way people
+    /// say it, "sha'a va-reva" ("an hour and a quarter"), "sha'atayim
+    /// va-chetzi" ("two and a half hours").
     public static func minutesText(_ seconds: Double) -> String {
         let minutes = Int((seconds / 60).rounded())
         switch minutes {
         case ..<1: return "פחות מדקה"
         case 1: return "דקה אחת"
         case 2: return "שתי דקות"
-        default: return "\(minutes) דקות"
+        case ..<60: return "\(minutes) דקות"
+        default: break
+        }
+        let hours = minutes / 60
+        let hoursText: String
+        switch hours {
+        case 1: hoursText = "שעה"
+        case 2: hoursText = "שעתיים"
+        default: hoursText = "\(hours) שעות"
+        }
+        switch minutes % 60 {
+        case 0: return hoursText
+        case 1: return "\(hoursText) ודקה"
+        case 2: return "\(hoursText) ושתי דקות"
+        case 15: return "\(hoursText) ורבע"
+        case 30: return "\(hoursText) וחצי"
+        case let rest: return "\(hoursText) ו-\(rest) דקות"
         }
     }
 
