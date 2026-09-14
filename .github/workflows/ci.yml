@@ -50,10 +50,13 @@ jobs:
         # machine what it actually has instead of guessing a name that
         # will just as easily go stale on the next runner image update.
         #
-        # Booted here, by id, so it comes up while the app compiles: left to
-        # xcodebuild, about two minutes passed between the build finishing
-        # and the first test starting. The id also rules out picking between
-        # two simulators of the same name on different iOS versions.
+        # Chosen by id, which rules out picking between two simulators of
+        # the same name on different iOS versions.
+        #
+        # Tried and dropped (2026-09-14): caching DerivedData, whose restore
+        # took a minute and saved no measurable build time, and booting the
+        # simulator here, which only moved its two minutes from before the
+        # tests into the build it competed with for the runner's cores.
         run: |
           DEVICE=$(xcrun simctl list devices available -j \
             | jq -r '.devices | to_entries[] | .value[] | select(.name | test("iPhone")) | "\(.udid) \(.name)"' \
@@ -66,31 +69,12 @@ jobs:
           UDID=${DEVICE%% *}
           echo "Using simulator: ${DEVICE#* } ($UDID)"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
-          xcrun simctl boot "$UDID" || true
-      - name: Name this week
-        id: week
-        run: echo "week=$(date +%G-%V)" >> "$GITHUB_OUTPUT"
-      - name: Restore the previous build
-        # Most of the build is WhisperKit and the packages under it, which
-        # don't change between commits. Restored with their timestamps,
-        # Xcode reuses them and compiles only this repo's code; macOS minutes
-        # are scarce on a private repository. A new cache each week picks up
-        # package updates the manifest allows.
-        uses: actions/cache@v6
-        with:
-          path: |
-            DerivedData
-            !DerivedData/Logs
-          key: deriveddata-${{ hashFiles('Package.swift', 'project.yml') }}-${{ steps.week.outputs.week }}
-          restore-keys: |
-            deriveddata-${{ hashFiles('Package.swift', 'project.yml') }}-
       - name: Build and test
         run: |
           set -o pipefail
           xcodebuild test \
             -project Ozen.xcodeproj \
             -scheme Ozen \
-            -derivedDataPath DerivedData \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             2>&1 | tee xcodebuild-raw.log | xcpretty
       - name: Show why it failed
