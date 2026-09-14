@@ -32,6 +32,7 @@ struct LiveCaptionView: View {
     @State private var confirmingCellularDownload = false
     @State private var openedRecentConversation: TranscriptSessionSummary?
     @State private var showingNameAlertForm = false
+    @State private var stopAnnouncer = CaptionsStopAnnouncer()
     /// Live scale while a pinch is in progress; 1 otherwise.
     @GestureState private var pinchScale: Double = 1
     @Environment(\.openURL) private var openURL
@@ -216,8 +217,9 @@ struct LiveCaptionView: View {
                 withAnimation { visibleKeywordHit = nil }
             }
         }
-        .onChange(of: viewModel.phase) { _, _ in
+        .onChange(of: viewModel.phase) { _, phase in
             viewModel.historySessionDidChangePhase()
+            announceStopOrReturn(phase)
         }
         .onChange(of: viewModel.segments.count) { _, _ in
             noteSpeechActivity()
@@ -496,6 +498,8 @@ struct LiveCaptionView: View {
                     .font(.headline)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
+                    // A target a shaky finger finds at any text size.
+                    .frame(minHeight: 48)
                     .background(.thinMaterial, in: Capsule())
             }
             .buttonStyle(.plain)
@@ -642,6 +646,19 @@ struct LiveCaptionView: View {
         UIAccessibility.post(notification: .announcement, argument: text)
     }
 
+    /// Captions that stopped by themselves, and their return, spoken the
+    /// same way (see `CaptionsStopAnnouncer`).
+    private func announceStopOrReturn(_ phase: PipelinePhase) {
+        switch stopAnnouncer.phaseChanged(to: phase) {
+        case .stopped?:
+            announceAlert("הכתוביות נעצרו: \(presentation.title)")
+        case .back?:
+            announceAlert("הכתוביות חזרו")
+        case nil:
+            break
+        }
+    }
+
     /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago".
     static func minutesAgoText(_ minutes: Int) -> String {
         switch minutes {
@@ -660,6 +677,8 @@ struct LiveCaptionView: View {
                 .font(.headline)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+                // A target a shaky finger finds at any text size.
+                .frame(minHeight: 48)
                 .background(.thinMaterial, in: Capsule())
         }
         .buttonStyle(.plain)

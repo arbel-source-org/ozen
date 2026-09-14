@@ -45,13 +45,17 @@ struct CaptionLiveActivity: Widget {
                     CaptionLinesView(state: context.state, isStale: context.isStale, fontSize: 17)
                 }
             } compactLeading: {
+                // Marks only: VoiceOver reads the activity's lines instead.
                 Image(systemName: "captions.bubble.fill")
                     .foregroundStyle(.yellow)
+                    .accessibilityHidden(true)
             } compactTrailing: {
                 Image(systemName: "ear")
+                    .accessibilityHidden(true)
             } minimal: {
                 Image(systemName: "captions.bubble.fill")
                     .foregroundStyle(.yellow)
+                    .accessibilityLabel("אוזן")
             }
         }
     }
@@ -86,19 +90,26 @@ struct CaptionLinesView: View {
                 }
             }
             if let status = state.status {
-                Text(status)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.orange)
+                note(status)
             } else if isStale {
                 // The app stopped updating the lines (iOS closed it, say):
                 // they may be long out of date.
-                Text("הכתוביות לא מתעדכנות. פתחו את אוזן.")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.orange)
+                note("הכתוביות לא מתעדכנות. פתחו את אוזן.")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .environment(\.layoutDirection, .rightToLeft)
+    }
+
+    /// Why the lines stopped coming. Follows the phone's text size, up to
+    /// where it would crowd the lines out of the lock screen's room.
+    private func note(_ text: String) -> some View {
+        Text(text)
+            .font(.system(.subheadline, weight: .semibold))
+            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+            .foregroundStyle(.orange)
+            .lineLimit(2)
+            .minimumScaleFactor(0.8)
     }
 
     private var listeningLabel: some View {
