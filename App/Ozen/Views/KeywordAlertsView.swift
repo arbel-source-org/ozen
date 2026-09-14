@@ -21,7 +21,7 @@ struct KeywordAlertsView: View {
                             .contentShape(Rectangle())
                     }
                     .disabled(newPhrase.trimmingCharacters(in: .whitespaces).isEmpty || typedWordIsOn)
-                    .accessibilityLabel(listed == nil ? "הוספה" : "הפעלה")
+                    .accessibilityLabel(Text(listed == nil ? "הוספה" : "הפעלה"))
                 }
                 if let listed {
                     Text(listed.isEnabled ? "\"\(listed.phrase)\" כבר ברשימה." : "\"\(listed.phrase)\" כבר ברשימה, במצב כבוי. הקישו על הפלוס כדי להפעיל מחדש.")
