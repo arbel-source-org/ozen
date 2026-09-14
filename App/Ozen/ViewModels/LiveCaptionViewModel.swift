@@ -317,6 +317,13 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    /// The battery is running low while captions run. On screen the
+    /// banner says so; with the phone put away it becomes a notification.
+    public func batteryWarningRaised(_ warning: BatteryWarning) {
+        guard !isAppActive, settings.notifyWhenInBackground else { return }
+        postNotification?(warning.notificationContent)
+    }
+
     private func alertRaised(sound alert: SoundAlert) {
         guard let content = backgroundAlerts.notification(for: alert, appIsActive: isAppActive, now: Date().timeIntervalSince1970) else { return }
         postNotification?(content)

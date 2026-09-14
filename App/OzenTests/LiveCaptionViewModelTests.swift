@@ -552,6 +552,25 @@ struct LiveCaptionViewModelBackgroundAlertTests {
         #expect(posted.first?.body == "סבתא, את ערה?")
     }
 
+    @Test("a low battery becomes a notification only while the app is in the background")
+    func batteryNotification() {
+        var posted: [AlertNotificationContent] = []
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-bg-\(UUID()).json"))
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, postNotification: { posted.append($0) })
+
+        viewModel.batteryWarningRaised(.low(percent: 20))
+        #expect(posted.isEmpty)
+
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.batteryWarningRaised(.critical(percent: 10))
+        #expect(posted.map(\.title) == ["הסוללה ב-10%"])
+
+        viewModel.notifyWhenInBackground = false
+        viewModel.batteryWarningRaised(.critical(percent: 9))
+        #expect(posted.count == 1)
+    }
+
     @Test("switching the setting off stops notifications")
     func settingOff() async {
         let engine = FakeEngine()

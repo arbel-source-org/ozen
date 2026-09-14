@@ -214,6 +214,9 @@ struct LiveCaptionView: View {
             announceNewLines()
         }
         .onChange(of: viewModel.isListening, initial: true) { _, listening in
+            battery.onWarning = { [viewModel] warning in
+                viewModel.batteryWarningRaised(warning)
+            }
             battery.setActive(listening)
         }
         .onChange(of: keepsScreenAwake, initial: true) { _, keep in

@@ -11,6 +11,31 @@ public enum BatteryWarning: Sendable, Equatable {
         case .low(let percent), .critical(let percent): return percent
         }
     }
+
+    /// The phone notification for when the app isn't on screen: captions
+    /// and the doorbell and name alerts keep running in a pocket, and stop
+    /// without a sound when the phone switches off. One identifier, so the
+    /// 10% notice replaces the 20% one.
+    public var notificationContent: AlertNotificationContent {
+        switch self {
+        case .low(let percent):
+            return AlertNotificationContent(
+                identifier: "battery",
+                title: "הסוללה ב-\(percent)%",
+                body: "הכתוביות וההתראות ממשיכות, אבל כדאי לחבר למטען.",
+                threadIdentifier: "status",
+                isUrgent: false
+            )
+        case .critical(let percent):
+            return AlertNotificationContent(
+                identifier: "battery",
+                title: "הסוללה ב-\(percent)%",
+                body: "הטלפון עלול לכבות, ואיתו הכתוביות וההתראות. חברו למטען.",
+                threadIdentifier: "status",
+                isUrgent: true
+            )
+        }
+    }
 }
 
 /// Decides when to tell the reader the battery is running out.

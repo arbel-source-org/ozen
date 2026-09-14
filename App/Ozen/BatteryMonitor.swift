@@ -14,6 +14,9 @@ final class BatteryMonitor {
     }
 
     private(set) var notice: Notice?
+    /// Called with each new warning, e.g. to post it as a notification
+    /// when the app isn't on screen.
+    @ObservationIgnored var onWarning: ((BatteryWarning) -> Void)?
     private var advisor = BatteryAdvisor()
     private var observers: [NSObjectProtocol] = []
     private var isActive = false
@@ -55,6 +58,7 @@ final class BatteryMonitor {
         }
         if let warning = advisor.update(level: level, isPluggedIn: pluggedIn) {
             notice = Notice(warning: warning)
+            onWarning?(warning)
         }
     }
 }

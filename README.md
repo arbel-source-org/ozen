@@ -108,7 +108,8 @@ things, for Hebrew conversation, entirely on-device.
   this runs whenever iOS next lets the app run.)
 - **Battery warnings** at 20% and 10% while captions run, because hours of
   listening drain the phone and nobody following a conversation watches
-  the battery icon.
+  the battery icon. With the phone in a pocket they arrive as a
+  notification, since a phone that switches off takes the alerts with it.
 - **Warns before the install runs out.** Installed with a free Apple ID,
   the app stops opening after seven days without a word. It reads its own
   provisioning profile, says on the caption screen two days ahead when that
@@ -203,10 +204,10 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (389 tests). The platform layer (WhisperKit/Speech engines, real
+logic (390 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 64 tests).
+the same fakes (another 65 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
