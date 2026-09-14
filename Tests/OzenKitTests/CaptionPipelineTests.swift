@@ -1550,3 +1550,33 @@ struct CaptionPipelineOpenLineTests {
         #expect(pipeline.stats.segmentsCommitted == 2)
     }
 }
+
+@Suite("CaptionPipeline retry only after a failure")
+@MainActor
+struct CaptionPipelineRetryGuardTests {
+    @Test("a retry asked for while starting or listening is ignored, so nothing prepares twice")
+    func retryIgnoredUnlessFailed() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: .disabled,
+            audioWatchdog: .disabled
+        )
+        var phaseWhenAsked: PipelinePhase?
+        engine.duringPrepare = {
+            phaseWhenAsked = pipeline.phase
+            Task { await pipeline.retry() }
+        }
+        await pipeline.start(settings: .default)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(phaseWhenAsked?.isTransitioning == true)
+        #expect(pipeline.phase.isListening)
+        #expect(engine.prepareCount == 1)
+
+        await pipeline.retry()
+        #expect(engine.prepareCount == 1)
+        #expect(pipeline.phase.isListening)
+    }
+}

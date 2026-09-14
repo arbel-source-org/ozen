@@ -66,6 +66,11 @@ public struct CaptionStabilizer: Sendable {
 
     public static let defaultSilenceCommitThreshold: TimeInterval = 6
 
+    /// Lines committed by the safety net rather than by the engine. That
+    /// commit is a guess that nothing more is coming; if the engine turns
+    /// out to be merely slow, its next update proves the guess wrong.
+    private var provisionalCommits: Set<UUID> = []
+
     public init(silenceCommitThreshold: TimeInterval = CaptionStabilizer.defaultSilenceCommitThreshold) {
         self.silenceCommitThreshold = silenceCommitThreshold
     }
@@ -73,6 +78,23 @@ public struct CaptionStabilizer: Sendable {
     @discardableResult
     public mutating func ingest(_ token: TranscriptToken) -> TranscriptSegment {
         if let index = segments.firstIndex(where: { $0.id == token.utteranceID }) {
+            if segments[index].isCommitted {
+                if provisionalCommits.remove(token.utteranceID) != nil {
+                    // Committed only because the engine went quiet, and it
+                    // wasn't done: show the line as still settling again
+                    // rather than changing words that looked final.
+                    segments[index].isCommitted = false
+                } else {
+                    // Final is final. Both engines start a new utterance
+                    // after a final, so anything more for this one is a
+                    // straggler, and the words she already read stay put.
+                    // Who said it can still be learned afterwards.
+                    if let clusterID = token.speakerClusterID {
+                        segments[index].speakerClusterID = clusterID
+                    }
+                    return segments[index]
+                }
+            }
             // An engine can send an empty update (Apple's recognizer does
             // when a request ends on silence). Text the reader has already
             // seen must never vanish because of it.
@@ -115,6 +137,7 @@ public struct CaptionStabilizer: Sendable {
         for index in segments.indices where !segments[index].isCommitted {
             if now - segments[index].lastUpdateTimestamp >= silenceCommitThreshold {
                 segments[index].isCommitted = true
+                provisionalCommits.insert(segments[index].id)
                 justCommitted.append(segments[index])
             }
         }
@@ -131,6 +154,8 @@ public struct CaptionStabilizer: Sendable {
             segments[index].isCommitted = true
             justCommitted.append(segments[index])
         }
+        // The engine that could have continued them is gone.
+        provisionalCommits = []
         return justCommitted
     }
 }

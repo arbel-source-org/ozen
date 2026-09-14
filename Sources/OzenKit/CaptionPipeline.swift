@@ -334,8 +334,11 @@ public final class CaptionPipeline {
     }
 
     /// For the retry button after a failure.
+    /// Starts again after a failure. Anything but a failure is left alone:
+    /// retrying in the middle of a start would begin a second model
+    /// download or load on the same engine while the first is still going.
     public func retry() async {
-        guard let activeSettings else { return }
+        guard case .failed = phase, let activeSettings else { return }
         cancelScheduledRetry()
         tearDownSession()
         phase = .idle

@@ -13,7 +13,8 @@ import Foundation
 /// together go out as one announcement, and the speaker's name leads a
 /// line when the speaker changes, the way the screen shows it.
 public struct CaptionAnnouncer: Sendable, Equatable {
-    private var announced: Set<UUID> = []
+    /// What each line said when it was last announced (or skipped).
+    private var announced: [UUID: String] = [:]
     private var lastSpeaker: String?
 
     public init() {}
@@ -27,9 +28,12 @@ public struct CaptionAnnouncer: Sendable, Equatable {
     ) -> String? {
         forgetLinesNoLongerShown(segments)
         var parts: [String] = []
-        for segment in segments where segment.isCommitted && !announced.contains(segment.id) {
-            announced.insert(segment.id)
+        for segment in segments where segment.isCommitted {
             let text = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            // A line read out once is read again only if its words changed
+            // afterwards (a slow engine correcting it).
+            guard announced[segment.id] != text else { continue }
+            announced[segment.id] = text
             guard !text.isEmpty else { continue }
             let name = speakerName(segment)
             if let name, name != lastSpeaker {
@@ -47,16 +51,17 @@ public struct CaptionAnnouncer: Sendable, Equatable {
     public mutating func skipLinesSoFar(_ segments: [TranscriptSegment]) {
         forgetLinesNoLongerShown(segments)
         for segment in segments where segment.isCommitted {
-            announced.insert(segment.id)
+            announced[segment.id] = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 
     private mutating func forgetLinesNoLongerShown(_ segments: [TranscriptSegment]) {
         if segments.isEmpty {
-            announced = []
+            announced = [:]
             lastSpeaker = nil
         } else if announced.count > segments.count {
-            announced.formIntersection(segments.map(\.id))
+            let shown = Set(segments.map(\.id))
+            announced = announced.filter { shown.contains($0.key) }
         }
     }
 }

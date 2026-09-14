@@ -57,15 +57,49 @@ struct CaptionStabilizerTests {
         #expect(stabilizer.segments[0].isCommitted)
     }
 
-    @Test("once committed, a later token for the same id does not un-commit it, but can still correct the text")
-    func committedSegmentCanStillBeCorrectedButStaysCommittedFlagWise() {
+    @Test("after the engine's final, a straggler for the same line changes neither its words nor its state, only who said it")
+    func engineFinalIsFinal() {
         var stabilizer = CaptionStabilizer()
         let id = UUID()
-        stabilizer.ingest(TranscriptToken(utteranceID: id, text: "בסדר", isFinal: true, timestamp: 0))
-        let corrected = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "בסדר גמור", isFinal: true, timestamp: 0.1))
+        stabilizer.ingest(TranscriptToken(utteranceID: id, text: "בסדר", isFinal: true, timestamp: 0, confidence: 0.9))
+        let straggler = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "בסדר גמור", isFinal: false, timestamp: 0.1, speakerClusterID: 2, confidence: 0.1))
 
-        #expect(corrected.isCommitted)
-        #expect(corrected.text == "בסדר גמור")
+        #expect(straggler.isCommitted)
+        #expect(straggler.text == "בסדר")
+        #expect(straggler.confidence == 0.9)
+        #expect(straggler.speakerClusterID == 2)
+    }
+
+    @Test("a line committed only because the engine went quiet reopens when the engine turns out to be slow, then settles on its final")
+    func safetyNetCommitReopens() {
+        var stabilizer = CaptionStabilizer(silenceCommitThreshold: 6)
+        let id = UUID()
+        stabilizer.ingest(TranscriptToken(utteranceID: id, text: "הרופא אמר", isFinal: false, timestamp: 0))
+        #expect(stabilizer.commitStale(now: 7).map(\.id) == [id])
+
+        let reopened = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "הרופא אמר כדור", isFinal: false, timestamp: 8))
+        #expect(reopened.isCommitted == false)
+        #expect(reopened.text == "הרופא אמר כדור")
+
+        let settled = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "הרופא אמר כדור אחד", isFinal: true, timestamp: 9))
+        #expect(settled.isCommitted)
+        #expect(settled.text == "הרופא אמר כדור אחד")
+
+        // Now it's the engine's final: nothing more changes the words.
+        let late = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "משהו אחר", isFinal: true, timestamp: 10))
+        #expect(late.text == "הרופא אמר כדור אחד")
+    }
+
+    @Test("lines finished because listening stopped stay as they are")
+    func commitAllIsFinal() {
+        var stabilizer = CaptionStabilizer(silenceCommitThreshold: 6)
+        let id = UUID()
+        stabilizer.ingest(TranscriptToken(utteranceID: id, text: "עד כאן", isFinal: false, timestamp: 0))
+        _ = stabilizer.commitStale(now: 7)
+        _ = stabilizer.commitAll()
+        let late = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "עד כאן ועוד", isFinal: false, timestamp: 8))
+        #expect(late.isCommitted)
+        #expect(late.text == "עד כאן")
     }
 
     @Test("two different utterances are tracked as two independent segments")

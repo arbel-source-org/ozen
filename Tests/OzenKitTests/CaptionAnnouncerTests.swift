@@ -87,4 +87,18 @@ struct CaptionAnnouncerTests {
         let roundTripped = try JSONDecoder().decode(DisplayPreferences.self, from: JSONEncoder().encode(off))
         #expect(roundTripped.announceNewLines == false)
     }
+
+    @Test("a line corrected after it was read out is read again; unchanged lines are not")
+    func correctedLineReadAgain() {
+        var announcer = CaptionAnnouncer()
+        var segment = line("הרופא אמר")
+        #expect(announcer.announcement(for: [segment], speakerName: { _ in nil }) == "הרופא אמר")
+        #expect(announcer.announcement(for: [segment], speakerName: { _ in nil }) == nil)
+
+        segment.isCommitted = false
+        segment.text = "הרופא אמר כדור אחד"
+        #expect(announcer.announcement(for: [segment], speakerName: { _ in nil }) == nil)
+        segment.isCommitted = true
+        #expect(announcer.announcement(for: [segment], speakerName: { _ in nil }) == "הרופא אמר כדור אחד")
+    }
 }
