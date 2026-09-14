@@ -921,3 +921,53 @@ struct LiveCaptionViewModelDeleteConversationTests {
         #expect(history.listSummaries().isEmpty)
     }
 }
+
+@Suite("LiveCaptionViewModel history retention")
+@MainActor
+struct LiveCaptionViewModelHistoryRetentionTests {
+    @Test("old conversations expire by the setting; the one on screen and starred ones stay, and the choice is remembered")
+    func expiresOldConversations() async throws {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-retention-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        let settingsStore = SettingsStore(fileURL: directory.appendingPathComponent("settings.json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: settingsStore, pipeline: pipeline, historyStore: history)
+
+        let day: TimeInterval = 86_400
+        let now = Date().timeIntervalSince1970
+        func oldRecord(starred: Bool) -> TranscriptSessionRecord {
+            TranscriptSessionRecord(
+                id: UUID(), startedAt: now - 40 * day, endedAt: now - 40 * day, engine: .whisperKit, modelVariant: nil, inputName: nil,
+                segments: [SavedSegment(id: UUID(), text: "מזמן", speakerName: nil, speakerClusterID: nil, startTimestamp: now - 40 * day, isCommitted: true, isStarred: starred)]
+            )
+        }
+        let old = oldRecord(starred: false)
+        let oldStarred = oldRecord(starred: true)
+        try history.save(old)
+        try history.save(oldStarred)
+
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "היום", isFinal: true, timestamp: now))
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        viewModel.persistHistory(ended: false)
+        #expect(history.listSummaries().count == 3)
+
+        let underForever = await viewModel.deleteExpiredHistory()
+        #expect(underForever == 0)
+
+        viewModel.historyRetention = .month
+        #expect(settingsStore.load().historyRetention == .month)
+        // Two months on, today's conversation is old too, but it's still on
+        // screen, so it stays.
+        let deleted = await viewModel.deleteExpiredHistory(now: now + 60 * day)
+        #expect(deleted == 1)
+        let left = Set(history.listSummaries().map(\.id))
+        #expect(left.count == 2)
+        #expect(!left.contains(old.id))
+        #expect(left.contains(oldStarred.id))
+    }
+}

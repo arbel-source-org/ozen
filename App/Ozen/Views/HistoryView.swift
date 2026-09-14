@@ -9,13 +9,23 @@ struct HistoryView: View {
     @State private var sessions: [TranscriptSessionSummary] = []
     @State private var totalSize: Int64 = 0
     @State private var confirmingDeleteAll = false
+    /// A shorter keep-for choice that would delete conversations already
+    /// saved, waiting for a yes.
+    @State private var pendingRetention: HistoryRetention?
 
     var body: some View {
         List {
-            Section {
-                Toggle("לשמור שיחות", isOn: $viewModel.saveHistory)
-            } footer: {
-                Text("השיחות נשמרות רק בטלפון הזה (\(ModelManagerView.format(bytes: totalSize))). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע.")
+            if query.isEmpty {
+                Section {
+                    Toggle("לשמור שיחות", isOn: $viewModel.saveHistory)
+                    Picker("מחיקה אוטומטית", selection: retentionChoice) {
+                        ForEach(HistoryRetention.allCases, id: \.self) { retention in
+                            Text(Self.name(for: retention)).tag(retention)
+                        }
+                    }
+                } footer: {
+                    Text("השיחות נשמרות רק בטלפון הזה (\(ModelManagerView.format(bytes: totalSize))). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע." + (viewModel.historyRetention == .forever ? "" : " שיחות עם שורה מסומנת או עם שם נשמרות תמיד."))
+                }
             }
 
             if query.isEmpty, sessions.contains(where: { $0.starredCount > 0 }) {
@@ -74,12 +84,68 @@ struct HistoryView: View {
                 .disabled(sessions.isEmpty)
             }
         }
+        .confirmationDialog(
+            Self.expiryWarning(count: pendingRetention.map { expiredCount(under: $0) } ?? 0),
+            isPresented: Binding(get: { pendingRetention != nil }, set: { if !$0 { pendingRetention = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("למחוק ולהמשיך כך", role: .destructive) {
+                if let retention = pendingRetention {
+                    apply(retention)
+                }
+            }
+            Button("ביטול", role: .cancel) {}
+        } message: {
+            Text("שיחות עם שורה מסומנת או עם שם לא יימחקו.")
+        }
         .confirmationDialog("למחוק את כל השיחות השמורות?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
             Button("מחיקת הכול", role: .destructive) {
                 try? viewModel.deleteAllConversations()
                 reload()
             }
             Button("ביטול", role: .cancel) {}
+        }
+    }
+
+    /// Picking a shorter time asks first when it would delete something
+    /// right away; anything else just takes effect.
+    private var retentionChoice: Binding<HistoryRetention> {
+        Binding(
+            get: { viewModel.historyRetention },
+            set: { choice in
+                if expiredCount(under: choice) > 0 {
+                    pendingRetention = choice
+                } else {
+                    apply(choice)
+                }
+            }
+        )
+    }
+
+    private func expiredCount(under retention: HistoryRetention) -> Int {
+        guard let cutoff = retention.cutoff(now: Date().timeIntervalSince1970) else { return 0 }
+        return sessions.filter { $0.lastActiveAt < cutoff && !$0.isKeptByChoice }.count
+    }
+
+    private func apply(_ retention: HistoryRetention) {
+        viewModel.historyRetention = retention
+        Task {
+            await viewModel.deleteExpiredHistory()
+            await reloadInBackground()
+        }
+    }
+
+    static func expiryWarning(count: Int) -> String {
+        count == 1 ? "שיחה ישנה אחת תימחק עכשיו" : "\(count) שיחות ישנות יימחקו עכשיו"
+    }
+
+    static func name(for retention: HistoryRetention) -> String {
+        switch retention {
+        case .forever: return "אף פעם"
+        case .year: return "אחרי שנה"
+        case .threeMonths: return "אחרי 3 חודשים"
+        case .month: return "אחרי חודש"
+        case .week: return "אחרי שבוע"
         }
     }
 

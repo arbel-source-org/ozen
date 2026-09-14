@@ -139,6 +139,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// Speech models may download over cellular data or in Low Data Mode.
     /// Off by default: a model is hundreds of megabytes.
     public var allowCellularModelDownload: Bool
+    /// Saved conversations delete themselves after this long; see
+    /// `HistoryRetention`.
+    public var historyRetention: HistoryRetention
 
     public init(
         engine: TranscriptionEngineKind,
@@ -159,7 +162,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         vocabulary: [String] = [],
         hasCompletedOnboarding: Bool = false,
         notifyWhenInBackground: Bool = true,
-        allowCellularModelDownload: Bool = false
+        allowCellularModelDownload: Bool = false,
+        historyRetention: HistoryRetention = .forever
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -180,6 +184,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.notifyWhenInBackground = notifyWhenInBackground
         self.allowCellularModelDownload = allowCellularModelDownload
+        self.historyRetention = historyRetention
     }
 
     /// The phrases a hard-of-hearing person needs most often in
@@ -209,7 +214,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding
-        case notifyWhenInBackground, allowCellularModelDownload
+        case notifyWhenInBackground, allowCellularModelDownload, historyRetention
     }
 
     public init(from decoder: any Decoder) throws {
@@ -241,6 +246,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
         notifyWhenInBackground = try container.decodeIfPresent(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
         allowCellularModelDownload = try container.decodeIfPresent(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
+        historyRetention = try container.decodeIfPresent(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
     }
 }
 

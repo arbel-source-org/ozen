@@ -59,6 +59,16 @@ public final class TranscriptHistoryWriter: Sendable {
         }
     }
 
+    /// Deletes conversations that have outlived the retention setting,
+    /// after the saves already queued. Returns how many were deleted.
+    @discardableResult
+    public func deleteExpiredNow(retention: HistoryRetention, now: TimeInterval, protecting protected: Set<UUID>) -> Int {
+        guard let cutoff = retention.cutoff(now: now) else { return 0 }
+        return queue.sync { [store] in
+            store.deleteConversations(inactiveBefore: cutoff, protecting: protected)
+        }
+    }
+
     /// Returns once every queued save has been written.
     public func waitUntilIdle() {
         queue.sync {}

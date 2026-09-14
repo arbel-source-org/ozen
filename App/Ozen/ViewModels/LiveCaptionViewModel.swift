@@ -65,6 +65,8 @@ public final class LiveCaptionViewModel {
         let inputName: String?
     }
     private var autosaveTask: Task<Void, Never>?
+    private var lastRetentionCheck: TimeInterval = 0
+    private static let retentionCheckIntervalSeconds: TimeInterval = 6 * 60 * 60
 
     private static let autosaveIntervalSeconds: UInt64 = 20
 
@@ -153,6 +155,9 @@ public final class LiveCaptionViewModel {
                 self?.knownSoundIdentifiers = identifiers
             }
         }
+        Task { [weak self] in
+            await self?.deleteExpiredHistory()
+        }
     }
 
     // MARK: - Alerts while the app isn't on screen
@@ -162,6 +167,11 @@ public final class LiveCaptionViewModel {
         // After a phone call iOS may never say the interruption ended.
         // Back on screen, try to take the microphone back: if that works
         // the call is over, and captions (and automatic recovery) resume.
+        // The phone may stay on the nightstand with the app open for days;
+        // old conversations still expire on schedule.
+        if isActive, Date().timeIntervalSince1970 - lastRetentionCheck > Self.retentionCheckIntervalSeconds {
+            Task { await deleteExpiredHistory() }
+        }
         if isActive, isInterruptedBySystem, reclaimAudioSession?() == true {
             systemInterruptionChanged(began: false)
         }
@@ -468,6 +478,31 @@ public final class LiveCaptionViewModel {
             settings.saveHistory = newValue
             persist()
         }
+    }
+
+    /// How long saved conversations are kept. Changing it doesn't delete
+    /// anything by itself; `deleteExpiredHistory()` does.
+    public var historyRetention: HistoryRetention {
+        get { settings.historyRetention }
+        set {
+            settings.historyRetention = newValue
+            persist()
+        }
+    }
+
+    /// Deletes saved conversations the retention setting says have expired,
+    /// off the main thread and after any save in flight. The conversations
+    /// still on screen are never touched. Returns how many were deleted.
+    @discardableResult
+    public func deleteExpiredHistory(now: TimeInterval = Date().timeIntervalSince1970) async -> Int {
+        lastRetentionCheck = now
+        let retention = settings.historyRetention
+        guard retention != .forever else { return 0 }
+        let onScreen = Set([historySessionID] + closedHistorySessions.map(\.id))
+        let writer = historyWriter
+        return await Task.detached(priority: .utility) {
+            writer.deleteExpiredNow(retention: retention, now: now, protecting: onScreen)
+        }.value
     }
 
     // MARK: - Keyword alerts
