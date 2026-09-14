@@ -438,8 +438,18 @@ struct LiveCaptionView: View {
                 Label("העתקה", systemImage: "doc.on.doc")
             }
         }
-        .accessibilityAction(named: viewModel.starredSegmentIDs.contains(segment.id) ? "ביטול הסימון" : "סימון כחשוב") {
-            viewModel.toggleStar(segment)
+        .accessibilityActions {
+            Button(viewModel.starredSegmentIDs.contains(segment.id) ? "ביטול הסימון" : "סימון כחשוב") {
+                viewModel.toggleStar(segment)
+            }
+            if viewModel.hasHebrewVoice {
+                Button("לבקש שיחזרו על זה") {
+                    viewModel.askToRepeat()
+                }
+            }
+            Button("מי מדבר?") {
+                namingSegment = segment
+            }
         }
     }
 
