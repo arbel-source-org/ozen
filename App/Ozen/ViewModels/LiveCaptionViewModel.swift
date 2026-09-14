@@ -589,7 +589,11 @@ public final class LiveCaptionViewModel {
     /// and when the app goes to the background — so a conversation is never
     /// lost to a crash or a force-quit.
     public func persistHistory(ended: Bool, endedAt: TimeInterval? = nil) {
-        guard settings.saveHistory, let startedAt = historySessionStartedAt else { return }
+        // After a conversation break the next conversation starts at its
+        // first line, not at the moment the break was noticed.
+        guard settings.saveHistory,
+              let startedAt = historySessionStartedAt ?? currentHistorySegments.first?.startTimestamp
+        else { return }
         let record = TranscriptSessionRecord.make(
             from: currentHistorySegments,
             speakerName: { [pipeline] in pipeline.displayName(for: $0) },
@@ -614,13 +618,11 @@ public final class LiveCaptionViewModel {
     @discardableResult
     public func checkForConversationBreak(now: TimeInterval = Date().timeIntervalSince1970) -> Bool {
         let lastCaptionAt = currentHistorySegments.map(\.lastUpdateTimestamp).max()
-        guard historySessionStartedAt != nil,
-              ConversationBreak.shouldStartNew(lastCaptionAt: lastCaptionAt, now: now)
-        else { return false }
+        guard ConversationBreak.shouldStartNew(lastCaptionAt: lastCaptionAt, now: now) else { return false }
         persistHistory(ended: true, endedAt: lastCaptionAt)
         historySessionID = UUID()
         historySegmentOffset = pipeline.segments.count
-        historySessionStartedAt = now
+        historySessionStartedAt = nil
         return true
     }
 

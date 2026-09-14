@@ -564,6 +564,9 @@ struct LiveCaptionViewModelConversationBreakTests {
         let summaries = history.listSummaries()
         #expect(summaries.count == 2)
         #expect(Set(summaries.map(\.preview)) == ["בוקר טוב", "ערב טוב"])
+        // The new conversation starts at its first line, not at the check.
+        let evening = summaries.first { $0.preview == "ערב טוב" }
+        #expect(evening.map { abs($0.startedAt - viewModel.segments[1].startTimestamp) < 0.001 } == true)
         // The screen still shows both lines.
         #expect(viewModel.segments.count == 2)
         // And a second check right away doesn't split again.
