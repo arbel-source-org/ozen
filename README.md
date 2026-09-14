@@ -148,6 +148,8 @@ things, for Hebrew conversation, entirely on-device.
   time, an amount or a phone number in it, each a tap from where it was
   said. Holding a line copies just that line, to paste a phone number or
   an address somewhere else.
+  The list is grouped under "Today" (hayom), "Yesterday" (etmol), the
+  weekday for the past week, and the date before that.
   The list reads a small summary per conversation, so it opens quickly
   even after months of daily use, and autosaving never stutters the
   captions. Old conversations can delete themselves after a week, a
