@@ -88,6 +88,8 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
     /// Runs on the main actor in the middle of `prepare`, so a test can
     /// inspect pipeline state at that exact moment.
     var duringPrepare: (@MainActor () -> Void)?
+    /// Megabytes `prepare` would still download; nil when the model is there.
+    var pendingDownload: Int?
     private(set) var prepareCount = 0
     private let lock = NSLock()
     private var tokenContinuation: AsyncThrowingStream<TranscriptToken, Error>.Continuation?
@@ -119,6 +121,10 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
             await MainActor.run { duringPrepare() }
         }
         return availability
+    }
+
+    func pendingDownloadMegabytes() async -> Int? {
+        lock.withLock { pendingDownload }
     }
 
     func stream(languageCode: String, audio: AsyncStream<[Float]>) -> AsyncThrowingStream<TranscriptToken, Error> {
@@ -1150,5 +1156,187 @@ struct CaptionPipelineEmbeddingThreadTests {
 
         #expect(seenMidAnalysis)
         #expect(await eventually { pipeline.speakerClusters.count == 1 })
+    }
+}
+
+@MainActor
+final class FakeNetworkMonitor: NetworkMonitoring {
+    var current: NetworkConditions?
+    var onChange: (@MainActor (NetworkConditions) -> Void)?
+
+    init(_ current: NetworkConditions?) {
+        self.current = current
+    }
+
+    func change(to conditions: NetworkConditions) {
+        current = conditions
+        onChange?(conditions)
+    }
+}
+
+@Suite("CaptionPipeline model download and the network")
+@MainActor
+struct CaptionPipelineDownloadNetworkTests {
+    private func makePipeline(
+        network: FakeNetworkMonitor?,
+        pendingDownload: Int? = 626,
+        recovery: AutoRecoveryPolicy = .disabled
+    ) -> (CaptionPipeline, FakeEngine) {
+        let engine = FakeEngine()
+        engine.pendingDownload = pendingDownload
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: recovery,
+            network: network
+        )
+        return (pipeline, engine)
+    }
+
+    private func settings(allowCellular: Bool = false) -> AppSettings {
+        var settings = AppSettings.default
+        settings.allowCellularModelDownload = allowCellular
+        return settings
+    }
+
+    @Test("on cellular, a model that still has to download waits for Wi-Fi and says how big it is")
+    func cellularWaits() async {
+        let (pipeline, engine) = makePipeline(network: FakeNetworkMonitor(.cellular), recovery: AutoRecoveryPolicy())
+        await pipeline.start(settings: settings())
+
+        let why = pipeline.phase.failure?.engineUnavailability
+        #expect(why?.kind == .waitingForWiFi)
+        #expect(why?.downloadMegabytes == 626)
+        #expect(engine.prepareCount == 0)
+        // No timer keeps asking the same cellular connection.
+        #expect(pipeline.scheduledRetry == nil)
+        #expect(pipeline.phase.failure?.isRetryableInApp == true)
+        #expect(pipeline.phase.failure?.suggestsOtherEngine == false)
+    }
+
+    @Test("Low Data Mode waits the same way")
+    func lowDataModeWaits() async {
+        let (pipeline, _) = makePipeline(network: FakeNetworkMonitor(NetworkConditions(isConnected: true, isConstrained: true)))
+        await pipeline.start(settings: settings())
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .waitingForWiFi)
+    }
+
+    @Test("on Wi-Fi, with nothing to download, or before the system has reported, it goes ahead")
+    func proceeds() async {
+        for (network, pending) in [(FakeNetworkMonitor(.wifi), 626), (FakeNetworkMonitor(.cellular), nil), (FakeNetworkMonitor(nil), 626)] as [(FakeNetworkMonitor, Int?)] {
+            let (pipeline, engine) = makePipeline(network: network, pendingDownload: pending)
+            await pipeline.start(settings: settings())
+            #expect(pipeline.phase.isListening)
+            #expect(engine.prepareCount == 1)
+        }
+        let (unmonitored, _) = makePipeline(network: nil)
+        await unmonitored.start(settings: settings())
+        #expect(unmonitored.phase.isListening)
+    }
+
+    @Test("with no connection at all it fails as a download problem without trying")
+    func offline() async {
+        let (pipeline, engine) = makePipeline(network: FakeNetworkMonitor(.offline))
+        await pipeline.start(settings: settings())
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .modelDownloadFailed)
+        #expect(engine.prepareCount == 0)
+    }
+
+    @Test("the setting to allow cellular downloads lets it go ahead")
+    func settingAllows() async {
+        let (pipeline, _) = makePipeline(network: FakeNetworkMonitor(.cellular))
+        await pipeline.start(settings: settings(allowCellular: true))
+        #expect(pipeline.phase.isListening)
+    }
+
+    @Test("download now anyway starts the download over cellular")
+    func approveOnce() async {
+        let (pipeline, engine) = makePipeline(network: FakeNetworkMonitor(.cellular))
+        await pipeline.start(settings: settings())
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .waitingForWiFi)
+
+        await pipeline.approveCellularDownload()
+        #expect(pipeline.phase.isListening)
+        #expect(engine.prepareCount == 1)
+    }
+
+    @Test("turning on the setting while waiting starts the download")
+    func settingTurnedOnWhileWaiting() async {
+        let (pipeline, _) = makePipeline(network: FakeNetworkMonitor(.cellular))
+        await pipeline.start(settings: settings())
+        await pipeline.setAllowCellularModelDownload(true)
+        #expect(pipeline.phase.isListening)
+    }
+
+    @Test("reaching Wi-Fi starts a waiting download by itself")
+    func wifiArrives() async {
+        let network = FakeNetworkMonitor(.cellular)
+        let (pipeline, engine) = makePipeline(network: network)
+        await pipeline.start(settings: settings())
+
+        network.change(to: .cellular)
+        #expect(engine.prepareCount == 0)
+
+        network.change(to: .wifi)
+        let deadline = ContinuousClock.now + .seconds(2)
+        while !pipeline.phase.isListening && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(pipeline.phase.isListening)
+        #expect(engine.prepareCount == 1)
+    }
+
+    @Test("a download that failed offline starts again when the connection comes back")
+    func connectionReturns() async {
+        let network = FakeNetworkMonitor(.offline)
+        let (pipeline, _) = makePipeline(network: network)
+        await pipeline.start(settings: settings())
+        #expect(pipeline.phase.failure != nil)
+
+        network.change(to: .wifi)
+        let deadline = ContinuousClock.now + .seconds(2)
+        while !pipeline.phase.isListening && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(pipeline.phase.isListening)
+    }
+
+    @Test("a download that failed on Wi-Fi isn't retried early just because Wi-Fi reported again")
+    func sameWiFiAgain() async {
+        let network = FakeNetworkMonitor(.wifi)
+        let engine = FakeEngine(availability: .unavailable(.modelDownloadFailed, "server said no"))
+        engine.pendingDownload = 626
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: .disabled,
+            network: network
+        )
+        await pipeline.start(settings: settings())
+        #expect(engine.prepareCount == 1)
+
+        network.change(to: .wifi)
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(engine.prepareCount == 1)
+    }
+
+    @Test("a connection change doesn't touch captions that are running or failed for other reasons")
+    func unrelatedFailuresIgnored() async {
+        let network = FakeNetworkMonitor(.offline)
+        let (pipeline, engine) = makePipeline(network: network, pendingDownload: nil)
+        await pipeline.start(settings: settings())
+        #expect(pipeline.phase.isListening)
+
+        engine.endStream(throwing: TestError())
+        let deadline = ContinuousClock.now + .seconds(2)
+        while pipeline.phase.failure == nil && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        network.change(to: .wifi)
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(pipeline.phase.failure?.kind == .transcriptionStopped)
+        #expect(engine.prepareCount == 1)
     }
 }

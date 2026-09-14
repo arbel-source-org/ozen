@@ -86,16 +86,22 @@ public struct EngineUnavailability: Sendable, Equatable, Error {
         case languageNotSupportedOnDevice
         case modelDownloadFailed
         case modelLoadFailed
+        /// The model still has to be downloaded, the phone is on cellular
+        /// data or Low Data Mode, and nobody said that's fine.
+        case waitingForWiFi
         case temporarilyUnavailable
         case other
     }
 
     public var kind: Kind
     public var detail: String
+    /// For `waitingForWiFi`: how big the download is, so the screen can say.
+    public var downloadMegabytes: Int?
 
-    public init(kind: Kind, detail: String) {
+    public init(kind: Kind, detail: String, downloadMegabytes: Int? = nil) {
         self.kind = kind
         self.detail = detail
+        self.downloadMegabytes = downloadMegabytes
     }
 }
 
@@ -146,6 +152,12 @@ public protocol TranscriptionEngine: Sendable {
         audio: AsyncStream<[Float]>
     ) -> AsyncThrowingStream<TranscriptToken, Error>
 
+    /// How much `prepare` would have to download first, in megabytes, or
+    /// nil when nothing big is needed (the model is already on the phone,
+    /// or the engine doesn't download). Asked before `prepare` so a large
+    /// download can wait for Wi-Fi.
+    func pendingDownloadMegabytes() async -> Int?
+
     /// Names and words to bias recognition towards (see `VocabularyHints`).
     /// Called before every `stream` and again whenever the user edits the
     /// list mid-conversation; engines that can't use hints ignore it.
@@ -154,6 +166,8 @@ public protocol TranscriptionEngine: Sendable {
 
 public extension TranscriptionEngine {
     func setVocabulary(_ terms: [String]) async {}
+
+    func pendingDownloadMegabytes() async -> Int? { nil }
 
     /// `prepare` without caring about progress — for callers (and tests)
     /// that only want the yes/no answer.

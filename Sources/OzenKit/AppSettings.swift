@@ -131,6 +131,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// Doorbell, siren or her name while the app isn't on screen (pocket,
     /// locked phone) also becomes a phone notification.
     public var notifyWhenInBackground: Bool
+    /// Speech models may download over cellular data or in Low Data Mode.
+    /// Off by default: a model is hundreds of megabytes.
+    public var allowCellularModelDownload: Bool
 
     public init(
         engine: TranscriptionEngineKind,
@@ -150,7 +153,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         speechRate: Float = 0.45,
         vocabulary: [String] = [],
         hasCompletedOnboarding: Bool = false,
-        notifyWhenInBackground: Bool = true
+        notifyWhenInBackground: Bool = true,
+        allowCellularModelDownload: Bool = false
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -170,6 +174,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.vocabulary = VocabularyHints.normalized(vocabulary)
         self.hasCompletedOnboarding = hasCompletedOnboarding
         self.notifyWhenInBackground = notifyWhenInBackground
+        self.allowCellularModelDownload = allowCellularModelDownload
     }
 
     /// The phrases a hard-of-hearing person needs most often in
@@ -199,7 +204,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding
-        case notifyWhenInBackground
+        case notifyWhenInBackground, allowCellularModelDownload
     }
 
     public init(from decoder: any Decoder) throws {
@@ -226,6 +231,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         vocabulary = VocabularyHints.normalized(try container.decodeIfPresent([String].self, forKey: .vocabulary) ?? [])
         hasCompletedOnboarding = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding) ?? false
         notifyWhenInBackground = try container.decodeIfPresent(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
+        allowCellularModelDownload = try container.decodeIfPresent(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
     }
 }
 

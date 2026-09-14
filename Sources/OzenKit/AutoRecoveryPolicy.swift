@@ -51,6 +51,11 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
             switch failure.engineUnavailability?.kind {
             case .permissionDenied, .languageNotSupportedOnDevice:
                 return .never
+            case .waitingForWiFi:
+                // Retrying on a timer would only ask the same question of
+                // the same cellular connection. The pipeline retries when
+                // the connection changes instead.
+                return .never
             case .modelDownloadFailed:
                 return .download
             case .modelLoadFailed:

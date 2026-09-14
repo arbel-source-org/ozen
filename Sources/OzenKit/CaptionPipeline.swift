@@ -94,6 +94,11 @@ public final class CaptionPipeline {
     /// A phone call (or another app) holds the audio session. Retrying
     /// then would only use up attempts; recovery waits for it to end.
     private var systemInterrupted = false
+    private let network: (any NetworkMonitoring)?
+    /// The person said this session's model may download over cellular.
+    private var cellularDownloadApproved = false
+    private var lastNetwork: NetworkConditions?
+    private var networkRetryTask: Task<Void, Never>?
 
     private static let embeddingWindowSeconds = 1.5
     private static let sampleRate = 16_000.0
@@ -110,6 +115,7 @@ public final class CaptionPipeline {
         stabilizer: CaptionStabilizer = CaptionStabilizer(),
         recovery: AutoRecoveryPolicy = AutoRecoveryPolicy(),
         audioWatchdog: AudioStallWatchdog = AudioStallWatchdog(),
+        network: (any NetworkMonitoring)? = nil,
         now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSince1970 }
     ) {
         self.recovery = recovery
@@ -122,6 +128,11 @@ public final class CaptionPipeline {
         self.clusterer = clusterer
         self.stabilizer = stabilizer
         self.now = now
+        self.network = network
+        lastNetwork = network?.current
+        network?.onChange = { [weak self] conditions in
+            self?.networkConditionsChanged(conditions)
+        }
     }
 
     // MARK: - Lifecycle
@@ -167,6 +178,28 @@ public final class CaptionPipeline {
         let engine = cachedEngine(for: settings)
         activeEngineKind = engine.kind
         phase = .preparingEngine(EnginePreparationProgress(stage: .checkingSupport))
+        if let megabytes = await engine.pendingDownloadMegabytes() {
+            guard runID == run else { return }
+            let allowCellular = settings.allowCellularModelDownload || cellularDownloadApproved
+            switch ModelDownloadGate.decide(network: network?.current, allowCellular: allowCellular) {
+            case .proceed:
+                break
+            case .waitForWiFi:
+                fail(
+                    .engineUnavailable,
+                    detail: "\(megabytes) MB to download, waiting for Wi-Fi",
+                    engineUnavailability: EngineUnavailability(kind: .waitingForWiFi, detail: "cellular or Low Data Mode", downloadMegabytes: megabytes)
+                )
+                return
+            case .offline:
+                fail(
+                    .engineUnavailable,
+                    detail: "\(megabytes) MB to download, no internet connection",
+                    engineUnavailability: EngineUnavailability(kind: .modelDownloadFailed, detail: "offline", downloadMegabytes: megabytes)
+                )
+                return
+            }
+        }
         let availability = await engine.prepare(languageCode: settings.languageCode) { [weak self] progress in
             Task { @MainActor [weak self] in
                 guard let self, self.runID == run, case .preparingEngine = self.phase else { return }
@@ -593,6 +626,46 @@ public final class CaptionPipeline {
         let failure = PipelineFailure(kind: kind, detail: detail, engineUnavailability: engineUnavailability)
         phase = .failed(failure)
         scheduleAutoRecovery(for: failure)
+    }
+
+    // MARK: - Downloads and the network
+
+    /// "Download now anyway": this session's model may use cellular data.
+    public func approveCellularDownload() async {
+        cellularDownloadApproved = true
+        guard isWaitingForWiFi else { return }
+        await retry()
+    }
+
+    /// The Settings switch for downloading over cellular changed.
+    public func setAllowCellularModelDownload(_ allowed: Bool) async {
+        activeSettings?.allowCellularModelDownload = allowed
+        guard allowed, isWaitingForWiFi else { return }
+        await retry()
+    }
+
+    private var isWaitingForWiFi: Bool {
+        phase.failure?.engineUnavailability?.kind == .waitingForWiFi
+    }
+
+    /// A download that was waiting for Wi-Fi, or failed for want of a
+    /// connection, starts as soon as the connection allows it, without
+    /// waiting out the retry timer.
+    private func networkConditionsChanged(_ conditions: NetworkConditions) {
+        let allowCellular = (activeSettings?.allowCellularModelDownload ?? false) || cellularDownloadApproved
+        let wasUsable = lastNetwork.map { ModelDownloadGate.canRetryDownload(on: $0, allowCellular: allowCellular) } ?? false
+        lastNetwork = conditions
+        guard !wasUsable,
+              ModelDownloadGate.canRetryDownload(on: conditions, allowCellular: allowCellular),
+              networkRetryTask == nil,
+              let kind = phase.failure?.engineUnavailability?.kind,
+              kind == .waitingForWiFi || kind == .modelDownloadFailed
+        else { return }
+        recovery.reset()
+        networkRetryTask = Task { [weak self] in
+            await self?.retry()
+            self?.networkRetryTask = nil
+        }
     }
 
     // MARK: - Automatic recovery

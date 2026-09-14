@@ -50,7 +50,7 @@ public struct PipelineFailure: Sendable, Equatable, Error {
         switch why.kind {
         case .languageNotSupportedOnDevice, .modelDownloadFailed, .modelLoadFailed:
             return true
-        case .permissionDenied, .temporarilyUnavailable, .other:
+        case .permissionDenied, .waitingForWiFi, .temporarilyUnavailable, .other:
             return false
         }
     }
