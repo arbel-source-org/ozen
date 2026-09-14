@@ -124,7 +124,7 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
 /// A lightweight stand-in for a `TranscriptSessionRecord` used for listing
 /// and searching, so browsing years of history never has to decode every
 /// segment of every session just to show a list of dates and previews.
-public struct TranscriptSessionSummary: Sendable, Equatable, Identifiable {
+public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiable {
     public let id: UUID
     public var startedAt: TimeInterval
     public var endedAt: TimeInterval?
@@ -214,15 +214,40 @@ extension TranscriptSessionSummary {
 /// injected URL, like `SettingsStore`, purely so tests can use a temp
 /// directory instead of touching real app storage — there's no database
 /// here, just a folder of small JSON files.
+///
+/// Next to each conversation sits a tiny summary file in `summaries/`.
+/// The history list reads only those, so opening it after a year of daily
+/// conversations doesn't decode every line ever captioned. A summary is a
+/// cache: if it is missing (a session saved by an older build), older than
+/// its conversation, or unreadable, the list rebuilds it from the full
+/// record and writes it back.
 public struct TranscriptHistoryStore: Sendable {
     private let directoryURL: URL
+
+    /// Bumped whenever `TranscriptSessionSummary` changes meaning, so
+    /// summaries written by an older build are rebuilt instead of trusted.
+    static let summaryFormat = 1
+    static let summariesFolderName = "summaries"
+
+    private struct CachedSummary: Codable {
+        var format: Int
+        var summary: TranscriptSessionSummary
+    }
 
     public init(directoryURL: URL) {
         self.directoryURL = directoryURL
     }
 
+    private var summariesURL: URL {
+        directoryURL.appendingPathComponent(Self.summariesFolderName, isDirectory: true)
+    }
+
     private func fileURL(for id: UUID) -> URL {
         directoryURL.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    private func summaryURL(forRecordFile url: URL) -> URL {
+        summariesURL.appendingPathComponent(url.lastPathComponent)
     }
 
     /// Saves a session, overwriting any earlier save with the same id —
@@ -235,13 +260,34 @@ public struct TranscriptHistoryStore: Sendable {
     public func save(_ record: TranscriptSessionRecord) throws -> Bool {
         guard !record.segments.isEmpty else { return false }
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        let url = fileURL(for: record.id)
         let data = try JSONEncoder().encode(record)
-        try data.write(to: fileURL(for: record.id), options: .atomic)
+        try data.write(to: url, options: .atomic)
+        // Written after the record, so a fresh summary is never older than
+        // its conversation. If this write fails the conversation is still
+        // saved; the list just rebuilds the summary next time.
+        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
         return true
     }
 
     public func load(id: UUID) -> TranscriptSessionRecord? {
         guard let data = try? Data(contentsOf: fileURL(for: id)) else { return nil }
+        return try? JSONDecoder().decode(TranscriptSessionRecord.self, from: data)
+    }
+
+    /// The conversation files in the directory, without reading them.
+    private func recordFiles() -> [URL] {
+        guard let urls = try? FileManager.default.contentsOfDirectory(
+            at: directoryURL,
+            includingPropertiesForKeys: [.contentModificationDateKey]
+        ) else {
+            return []
+        }
+        return urls.filter { $0.pathExtension == "json" }
+    }
+
+    private static func decodeRecord(at url: URL) -> TranscriptSessionRecord? {
+        guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(TranscriptSessionRecord.self, from: data)
     }
 
@@ -251,21 +297,42 @@ public struct TranscriptHistoryStore: Sendable {
     /// the whole listing — one bad session must never hide every other
     /// one.
     private func allRecords() -> [TranscriptSessionRecord] {
-        guard let urls = try? FileManager.default.contentsOfDirectory(
-            at: directoryURL,
-            includingPropertiesForKeys: nil
-        ) else {
-            return []
-        }
-        return urls.compactMap { url in
-            guard url.pathExtension == "json", let data = try? Data(contentsOf: url) else { return nil }
-            return try? JSONDecoder().decode(TranscriptSessionRecord.self, from: data)
-        }
+        recordFiles().compactMap(Self.decodeRecord(at:))
+    }
+
+    private static func modificationDate(of url: URL) -> Date? {
+        var url = url
+        url.removeAllCachedResourceValues()
+        return (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+    }
+
+    private func cachedSummary(forRecordFile url: URL) -> TranscriptSessionSummary? {
+        let cacheURL = summaryURL(forRecordFile: url)
+        guard let cacheDate = Self.modificationDate(of: cacheURL),
+              let recordDate = Self.modificationDate(of: url),
+              cacheDate >= recordDate,
+              let data = try? Data(contentsOf: cacheURL),
+              let cached = try? JSONDecoder().decode(CachedSummary.self, from: data),
+              cached.format == Self.summaryFormat
+        else { return nil }
+        return cached.summary
+    }
+
+    private func writeSummary(_ summary: TranscriptSessionSummary, forRecordFile url: URL) {
+        guard let data = try? JSONEncoder().encode(CachedSummary(format: Self.summaryFormat, summary: summary)) else { return }
+        try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
+        try? data.write(to: summaryURL(forRecordFile: url), options: .atomic)
     }
 
     public func listSummaries() -> [TranscriptSessionSummary] {
-        allRecords()
-            .map { TranscriptSessionSummary(summarizing: $0) }
+        recordFiles()
+            .compactMap { url -> TranscriptSessionSummary? in
+                if let cached = cachedSummary(forRecordFile: url) { return cached }
+                guard let record = Self.decodeRecord(at: url) else { return nil }
+                let summary = TranscriptSessionSummary(summarizing: record)
+                writeSummary(summary, forRecordFile: url)
+                return summary
+            }
             .sorted { $0.startedAt > $1.startedAt }
     }
 
@@ -297,33 +364,36 @@ public struct TranscriptHistoryStore: Sendable {
 
     public func delete(id: UUID) throws {
         let url = fileURL(for: id)
+        try? FileManager.default.removeItem(at: summaryURL(forRecordFile: url))
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try FileManager.default.removeItem(at: url)
     }
 
     public func deleteAll() throws {
-        guard let urls = try? FileManager.default.contentsOfDirectory(
-            at: directoryURL,
-            includingPropertiesForKeys: nil
-        ) else {
-            return
-        }
-        for url in urls where url.pathExtension == "json" {
+        for url in recordFiles() {
             try FileManager.default.removeItem(at: url)
+        }
+        if FileManager.default.fileExists(atPath: summariesURL.path) {
+            try FileManager.default.removeItem(at: summariesURL)
         }
     }
 
+    /// Bytes used by conversations and their summaries.
     public func totalSizeOnDisk() -> Int64 {
-        guard let urls = try? FileManager.default.contentsOfDirectory(
+        guard let enumerator = FileManager.default.enumerator(
             at: directoryURL,
-            includingPropertiesForKeys: [.fileSizeKey]
+            includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]
         ) else {
             return 0
         }
-        return urls.reduce(Int64(0)) { total, url in
-            let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
-            return total + Int64(size)
+        var total: Int64 = 0
+        for case let url as URL in enumerator {
+            guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
+                  values.isRegularFile == true
+            else { continue }
+            total += Int64(values.fileSize ?? 0)
         }
+        return total
     }
 
     /// A plain-text rendering for sharing or reviewing a session outside

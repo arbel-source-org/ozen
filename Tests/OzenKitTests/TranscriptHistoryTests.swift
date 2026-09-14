@@ -337,3 +337,117 @@ struct TranscriptHistoryTests {
         #expect(names == ["רותי", "אבי", "דובר חדש"])
     }
 }
+
+@Suite("Transcript history summary files")
+struct TranscriptHistorySummaryCacheTests {
+    private func makeTempDirectory() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("ozen-history-cache-\(UUID())")
+    }
+
+    private func record(id: UUID = UUID(), startedAt: TimeInterval, texts: [String]) -> TranscriptSessionRecord {
+        TranscriptSessionRecord(
+            id: id,
+            startedAt: startedAt,
+            endedAt: nil,
+            engine: .whisperKit,
+            modelVariant: "small",
+            inputName: nil,
+            segments: texts.map {
+                SavedSegment(id: UUID(), text: $0, speakerName: nil, speakerClusterID: nil, startTimestamp: startedAt, isCommitted: true)
+            }
+        )
+    }
+
+    private func recordFile(_ dir: URL, _ id: UUID) -> URL {
+        dir.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    private func summaryFile(_ dir: URL, _ id: UUID) -> URL {
+        dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName).appendingPathComponent("\(id.uuidString).json")
+    }
+
+    private func setModified(_ url: URL, _ date: Date) throws {
+        try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: url.path)
+    }
+
+    @Test("the list comes from the summary file, without reading the full conversation")
+    func listUsesSummary() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let saved = record(startedAt: 100, texts: ["שלום סבתא", "מה שלומך"])
+        try store.save(saved)
+        #expect(FileManager.default.fileExists(atPath: summaryFile(dir, saved.id).path))
+
+        // Unreadable conversation, older than its summary: only a list that
+        // trusts the summary can still show it.
+        try Data("not json".utf8).write(to: recordFile(dir, saved.id))
+        try setModified(recordFile(dir, saved.id), Date(timeIntervalSince1970: 1_000))
+
+        let listed = store.listSummaries()
+        #expect(listed.count == 1)
+        #expect(listed.first?.preview == "שלום סבתא")
+        #expect(listed.first?.segmentCount == 2)
+    }
+
+    @Test("a conversation saved by an older build, with no summary, is listed and gets one")
+    func missingSummaryIsRebuilt() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let old = record(startedAt: 50, texts: ["ישן"])
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try JSONEncoder().encode(old).write(to: recordFile(dir, old.id))
+
+        #expect(store.listSummaries().map(\.id) == [old.id])
+        #expect(FileManager.default.fileExists(atPath: summaryFile(dir, old.id).path))
+    }
+
+    @Test("a summary older than its conversation is rebuilt, not trusted")
+    func staleSummaryIsRebuilt() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let id = UUID()
+        try store.save(record(id: id, startedAt: 10, texts: ["אחת"]))
+
+        // The conversation changed after its summary was written.
+        try JSONEncoder().encode(record(id: id, startedAt: 10, texts: ["אחת", "שתיים", "שלוש"])).write(to: recordFile(dir, id))
+        try setModified(summaryFile(dir, id), Date(timeIntervalSince1970: 1_000))
+        try setModified(recordFile(dir, id), Date(timeIntervalSince1970: 2_000))
+
+        #expect(store.listSummaries().first?.segmentCount == 3)
+    }
+
+    @Test("an unreadable summary is rebuilt from the conversation")
+    func corruptSummaryIsRebuilt() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let saved = record(startedAt: 10, texts: ["טקסט"])
+        try store.save(saved)
+        try Data("{".utf8).write(to: summaryFile(dir, saved.id))
+
+        #expect(store.listSummaries().first?.preview == "טקסט")
+    }
+
+    @Test("deleting a conversation removes its summary, so it can't reappear in the list")
+    func deleteRemovesSummary() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let first = record(startedAt: 10, texts: ["א"])
+        let second = record(startedAt: 20, texts: ["ב"])
+        try store.save(first)
+        try store.save(second)
+
+        try store.delete(id: first.id)
+        #expect(!FileManager.default.fileExists(atPath: summaryFile(dir, first.id).path))
+        #expect(store.listSummaries().map(\.id) == [second.id])
+
+        try store.deleteAll()
+        #expect(store.listSummaries().isEmpty)
+        #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName).path))
+        #expect(store.totalSizeOnDisk() == 0)
+    }
+}
