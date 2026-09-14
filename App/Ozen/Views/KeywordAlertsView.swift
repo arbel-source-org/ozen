@@ -1,10 +1,6 @@
 import SwiftUI
 import OzenKit
 
-/// The reader's own list of words worth a buzz: her name, the
-/// grandchildren, "medicine", "ambulance". Matching understands Hebrew's
-/// attached prefixes, so "le-savta" ("to grandma") and "ve-savta" ("and
-/// grandma") both count as "savta".
 struct KeywordAlertsView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var newPhrase = ""

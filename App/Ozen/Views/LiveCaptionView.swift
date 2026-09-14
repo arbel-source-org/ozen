@@ -185,7 +185,7 @@ struct LiveCaptionView: View {
         }
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
             guard let alert = viewModel.soundAlerts.last else { return }
-            if !isCoveredByAlertScreen {
+            if !isCoveredByAlertScreen, alert.takesBanner(from: visibleSoundAlert) {
                 withAnimation { visibleSoundAlert = alert }
             }
             vibrate(.pattern(for: alert.event.importance))

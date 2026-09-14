@@ -137,6 +137,14 @@ public struct SoundAlert: Sendable, Equatable, Identifiable {
         self.confidence = confidence
         self.timestamp = timestamp
     }
+
+    /// Whether this alert's banner replaces the one on screen: a kettle
+    /// heard during a smoke alarm doesn't take its banner away. It still
+    /// buzzes and is read out.
+    public func takesBanner(from shown: SoundAlert?) -> Bool {
+        guard let shown else { return true }
+        return event.importance >= shown.event.importance
+    }
 }
 
 /// A source of sound classifications. The real one (`SoundAnalysisDetector`

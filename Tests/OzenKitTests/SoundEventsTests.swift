@@ -90,6 +90,19 @@ struct SoundEventsTests {
         #expect(afterReset != nil)
     }
 
+    @Test("a banner gives way only to an alert at least as important")
+    func bannerTakeOver() throws {
+        func alert(_ identifier: String) throws -> SoundAlert {
+            SoundAlert(event: try #require(SoundEventCatalog.event(for: identifier)), confidence: 0.9, timestamp: 1)
+        }
+        let smoke = try alert("smoke_detector")
+        let horn = try alert("car_horn")
+        #expect(smoke.takesBanner(from: nil))
+        #expect(!horn.takesBanner(from: smoke))
+        #expect(smoke.takesBanner(from: horn))
+        #expect(try alert("siren").takesBanner(from: smoke))
+    }
+
     @Test("preferences decode tolerantly and round-trip")
     func preferencesCodable() throws {
         let decoded = try JSONDecoder().decode(SoundAlertPreferences.self, from: Data("{}".utf8))
