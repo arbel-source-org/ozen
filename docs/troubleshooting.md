@@ -46,8 +46,8 @@ leave the phone.
   that, so pick a smaller one in Settings → מודל Whisper (the recommended
   Turbo (compressed) rather than a 3 GB one), or switch to Apple's engine.
 - **Some words are in a different colour.** Numbers (a time, how many pills,
-  a phone number) stand out so they aren't missed: yellow on the white
-  theme, white on the yellow one, blue on the light one. Settings → תצוגה →
+  a phone number) stand out so they aren't missed: yellow among white text,
+  white among yellow text, dark blue on a white background. Settings → תצוגה →
   "מספרים בולטים" turns it off.
 - **A small question mark next to a line.** The engine wasn't sure it heard
   that line right. Holding the line offers to ask the speaker to repeat it.
