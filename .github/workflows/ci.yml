@@ -49,17 +49,24 @@ jobs:
         # Xcode didn't have that particular simulator registered. Ask the
         # machine what it actually has instead of guessing a name that
         # will just as easily go stale on the next runner image update.
+        #
+        # Booted here, by id, so it comes up while the app compiles: left to
+        # xcodebuild, about two minutes passed between the build finishing
+        # and the first test starting. The id also rules out picking between
+        # two simulators of the same name on different iOS versions.
         run: |
           DEVICE=$(xcrun simctl list devices available -j \
-            | jq -r '.devices | to_entries[] | .value[] | select(.name | test("iPhone")) | .name' \
+            | jq -r '.devices | to_entries[] | .value[] | select(.name | test("iPhone")) | "\(.udid) \(.name)"' \
             | head -n1)
           if [ -z "$DEVICE" ]; then
             echo "No available iPhone simulator found" >&2
             xcrun simctl list devices available
             exit 1
           fi
-          echo "Using simulator: $DEVICE"
-          echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+          UDID=${DEVICE%% *}
+          echo "Using simulator: ${DEVICE#* } ($UDID)"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl boot "$UDID" || true
       - name: Name this week
         id: week
         run: echo "week=$(date +%G-%V)" >> "$GITHUB_OUTPUT"
@@ -84,7 +91,7 @@ jobs:
             -project Ozen.xcodeproj \
             -scheme Ozen \
             -derivedDataPath DerivedData \
-            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             2>&1 | tee xcodebuild-raw.log | xcpretty
       - name: Show why it failed
         # xcpretty prints nothing useful when a test fails in a way it
