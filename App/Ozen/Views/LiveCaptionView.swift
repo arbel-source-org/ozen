@@ -424,7 +424,7 @@ struct LiveCaptionView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("השיחה מ\(Self.minutesAgoText(minutes)) נשמרה")
                             .font(.headline)
-                        Text(recent.title ?? recent.preview)
+                        Text(CaptionLayout.directed(recent.title ?? recent.preview))
                             .font(.subheadline)
                             .lineLimit(2)
                             .opacity(0.8)

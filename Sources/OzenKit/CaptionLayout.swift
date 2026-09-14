@@ -43,9 +43,14 @@ public enum CaptionLayout {
     /// paragraph's direction whatever word comes first. For display only:
     /// copied, shared and spoken text stays as recognized.
     public static func displayText(_ text: String, languageCode: String = "he") -> String {
-        let readable = readableText(text)
-        guard isRightToLeft(languageCode: languageCode) else { return readable }
-        return readable
+        directed(readableText(text), languageCode: languageCode)
+    }
+
+    /// The marks alone, without breaking the text into paragraphs: for a
+    /// one- or two-line preview.
+    public static func directed(_ text: String, languageCode: String = "he") -> String {
+        guard isRightToLeft(languageCode: languageCode) else { return text }
+        return text
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { rightToLeftMark + $0 }
             .joined(separator: "\n")

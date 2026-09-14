@@ -228,7 +228,7 @@ private struct SessionRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Text(session.preview)
+            Text(CaptionLayout.directed(session.preview))
                 .font(.body)
                 .lineLimit(2)
                 .foregroundStyle(.secondary)

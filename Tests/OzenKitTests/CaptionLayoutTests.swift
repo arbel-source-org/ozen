@@ -51,6 +51,13 @@ struct CaptionLayoutTests {
     @Test("a left-to-right language is shown exactly as laid out")
     func leftToRightUntouched() {
         #expect(CaptionLayout.displayText("OK, see you tomorrow.", languageCode: "en") == "OK, see you tomorrow.")
+        #expect(CaptionLayout.directed("OK, see you tomorrow.", languageCode: "en") == "OK, see you tomorrow.")
+    }
+
+    @Test("a preview gets the marks without being broken into paragraphs")
+    func previewNotParagraphed() {
+        let long = "אתמול הלכנו לשוק בבוקר מוקדם. WhatsApp שלחה הודעה וקנינו ירקות טריים לכל השבוע. אחר כך ישבנו בבית קפה קטן ליד התחנה."
+        #expect(CaptionLayout.directed(long) == "\u{200F}" + long)
     }
 
     @Test("a single sentence longer than a paragraph stays whole")
