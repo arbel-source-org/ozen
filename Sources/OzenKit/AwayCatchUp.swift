@@ -63,6 +63,17 @@ public struct AwayCatchUp: Sendable, Equatable {
         return segments.firstIndex { away.contains($0.startTimestamp) }
     }
 
+    /// Where the mark is drawn when only the lines from `firstDrawnIndex`
+    /// on are on screen (see `CaptionLayout.onScreenLineLimit`): at the
+    /// first missed line among them. Nil when every missed line is above
+    /// them, since a mark on a later line would say that line was missed.
+    public func drawnMarkIndex(in segments: [TranscriptSegment], firstDrawnIndex: Int) -> Int? {
+        guard let away, let first = firstMissedIndex(in: segments) else { return nil }
+        let index = max(first, firstDrawnIndex)
+        guard segments.indices.contains(index), away.contains(segments[index].startTimestamp) else { return nil }
+        return index
+    }
+
     /// Whether to offer jumping back to the mark.
     public func offersJump(in segments: [TranscriptSegment]) -> Bool {
         !isAcknowledged && firstMissedIndex(in: segments) != nil

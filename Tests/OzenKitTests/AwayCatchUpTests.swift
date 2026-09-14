@@ -20,6 +20,20 @@ struct AwayCatchUpTests {
         #expect(catchUp.offersJump(in: segments))
     }
 
+    @Test("drawn from the first missed line still on screen, and not at all once they have all scrolled out of it")
+    func markAmongTheDrawnLines() {
+        var catchUp = AwayCatchUp()
+        catchUp.screenLeft(at: 100)
+        catchUp.screenReturned(at: 400)
+        let segments = lines(startingAt: [50, 150, 200, 390, 410, 420])
+        #expect(catchUp.drawnMarkIndex(in: segments, firstDrawnIndex: 0) == 1)
+        #expect(catchUp.drawnMarkIndex(in: segments, firstDrawnIndex: 2) == 2)
+        #expect(catchUp.drawnMarkIndex(in: segments, firstDrawnIndex: 3) == 3)
+        // Only lines said after she came back are drawn.
+        #expect(catchUp.drawnMarkIndex(in: segments, firstDrawnIndex: 4) == nil)
+        #expect(catchUp.drawnMarkIndex(in: segments, firstDrawnIndex: 9) == nil)
+    }
+
     @Test("a glance away doesn't count, and doesn't move an earlier mark")
     func shortAbsenceKeepsTheEarlierMark() {
         var catchUp = AwayCatchUp()

@@ -44,6 +44,13 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
     /// when even the quietest chunk of the last three seconds is above the
     /// floor, the floor rises toward it, and the hum stops counting while
     /// people talking over it still do.
+    ///
+    /// Someone talking on without stopping keeps those gaps too: with the
+    /// recordings run together 0.1-0.6 s apart for four minutes, in quiet
+    /// and in noisy rooms, speech reached Whisper as often with this as
+    /// without it (89-94%), and no less in the last minute than the first.
+    /// What it does cost is speech barely louder than a hum: 3 dB above a
+    /// -55 dBFS hum, a quarter of it got through; 10 dB above, nearly all.
     public var recentWindowSamples: Int
     /// How quickly the floor rises toward that quietest recent level (per
     /// chunk).

@@ -447,14 +447,15 @@ struct LiveCaptionView: View {
         }
     }
 
-    /// Where the lines said while the screen was away begin, as drawn: never
-    /// above the first line on screen. It scans the whole transcript, so the
+    /// Where the lines said while the screen was away begin, as drawn (see
+    /// `AwayCatchUp.drawnMarkIndex`). It scans the whole transcript, so the
     /// list reads it once per update rather than once per line.
     private var awayMark: (index: Int, segmentID: UUID, count: Int)? {
         let segments = viewModel.segments
-        guard let first = viewModel.awayCatchUp.firstMissedIndex(in: segments) else { return nil }
-        let index = max(first, CaptionLayout.firstOnScreenIndex(lineCount: segments.count))
-        guard segments.indices.contains(index) else { return nil }
+        guard let index = viewModel.awayCatchUp.drawnMarkIndex(
+            in: segments,
+            firstDrawnIndex: CaptionLayout.firstOnScreenIndex(lineCount: segments.count)
+        ) else { return nil }
         return (index, segments[index].id, viewModel.awayCatchUp.missedLineCount(in: segments))
     }
 
