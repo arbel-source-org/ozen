@@ -7,7 +7,7 @@ import Foundation
 /// start a new utterance. Not a neural VAD; deliberately simple, tuned to
 /// be conservative about *missing* speech rather than about false alarms,
 /// since a false alarm costs a wasted inference and a miss costs words.
-public struct EnergyVoiceDetector: Sendable, Equatable {
+public struct EnergyVoiceDetector: Sendable {
     /// Below this RMS (-60 dBFS) nothing counts as speech, whatever the
     /// noise floor says. Guards against a dead-quiet room where the floor
     /// would otherwise drop to ~0 and make breathing count as speech.
@@ -106,23 +106,6 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
         self.noiseFloor = initialNoiseFloor
         self.recentWindowSamples = recentWindowSamples
         self.recentMinimumRiseRate = recentMinimumRiseRate
-    }
-
-    public static func == (lhs: EnergyVoiceDetector, rhs: EnergyVoiceDetector) -> Bool {
-        lhs.absoluteThreshold == rhs.absoluteThreshold
-            && lhs.noiseFloorRatio == rhs.noiseFloorRatio
-            && lhs.floorFallRate == rhs.floorFallRate
-            && lhs.floorRiseRate == rhs.floorRiseRate
-            && lhs.maximumNoiseFloor == rhs.maximumNoiseFloor
-            && lhs.recentWindowSamples == rhs.recentWindowSamples
-            && lhs.recentMinimumRiseRate == rhs.recentMinimumRiseRate
-            && lhs.steadyNoiseFloorRatio == rhs.steadyNoiseFloorRatio
-            && lhs.noiseSwingRate == rhs.noiseSwingRate
-            && lhs.noiseSwingDecibels == rhs.noiseSwingDecibels
-            && lhs.noiseFloor == rhs.noiseFloor
-            && lhs.lastLevel == rhs.lastLevel
-            && lhs.recentSamples == rhs.recentSamples
-            && lhs.recentLevels.elementsEqual(rhs.recentLevels) { $0.level == $1.level && $0.samples == $1.samples }
     }
 
     public var threshold: Float {
