@@ -255,6 +255,12 @@ struct LiveCaptionView: View {
         .sensoryFeedback(.selection, trigger: fontSizeTrigger)
         .animation(.default, value: battery.notice)
         .onChange(of: scenePhase, initial: true) { _, phase in
+            // Inactive is Control Center pulled down, a call banner, or the
+            // moment on the way to locking: the captions are still on
+            // screen, or about to be put away, which background will say.
+            // Counting it as away posted phone notifications over an app
+            // she was looking at.
+            guard phase != .inactive else { return }
             viewModel.sceneActivityChanged(isActive: phase == .active)
         }
         .onChange(of: scenePhase) { _, phase in
