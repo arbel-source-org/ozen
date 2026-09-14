@@ -22,13 +22,25 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
     /// both reached it 96-97% of the time. Whisper itself doesn't mind the
     /// level: its word error rate was the same at -26 and -56 dBFS.
     public var absoluteThreshold: Float
-    /// Speech must exceed the tracked noise floor by this factor (8 dB).
-    ///
-    /// 2.0 (6 dB) was tried in the simulation: speech 6 dB above a steady
-    /// -55 dBFS hum reached Whisper 87% of the time instead of 63%, but in a
-    /// room of ordinary fluctuating noise 28% of the silence between
-    /// sentences went to Whisper instead of 6%.
+    /// Speech must exceed the tracked noise floor by this factor (8 dB) in
+    /// a room whose noise swings, down to `steadyNoiseFloorRatio` (6 dB) in
+    /// one whose noise holds still (see `noiseSwingDecibels`).
     public var noiseFloorRatio: Float
+    /// The factor for steady noise: a fan, an air conditioner, a fridge's
+    /// hum. Noise that barely moves can't cross a lower line by chance.
+    ///
+    /// In the simulation, 6 dB everywhere let speech 6 dB above a steady
+    /// -56 dBFS fan through 89% of the time instead of 64%, but in a room of
+    /// rumbling, swinging noise 26% of the silence between sentences went to
+    /// Whisper instead of 4%. Following the swing kept that room at 8 dB (and
+    /// 5% of its silence) while the fan got 6 dB: 80-82% of speech reached
+    /// Whisper there, and over a steady hum 83% instead of 63%. With
+    /// 43 ms chunks instead of 100 ms the gains held (fan 78% to 87%, hum
+    /// 77% to 88%) and no more silence went through.
+    public var steadyNoiseFloorRatio: Float
+    /// How quickly `noiseSwingDecibels` follows the last few seconds (per
+    /// chunk).
+    public var noiseSwingRate: Float
     /// How quickly the floor follows a *quieter* signal (per chunk).
     public var floorFallRate: Float
     /// How quickly the floor rises toward a louder non-speech signal
@@ -63,6 +75,12 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
 
     public private(set) var noiseFloor: Float
     public private(set) var lastLevel: Float = 0
+    /// How far the noise swings: over the last `recentWindowSamples`, the
+    /// gap in dB between the quietest chunk and the one a fifth of the way
+    /// up. A fan keeps it well under a decibel; a rumbling room, or someone
+    /// talking through most of the window, several. Starts high, so a new
+    /// session begins at the cautious 8 dB.
+    public private(set) var noiseSwingDecibels: Float = 2
     private var recentLevels: [(level: Float, samples: Int)] = []
     private var recentSamples = 0
 
@@ -74,10 +92,14 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
         maximumNoiseFloor: Float = 0.02,
         initialNoiseFloor: Float = 0.0004,
         recentWindowSamples: Int = 48_000,
-        recentMinimumRiseRate: Float = 0.05
+        recentMinimumRiseRate: Float = 0.05,
+        steadyNoiseFloorRatio: Float = 2.0,
+        noiseSwingRate: Float = 0.02
     ) {
         self.absoluteThreshold = absoluteThreshold
         self.noiseFloorRatio = noiseFloorRatio
+        self.steadyNoiseFloorRatio = steadyNoiseFloorRatio
+        self.noiseSwingRate = noiseSwingRate
         self.floorFallRate = floorFallRate
         self.floorRiseRate = floorRiseRate
         self.maximumNoiseFloor = maximumNoiseFloor
@@ -94,6 +116,9 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
             && lhs.maximumNoiseFloor == rhs.maximumNoiseFloor
             && lhs.recentWindowSamples == rhs.recentWindowSamples
             && lhs.recentMinimumRiseRate == rhs.recentMinimumRiseRate
+            && lhs.steadyNoiseFloorRatio == rhs.steadyNoiseFloorRatio
+            && lhs.noiseSwingRate == rhs.noiseSwingRate
+            && lhs.noiseSwingDecibels == rhs.noiseSwingDecibels
             && lhs.noiseFloor == rhs.noiseFloor
             && lhs.lastLevel == rhs.lastLevel
             && lhs.recentSamples == rhs.recentSamples
@@ -101,7 +126,16 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
     }
 
     public var threshold: Float {
-        max(absoluteThreshold, noiseFloor * noiseFloorRatio)
+        max(absoluteThreshold, noiseFloor * currentNoiseFloorRatio)
+    }
+
+    /// Between `steadyNoiseFloorRatio` and `noiseFloorRatio`, a decibel
+    /// higher for each decibel the noise swings.
+    public var currentNoiseFloorRatio: Float {
+        let steady = 20 * log10(steadyNoiseFloorRatio)
+        let swinging = 20 * log10(max(noiseFloorRatio, steadyNoiseFloorRatio))
+        let decibels = min(max(steady + noiseSwingDecibels, steady), swinging)
+        return pow(10, decibels / 20)
     }
 
     /// Classifies one chunk and updates the noise floor. Chunks that are
@@ -136,10 +170,14 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
         }
         // Only once the window holds a full few seconds: at the start of
         // listening the first chunk alone is the "quietest".
-        guard recentSamples >= recentWindowSamples,
-              let quietest = recentLevels.map(\.level).min(),
-              quietest > noiseFloor
-        else { return }
+        guard recentSamples >= recentWindowSamples else { return }
+        let levels = recentLevels.map(\.level).sorted()
+        let quietest = levels[0]
+        if quietest > 0 {
+            let swing = 20 * log10(levels[levels.count / 5] / quietest)
+            noiseSwingDecibels += (swing - noiseSwingDecibels) * noiseSwingRate
+        }
+        guard quietest > noiseFloor else { return }
         noiseFloor = min(noiseFloor + (quietest - noiseFloor) * recentMinimumRiseRate, maximumNoiseFloor)
     }
 

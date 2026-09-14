@@ -737,6 +737,10 @@ public final class CaptionPipeline {
             buffer.append(contentsOf: chunk)
             let isSpeech = embeddingVoiceDetector.isSpeech(chunk)
             stats.inputLevels.add(rms: embeddingVoiceDetector.lastLevel)
+            if embeddingVoiceDetector.noiseFloor > 0 {
+                stats.noiseFloorDecibels = Double(20 * log10(embeddingVoiceDetector.noiseFloor))
+            }
+            stats.noiseMarginDecibels = Double(20 * log10(embeddingVoiceDetector.currentNoiseFloorRatio))
             if isSpeech {
                 speechSamples += chunk.count
                 stats.speechChunks += 1

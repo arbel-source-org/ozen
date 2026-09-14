@@ -103,7 +103,12 @@ leave the phone.
   reach about -60 dBFS: if "loud" stays below that through a conversation,
   the phone is too far from the people talking, or an external microphone
   helps. Build 14 and earlier ignored anything under -44 dBFS, which in
-  practice was most conversation more than a metre away.
+  practice was most conversation more than a metre away. `floor:` is the
+  room's background noise as the phone has learned it, and `margin:` how
+  far above it speech must be: about 6 dB when the noise is steady (a fan,
+  an air conditioner), up to 8 dB when it swings. Talking only a few dB
+  above a loud `floor:` is where words get lost; moving the phone closer
+  to the people than to the noise helps most.
 - **A small question mark next to a line.** The engine wasn't sure it heard
   that line right. Holding the line offers to ask the speaker to repeat it.
 - **No phone notifications when the screen is off.** Settings → Notifications (hatra'ot) shows

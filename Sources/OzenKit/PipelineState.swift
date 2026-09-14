@@ -120,6 +120,10 @@ public struct PipelineStats: Sendable, Equatable {
     public var inputLevels = AudioLevelHistogram()
     /// Chunks the voice detector counted as someone talking.
     public var speechChunks: Int = 0
+    /// The voice detector's noise floor and the margin above it speech
+    /// needs, in dB, as of the latest chunk (see `EnergyVoiceDetector`).
+    public var noiseFloorDecibels: Double?
+    public var noiseMarginDecibels: Double?
 
     /// The share of audio the voice detector counted as speech, 0...1.
     /// Near zero through a conversation means speech arrives too quietly

@@ -208,7 +208,7 @@ struct DiagnosticsView: View {
         engine: \(viewModel.pipeline.activeEngineKind?.rawValue ?? "-") model: \(viewModel.settings.whisperModelVariant) lang: \(viewModel.settings.languageCode)
         input: \(viewModel.selectedInput?.portName ?? "-") of \(viewModel.availableInputs.map { "\($0.portName) [\($0.portType.rawValue)]" }.joined(separator: ", "))
         audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges) stalls: \(stats.audioStalls)
-        levels: \(stats.inputLevels.summary ?? "-") speech: \(stats.speechShare.map { String(format: "%.1f%%", $0 * 100) } ?? "-")
+        levels: \(stats.inputLevels.summary ?? "-") speech: \(stats.speechShare.map { String(format: "%.1f%%", $0 * 100) } ?? "-") floor: \(stats.noiseFloorDecibels.map { String(format: "%.1f", $0) } ?? "-") margin: \(stats.noiseMarginDecibels.map { String(format: "%.1f dB", $0) } ?? "-")
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)

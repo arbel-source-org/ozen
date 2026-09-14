@@ -71,6 +71,29 @@ struct EnergyVoiceDetectorTests {
         #expect(humLater)
     }
 
+    @Test("steady noise lowers the margin speech needs to 6 dB; noise that swings keeps it at 8 dB")
+    func marginFollowsHowTheNoiseSwings() {
+        var steady = EnergyVoiceDetector()
+        #expect(abs(steady.currentNoiseFloorRatio - 2.5) < 0.01)
+        let hum = tone(amplitude: 0.002, count: 1_600)
+        for _ in 0..<600 {
+            steady.isSpeech(hum)
+        }
+        #expect(steady.noiseSwingDecibels < 0.5)
+        #expect(steady.currentNoiseFloorRatio < 2.15)
+        // Six decibels above the hum: speech with the lower margin.
+        let justAbove = steady.isSpeech(tone(amplitude: 0.0042, count: 1_600))
+        #expect(justAbove)
+
+        var swinging = EnergyVoiceDetector()
+        for i in 0..<600 {
+            let decibels = Float((i * 7) % 13) - 6
+            swinging.isSpeech(tone(amplitude: 0.002 * pow(10, decibels / 20), count: 1_600))
+        }
+        #expect(swinging.noiseSwingDecibels > 2)
+        #expect(abs(swinging.currentNoiseFloorRatio - 2.5) < 0.01)
+    }
+
     @Test("the floor is capped so a loud fan can't disable detection")
     func floorIsCapped() {
         var detector = EnergyVoiceDetector()
