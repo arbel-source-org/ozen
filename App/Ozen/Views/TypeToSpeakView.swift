@@ -95,14 +95,14 @@ struct TypeToSpeakView: View {
                         Label(tr("עצירה", "Stop"), systemImage: "stop.fill")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .ozenGlassButton()
                     .controlSize(.large)
                 }
                 Button(action: speakTyped) {
                     Label(tr("להשמיע", "Play"), systemImage: "speaker.wave.3.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .ozenGlassButton(prominent: true)
                 .controlSize(.large)
                 .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
@@ -118,7 +118,7 @@ struct TypeToSpeakView: View {
                 Label(tr("מסך מלא באותיות גדולות", "Full screen, big letters"), systemImage: "textformat.size.larger")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
+            .ozenGlassButton()
             .accessibilityHint(tr("כדי שמישהו יכתוב לך, או כדי להראות למי שמולך מה כתבת", "So someone can write to you, or to show the person you’re talking with what you wrote"))
 
             if !viewModel.hasHebrewVoice {
@@ -138,7 +138,7 @@ struct TypeToSpeakView: View {
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.bordered)
+            .ozenGlassButton()
             .accessibilityLabel(tr("להשמיע שוב: \(phrase)", "Play again: \(phrase)"))
 
             if !viewModel.settings.quickPhrases.contains(phrase) {
@@ -148,7 +148,7 @@ struct TypeToSpeakView: View {
                     Image(systemName: "plus.bubble")
                         .frame(minWidth: 44, minHeight: 32)
                 }
-                .buttonStyle(.bordered)
+                .ozenGlassButton()
                 .accessibilityLabel(tr("להוסיף למשפטים המוכנים", "Add to quick phrases"))
             }
         }

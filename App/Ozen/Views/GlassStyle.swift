@@ -3,18 +3,34 @@ import SwiftUI
 #if compiler(>=6.2)
 extension View {
     @ViewBuilder
-    func ozenGlass(in shape: some Shape, interactive: Bool = false) -> some View {
+    func ozenGlass(in shape: some Shape, interactive: Bool = false, fallback: Material = .ultraThinMaterial) -> some View {
         if #available(iOS 26.0, *) {
             glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
         } else {
-            background(.ultraThinMaterial, in: shape)
+            background(fallback, in: shape)
         }
     }
 
     @ViewBuilder
-    func ozenGlassButton() -> some View {
+    func ozenGlassBar() -> some View {
         if #available(iOS 26.0, *) {
-            buttonStyle(.glass)
+            glassEffect(.regular, in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+                .padding(.horizontal, 10)
+        } else {
+            background(.ultraThinMaterial)
+        }
+    }
+
+    @ViewBuilder
+    func ozenGlassButton(prominent: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            if prominent {
+                buttonStyle(.glassProminent)
+            } else {
+                buttonStyle(.glass)
+            }
+        } else if prominent {
+            buttonStyle(.borderedProminent)
         } else {
             buttonStyle(.bordered)
         }
@@ -22,12 +38,21 @@ extension View {
 }
 #else
 extension View {
-    func ozenGlass(in shape: some Shape, interactive: Bool = false) -> some View {
-        background(.ultraThinMaterial, in: shape)
+    func ozenGlass(in shape: some Shape, interactive: Bool = false, fallback: Material = .ultraThinMaterial) -> some View {
+        background(fallback, in: shape)
     }
 
-    func ozenGlassButton() -> some View {
-        buttonStyle(.bordered)
+    func ozenGlassBar() -> some View {
+        background(.ultraThinMaterial)
+    }
+
+    @ViewBuilder
+    func ozenGlassButton(prominent: Bool = false) -> some View {
+        if prominent {
+            buttonStyle(.borderedProminent)
+        } else {
+            buttonStyle(.bordered)
+        }
     }
 }
 #endif

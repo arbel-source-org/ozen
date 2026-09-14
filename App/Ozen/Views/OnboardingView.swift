@@ -118,7 +118,7 @@ struct OnboardingView: View {
                         Label(tr("לאשר התראות", "Approve notifications"), systemImage: "bell.badge")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .ozenGlassButton()
                     .controlSize(.large)
                 }
             case .denied:
@@ -134,7 +134,7 @@ struct OnboardingView: View {
                     } label: {
                         Label(tr("פתיחת הגדרות הטלפון", "Open phone settings"), systemImage: "gear")
                     }
-                    .buttonStyle(.bordered)
+                    .ozenGlassButton()
                     .controlSize(.large)
                 }
             case nil:
@@ -148,7 +148,7 @@ struct OnboardingView: View {
                     Label(tr("לאשר את המיקרופון", "Approve the microphone"), systemImage: "mic.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .ozenGlassButton(prominent: true)
                 .controlSize(.large)
                 .disabled(requesting)
             }
@@ -196,7 +196,7 @@ struct OnboardingView: View {
                     Text(tr("הבא", "Next"))
                         .frame(minWidth: 120)
                 }
-                .buttonStyle(.borderedProminent)
+                .ozenGlassButton(prominent: true)
                 .controlSize(.large)
             } else {
                 Button {
@@ -205,7 +205,7 @@ struct OnboardingView: View {
                     Label(tr("להתחיל", "Start"), systemImage: "captions.bubble.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .ozenGlassButton(prominent: true)
                 .controlSize(.large)
             }
         }

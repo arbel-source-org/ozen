@@ -119,7 +119,7 @@ struct LiveCaptionView: View {
                     .font(.headline.monospacedDigit())
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(.ultraThinMaterial, in: Capsule())
+                    .ozenGlass(in: Capsule())
                     .foregroundStyle(theme.chrome)
                     .frame(maxHeight: .infinity, alignment: .center)
                     .allowsHitTesting(false)
@@ -594,7 +594,7 @@ struct LiveCaptionView: View {
                     .padding(.vertical, 10)
                     // A target a shaky finger finds at any text size.
                     .frame(minHeight: 48)
-                    .background(.thinMaterial, in: Capsule())
+                    .ozenGlass(in: Capsule(), interactive: true, fallback: .thinMaterial)
             }
             .buttonStyle(.plain)
             .foregroundStyle(theme.chrome)
@@ -787,7 +787,7 @@ struct LiveCaptionView: View {
                 .padding(.vertical, 10)
                 // A target a shaky finger finds at any text size.
                 .frame(minHeight: 48)
-                .background(.thinMaterial, in: Capsule())
+                .ozenGlass(in: Capsule(), interactive: true, fallback: .thinMaterial)
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.chrome)
@@ -816,7 +816,7 @@ struct LiveCaptionView: View {
             Image(systemName: "chevron.up")
                 .font(.title3.weight(.semibold))
                 .frame(width: 64, height: 40)
-                .background(.ultraThinMaterial, in: Capsule())
+                .ozenGlass(in: Capsule(), interactive: true)
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.chrome)
@@ -886,7 +886,7 @@ struct LiveCaptionView: View {
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 8)
-        .background(.ultraThinMaterial)
+        .ozenGlassBar()
         .foregroundStyle(theme.chrome)
     }
 
@@ -903,7 +903,7 @@ struct LiveCaptionView: View {
             }
             .frame(width: 56)
         }
-        .buttonStyle(.bordered)
+        .ozenGlassButton()
         .accessibilityLabel(tr("בחירת מיקרופון", "Choose microphone"))
     }
 
@@ -919,7 +919,7 @@ struct LiveCaptionView: View {
             }
             .frame(width: 56)
         }
-        .buttonStyle(.bordered)
+        .ozenGlassButton()
         .accessibilityLabel(tr("להגיד משהו בקול", "Say something out loud"))
     }
 
@@ -935,7 +935,7 @@ struct LiveCaptionView: View {
             }
             .frame(width: 56)
         }
-        .buttonStyle(.bordered)
+        .ozenGlassButton()
         .accessibilityLabel(tr("הגדרות", "Settings"))
     }
 
