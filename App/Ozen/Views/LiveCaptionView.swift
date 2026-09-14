@@ -155,7 +155,13 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.phase) { _, _ in
             viewModel.historySessionDidChangePhase()
         }
-        .onChange(of: viewModel.segments.count) { _, _ in noteSpeechActivity() }
+        .onChange(of: viewModel.segments.count) { _, _ in
+            noteSpeechActivity()
+            // A new line whose text happens to equal the previous one ("כן",
+            // then "כן" again) doesn't change the last line's text, so it
+            // has to scroll here too or it lands below the fold.
+            scrollToLatestIfPinned()
+        }
         .onChange(of: viewModel.segments.last?.text) { _, _ in
             noteSpeechActivity()
             scrollToLatestIfPinned()
