@@ -50,19 +50,22 @@ leave the phone.
   meanwhile" (ma she-ne'emar beinta'yim), scrolls up to it.
 - **Captions on the lock screen.** The newest lines show there while
   captions run, and stay (saying "paused because of a call" or "captions
-  stopped") when something interrupts them. If none appear: iOS Settings →
-  Ozen → Live Activities must be on (when it is off, Ozen's own Settings
-  shows a red note under the switch with a button that opens that page),
-  and captions have to be started (or the
-  app opened once) with the phone unlocked, since iOS only lets an app put a
-  new one on the lock screen from the front. They also end by themselves
-  after eight hours; opening the app brings them back. Settings → Display
-  (tetzuga) → "Captions on the lock screen too" (ktuviyot gam be-masach
-  ha-ne'ila) turns them off. With the caption text size at 34 or more, the
-  lock screen's lines are larger too, and show fewer words of the line
-  before the newest. After a minute with nothing said, only the newest line
-  stays, with "said N minutes ago" (ne'emar lifnei N dakot) under it; after
-  a quarter of an hour it gives way to "Listening" (makshiv).
+  stopped") when something interrupts them. After a minute with nothing
+  said, only the newest line stays, with "said N minutes ago" (ne'emar
+  lifnei N dakot) under it; after a quarter of an hour it gives way to
+  "Listening" (makshiv). With the caption text size at 34 or more, the lock
+  screen's lines are larger too, and show fewer words of the line before
+  the newest. Settings → Display (tetzuga) → "Captions on the lock screen
+  too" (ktuviyot gam be-masach ha-ne'ila) turns them off.
+
+  If none appear: iOS Settings → Ozen → Live Activities must be on (when it
+  is off, Ozen's own Settings shows a red note under the switch with a
+  button that opens that page), and captions have to be started, or the app
+  opened once, with the phone unlocked: iOS only lets an app put one on the
+  lock screen from the front. They also end by themselves after eight
+  hours; opening the app brings them back. The diagnostics report's "lock
+  screen" line says whether the setting is on, whether iOS allows them,
+  whether they are showing, and why iOS last refused one.
 - **Adding the start button to Control Center or the lock screen.** On iOS
   18 or later: open Control Center, press and hold an empty spot, tap "Add
   a Control" and search for Ozen. For the lock screen: press and hold the
