@@ -173,7 +173,9 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
         guard recentSamples >= recentWindowSamples else { return }
         let levels = recentLevels.map(\.level).sorted()
         let quietest = levels[0]
-        if quietest > 0 {
+        // A fifth of fewer than five levels is the quietest itself, which
+        // would read as noise that never swings.
+        if quietest > 0, levels.count >= 5 {
             let swing = 20 * log10(levels[levels.count / 5] / quietest)
             noiseSwingDecibels += (swing - noiseSwingDecibels) * noiseSwingRate
         }

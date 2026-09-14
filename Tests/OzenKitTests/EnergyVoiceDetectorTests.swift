@@ -94,6 +94,15 @@ struct EnergyVoiceDetectorTests {
         #expect(abs(swinging.currentNoiseFloorRatio - 2.5) < 0.01)
     }
 
+    @Test("a window only a few chunks long can't tell how the noise swings, so the margin stays cautious")
+    func fewChunksKeepTheMargin() {
+        var detector = EnergyVoiceDetector(recentWindowSamples: 3_200)
+        for i in 0..<600 {
+            detector.isSpeech(tone(amplitude: i % 2 == 0 ? 0.001 : 0.004, count: 1_600))
+        }
+        #expect(abs(detector.currentNoiseFloorRatio - 2.5) < 0.01)
+    }
+
     @Test("the floor is capped so a loud fan can't disable detection")
     func floorIsCapped() {
         var detector = EnergyVoiceDetector()
