@@ -26,6 +26,8 @@ struct LiveCaptionView: View {
     @GestureState private var pinchScale: Double = 1
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    /// With Reduce Motion on, new lines jump into view instead of sliding.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var theme: CaptionTheme { CaptionTheme(viewModel.display.theme) }
 
@@ -334,7 +336,7 @@ struct LiveCaptionView: View {
 
     private func scrollToLatest(animated: Bool) {
         guard let proxy = scrollProxy else { return }
-        if animated {
+        if animated && !reduceMotion {
             withAnimation(.easeOut(duration: 0.2)) {
                 proxy.scrollTo("bottom-sentinel", anchor: .bottom)
             }
