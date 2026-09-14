@@ -103,6 +103,27 @@ struct EnergyVoiceDetectorTests {
         #expect(abs(detector.currentNoiseFloorRatio - 2.5) < 0.01)
     }
 
+    @Test("a glitched chunk, NaN or infinite, is not speech and doesn't stop the floor from following a hum")
+    func glitchedChunksAreIgnored() {
+        var detector = EnergyVoiceDetector()
+        let hum = tone(amplitude: 0.009)
+        var notANumber = hum
+        notANumber[10] = .nan
+        var infinite = hum
+        infinite[10] = .infinity
+        let notANumberAtFirst = detector.isSpeech(notANumber)
+        for index in 0..<156 {
+            detector.isSpeech(index == 80 ? infinite : hum)
+        }
+        let infiniteLater = detector.isSpeech(infinite)
+        let humLater = detector.isSpeech(hum)
+        let speechOverIt = detector.isSpeech(tone(amplitude: 0.05))
+        #expect(!notANumberAtFirst && !infiniteLater)
+        #expect(detector.noiseFloor.isFinite && detector.noiseSwingDecibels.isFinite)
+        #expect(!humLater)
+        #expect(speechOverIt)
+    }
+
     @Test("the floor is capped so a loud fan can't disable detection")
     func floorIsCapped() {
         var detector = EnergyVoiceDetector()

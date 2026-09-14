@@ -146,6 +146,14 @@ public struct EnergyVoiceDetector: Sendable, Equatable {
     @discardableResult
     public mutating func isSpeech(_ samples: [Float]) -> Bool {
         let level = Self.rms(samples)
+        // A glitched buffer can carry a NaN or infinite sample. Its level
+        // in the floor or the recent window would stay there for good,
+        // leaving only the absolute threshold: a hum would count as speech
+        // all evening.
+        guard level.isFinite else {
+            lastLevel = 0
+            return false
+        }
         lastLevel = level
         followQuietestRecentLevel(level, samples: samples.count)
         let speech = level > threshold
