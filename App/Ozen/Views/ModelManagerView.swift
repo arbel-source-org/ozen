@@ -46,7 +46,14 @@ struct ModelManagerView: View {
             }
             Button("ביטול", role: .cancel) {}
         } message: {
-            Text("אפשר להוריד אותו שוב בכל עת.")
+            if let option = pendingDelete, option.variant == viewModel.settings.whisperModelVariant {
+                // The picked one: the next time it has to load (the next
+                // launch, say) it downloads all over again first, which
+                // with no Wi-Fi nearby is a long wait nobody expects.
+                Text("זה המודל שנבחר. בפעם הבאה שהוא ייטען, למשל כשהאפליקציה תיפתח מחדש, הוא יירד שוב (\(option.sizeLabel)) לפני שיהיו כתוביות.")
+            } else {
+                Text("אפשר להוריד אותו שוב בכל עת.")
+            }
         }
         .alert("המחיקה נכשלה", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
             Button("סגור", role: .cancel) {}
