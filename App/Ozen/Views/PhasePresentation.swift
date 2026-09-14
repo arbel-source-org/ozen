@@ -16,6 +16,8 @@ struct PhasePresentation {
         case retry
         case openSystemSettings
         case openEngineSettings
+        /// Ask before downloading the model over cellular data.
+        case confirmCellularDownload
     }
 
     let title: String
@@ -167,6 +169,15 @@ struct PhasePresentation {
                 systemImage: "wifi.exclamationmark",
                 tint: .red,
                 action: .retry
+            )
+        case .waitingForWiFi:
+            let size = engineFailure?.downloadMegabytes.flatMap { $0 > 0 ? "\($0) MB" : nil }
+            self.init(
+                title: "ממתין ל-Wi-Fi כדי להוריד את מודל השפה",
+                detail: [size, "יורד לבד כשיהיה Wi-Fi · הקישו להורדה עכשיו"].compactMap { $0 }.joined(separator: " · "),
+                systemImage: "wifi",
+                tint: .orange,
+                action: .confirmCellularDownload
             )
         case .modelLoadFailed:
             self.init(

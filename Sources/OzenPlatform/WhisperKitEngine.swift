@@ -74,6 +74,16 @@ public actor WhisperKitEngine: TranscriptionEngine {
         echoDetector = detector.isEmpty ? nil : detector
     }
 
+    /// The model's size when it isn't fully on the phone yet. A cut-off
+    /// download reports the whole size: how much is left isn't known
+    /// until the hub is asked, and that already needs the connection.
+    /// 0 means a model the catalog doesn't know the size of.
+    public func pendingDownloadMegabytes() async -> Int? {
+        if pipe != nil { return nil }
+        guard store.installedFolder(for: modelVariant) == nil else { return nil }
+        return WhisperModelCatalog.option(for: modelVariant)?.sizeMB ?? 0
+    }
+
     public func prepare(
         languageCode: String,
         progress: @escaping @Sendable (EnginePreparationProgress) -> Void

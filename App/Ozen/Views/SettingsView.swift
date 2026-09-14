@@ -119,10 +119,11 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            Toggle("להוריד מודלים גם בחבילת הגלישה", isOn: $viewModel.allowCellularModelDownload)
         } header: {
             Text("Whisper")
         } footer: {
-            Text("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \"Turbo (compressed)\" הוא הבחירה המומלצת לאייפון הזה.")
+            Text("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \"Turbo (compressed)\" הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.")
         }
     }
 

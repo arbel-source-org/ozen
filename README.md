@@ -60,6 +60,10 @@ things, for Hebrew conversation, entirely on-device.
 - **Downloads that can't get stuck.** A cut-off model download is told
   apart from a whole model and simply continues from where it stopped,
   instead of failing to load on every launch.
+- **Downloads that don't eat the data plan.** On cellular or in Low Data
+  Mode a model waits for Wi-Fi, says how big it is, and starts by itself
+  when Wi-Fi arrives. "Download now" asks first; a setting allows it
+  always.
 - **Type to speak.** The other half of a conversation: type a reply, or
   tap one of the ready-made phrases ("רגע, לא הבנתי", "אפשר לחזור על
   זה?"), and the phone says it in Hebrew. Captions pause while the phone
@@ -152,7 +156,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (260 tests). The platform layer (WhisperKit/Speech engines, real
+logic (282 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 35 tests).

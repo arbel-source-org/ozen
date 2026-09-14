@@ -63,7 +63,8 @@ public final class LiveCaptionViewModel {
                 }
             },
             embedder: MFCCSpeakerEmbedder(),
-            soundDetector: SoundAnalysisDetector()
+            soundDetector: SoundAnalysisDetector(),
+            network: PathNetworkMonitor()
         )
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         self.init(
@@ -140,6 +141,21 @@ public final class LiveCaptionViewModel {
     func systemInterruptionChanged(began: Bool) {
         isInterruptedBySystem = began
         pipeline.systemInterruptionChanged(active: began)
+    }
+
+    /// Speech models may download over cellular data.
+    public var allowCellularModelDownload: Bool {
+        get { settings.allowCellularModelDownload }
+        set {
+            settings.allowCellularModelDownload = newValue
+            persist()
+            Task { await pipeline.setAllowCellularModelDownload(newValue) }
+        }
+    }
+
+    /// "Download now" while the model waits for Wi-Fi.
+    public func approveCellularDownload() async {
+        await pipeline.approveCellularDownload()
     }
 
     public var notifyWhenInBackground: Bool {

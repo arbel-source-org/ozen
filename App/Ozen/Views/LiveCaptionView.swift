@@ -21,6 +21,7 @@ struct LiveCaptionView: View {
     @State private var hasLaunched = false
     @State private var fontSizeTrigger = 0
     @State private var battery = BatteryMonitor()
+    @State private var confirmingCellularDownload = false
     /// Live scale while a pinch is in progress; 1 otherwise.
     @GestureState private var pinchScale: Double = 1
     @Environment(\.openURL) private var openURL
@@ -201,6 +202,18 @@ struct LiveCaptionView: View {
         }
         .sheet(item: $namingSegment) { segment in
             NameSpeakerSheet(segment: segment, viewModel: viewModel)
+        }
+        .confirmationDialog(
+            "להוריד את המודל בחבילת הגלישה?",
+            isPresented: $confirmingCellularDownload,
+            titleVisibility: .visible
+        ) {
+            Button("להוריד עכשיו") {
+                Task { await viewModel.approveCellularDownload() }
+            }
+            Button("לחכות ל-Wi-Fi", role: .cancel) {}
+        } message: {
+            Text(cellularDownloadMessage)
         }
     }
 
@@ -421,6 +434,12 @@ struct LiveCaptionView: View {
         .accessibilityHint(current.detail ?? "")
     }
 
+    private var cellularDownloadMessage: String {
+        let megabytes = viewModel.phase.failure?.engineUnavailability?.downloadMegabytes ?? 0
+        let size = megabytes > 0 ? "\(megabytes) MB" : "כמה מאות MB"
+        return "המודל שוקל \(size). בחבילת גלישה זה יכול לעלות כסף או לגמור את נפח הגלישה. ב-Wi-Fi ההורדה תתחיל לבד."
+    }
+
     private func perform(_ action: PhasePresentation.Action) {
         switch action {
         case .none:
@@ -435,6 +454,8 @@ struct LiveCaptionView: View {
             }
         case .openEngineSettings:
             showingSettings = true
+        case .confirmCellularDownload:
+            confirmingCellularDownload = true
         }
     }
 }
