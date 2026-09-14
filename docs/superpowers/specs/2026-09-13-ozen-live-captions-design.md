@@ -201,6 +201,17 @@ input source).
   in all three themes and don't make ordinary lines look important; a
   phrase tapped while the model is still loading is not captioned; and
   Diagnostics' memory row shows plausible numbers for the loaded model.
+  Added with the lock screen captions (build 16 on): with captions running
+  and the phone locked, the newest lines appear and keep up within about
+  a second, at caption size 30 and at 40 and above (the larger lock screen
+  text), without a line losing its last words to the edge; force-closing
+  the app turns the lines to "not updating" (lo mit'adkenot) within two
+  minutes; a call shows the "paused because of a call" note and captions
+  come back after it; the Control Center "Start captions" button opens the
+  app and starts listening, from the lock screen too; with Live Activities
+  switched off in iOS Settings, Ozen's Settings shows the red note; and
+  with VoiceOver on, whenever the status turns red by itself VoiceOver
+  says captions stopped and why, and says so again when they come back.
 
 ## Explicit non-goals for v1
 
