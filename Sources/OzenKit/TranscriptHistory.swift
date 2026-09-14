@@ -596,7 +596,7 @@ public struct TranscriptHistoryStore: Sendable {
     /// pasted into a chat or a note, the lines alone never say which day
     /// the doctor said it.
     public static func exportText(_ record: TranscriptSessionRecord, utcOffsetSeconds: Int = 0) -> String {
-        let lines = record.segments
+        let formatted = record.segments
             .map { segment in
                 let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
                 let star = segment.isStarred ? "★ " : ""
@@ -610,7 +610,6 @@ public struct TranscriptHistoryStore: Sendable {
                 // would be laid out left to right and read out of order.
                 return CaptionLayout.opensLeftToRight(line) ? CaptionLayout.rightToLeftMark + line : line
             }
-            .joined(separator: "\n")
         let date = formattedDate(record.startedAt, utcOffsetSeconds: utcOffsetSeconds)
         let heading: String
         if let title = record.title, !title.isEmpty {
@@ -618,8 +617,22 @@ public struct TranscriptHistoryStore: Sendable {
         } else {
             heading = "שיחה מתאריך \(date)"
         }
-        return lines.isEmpty ? heading : "\(heading)\n\n\(lines)"
+        guard !formatted.isEmpty else { return heading }
+        let transcript = formatted.joined(separator: "\n")
+        let numbered = record.segments.count < numbersBlockMinimumLines ? [] : zip(record.segments, formatted)
+            .filter { NumberEmphasis.hasListableNumber($0.0.text) }
+            .prefix(numbersBlockLimit)
+            .map(\.1)
+        guard !numbered.isEmpty else { return "\(heading)\n\n\(transcript)" }
+        return "\(heading)\n\nמספרים שנאמרו:\n\(numbered.joined(separator: "\n"))\n\nהשיחה:\n\(transcript)"
     }
+
+    /// A long conversation shared as text opens with the lines that had a
+    /// time, an amount or a phone number in them (see `NumberEmphasis`), so
+    /// whoever reads it in a chat finds what the doctor said without
+    /// scrolling through an hour of talk. A short one is read whole anyway.
+    static let numbersBlockMinimumLines = 20
+    static let numbersBlockLimit = 12
 
     /// Starred lines as plain text for sharing: one block per
     /// conversation, headed by its date, then each line with its time and

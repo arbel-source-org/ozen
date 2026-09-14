@@ -230,6 +230,24 @@ struct TranscriptHistoryTests {
         #expect(text == "שיחה מתאריך 01.01.1970\n\n[01:01:01] סבתא: שלום\n[01:01:05] מה נשמע")
     }
 
+    @Test("a long conversation shared as text opens with its lines that had numbers; a short one doesn't")
+    func exportTextNumbersBlock() {
+        var segments = (0..<19).map { index in
+            segment(text: "משפט רגיל", speakerName: nil, startTimestamp: 3_600 + TimeInterval(index))
+        }
+        segments[3] = segment(text: "התור ב-10:30", speakerName: "רופא", startTimestamp: 3_603)
+        segments[7] = segment(text: "שלושה כדורים ביום", speakerName: nil, startTimestamp: 3_607)
+        segments[9] = segment(text: "רק פעם אחת", speakerName: nil, startTimestamp: 3_609)
+
+        let short = TranscriptHistoryStore.exportText(record(startedAt: 3_600, segments: segments))
+        #expect(short.contains("מספרים שנאמרו") == false)
+
+        segments.append(segment(text: "תודה", speakerName: nil, startTimestamp: 3_619))
+        let long = TranscriptHistoryStore.exportText(record(startedAt: 3_600, segments: segments))
+        #expect(long.hasPrefix("שיחה מתאריך 01.01.1970\n\nמספרים שנאמרו:\n[01:00:03] רופא: התור ב-10:30\n[01:00:07] שלושה כדורים ביום\n\nהשיחה:\n[01:00:00] משפט רגיל\n"))
+        #expect(long.hasSuffix("[01:00:19] תודה"))
+    }
+
     @Test("make(from:) drops empty-text segments and resolves speaker names")
     func makeFromDropsEmptySegmentsAndResolvesNames() {
         let keptID = UUID()
