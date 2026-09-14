@@ -33,6 +33,10 @@ public final class CaptionPipeline {
     public private(set) var activeEngineKind: TranscriptionEngineKind?
     public private(set) var speakerClusters: [SpeakerCluster] = []
     public private(set) var stats = PipelineStats()
+    /// Alert sounds heard too faintly to alert, for the diagnostics report.
+    public private(set) var soundNearMisses = SoundNearMisses()
+    /// The classifier confidence a sound needs to raise an alert.
+    public var soundAlertConfidence: Double { soundPolicy.minimumConfidence }
     /// Failures, retries and recoveries in order, for the diagnostics report.
     public private(set) var eventLog = PipelineEventLog()
 
@@ -434,6 +438,7 @@ public final class CaptionPipeline {
            SoundEventCatalog.vibrationLookalikes.contains(observation.identifier) {
             return
         }
+        soundNearMisses.record(observation, alertConfidence: soundPolicy.minimumConfidence)
         guard let alert = soundPolicy.evaluate(observation) else { return }
         soundAlerts.append(alert)
         onSoundAlert?(alert)

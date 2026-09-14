@@ -44,6 +44,8 @@ struct DiagnosticsView: View {
                 LabeledContent("זיהוי צלילים", value: viewModel.stats.soundDetectionRunning ? "פועל" : (viewModel.isListening ? "נעצר" : "—"))
             }
 
+            nearMissesSection
+
             Section("תמלול") {
                 LabeledContent("עדכונים מהמנוע", value: "\(viewModel.stats.tokensReceived)")
                 LabeledContent("שורות שנסגרו", value: "\(viewModel.stats.segmentsCommitted)")
@@ -210,6 +212,7 @@ struct DiagnosticsView: View {
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)
+        sounds heard below the alert level: \(viewModel.pipeline.soundNearMisses.reportLine(utcOffsetSeconds: Self.utcOffsetSeconds) ?? "-")
         settings save error: \(viewModel.settingsSaveError ?? "-") history save error: \(viewModel.historySaveFailure ?? "-") notification error: \(AlertNotifier.shared.lastFailure ?? "-") haptics: \(AlertHapticPlayer.shared.supportsHaptics ? (AlertHapticPlayer.shared.lastFailure ?? "ok") : "unsupported") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText) free space: \(Self.freeSpaceText)
@@ -218,6 +221,27 @@ struct DiagnosticsView: View {
         events (oldest first):
         \(eventLines)
         """
+    }
+
+    /// Alert sounds the classifier heard, but not surely enough to alert:
+    /// tells "never heard the doorbell" from "heard it faintly".
+    @ViewBuilder
+    private var nearMissesSection: some View {
+        let misses = viewModel.pipeline.soundNearMisses.recentFirst
+        if !misses.isEmpty {
+            Section {
+                ForEach(misses, id: \.identifier) { miss in
+                    LabeledContent(
+                        SoundEventCatalog.event(for: miss.identifier)?.name ?? miss.identifier,
+                        value: "\(Int((miss.bestConfidence * 100).rounded()))% · \(Date(timeIntervalSince1970: miss.lastHeardAt).formatted(date: .omitted, time: .shortened))"
+                    )
+                }
+            } header: {
+                Text("צלילים שנשמעו חלש מדי להתראה")
+            } footer: {
+                Text("התראה צריכה ביטחון של \(Int((viewModel.pipeline.soundAlertConfidence * 100).rounded()))%. צליל שמופיע כאן נשמע, אבל רחוק או חלש מדי.")
+            }
+        }
     }
 
     /// The quiet, middle and loud ends of what the microphone heard, in

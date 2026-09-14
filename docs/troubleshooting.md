@@ -87,6 +87,13 @@ leave the phone.
   to fix it. If there's no warning, tap "Check that a notification arrives when the phone is locked" (livdok she-hatra'a magi'a k'she-ha-telefon na'ul)
   and lock the phone: a sample doorbell alert arrives within 10 seconds. If
   it doesn't, a Focus mode or Scheduled Summary in iOS is holding it back.
+- **The doorbell rang and no alert came at all.** Look at the report's
+  `sounds heard below the alert level:` line, or Diagnostics → "Sounds heard
+  too faintly to alert" (tzlilim she-nishme'u chalash midai le-hatra'a). A
+  doorbell listed there was heard, but under the 60% sureness an alert
+  needs: the phone is too far from the door, so keep it closer or in the
+  same room. Not listed at all means the sound classifier didn't recognize
+  it as a doorbell (some electronic chimes don't sound like one to it).
 - **The doorbell notification comes, but she doesn't notice it.** With the
   phone face down or across the room, turn on iOS Settings → Accessibility →
   Audio & Visual → LED Flash for Alerts: the camera light then blinks for
