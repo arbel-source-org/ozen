@@ -140,6 +140,14 @@ leave the phone.
   aren't being kept, though captions still work. Free some space (Settings →
   General → iPhone Storage) and saving resumes by itself; the banner comes
   back only if it fails again.
+- **A model in the model list is greyed out and can't be picked.** It says
+  "Not enough space on the phone" (ein maspik makom ba-telefon): its
+  download wouldn't fit, and picking it would only stop the captions that
+  work now. Free space and it can be picked; a model already on the phone,
+  or half downloaded, can always be picked.
+- **Picking a model asks "Download … and switch to it?"** (lehorid … ve-la'avor
+  elav). Captions are running and that model isn't on the phone yet:
+  captions stop until it has downloaded and loaded, so it asks first.
 
 ## Reinstalling
 
