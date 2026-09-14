@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import OzenKit
 
 struct HistoryDetailView: View {
@@ -49,6 +50,8 @@ struct HistoryDetailView: View {
                     NumberLineLabel(segment: segment)
                 }
                 .accessibilityHint("מעבר לשורה בשיחה")
+                .contextMenu { copyButton(segment.text) }
+                .accessibilityActions { copyButton(segment.text) }
             }
             if numberLineIDs.count > Self.listedNumberLines {
                 Text("ועוד \(numberLineIDs.count - Self.listedNumberLines) שורות עם מספרים בהמשך השיחה")
@@ -85,6 +88,8 @@ struct HistoryDetailView: View {
                         )
                         .listRowBackground(isMatch ? Color.yellow.opacity(0.3) : nil)
                         .id(segment.id)
+                        .contextMenu { copyButton(segment.text) }
+                        .accessibilityActions { copyButton(segment.text) }
                     }
                 } header: {
                     Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .long, time: .shortened))
@@ -103,6 +108,15 @@ struct HistoryDetailView: View {
                 guard matches.indices.contains(currentMatch) else { return }
                 withAnimation { proxy.scrollTo(matches[currentMatch], anchor: .center) }
             }
+        }
+    }
+
+    /// A phone number or an address said, to paste somewhere else.
+    private func copyButton(_ text: String) -> some View {
+        Button {
+            UIPasteboard.general.string = text
+        } label: {
+            Label("העתקה", systemImage: "doc.on.doc")
         }
     }
 
