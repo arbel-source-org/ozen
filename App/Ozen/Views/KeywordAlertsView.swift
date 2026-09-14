@@ -35,15 +35,6 @@ struct KeywordAlertsView: View {
                 if viewModel.keywordAlerts.isEmpty {
                     Text("עדיין אין מילים. הוסיפו את השם שלכם, שמות של נכדים, או מילים כמו \"תרופה\".")
                         .foregroundStyle(.secondary)
-                    // One tap for the words most homes would want, rather
-                    // than typing on a phone keyboard with weak eyes.
-                    ForEach(Self.suggestions, id: \.self) { word in
-                        Button {
-                            viewModel.addKeywordAlert(phrase: word)
-                        } label: {
-                            Label("להוסיף: \(word)", systemImage: "plus.circle")
-                        }
-                    }
                 }
                 ForEach(viewModel.keywordAlerts) { alert in
                     Toggle(isOn: Binding(
@@ -58,6 +49,13 @@ struct KeywordAlertsView: View {
                     let ids = offsets.map { viewModel.keywordAlerts[$0].id }
                     for id in ids {
                         viewModel.removeKeywordAlert(id: id)
+                    }
+                }
+                ForEach(unusedSuggestions, id: \.self) { word in
+                    Button {
+                        viewModel.addKeywordAlert(phrase: word)
+                    } label: {
+                        Label("להוסיף: \(word)", systemImage: "plus.circle")
                     }
                 }
             }
@@ -81,6 +79,10 @@ struct KeywordAlertsView: View {
     }
 
     private static let suggestions = ["סבתא", "אמא", "תרופה", "רופא"]
+
+    private var unusedSuggestions: [String] {
+        Self.suggestions.filter { word in !viewModel.keywordAlerts.contains { HebrewText.normalize($0.phrase) == HebrewText.normalize(word) } }
+    }
 
     private func add() {
         viewModel.addKeywordAlert(phrase: newPhrase)
