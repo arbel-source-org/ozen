@@ -88,6 +88,23 @@ struct CaptionAnnouncerTests {
         #expect(roundTripped.announceNewLines == false)
     }
 
+    @Test("a line left open while many others finish is still announced when it finishes")
+    func longOpenLine() {
+        var announcer = CaptionAnnouncer()
+        var open = TranscriptSegment(id: UUID(), text: "והרופא", isCommitted: false, speakerClusterID: nil, startTimestamp: 0, lastUpdateTimestamp: 0)
+        var lines = [open]
+        #expect(announcer.announcement(for: lines, speakerName: { _ in nil }) == nil)
+        for n in 1...(CaptionAnnouncer.recheckedLines * 3) {
+            lines.append(line("שורה \(n)"))
+            _ = announcer.announcement(for: lines, speakerName: { _ in nil })
+        }
+        open.text = "והרופא אמר"
+        open.isCommitted = true
+        lines[0] = open
+        lines.append(line("עוד"))
+        #expect(announcer.announcement(for: lines, speakerName: { _ in nil }) == "והרופא אמר\nעוד")
+    }
+
     @Test("a line corrected after it was read out is read again; unchanged lines are not")
     func correctedLineReadAgain() {
         var announcer = CaptionAnnouncer()

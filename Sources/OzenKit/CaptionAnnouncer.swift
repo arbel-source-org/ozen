@@ -16,6 +16,13 @@ public struct CaptionAnnouncer: Sendable, Equatable {
     /// What each line said when it was last announced (or skipped).
     private var announced: [UUID: String] = [:]
     private var lastSpeaker: String?
+    /// Where the next look starts (`scanStart`): lines before it were
+    /// finished and handled, and nothing corrects a line that far back.
+    private var scannedCount = 0
+    private var firstOpenIndex: Int?
+    /// Finished lines this close to the end are looked at again, for a
+    /// correction that comes after a line was read out.
+    static let recheckedLines = 8
 
     public init() {}
 
@@ -28,10 +35,12 @@ public struct CaptionAnnouncer: Sendable, Equatable {
     ) -> String? {
         forgetLinesNoLongerShown(segments)
         var parts: [String] = []
-        for segment in segments where segment.isCommitted {
+        let start = scanStart(in: segments)
+        noteScanned(segments, from: start)
+        for segment in segments[start...] where segment.isCommitted {
             let text = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
             // A line read out once is read again only if its words changed
-            // afterwards (a slow engine correcting it).
+            // afterwards (a slow engine correcting one of the last lines).
             guard announced[segment.id] != text else { continue }
             announced[segment.id] = text
             guard !text.isEmpty else { continue }
@@ -50,12 +59,33 @@ public struct CaptionAnnouncer: Sendable, Equatable {
     /// the setting) on mid-conversation doesn't read out the whole backlog.
     public mutating func skipLinesSoFar(_ segments: [TranscriptSegment]) {
         forgetLinesNoLongerShown(segments)
-        for segment in segments where segment.isCommitted {
+        let start = scanStart(in: segments)
+        noteScanned(segments, from: start)
+        for segment in segments[start...] where segment.isCommitted {
             announced[segment.id] = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 
+    /// Only the lines that can have changed are looked at: those since the
+    /// last look, the few before them, and any line that was still being
+    /// written then. Called for every finished line of an evening's
+    /// captions, a pass over the whole transcript each time grew with it.
+    private func scanStart(in segments: [TranscriptSegment]) -> Int {
+        var start = max(0, min(scannedCount, segments.count) - Self.recheckedLines)
+        if let firstOpenIndex { start = min(start, firstOpenIndex) }
+        return min(start, segments.count)
+    }
+
+    private mutating func noteScanned(_ segments: [TranscriptSegment], from start: Int) {
+        scannedCount = segments.count
+        firstOpenIndex = segments[start...].firstIndex { !$0.isCommitted }
+    }
+
     private mutating func forgetLinesNoLongerShown(_ segments: [TranscriptSegment]) {
+        if segments.isEmpty || segments.count < scannedCount {
+            scannedCount = 0
+            firstOpenIndex = nil
+        }
         if segments.isEmpty {
             announced = [:]
             lastSpeaker = nil
