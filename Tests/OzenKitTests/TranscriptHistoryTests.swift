@@ -554,3 +554,35 @@ struct TranscriptHistorySearchCacheTests {
         #expect(!FileManager.default.fileExists(atPath: searchFile(dir, saved.id).path))
     }
 }
+
+@Suite("Transcript history search matches inside a conversation")
+struct TranscriptHistoryMatchingLinesTests {
+    private func line(_ text: String, _ name: String? = nil) -> SavedSegment {
+        SavedSegment(id: UUID(), text: text, speakerName: name, speakerClusterID: nil, startTimestamp: 0, isCommitted: true)
+    }
+
+    private func record(_ segments: [SavedSegment]) -> TranscriptSessionRecord {
+        TranscriptSessionRecord(id: UUID(), startedAt: 0, endedAt: nil, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: segments)
+    }
+
+    @Test("the lines a search found, in order, by words or by who said them")
+    func matchingLines() {
+        let lines = [
+            line("הרופא אמר לקחת את התְּרוּפָה בבוקר", "דני"),
+            line("טוב", "שרה"),
+            line("ואת התרופה השנייה בערב", "דני"),
+            line("Aspirin?", "רותי"),
+        ]
+        let conversation = record(lines)
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: " תרופה ") == [lines[0].id, lines[2].id])
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "שרה") == [lines[1].id])
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "ASPIRIN") == [lines[3].id])
+    }
+
+    @Test("an empty search, or one that matches nothing, finds no lines")
+    func noLines() {
+        let conversation = record([line("שלום")])
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "  ").isEmpty)
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "להתראות").isEmpty)
+    }
+}

@@ -362,13 +362,25 @@ public struct TranscriptHistoryStore: Sendable {
     }
 
     private static func record(_ record: TranscriptSessionRecord, matches needle: String) -> Bool {
-        record.segments.contains { segment in
-            if strippingNiqqud(segment.text).lowercased().contains(needle) {
-                return true
-            }
-            guard let name = segment.speakerName else { return false }
-            return strippingNiqqud(name).lowercased().contains(needle)
+        record.segments.contains { segment($0, matches: needle) }
+    }
+
+    private static func segment(_ segment: SavedSegment, matches needle: String) -> Bool {
+        if strippingNiqqud(segment.text).lowercased().contains(needle) {
+            return true
         }
+        guard let name = segment.speakerName else { return false }
+        return strippingNiqqud(name).lowercased().contains(needle)
+    }
+
+    /// The lines of a conversation that a search for `query` found, in
+    /// order, by the same rules as `search`: the words of the line or the
+    /// name of who said it. Opening a search result jumps to these.
+    public static func matchingSegmentIDs(in record: TranscriptSessionRecord, query: String) -> [UUID] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let needle = strippingNiqqud(trimmed).lowercased()
+        return record.segments.filter { segment($0, matches: needle) }.map(\.id)
     }
 
     public func listSummaries() -> [TranscriptSessionSummary] {

@@ -25,7 +25,7 @@ struct HistoryView: View {
                 }
                 ForEach(sessions) { session in
                     NavigationLink {
-                        HistoryDetailView(viewModel: viewModel, sessionID: session.id, onDelete: reload)
+                        HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onDelete: reload)
                     } label: {
                         SessionRow(session: session)
                     }
@@ -131,15 +131,24 @@ private struct SessionRow: View {
 struct HistoryDetailView: View {
     let viewModel: LiveCaptionViewModel
     let sessionID: UUID
+    /// The search that led here, if any: its lines are highlighted and
+    /// the first one is scrolled into view.
+    var searchQuery: String = ""
     let onDelete: () -> Void
     @State private var record: TranscriptSessionRecord?
     @State private var stats: ConversationStats?
+    @State private var matches: [UUID] = []
+    @State private var currentMatch = 0
+    @State private var hasLoaded = false
     @State private var confirmingDelete = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
-            if let record {
+            if !hasLoaded {
+                ProgressView()
+            } else if let record {
+                ScrollViewReader { proxy in
                 List {
                     if let stats, stats.totalWords > 0 {
                         ConversationSummarySection(stats: stats)
@@ -158,12 +167,27 @@ struct HistoryDetailView: View {
                             }
                             .accessibilityElement(children: .ignore)
                             .accessibilityLabel(segment.speakerName.map { "\($0): \(segment.text)" } ?? segment.text)
+                            .accessibilityHint(matches.contains(segment.id) ? "מכיל את מה שחיפשת" : "")
+                            .listRowBackground(matches.contains(segment.id) ? Color.yellow.opacity(0.3) : nil)
+                            .id(segment.id)
                         }
                     } header: {
                         Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .long, time: .shortened))
                     } footer: {
                         Text("\(record.engine.displayName)\(record.modelVariant.map { " · \($0)" } ?? "")\(record.inputName.map { " · \($0)" } ?? "")")
                     }
+                }
+                .task {
+                    // Give the list a moment to lay out, then open where the
+                    // search found something instead of at the top.
+                    guard let first = matches.first else { return }
+                    try? await Task.sleep(for: .milliseconds(150))
+                    withAnimation { proxy.scrollTo(first, anchor: .center) }
+                }
+                .onChange(of: currentMatch) { _, index in
+                    guard matches.indices.contains(index) else { return }
+                    withAnimation { proxy.scrollTo(matches[index], anchor: .center) }
+                }
                 }
             } else {
                 ContentUnavailableView("השיחה לא נמצאה", systemImage: "questionmark.folder")
@@ -172,6 +196,16 @@ struct HistoryDetailView: View {
         .navigationTitle("שיחה")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if matches.count > 1 {
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        currentMatch = (currentMatch + 1) % matches.count
+                    } label: {
+                        Label("המקום הבא (\(currentMatch + 1) מתוך \(matches.count))", systemImage: "chevron.down")
+                            .labelStyle(.titleAndIcon)
+                    }
+                }
+            }
             if let record {
                 ToolbarItem(placement: .primaryAction) {
                     ShareLink(
@@ -199,12 +233,26 @@ struct HistoryDetailView: View {
             }
             Button("ביטול", role: .cancel) {}
         }
-        .onAppear {
-            // Loaded and summarised once; a long conversation's word count
-            // shouldn't be redone on every redraw.
-            let loaded = viewModel.historyStore.load(id: sessionID)
+        .task {
+            // Loaded and summarised once, off the main thread: a long
+            // conversation's words shouldn't be counted on every redraw, or
+            // hold up the screen sliding in.
+            guard !hasLoaded else { return }
+            let store = viewModel.historyStore
+            let id = sessionID
+            let query = searchQuery
+            let (loaded, summary, found) = await Task.detached(priority: .userInitiated) {
+                let loaded = store.load(id: id)
+                return (
+                    loaded,
+                    loaded.map(ConversationStats.compute(from:)),
+                    loaded.map { TranscriptHistoryStore.matchingSegmentIDs(in: $0, query: query) } ?? []
+                )
+            }.value
             record = loaded
-            stats = loaded.map(ConversationStats.compute(from:))
+            stats = summary
+            matches = found
+            hasLoaded = true
         }
     }
 }
