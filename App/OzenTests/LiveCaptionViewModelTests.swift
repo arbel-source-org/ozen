@@ -1016,10 +1016,9 @@ struct LiveCaptionViewModelStartupTests {
         // Not read yet: building the view model didn't wait for it.
         #expect(viewModel.knownSoundIdentifiers == nil)
 
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.knownSoundIdentifiers == nil && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        // Waits on the load itself rather than a clock: a busy simulator can
+        // take longer than any fixed deadline to run a utility-priority task.
+        await viewModel.finishLoadingSoundIdentifiers()
         #expect(viewModel.knownSoundIdentifiers == ["door_bell", "siren"])
     }
 }

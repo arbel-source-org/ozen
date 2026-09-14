@@ -81,6 +81,7 @@ public final class LiveCaptionViewModel {
     private var autosaveTask: Task<Void, Never>?
     private var lastRetentionCheck: TimeInterval = 0
     private var launchHousekeeping: Task<Void, Never>?
+    private var soundIdentifiersLoad: Task<Void, Never>?
     @ObservationIgnored private var announcer = CaptionAnnouncer()
     private static let retentionCheckIntervalSeconds: TimeInterval = 6 * 60 * 60
 
@@ -180,7 +181,7 @@ public final class LiveCaptionViewModel {
             self?.phoneCallsChanged(inProgress: inProgress)
         }
         if let loadKnownSoundIdentifiers {
-            Task { [weak self] in
+            soundIdentifiersLoad = Task { [weak self] in
                 let identifiers = await Task.detached(priority: .utility) { loadKnownSoundIdentifiers() }.value
                 self?.knownSoundIdentifiers = identifiers
             }
@@ -194,6 +195,12 @@ public final class LiveCaptionViewModel {
     /// Returns once the history tidying started at launch has finished.
     func finishLaunchHousekeeping() async {
         await launchHousekeeping?.value
+    }
+
+    /// Returns once the sound classifier's labels, read in the background at
+    /// launch, have arrived.
+    func finishLoadingSoundIdentifiers() async {
+        await soundIdentifiersLoad?.value
     }
 
     // MARK: - Alerts while the app isn't on screen
