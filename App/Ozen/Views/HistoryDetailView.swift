@@ -15,6 +15,8 @@ struct HistoryDetailView: View {
     @State private var stats: ConversationStats?
     @State private var matches: [UUID] = []
     @State private var timeMarks: Set<UUID> = []
+    /// Lines with a time, an amount or a phone number in them, in order.
+    @State private var numberLineIDs: [UUID] = []
     @State private var currentMatch = 0
     @State private var hasJumped = false
     @State private var scrollRequest = 0
@@ -29,11 +31,54 @@ struct HistoryDetailView: View {
         !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private static let listedNumberLines = 12
+
+    /// "What time was the appointment again?": every line with a number in
+    /// it, gathered at the top, each one a tap away from where it was said.
+    private func numbersSection(_ record: TranscriptSessionRecord, proxy: ScrollViewProxy) -> some View {
+        let wanted = Set(numberLineIDs.prefix(Self.listedNumberLines))
+        let lines = record.segments.filter { wanted.contains($0.id) }
+        return Section {
+            // Numbered rather than by line: the transcript below already
+            // uses the line IDs, and a second view with the same ID would
+            // be the one a tap scrolls to.
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, segment in
+                Button {
+                    withAnimation { proxy.scrollTo(segment.id, anchor: .center) }
+                } label: {
+                    Text(
+                        caption: CaptionLayout.directed(segment.text),
+                        emphasizingNumbers: true,
+                        size: 17,
+                        numberColor: nil
+                    )
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .accessibilityHint("מעבר לשורה בשיחה")
+            }
+            if numberLineIDs.count > Self.listedNumberLines {
+                Text("ועוד \(numberLineIDs.count - Self.listedNumberLines) שורות עם מספרים בהמשך השיחה")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("מספרים שנאמרו")
+        } footer: {
+            Text("שעות, כמויות ומספרי טלפון מהשיחה. נגיעה בשורה מובילה אליה.")
+        }
+    }
+
     private func transcriptList(_ record: TranscriptSessionRecord) -> some View {
         ScrollViewReader { proxy in
             List {
                 if let stats, stats.totalWords > 0 {
                     ConversationSummarySection(stats: stats)
+                }
+                if !isSearch, !numberLineIDs.isEmpty {
+                    numbersSection(record, proxy: proxy)
                 }
                 Section {
                     ForEach(Array(record.segments.enumerated()), id: \.element.id) { index, segment in
@@ -180,7 +225,7 @@ struct HistoryDetailView: View {
             let store = viewModel.historyStore
             let id = sessionID
             let query = searchQuery
-            let (loaded, summary, found, marks) = await Task.detached(priority: .userInitiated) {
+            let (loaded, summary, found, marks, numbers) = await Task.detached(priority: .userInitiated) {
                 let loaded = store.load(id: id)
                 return (
                     loaded,
@@ -191,13 +236,15 @@ struct HistoryDetailView: View {
                             ? record.segments.filter(\.isStarred).map(\.id)
                             : TranscriptHistoryStore.matchingSegmentIDs(in: record, query: query)
                     } ?? [],
-                    loaded.map { CaptionLayout.timeMarkedLineIDs(in: $0.segments) } ?? []
+                    loaded.map { CaptionLayout.timeMarkedLineIDs(in: $0.segments) } ?? [],
+                    loaded.map { $0.segments.filter { NumberEmphasis.hasListableNumber($0.text) }.map(\.id) } ?? []
                 )
             }.value
             record = loaded
             stats = summary
             matches = found
             timeMarks = marks
+            numberLineIDs = numbers
             // Opened at a starred line: "next" continues from that one.
             if let initialLineID, let index = found.firstIndex(of: initialLineID) {
                 currentMatch = index

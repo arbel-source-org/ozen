@@ -46,6 +46,19 @@ public enum NumberEmphasis {
         return result
     }
 
+    /// Whether a line is worth listing under "numbers said" in a saved
+    /// conversation: it has digits, or a counting word beyond one and two.
+    /// Those two are mostly idioms ("פעם אחת", "ביום שני"); a list of every
+    /// line with them in it would be most of the conversation.
+    public static func hasListableNumber(_ text: String) -> Bool {
+        ranges(in: text).contains { range in
+            let found = text[range]
+            if found.contains(where: \.isNumber) { return true }
+            guard let reading = numberReading(of: String(found)) else { return false }
+            return !onesWords.contains(reading.number) && !twoWords.contains(reading.number)
+        }
+    }
+
     private struct Word {
         let text: Substring
         /// The letters, without punctuation, quotes or direction marks.

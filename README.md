@@ -130,7 +130,9 @@ things, for Hebrew conversation, entirely on-device.
 - **Conversation history.** Conversations are saved as they happen,
   searchable, shareable as text, can be given a name ("ביקור אצל
   הרופא"), list who took part, and open with a summary: length, how much
-  each person said, speaking pace, longest turn.
+  each person said, speaking pace, longest turn, and every line with a
+  time, an amount or a phone number in it, each a tap from where it was
+  said.
   The list reads a small summary per conversation, so it opens quickly
   even after months of daily use, and autosaving never stutters the
   captions. Old conversations can delete themselves after a week, a
@@ -220,7 +222,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (432 tests). The platform layer (WhisperKit/Speech engines, real
+logic (433 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 75 tests).

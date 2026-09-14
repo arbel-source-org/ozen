@@ -50,6 +50,17 @@ struct NumberEmphasisTests {
         #expect(emphasized("מש הש") == [])
     }
 
+    @Test("lines listed under numbers said: digits and real amounts, not the idioms of one and two")
+    func listable() {
+        #expect(NumberEmphasis.hasListableNumber("ניפגש ב-10:30"))
+        #expect(NumberEmphasis.hasListableNumber("לקחת שלושה כדורים"))
+        #expect(NumberEmphasis.hasListableNumber("ובערב חצי כדור"))
+        #expect(NumberEmphasis.hasListableNumber("רק פעם אחת") == false)
+        #expect(NumberEmphasis.hasListableNumber("נתראה ביום שני") == false)
+        #expect(NumberEmphasis.hasListableNumber("כל אחד לבד") == false)
+        #expect(NumberEmphasis.hasListableNumber("") == false)
+    }
+
     @Test("on by default, survives older settings files, and can be turned off")
     func settingDefault() throws {
         #expect(DisplayPreferences.default.emphasizeNumbers)
