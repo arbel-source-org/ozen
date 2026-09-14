@@ -179,6 +179,7 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
             guard let alert = viewModel.soundAlerts.last else { return }
             withAnimation { visibleSoundAlert = alert }
+            AlertHapticPlayer.shared.play(.pattern(for: alert.event.importance))
             announceAlert(alert.event.importance == .critical ? "שימו לב! \(alert.event.name)" : "התראה: \(alert.event.name)")
         }
         .task(id: visibleSoundAlert?.id) {
@@ -193,6 +194,7 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.keywordHits.last?.id) { _, _ in
             guard let hit = viewModel.keywordHits.last else { return }
             withAnimation { visibleKeywordHit = hit }
+            AlertHapticPlayer.shared.play(.keyword)
             announceAlert("נאמר: \(hit.match.phrase)")
         }
         .task(id: visibleKeywordHit?.id) {
@@ -202,8 +204,6 @@ struct LiveCaptionView: View {
                 withAnimation { visibleKeywordHit = nil }
             }
         }
-        .sensoryFeedback(.warning, trigger: viewModel.soundAlerts.last?.id)
-        .sensoryFeedback(.success, trigger: viewModel.keywordHits.last?.id)
         .onChange(of: viewModel.phase) { _, _ in
             viewModel.historySessionDidChangePhase()
         }
