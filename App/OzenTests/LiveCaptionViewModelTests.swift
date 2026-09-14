@@ -822,6 +822,26 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
         #expect(phone.posted.first?.identifier == StoppedCaptionsNotice.identifier)
     }
 
+    @Test("captions that failed with the app open post the notice once the phone is put away, and only once")
+    func failureBeforeBackground() async {
+        let phone = Phone(reclaimAnswer: true)
+        let engine = FakeEngine()
+        let viewModel = makeViewModel(phone: phone, engine: engine)
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: true)
+        engine.endStream(throwing: TestError())
+        #expect(await eventually { viewModel.phase.failure != nil })
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(phone.posted.isEmpty)
+
+        viewModel.sceneActivityChanged(isActive: false)
+        #expect(phone.posted.map(\.identifier) == [StoppedCaptionsNotice.identifier])
+
+        viewModel.sceneActivityChanged(isActive: true)
+        viewModel.sceneActivityChanged(isActive: false)
+        #expect(phone.posted.count == 1)
+    }
+
     @Test("a failure that will be retried posts nothing")
     func retriedFailureQuiet() async {
         let phone = Phone(reclaimAnswer: true)

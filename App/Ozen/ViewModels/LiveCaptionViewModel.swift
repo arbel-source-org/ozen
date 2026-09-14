@@ -217,6 +217,10 @@ public final class LiveCaptionViewModel {
 
     public func sceneActivityChanged(isActive: Bool) {
         isAppActive = isActive
+        // Captions that failed with the app open were on screen for her to
+        // see; putting the phone away with them still stopped is when she
+        // needs telling, and no pipeline event will come along to say so.
+        checkCaptionsStillRunning()
         // After a phone call iOS may never say the interruption ended.
         // Back on screen, try to take the microphone back: if that works
         // the call is over, and captions (and automatic recovery) resume.
