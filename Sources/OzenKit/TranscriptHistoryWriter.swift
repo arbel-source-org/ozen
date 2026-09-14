@@ -15,6 +15,13 @@ import Foundation
 public final class TranscriptHistoryWriter: Sendable {
     private let store: TranscriptHistoryStore
     private let queue: DispatchQueue
+    private let failure = FailureBox()
+
+    /// Why the most recent save or rename didn't reach the disk (a full
+    /// phone, most likely), or nil when it did. Autosaves have no one to
+    /// report to when they fail; without this a conversation could stop
+    /// being saved with nothing on screen saying so.
+    public var lastFailure: String? { failure.value }
 
     public init(store: TranscriptHistoryStore, queue: DispatchQueue = DispatchQueue(label: "ozen.history-writer", qos: .utility)) {
         self.store = store
@@ -23,15 +30,15 @@ public final class TranscriptHistoryWriter: Sendable {
 
     /// Queues a save and returns immediately.
     public func saveInBackground(_ record: TranscriptSessionRecord) {
-        queue.async { [store] in
-            _ = try? store.save(record)
+        queue.async { [store, failure] in
+            failure.capture { try store.save(record) }
         }
     }
 
     /// Waits for earlier queued saves, then writes this one before returning.
     public func saveNow(_ record: TranscriptSessionRecord) {
-        queue.sync { [store] in
-            _ = try? store.save(record)
+        queue.sync { [store, failure] in
+            failure.capture { try store.save(record) }
         }
     }
 
@@ -39,8 +46,8 @@ public final class TranscriptHistoryWriter: Sendable {
     /// that already read the old summary can't land after the new name
     /// and drop it.
     public func renameNow(id: UUID, title: String) {
-        queue.sync { [store] in
-            try? store.rename(id: id, title: title)
+        queue.sync { [store, failure] in
+            failure.capture { try store.rename(id: id, title: title) }
         }
     }
 
@@ -72,5 +79,30 @@ public final class TranscriptHistoryWriter: Sendable {
     /// Returns once every queued save has been written.
     public func waitUntilIdle() {
         queue.sync {}
+    }
+}
+
+/// The last save error, shared between the writer's queue and whoever asks.
+private final class FailureBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: String?
+
+    var value: String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return stored
+    }
+
+    func capture(_ work: () throws -> Any) {
+        let outcome: String?
+        do {
+            _ = try work()
+            outcome = nil
+        } catch {
+            outcome = String(describing: error)
+        }
+        lock.lock()
+        stored = outcome
+        lock.unlock()
     }
 }

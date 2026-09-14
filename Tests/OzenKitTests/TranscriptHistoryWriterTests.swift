@@ -148,4 +148,27 @@ struct TranscriptHistoryWriterTests {
         #expect(deleteReturnedEarly == false)
         #expect(store.listSummaries().isEmpty)
     }
+
+    @Test("a save that can't reach the disk is reported, and the next one that does clears it")
+    func saveFailureIsReported() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-writer-fail-\(UUID())", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        // A file where the history folder should be: every save fails, the
+        // way it would on a phone with no room left.
+        let blocked = base.appendingPathComponent("history")
+        try Data("not a folder".utf8).write(to: blocked)
+        let failing = TranscriptHistoryWriter(store: TranscriptHistoryStore(directoryURL: blocked), queue: DispatchQueue(label: "test.fail"))
+
+        #expect(failing.lastFailure == nil)
+        failing.saveInBackground(record(id: UUID(), lines: 1, ended: false))
+        failing.waitUntilIdle()
+        #expect(failing.lastFailure != nil)
+
+        // The folder becomes usable again (room was freed): the next save
+        // works and the problem is no longer reported.
+        try FileManager.default.removeItem(at: blocked)
+        failing.saveNow(record(id: UUID(), lines: 1, ended: false))
+        #expect(failing.lastFailure == nil)
+    }
 }

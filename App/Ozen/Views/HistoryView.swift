@@ -18,6 +18,10 @@ struct HistoryView: View {
         List {
             if query.isEmpty {
                 Section {
+                    if viewModel.saveHistory, viewModel.historySaveFailure != nil {
+                        Label("השמירה האחרונה של שיחה נכשלה, כנראה כי אין מקום פנוי בטלפון. מה שנאמר מאז אולי לא נשמר.", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.red)
+                    }
                     Toggle("לשמור שיחות", isOn: $viewModel.saveHistory)
                     Picker("מחיקה אוטומטית", selection: retentionChoice) {
                         ForEach(HistoryRetention.allCases, id: \.self) { retention in

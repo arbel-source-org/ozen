@@ -830,6 +830,10 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    /// Why the latest history save didn't reach the disk, or nil when it
+    /// did. Read when a screen draws; it isn't observed.
+    public var historySaveFailure: String? { historyWriter.lastFailure }
+
     /// Names a saved conversation, in order with any autosave in flight.
     public func renameConversation(id: UUID, title: String) {
         historyWriter.renameNow(id: id, title: title)
