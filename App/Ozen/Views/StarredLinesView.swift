@@ -40,7 +40,12 @@ struct StarredLinesView: View {
                                                     .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID, on: colorScheme))
                                             }
                                         }
-                                        Text(CaptionLayout.displayText(line.segment.text))
+                                        Text(
+                                            caption: CaptionLayout.displayText(line.segment.text),
+                                            emphasizingNumbers: viewModel.display.emphasizeNumbers,
+                                            size: max(17, viewModel.display.fontSize * 0.7),
+                                            numberColor: nil
+                                        )
                                             .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
                                     }
                                 }
