@@ -16,8 +16,9 @@ struct LiveCaptionView: View {
     @State private var isPinnedToBottom = true
     @State private var hapticTrigger = 0
     @State private var lastSegmentUpdate: TimeInterval = 0
-    /// Advanced every half minute while listening, so a long quiet can let
-    /// the phone lock (see `ScreenAwakePolicy`).
+    /// Advanced every half minute, so a long quiet can let the phone lock
+    /// (see `ScreenAwakePolicy`) and the install-expiry warning appears on
+    /// time.
     @State private var awakeClock = Date().timeIntervalSince1970
     @State private var visibleSoundAlert: SoundAlert?
     @State private var visibleKeywordHit: KeywordHit?
@@ -223,7 +224,10 @@ struct LiveCaptionView: View {
             UIApplication.shared.isIdleTimerDisabled = keep
         }
         .task(id: viewModel.isListening) {
-            while viewModel.isListening, !Task.isCancelled {
+            // Ticks whether or not captions run: the screen lock needs it
+            // while listening, and the install-expiry warning must still
+            // appear on a screen left paused or failed for a day.
+            while !Task.isCancelled {
                 awakeClock = Date().timeIntervalSince1970
                 try? await Task.sleep(for: .seconds(30))
             }
@@ -236,7 +240,7 @@ struct LiveCaptionView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                // The clock only ticks while listening; and a dismissed
+                // The clock may have slept with the app; and a dismissed
                 // expiry warning comes back each time the app is opened.
                 awakeClock = Date().timeIntervalSince1970
                 installExpiryDismissed = false
