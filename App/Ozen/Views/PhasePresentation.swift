@@ -109,7 +109,9 @@ struct PhasePresentation {
         case .downloadingModel:
             let percent = preparation.fraction.map { Int(($0 * 100).rounded()) }
             let title = percent.map { "מוריד את מודל השפה · \($0)%" } ?? "מוריד את מודל השפה"
-            let detail = modelName.map { "\($0) · פעם אחת בלבד, דרך Wi-Fi" } ?? "פעם אחת בלבד, דרך Wi-Fi"
+            // The download only runs while the app is open; the screen is
+            // kept on meanwhile, but she might still switch away.
+            let detail = modelName.map { "\($0) · פעם אחת בלבד · השאירו את האפליקציה פתוחה" } ?? "פעם אחת בלבד · השאירו את האפליקציה פתוחה"
             self.init(title: title, detail: detail, systemImage: "arrow.down.circle", tint: .yellow, progress: preparation.fraction, isBusy: true)
         case .loadingModel:
             self.init(title: "טוען את המודל", detail: "בפעם הראשונה זה יכול לקחת דקה או שתיים", systemImage: "cpu", tint: .yellow, isBusy: true)

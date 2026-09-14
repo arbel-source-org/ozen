@@ -52,6 +52,10 @@ struct LiveCaptionView: View {
             }
     }
 
+    private var keepsScreenAwake: Bool {
+        ScreenAwakePolicy.shouldKeepAwake(phase: viewModel.phase, keepAwakeWhileListening: viewModel.display.keepScreenAwake)
+    }
+
     private var presentation: PhasePresentation {
         PhasePresentation(
             phase: viewModel.phase,
@@ -170,15 +174,14 @@ struct LiveCaptionView: View {
             scrollToLatestIfPinned()
         }
         .onChange(of: viewModel.isListening, initial: true) { _, listening in
-            UIApplication.shared.isIdleTimerDisabled = listening && viewModel.display.keepScreenAwake
             battery.setActive(listening)
+        }
+        .onChange(of: keepsScreenAwake, initial: true) { _, keep in
+            UIApplication.shared.isIdleTimerDisabled = keep
         }
         .sensoryFeedback(.warning, trigger: battery.notice?.id)
         .sensoryFeedback(.selection, trigger: fontSizeTrigger)
         .animation(.default, value: battery.notice)
-        .onChange(of: viewModel.display.keepScreenAwake) { _, keep in
-            UIApplication.shared.isIdleTimerDisabled = viewModel.isListening && keep
-        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             viewModel.sceneActivityChanged(isActive: phase == .active)
         }
