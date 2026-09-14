@@ -94,6 +94,14 @@ public enum SoundEventCatalog {
         SoundEvent(identifier: "music", name: "מוזיקה", importance: .low, systemImage: "music.note"),
     ]
 
+    /// What the phone's own vibration on a hard surface can be heard as: a
+    /// ring, a buzzer or alarm clock, a beep, a knock-like tap, an appliance
+    /// hum. Never a safety sound, never the doorbell.
+    public static let vibrationLookalikes: Set<String> = [
+        "telephone_bell_ringing", "ringtone", "telephone", "alarm_clock",
+        "beep", "knock", "microwave_oven", "vacuum_cleaner",
+    ]
+
     public static func event(for identifier: String) -> SoundEvent? {
         events.first { $0.identifier == identifier }
     }

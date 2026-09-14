@@ -392,11 +392,13 @@ public final class CaptionPipeline {
         soundAlerts = []
     }
 
-    /// Stops listening for sounds while the phone vibrates for an alert,
-    /// and for a moment after, since the classifier reports what it heard a
-    /// little late. A phone buzzing on a table is, to the classifier, a
-    /// phone ringing or an alarm clock: without this the vibration raises
-    /// an alert of its own, which vibrates again.
+    /// Stops taking a buzz for a sound while the phone vibrates for an
+    /// alert, and for a moment after, since the classifier reports what it
+    /// heard a little late. A phone buzzing on a table is, to the
+    /// classifier, a phone ringing or an alarm clock: without this the
+    /// vibration raises an alert of its own, which vibrates again. Only
+    /// `SoundEventCatalog.vibrationLookalikes` are ignored; a siren, a smoke
+    /// alarm or the doorbell in the same moment still comes through.
     public func ignoreSounds(whileVibrating vibration: AlertVibration) {
         soundsIgnoredUntil = max(soundsIgnoredUntil, now() + vibration.totalSeconds + Self.soundReportDelaySeconds)
     }
@@ -409,7 +411,10 @@ public final class CaptionPipeline {
         // Judged by when the classifier produced the reading, not when it
         // got here, and dropped before the policy, so the phone's own buzz
         // doesn't start a cooldown that would hide a real ring right after.
-        guard observation.timestamp >= soundsIgnoredUntil else { return }
+        if observation.timestamp < soundsIgnoredUntil,
+           SoundEventCatalog.vibrationLookalikes.contains(observation.identifier) {
+            return
+        }
         guard let alert = soundPolicy.evaluate(observation) else { return }
         soundAlerts.append(alert)
         onSoundAlert?(alert)

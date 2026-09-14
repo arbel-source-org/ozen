@@ -4,6 +4,16 @@ import Foundation
 
 @Suite("SoundEventCatalog and SoundEventPolicy")
 struct SoundEventsTests {
+    @Test("what a buzzing phone can be taken for is never a safety sound or the doorbell, and every name is a real sound")
+    func vibrationLookalikesAreSafeToIgnore() {
+        for identifier in SoundEventCatalog.vibrationLookalikes {
+            let event = SoundEventCatalog.event(for: identifier)
+            #expect(event != nil, "\(identifier) is not in the catalog")
+            #expect(event?.importance != .critical)
+            #expect(identifier != "door_bell")
+        }
+    }
+
     @Test("catalog identifiers are unique, snake_case, and speech is deliberately absent")
     func catalogSanity() {
         let identifiers = SoundEventCatalog.events.map(\.identifier)

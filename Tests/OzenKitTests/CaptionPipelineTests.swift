@@ -860,13 +860,13 @@ struct CaptionPipelineAlertTests {
         detector.push(SoundObservation(identifier: "telephone_bell_ringing", confidence: 0.9, timestamp: clock.now))
         clock.advance(vibration.totalSeconds + 1)
         detector.push(SoundObservation(identifier: "alarm_clock", confidence: 0.9, timestamp: clock.now))
-        // A marker that is never ignored, to know both readings were handled.
-        clock.advance(1)
-        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: clock.now))
+        // A real smoke alarm in the same moment is never taken for the buzz.
+        detector.push(SoundObservation(identifier: "smoke_detector", confidence: 0.9, timestamp: clock.now))
         #expect(await eventually { !pipeline.soundAlerts.isEmpty })
-        #expect(pipeline.soundAlerts.map(\.event.identifier) == ["door_bell"])
+        #expect(pipeline.soundAlerts.map(\.event.identifier) == ["smoke_detector"])
 
         // The ignored ring started no cooldown: a real one right after counts.
+        clock.advance(1)
         detector.push(SoundObservation(identifier: "telephone_bell_ringing", confidence: 0.9, timestamp: clock.now))
         #expect(await eventually { pipeline.soundAlerts.count == 2 })
     }
