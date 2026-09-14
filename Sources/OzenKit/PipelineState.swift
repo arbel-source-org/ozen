@@ -91,6 +91,16 @@ public enum PipelinePhase: Sendable, Equatable {
         if case .preparingEngine(let progress) = self { return progress }
         return nil
     }
+
+    /// The phase without a download's fraction, for work to do when a step
+    /// begins or ends: the fraction changes many times a second, and a
+    /// screen reacting to each one rescanned the disk or saved the
+    /// conversation with every percent.
+    public var step: PipelinePhase {
+        guard case .preparingEngine(var progress) = self else { return self }
+        progress.fraction = nil
+        return .preparingEngine(progress)
+    }
 }
 
 /// Running counters for the diagnostics screen. Cheap to keep and

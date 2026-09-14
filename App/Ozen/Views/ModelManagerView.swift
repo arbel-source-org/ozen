@@ -35,7 +35,7 @@ struct ModelManagerView: View {
         .navigationTitle("מודל Whisper")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: refresh)
-        .onChange(of: viewModel.phase) { _, _ in refresh() }
+        .onChange(of: viewModel.phase.step) { _, _ in refresh() }
         .confirmationDialog(
             "למחוק את \(pendingDelete?.displayName ?? "") מהטלפון?",
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),

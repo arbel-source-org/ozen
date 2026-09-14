@@ -79,6 +79,18 @@ struct PipelineStateTests {
         #expect(EngineAvailability.available.unavailability == nil)
     }
 
+    @Test("a phase's step keeps the stage and model of a download but not how far along it is")
+    func stepIgnoresDownloadFraction() {
+        let at10 = PipelinePhase.preparingEngine(EnginePreparationProgress(stage: .downloadingModel, fraction: 0.1, detail: "small"))
+        let at11 = PipelinePhase.preparingEngine(EnginePreparationProgress(stage: .downloadingModel, fraction: 0.11, detail: "small"))
+        #expect(at10 != at11)
+        #expect(at10.step == at11.step)
+        #expect(at10.step != PipelinePhase.preparingEngine(EnginePreparationProgress(stage: .loadingModel, detail: "small")).step)
+        #expect(at10.step != PipelinePhase.preparingEngine(EnginePreparationProgress(stage: .downloadingModel, fraction: 0.1, detail: "base")).step)
+        #expect(PipelinePhase.listening.step == .listening)
+        #expect(PipelinePhase.failed(PipelineFailure(kind: .audioSessionFailed, detail: "x")).step == .failed(PipelineFailure(kind: .audioSessionFailed, detail: "x")))
+    }
+
     @Test("caption lag counts only while a line is still being written")
     func lagOnlyWhileOpen() {
         var stats = PipelineStats()

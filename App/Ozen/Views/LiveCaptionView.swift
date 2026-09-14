@@ -217,7 +217,7 @@ struct LiveCaptionView: View {
                 withAnimation { visibleKeywordHit = nil }
             }
         }
-        .onChange(of: viewModel.phase) { _, phase in
+        .onChange(of: viewModel.phase.step) { _, phase in
             viewModel.historySessionDidChangePhase()
             announceStopOrReturn(phase)
         }
