@@ -248,6 +248,10 @@ private final class RecognitionSession: @unchecked Sendable {
 
         if let error {
             lock.lock()
+            // An error is a recognition task's last word: no final result
+            // will come to clear this utterance's text, and over an evening
+            // of recognizer hiccups the leftovers would only pile up.
+            lastTextByUtterance[id] = nil
             let response = RecognitionRequestPolicy.respond(
                 isCurrentRequest: isCurrent && id == utteranceID,
                 requestHadSpeech: requestHasSpeech,

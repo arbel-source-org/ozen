@@ -208,6 +208,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
     ) -> AsyncThrowingStream<TranscriptToken, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
+                await self.beginStreaming()
                 do {
                     try await self.runStreaming(languageCode: languageCode, audio: audio, continuation: continuation)
                     continuation.finish()
@@ -216,8 +217,37 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 } catch {
                     continuation.finish(throwing: error)
                 }
+                await self.endStreaming()
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Whether a stream is using `pipe`, and the streams waiting for it.
+    ///
+    /// WhisperKit keeps decoder state on the instance, so two passes must
+    /// never run on it at once. Without this they could: the pipeline
+    /// cancels a stream on pause, restart or recovery without waiting for it
+    /// to end, a cancelled stream can still be inside `transcribe` (a pass
+    /// doesn't stop part way), and an actor lets the next stream in while
+    /// that call is suspended. The next stream now waits, at most one pass.
+    private var isStreaming = false
+    private var streamWaiters: [CheckedContinuation<Void, Never>] = []
+
+    private func beginStreaming() async {
+        guard isStreaming else {
+            isStreaming = true
+            return
+        }
+        await withCheckedContinuation { streamWaiters.append($0) }
+    }
+
+    /// Hands `pipe` straight to the next waiting stream, if there is one.
+    private func endStreaming() {
+        if streamWaiters.isEmpty {
+            isStreaming = false
+        } else {
+            streamWaiters.removeFirst().resume()
         }
     }
 
