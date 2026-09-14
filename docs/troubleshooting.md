@@ -53,6 +53,11 @@ leave the phone.
   Audio & Visual → LED Flash for Alerts: the camera light then blinks for
   every notification, Ozen's included. With the app open, sirens and the
   doorbell already flash the edge of the screen.
+- **Alerts don't vibrate.** With the app open each kind vibrates its own
+  way: long buzzes for an alarm or siren, a double knock for the door or a
+  baby, three quick taps for her name. If nothing vibrates at all, iOS
+  Settings → Accessibility → Touch → Vibration has been turned off, which
+  silences every app.
 - **A banner "השמירה בטלפון נכשלה", or History says the last save failed.**
   The phone is out of storage, so new conversations and settings changes
   aren't being kept, though captions still work. Free some space (Settings →
