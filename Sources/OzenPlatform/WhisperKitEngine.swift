@@ -19,7 +19,7 @@ import OzenKit
 /// one last, more careful pass when a pause ends the utterance. Audio
 /// intake and inference are separate loops on purpose: intake just
 /// appends to a buffer and can never fall behind, while inference always
-/// works on the *latest* snapshot — if a pass takes longer than 0.6 s the
+/// works on the *latest* audio — if a pass takes longer than 0.6 s the
 /// next one simply covers more audio, instead of a queue of stale passes
 /// building up and the captions drifting further and further behind.
 public actor WhisperKitEngine: TranscriptionEngine {
@@ -291,24 +291,27 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
         while true {
             try Task.checkCancellation()
-            let snapshot = intake.snapshot()
-            let total = snapshot.samples.count
+            // The counts only: most turns just wait for more audio, and
+            // copying up to 28 seconds of it twenty times a second to find
+            // that out cost battery all through a conversation.
+            let status = intake.status()
+            let total = status.count
 
-            guard let speechEnd = snapshot.lastSpeechEnd else {
+            guard let speechEnd = status.lastSpeechEnd else {
                 // Nothing but silence so far: don't run the model at all
                 // (that's where hallucinations come from), just keep a
                 // little lead-in audio and wait.
                 if total > keepSamples {
                     intake.drop(prefix: total - keepSamples)
                 }
-                if snapshot.finished { break }
+                if status.finished { break }
                 try await Task.sleep(for: .milliseconds(80))
                 continue
             }
 
             let pauseReached = total - speechEnd >= pauseSamples
             let tooLong = total >= maxSamples
-            let isFinal = pauseReached || tooLong || snapshot.finished
+            let isFinal = pauseReached || tooLong || status.finished
             let interval = InferenceCadence.secondsBetweenLivePasses(
                 heat: Self.currentHeat(),
                 lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled,
@@ -320,23 +323,27 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 continue
             }
 
-            let end: Int
+            // Only this loop drops audio from the front, so the first
+            // `total` samples are still the ones the counts described.
+            let window: [Float]
             if !isFinal {
-                end = total
-            } else if tooLong && !pauseReached && !snapshot.finished {
+                window = intake.copySamples(upTo: total)
+            } else if tooLong && !pauseReached && !status.finished {
                 // Still talking at the cap: end the line in the quietest
                 // moment of the last two seconds rather than mid-word. What
                 // comes after it is kept and starts the next line.
-                end = UtteranceCut.quietestPoint(
-                    in: snapshot.samples,
-                    before: min(total, speechEnd + padSamples),
+                let heard = intake.copySamples(upTo: min(total, speechEnd + padSamples))
+                let cut = UtteranceCut.quietestPoint(
+                    in: heard,
+                    before: heard.count,
                     lookBack: longCutLookBack,
                     frame: longCutFrame
                 )
+                window = Array(heard[0..<cut])
             } else {
-                end = min(total, speechEnd + padSamples)
+                window = intake.copySamples(upTo: min(total, speechEnd + padSamples))
             }
-            let window = Array(snapshot.samples[0..<end])
+            let end = window.count
             samplesAtLastPass = total
 
             var options = isFinal ? finalPass : livePass
@@ -395,7 +402,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 // about the next, shorter one; its first preview shouldn't
                 // wait on it.
                 lastLivePassSeconds = nil
-                if snapshot.finished && total - end == 0 { break }
+                if status.finished && total - end == 0 { break }
             }
         }
     }
@@ -484,8 +491,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
 /// Locked rather than actor-isolated so the audio loop never has to wait
 /// for the actor while a long inference pass is in flight.
 private final class AudioIntake: @unchecked Sendable {
-    struct Snapshot {
-        var samples: [Float]
+    struct Status {
+        var count: Int
         /// Index just past the last chunk classified as speech, if any.
         var lastSpeechEnd: Int?
         var finished: Bool
@@ -510,9 +517,16 @@ private final class AudioIntake: @unchecked Sendable {
         lock.withLock { finished = true }
     }
 
-    func snapshot() -> Snapshot {
+    func status() -> Status {
         lock.withLock {
-            Snapshot(samples: samples, lastSpeechEnd: lastSpeechEnd, finished: finished)
+            Status(count: samples.count, lastSpeechEnd: lastSpeechEnd, finished: finished)
+        }
+    }
+
+    /// A copy of the first `end` samples.
+    func copySamples(upTo end: Int) -> [Float] {
+        lock.withLock {
+            Array(samples[0..<min(max(end, 0), samples.count)])
         }
     }
 
