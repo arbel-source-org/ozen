@@ -1098,3 +1098,57 @@ struct CaptionPipelineAudioStallTests {
         #expect(pipeline.stats.audioStalls == 1)
     }
 }
+
+/// Holds each embedding until the test lets it go (or a second passes).
+final class BlockingEmbedder: SpeakerEmbedding, @unchecked Sendable {
+    private let lock = NSLock()
+    private let release = DispatchSemaphore(value: 0)
+    private var started = false
+    private var finished = false
+
+    var state: (started: Bool, finished: Bool) { lock.withLock { (started, finished) } }
+
+    func letGo() { release.signal() }
+
+    func embed(samples: [Float], sampleRate: Double) -> [Float]? {
+        lock.withLock { started = true }
+        _ = release.wait(timeout: .now() + .seconds(1))
+        lock.withLock { finished = true }
+        return [1, 0, 0]
+    }
+}
+
+@Suite("CaptionPipeline voice analysis thread")
+@MainActor
+struct CaptionPipelineEmbeddingThreadTests {
+    @Test("the main actor stays free while a voice is being analysed, and the speaker is still assigned")
+    func embeddingOffMain() async throws {
+        let embedder = BlockingEmbedder()
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(
+            audio: audio,
+            engineFactory: { _ in FakeEngine() },
+            embedder: embedder,
+            recovery: .disabled
+        )
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.5, count: 24_000))
+
+        // This loop runs on the main actor. If the analysis ran there too,
+        // the loop could only look again after it finished.
+        var seenMidAnalysis = false
+        let deadline = ContinuousClock.now + .seconds(2)
+        while ContinuousClock.now < deadline {
+            let state = embedder.state
+            if state.started {
+                seenMidAnalysis = !state.finished
+                break
+            }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        embedder.letGo()
+
+        #expect(seenMidAnalysis)
+        #expect(await eventually { pipeline.speakerClusters.count == 1 })
+    }
+}

@@ -520,7 +520,16 @@ public final class CaptionPipeline {
             speechSamples = 0
             guard speechFraction >= Self.minimumSpeechFractionForEmbedding else { continue }
 
-            guard let embedding = embedder.embed(samples: window, sampleRate: Self.sampleRate) else { continue }
+            // A few hundred spectrum frames per window: real work, done off
+            // the main thread so the caption screen stays smooth while
+            // people talk. Chunks arriving meanwhile wait in the stream.
+            let embedder = self.embedder
+            let sampleRate = Self.sampleRate
+            let computed = await Task.detached(priority: .userInitiated) {
+                embedder.embed(samples: window, sampleRate: sampleRate)
+            }.value
+            guard runID == run else { return }
+            guard let embedding = computed else { continue }
             let clusterCountBefore = clusterer.clusters.count
             let clusterID = clusterer.assign(embedding: embedding)
             if clusterer.clusters.count > clusterCountBefore {
