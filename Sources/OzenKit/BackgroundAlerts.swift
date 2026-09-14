@@ -65,6 +65,18 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         return true
     }
 
+    /// What a sound alert looks like on the lock screen, for trying it out
+    /// from Settings: Focus modes, notification summaries and a muted app
+    /// can each keep the real ones away, and the time to find that out is
+    /// not when the doorbell rings.
+    public static let testNotification = AlertNotificationContent(
+        identifier: "test-alert",
+        title: "בדיקה: פעמון דלת",
+        body: "כך תיראה התראה מאוזן כשהטלפון בכיס או נעול.",
+        threadIdentifier: "sounds",
+        isUrgent: false
+    )
+
     /// Notification bodies get cut off by the system anyway; cut at a word
     /// so the reader sees whole words and an ellipsis.
     static func excerpt(_ text: String, limit: Int = 120) -> String {

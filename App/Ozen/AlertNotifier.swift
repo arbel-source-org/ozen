@@ -44,6 +44,13 @@ nonisolated final class AlertNotifier: Sendable {
         add(UNNotificationRequest(identifier: content.identifier, content: Self.body(for: content), trigger: trigger))
     }
 
+    /// Delivers `content` in `seconds`, e.g. a test notification to see on
+    /// the lock screen.
+    func schedule(_ content: AlertNotificationContent, after seconds: TimeInterval) {
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(seconds, 1), repeats: false)
+        add(UNNotificationRequest(identifier: content.identifier, content: Self.body(for: content), trigger: trigger))
+    }
+
     func cancelScheduled(identifier: String) {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
     }

@@ -12,6 +12,7 @@ struct SettingsView: View {
     /// iOS has notifications for Ozen switched off, so the "notify when the
     /// screen is off" switch can't do anything until they're allowed.
     @State private var notificationsBlocked = false
+    @State private var testNotificationSent = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
@@ -209,6 +210,27 @@ struct SettingsView: View {
 
     // MARK: - Alerts
 
+    /// Sends a sample alert to the lock screen, so whoever sets the phone
+    /// up sees for themselves that alerts get through.
+    private var testNotificationButton: some View {
+        Button {
+            Task {
+                guard await AlertNotifier.shared.requestAuthorization() else {
+                    notificationsBlocked = true
+                    return
+                }
+                AlertNotifier.shared.schedule(BackgroundAlertPolicy.testNotification, after: 10)
+                testNotificationSent = true
+            }
+        } label: {
+            if testNotificationSent {
+                Label("נשלחה. נעלו את הטלפון, ותוך 10 שניות היא תגיע", systemImage: "checkmark")
+            } else {
+                Label("לבדוק שהתראה מגיעה כשהטלפון נעול", systemImage: "bell.and.waves.left.and.right")
+            }
+        }
+    }
+
     private var alertsSection: some View {
         Section {
             NavigationLink {
@@ -244,6 +266,9 @@ struct SettingsView: View {
                 }
             )) {
                 Label("התראה בטלפון כשהמסך כבוי", systemImage: "iphone.radiowaves.left.and.right")
+            }
+            if viewModel.notifyWhenInBackground && !notificationsBlocked {
+                testNotificationButton
             }
             if viewModel.notifyWhenInBackground && notificationsBlocked {
                 VStack(alignment: .leading, spacing: 8) {

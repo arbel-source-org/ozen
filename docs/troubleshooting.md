@@ -45,7 +45,9 @@ leave the phone.
   that line right. Holding the line offers to ask the speaker to repeat it.
 - **No phone notifications when the screen is off.** Settings → התראות shows
   a red warning if notifications are blocked for Ozen in iOS, with a button
-  to fix it.
+  to fix it. If there's no warning, tap "לבדוק שהתראה מגיעה כשהטלפון נעול"
+  and lock the phone: a sample doorbell alert arrives within 10 seconds. If
+  it doesn't, a Focus mode or Scheduled Summary in iOS is holding it back.
 - **The doorbell notification comes, but she doesn't notice it.** With the
   phone face down or across the room, turn on iOS Settings → Accessibility →
   Audio & Visual → LED Flash for Alerts: the camera light then blinks for
