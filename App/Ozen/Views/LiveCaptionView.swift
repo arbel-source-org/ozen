@@ -218,7 +218,6 @@ struct LiveCaptionView: View {
             }
         }
         .onChange(of: viewModel.phase.step) { _, phase in
-            viewModel.historySessionDidChangePhase()
             announceStopOrReturn(phase)
         }
         .onChange(of: viewModel.segments.count) { _, _ in

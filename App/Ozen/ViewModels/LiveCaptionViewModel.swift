@@ -88,6 +88,8 @@ public final class LiveCaptionViewModel {
         let inputName: String?
     }
     private var autosaveTask: Task<Void, Never>?
+    /// Whether captions were listening the last time history looked.
+    @ObservationIgnored private var historySawListening = false
     private var lastRetentionCheck: TimeInterval = 0
     private var launchHousekeeping: Task<Void, Never>?
     private var soundIdentifiersLoad: Task<Void, Never>?
@@ -188,6 +190,15 @@ public final class LiveCaptionViewModel {
             // A failure's automatic retry is lined up right after its phase
             // is set, so look once the pipeline has finished reacting.
             Task { @MainActor [weak self] in
+                // Here and not only after this class's own start or pause:
+                // captions an automatic retry brought back must be saved
+                // too, with or without the caption screen watching. Only
+                // when listening began or ended since history last looked,
+                // so a start this class already handled isn't handled again
+                // a moment later.
+                if let self, self.pipeline.phase.isListening != self.historySawListening {
+                    self.historySessionDidChangePhase()
+                }
                 self?.holdCaptionsIfStillSpeaking()
                 self?.checkCaptionsStillRunning()
                 self?.refreshLockScreen()
@@ -1236,6 +1247,7 @@ public final class LiveCaptionViewModel {
 
     /// Keeps the autosave loop matched to whether we're listening.
     public func historySessionDidChangePhase() {
+        historySawListening = pipeline.phase.isListening
         if pipeline.phase.isListening {
             checkForConversationBreak()
             if historySessionStartedAt == nil {

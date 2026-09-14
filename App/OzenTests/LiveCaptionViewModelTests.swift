@@ -1380,6 +1380,40 @@ struct LiveCaptionViewModelSavingTroubleTests {
         #expect(!viewModel.savingTrouble.isFailing)
     }
 
+    @Test("captions an automatic retry brought back after a failed start are saved as a conversation of their own")
+    func autoRetryStartsTheHistorySession() async throws {
+        let audio = FakeAudioCapturer()
+        audio.startError = TestError()
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(
+            audio: audio,
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.3], downloadDelays: [])
+        )
+        let history = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-retry-history-\(UUID())", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: history) }
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-settings-\(UUID()).json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: history)
+        )
+        await viewModel.start()
+        #expect(viewModel.phase.failure != nil)
+
+        audio.startError = nil
+        #expect(await eventually { viewModel.isListening })
+        let listeningBy = Date().timeIntervalSince1970
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: 1))
+        #expect(await eventually { !viewModel.segments.isEmpty })
+
+        // Started when listening began, not at the line's own timestamp,
+        // which is what a conversation nobody started would fall back to.
+        viewModel.persistHistory(ended: false)
+        let saved = try #require(viewModel.historyStore.listSummaries().first)
+        #expect(saved.startedAt > listeningBy - 60)
+    }
+
     @Test("a conversation that can't be saved puts the banner up")
     func historySaveFailure() async throws {
         let blocker = try blockedFolder()
