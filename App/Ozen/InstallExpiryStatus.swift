@@ -13,6 +13,7 @@ final class InstallExpiryStatus {
 
     private(set) var expiresAt: Date?
     @ObservationIgnored private var loading: Task<Void, Never>?
+    @ObservationIgnored private var hasRead = false
 
     /// Reads the profile the first time; later calls wait for that read.
     func load() async {
@@ -20,10 +21,22 @@ final class InstallExpiryStatus {
             loading = Task {
                 let date = await Task.detached(priority: .utility) { Self.readProfile() }.value
                 expiresAt = date
+                hasRead = true
                 scheduleReminder(expiresAt: date)
             }
         }
         await loading?.value
+    }
+
+    /// Schedules the reminder again, e.g. when the app comes back on
+    /// screen. The first time round notifications may not have been allowed
+    /// yet (the walkthrough asks later), and with background listening the
+    /// app can stay running for the whole week without another launch.
+    func refreshReminder() {
+        // Before the profile has been read there is nothing to schedule,
+        // and nothing old to cancel either.
+        guard hasRead else { return }
+        scheduleReminder(expiresAt: expiresAt)
     }
 
     private func scheduleReminder(expiresAt: Date?) {
