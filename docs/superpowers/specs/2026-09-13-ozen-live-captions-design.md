@@ -218,6 +218,14 @@ input source).
   buzzes but leaves the alarm's banner and flash; with VoiceOver, a caption
   line's actions include asking to repeat and naming the speaker; and a
   line copied from History pastes into Messages whole.
+  Added with build 20: a Bluetooth microphone switched off and on in the
+  middle of a phone call has captions back within seconds of hanging up;
+  the diagnostics report's `damaged:` count stays at 0 on the phone's own
+  microphone; past 300 lines the note at the top opens the saved
+  conversation at the line where the screen cut off, and that line lights
+  up; History shows Today / Yesterday headings; a two-word search whose
+  words sit on different lines finds the conversation; "twice a day" is
+  in the number colour.
 
 ## Explicit non-goals for v1
 
