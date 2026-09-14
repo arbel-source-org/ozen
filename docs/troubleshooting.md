@@ -57,9 +57,9 @@ leave the phone.
   way: long buzzes for an alarm or siren, a double knock for the door or a
   baby, three quick taps for her name. Settings → צלילים בבית → "איך כל
   התראה מרגישה" plays each one, to learn them together. If nothing vibrates
-  at all, iOS
-  Settings → Accessibility → Touch → Vibration has been turned off, which
-  silences every app.
+  at all, iOS Settings → Accessibility → Touch → Vibration has been turned
+  off, which silences every app. If every alert gives the same plain buzz,
+  Diagnostics shows "רטט להתראות: נכשל" and the report says why.
 - **A banner "השמירה בטלפון נכשלה", or History says the last save failed.**
   The phone is out of storage, so new conversations and settings changes
   aren't being kept, though captions still work. Free some space (Settings →
