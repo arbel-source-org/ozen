@@ -1624,6 +1624,23 @@ struct NaNEmbedder: SpeakerEmbedding {
     }
 }
 
+@Suite("CaptionPipeline thanks on a quiet room")
+@MainActor
+struct CaptionPipelineSilencePhraseTests {
+    @Test("thanks invented again and again while nobody talks shows once, and real speech after it shows")
+    func thanksLoop() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder(), recovery: .disabled)
+        await pipeline.start(settings: .default)
+        for _ in 0..<4 {
+            engine.emit(TranscriptToken(utteranceID: UUID(), text: "תודה.", isFinal: true, timestamp: 1))
+        }
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "תודה. תודה. תודה.", isFinal: true, timestamp: 2))
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "מה שלומך היום?", isFinal: true, timestamp: 3))
+        #expect(await eventually { pipeline.segments.map(\.text) == ["תודה.", "מה שלומך היום?"] })
+    }
+}
+
 @Suite("CaptionPipeline broken voice prints")
 @MainActor
 struct CaptionPipelineNaNEmbeddingTests {

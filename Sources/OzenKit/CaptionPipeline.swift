@@ -115,6 +115,7 @@ public final class CaptionPipeline {
     /// and background noise must not open phantom speakers or drag a real
     /// person's voice profile toward the fridge hum.
     private var embeddingVoiceDetector = EnergyVoiceDetector()
+    private var silencePhraseGuard = SilencePhraseGuard()
     /// The speaker of the most recent window that held speech. A short reply
     /// ("ken" — "yes") is often over before its caption line exists, so a new
     /// line with no speaker yet takes this one if it is recent.
@@ -726,6 +727,9 @@ public final class CaptionPipeline {
         if !isKnown && token.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return
         }
+        // "toda. toda. toda." ("thanks") invented window after window on a
+        // quiet room: see `SilencePhraseGuard`.
+        guard silencePhraseGuard.admits(token, at: now()) else { return }
         var enriched = token
         if enriched.speakerClusterID == nil {
             if let assigned = utteranceClusterAssignments[token.utteranceID] {
