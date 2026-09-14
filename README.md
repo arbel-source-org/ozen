@@ -95,6 +95,11 @@ things, for Hebrew conversation, entirely on-device.
   The list reads a small summary per conversation, so it opens quickly
   even after months of daily use, and autosaving never stutters the
   captions.
+- **Star what matters.** Hold a caption line to mark it as important
+  (what the doctor said about the pills), copy it, or say who is talking.
+  Stars are saved with the conversation, counted in the history list,
+  marked in shared text, and one button steps through them later. A
+  search result opens at the lines it found, highlighted.
 - **Saved speakers can be renamed**, and the new name follows onto lines
   already on screen and into the names list.
 - **First-launch walkthrough** in large type that explains the engines and
@@ -156,7 +161,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (282 tests). The platform layer (WhisperKit/Speech engines, real
+logic (291 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 35 tests).
