@@ -38,6 +38,7 @@ struct DiagnosticsView: View {
                 LabeledContent("חבילות אודיו", value: "\(viewModel.stats.audioChunksReceived)")
                 LabeledContent("שניות אודיו", value: String(format: "%.1f", viewModel.stats.audioSecondsReceived))
                 LabeledContent("החלפות מיקרופון", value: "\(viewModel.stats.inputChanges)")
+                LabeledContent("המיקרופון נתקע", value: "\(viewModel.stats.audioStalls)")
                 LabeledContent("זיהוי צלילים", value: viewModel.stats.soundDetectionRunning ? "פועל" : (viewModel.isListening ? "נעצר" : "—"))
             }
 
@@ -134,7 +135,7 @@ struct DiagnosticsView: View {
         failure: \(viewModel.phase.failure?.detail ?? "-")
         engine: \(viewModel.pipeline.activeEngineKind?.rawValue ?? "-") model: \(viewModel.settings.whisperModelVariant) lang: \(viewModel.settings.languageCode)
         input: \(viewModel.selectedInput?.portName ?? "-") of \(viewModel.availableInputs.map { "\($0.portName) [\($0.portType.rawValue)]" }.joined(separator: ", "))
-        audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges)
+        audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges) stalls: \(stats.audioStalls)
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)

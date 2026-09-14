@@ -86,6 +86,8 @@ public final class CaptionPipeline {
     /// compare against it and drop themselves instead of clobbering state.
     private var runID = UUID()
     private var recovery: AutoRecoveryPolicy
+    /// Notices capture that died while the screen still says "listening".
+    private var audioWatchdog: AudioStallWatchdog
     private var retryTask: Task<Void, Never>?
     private var retryToken: UUID?
     private var listeningSince: TimeInterval?
@@ -107,9 +109,11 @@ public final class CaptionPipeline {
         clusterer: EmbeddingClusterer = EmbeddingClusterer(),
         stabilizer: CaptionStabilizer = CaptionStabilizer(),
         recovery: AutoRecoveryPolicy = AutoRecoveryPolicy(),
+        audioWatchdog: AudioStallWatchdog = AudioStallWatchdog(),
         now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSince1970 }
     ) {
         self.recovery = recovery
+        self.audioWatchdog = audioWatchdog
         self.audio = audio
         self.engineFactory = engineFactory
         self.embedder = embedder
@@ -196,6 +200,7 @@ public final class CaptionPipeline {
         stats.sessionStartedAt = now()
         phase = .listening
         listeningSince = now()
+        audioWatchdog.reset()
 
         embeddingTask = Task { [weak self] in
             await self?.consumeEmbeddings(embedderAudio, run: run)
@@ -237,9 +242,10 @@ public final class CaptionPipeline {
 
         staleCommitTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(250))
+                try? await Task.sleep(for: .seconds(AudioStallWatchdog.tickSeconds))
                 guard let self, self.runID == run else { return }
                 self.commitStaleSegments()
+                self.checkAudioIsArriving()
             }
         }
     }
@@ -561,6 +567,16 @@ public final class CaptionPipeline {
         let engine = engineFactory(settings)
         engineCache[key] = engine
         return engine
+    }
+
+    /// A tap that stopped delivering (see `AudioStallWatchdog`) becomes a
+    /// visible failure, which automatic recovery answers with a fresh
+    /// audio engine: the same thing a manual stop and start would do.
+    private func checkAudioIsArriving() {
+        guard phase.isListening else { return }
+        guard audioWatchdog.tick(chunksReceived: stats.audioChunksReceived, systemInterrupted: systemInterrupted) else { return }
+        stats.audioStalls += 1
+        fail(.audioSessionFailed, detail: "no audio from the microphone for \(Int(audioWatchdog.stallSeconds)) s")
     }
 
     private func fail(_ kind: PipelineFailure.Kind, detail: String, engineUnavailability: EngineUnavailability? = nil) {

@@ -198,6 +198,7 @@ private func makePipeline(
     engines: [TranscriptionEngineKind: FakeEngine] = [.whisperKit: FakeEngine()],
     soundDetector: FakeSoundDetector? = nil,
     recovery: AutoRecoveryPolicy = .disabled,
+    audioWatchdog: AudioStallWatchdog = AudioStallWatchdog(),
     now: @escaping @Sendable () -> TimeInterval = { 1_000 }
 ) -> (CaptionPipeline, FakeAudioCapturer, FactoryLog) {
     let log = FactoryLog()
@@ -210,6 +211,7 @@ private func makePipeline(
         embedder: FakeEmbedder(),
         soundDetector: soundDetector,
         recovery: recovery,
+        audioWatchdog: audioWatchdog,
         now: now
     )
     return (pipeline, audio, log)
@@ -1040,5 +1042,59 @@ struct CaptionPipelineRefreshTests {
         #expect(pipeline.availableInputs == [builtIn])
         #expect(audio.calls == ["refreshInputs"])
         #expect(pipeline.phase == .idle)
+    }
+}
+
+@Suite("CaptionPipeline dead microphone")
+@MainActor
+struct CaptionPipelineAudioStallTests {
+    private let quickWatchdog = AudioStallWatchdog(stallSeconds: 0.5)
+
+    @Test("a microphone that stops delivering audio becomes a visible audio failure")
+    func deadMicrophoneFails() async {
+        let (pipeline, audio, _) = makePipeline(audioWatchdog: quickWatchdog)
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0, count: 1_600))
+
+        #expect(await eventually { pipeline.phase.failure?.kind == .audioSessionFailed })
+        #expect(pipeline.stats.audioStalls == 1)
+        #expect(audio.calls.last == "stopCapture")
+    }
+
+    @Test("a quiet room still delivers audio, so captions keep listening")
+    func silenceIsNotAStall() async throws {
+        let (pipeline, audio, _) = makePipeline(audioWatchdog: quickWatchdog)
+        await pipeline.start(settings: .default)
+        for _ in 0..<24 {
+            audio.push([Float](repeating: 0, count: 800))
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(pipeline.phase.isListening)
+        #expect(pipeline.stats.audioStalls == 0)
+    }
+
+    @Test("no failure while a phone call holds the microphone, and the watch resumes after it")
+    func phoneCallIsNotAStall() async throws {
+        let (pipeline, _, _) = makePipeline(audioWatchdog: quickWatchdog)
+        await pipeline.start(settings: .default)
+        pipeline.systemInterruptionChanged(active: true)
+        try await Task.sleep(for: .milliseconds(1_200))
+        #expect(pipeline.phase.isListening)
+
+        pipeline.systemInterruptionChanged(active: false)
+        #expect(await eventually { pipeline.phase.failure?.kind == .audioSessionFailed })
+    }
+
+    @Test("automatic recovery starts capture again after a stall")
+    func stallRecovers() async {
+        let (pipeline, audio, _) = makePipeline(
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: []),
+            audioWatchdog: quickWatchdog
+        )
+        await pipeline.start(settings: .default)
+
+        #expect(await eventually { audio.calls.filter { $0 == "startCapture" }.count == 2 })
+        #expect(await eventually { pipeline.phase.isListening })
+        #expect(pipeline.stats.audioStalls == 1)
     }
 }

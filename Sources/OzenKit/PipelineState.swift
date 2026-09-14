@@ -108,6 +108,9 @@ public struct PipelineStats: Sendable, Equatable {
     public var engineRestarts: Int = 0
     public var inputChanges: Int = 0
     public var speakerClustersOpened: Int = 0
+    /// Times the microphone stopped delivering audio mid-session and
+    /// capture was restarted because of it.
+    public var audioStalls: Int = 0
     /// A caption line is still being written (not yet final).
     public var hasOpenLine = false
     /// Sound alerts are being listened for right now. False while
