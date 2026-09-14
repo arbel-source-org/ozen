@@ -37,6 +37,12 @@ leave the phone.
 
 ## Things that are working as intended
 
+- **Speaker numbers start again from 1.** After a long quiet stretch (a new
+  conversation), or when the screen is cleared, unnamed voices are numbered
+  from "Speaker 1" (dover 1) again, so a phone left listening all week
+  doesn't end up at speaker 140. Lines already on screen keep their labels.
+  To have someone always called by name, tap one of their lines and type
+  the name.
 - **The screen turned off while listening.** After fifteen minutes with
   nothing said, the phone locks as usual to save the battery. Captions and
   doorbell or alarm alerts keep running; unlock to read.
