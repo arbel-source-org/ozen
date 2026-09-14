@@ -13,28 +13,68 @@ public enum NumberEmphasis {
     /// whole word (with its prefix), or for digits, from the first digit
     /// to the last, with a percent sign right after.
     public static func ranges(in text: String) -> [Range<String.Index>] {
+        let words = self.words(in: text)
         var result: [Range<String.Index>] = []
-        var previousWord = ""
+        for (position, word) in words.enumerated() {
+            if let firstDigit = word.text.firstIndex(where: \.isNumber), let lastDigit = word.text.lastIndex(where: \.isNumber) {
+                var end = word.text.index(after: lastDigit)
+                if end < word.text.endIndex, word.text[end] == "%" {
+                    end = word.text.index(after: end)
+                }
+                result.append(firstDigit..<end)
+                continue
+            }
+            guard let coreRange = word.coreRange, let core = word.core, let reading = numberReading(of: core) else { continue }
+            let previous = position > 0 ? words[position - 1].core : nil
+            let following = words[(position + 1)...].prefix(3).compactMap(\.core)
+            if onesWords.contains(reading.number) {
+                // "אף אחד" is nobody and "כל אחד" everybody, and "אחד
+                // את השני" is each other: none of them a count of one.
+                if let previous, notACountBefore.contains(previous) { continue }
+                if following.contains(where: otherOneWords.contains) { continue }
+            }
+            if twoWords.contains(reading.number) {
+                // "השני" is the other one or the second, never a count of two.
+                if reading.prefixes.contains("ה") { continue }
+                // "לשני" after "אחד" is "to each other"; alone it's "to two"
+                // or "on Monday".
+                let earlier = words[max(0, position - 3)..<position].compactMap(\.core)
+                if otherOneWords.contains(core), earlier.contains(where: onesWords.contains) { continue }
+            }
+            result.append(coreRange)
+        }
+        return result
+    }
+
+    private struct Word {
+        let text: Substring
+        /// The letters, without punctuation, quotes or direction marks.
+        let coreRange: Range<String.Index>?
+        let core: String?
+    }
+
+    private static func words(in text: String) -> [Word] {
+        var words: [Word] = []
         var start: String.Index?
         var index = text.startIndex
-        while index <= text.endIndex {
-            let isBoundary = index == text.endIndex || separates(at: index, in: text)
-            if isBoundary {
+        while true {
+            let atEnd = index == text.endIndex
+            if atEnd || separates(at: index, in: text) {
                 if let wordStart = start {
-                    let word = text[wordStart..<index]
-                    if let range = numberRange(in: word, after: previousWord) {
-                        result.append(range)
-                    }
-                    previousWord = String(letters(of: word).map { text[$0] } ?? "")
+                    let slice = text[wordStart..<index]
+                    let first = slice.firstIndex(where: \.isLetter)
+                    let last = slice.lastIndex(where: \.isLetter)
+                    let core = first.flatMap { first in last.map { first..<slice.index(after: $0) } }
+                    words.append(Word(text: slice, coreRange: core, core: core.map { String(slice[$0]) }))
                     start = nil
                 }
             } else if start == nil {
                 start = index
             }
-            guard index < text.endIndex else { break }
+            guard !atEnd else { break }
             index = text.index(after: index)
         }
-        return result
+        return words
     }
 
     /// Whitespace always ends a word. A hyphen, maqaf, dash or slash does
@@ -52,46 +92,32 @@ public enum NumberEmphasis {
         return !(text[text.index(before: index)].isNumber && text[after].isNumber)
     }
 
-    private static func numberRange(in word: Substring, after previousWord: String) -> Range<String.Index>? {
-        if let firstDigit = word.firstIndex(where: \.isNumber), let lastDigit = word.lastIndex(where: \.isNumber) {
-            var end = word.index(after: lastDigit)
-            if end < word.endIndex, word[end] == "%" {
-                end = word.index(after: end)
-            }
-            return firstDigit..<end
-        }
-        guard let core = letters(of: word) else { return nil }
-        let spelled = String(word[core])
-        guard isNumberWord(spelled) else { return nil }
-        // "אף אחד" is nobody and "כל אחד" everybody, not a count of one.
-        if onesWords.contains(spelled), notACountBefore.contains(previousWord) {
-            return nil
-        }
-        return core
-    }
-
-    /// The word without the punctuation, quotes or direction marks around it.
-    private static func letters(of word: Substring) -> Range<String.Index>? {
-        guard let first = word.firstIndex(where: \.isLetter), let last = word.lastIndex(where: \.isLetter) else { return nil }
-        return first..<word.index(after: last)
-    }
-
-    private static func isNumberWord(_ word: String) -> Bool {
-        if numberWords.contains(word) { return true }
-        // Up to two attached prefixes: "ב" + "שש", "ו" + "ב" + "שש".
+    /// The number word inside `word` and the prefixes attached in front
+    /// of it (at most two: "ו" + "ב" + "שש"), or nil when it isn't one.
+    private static func numberReading(of word: String) -> (number: String, prefixes: String)? {
+        if numberWords.contains(word) { return (word, "") }
         var rest = Substring(word)
         for _ in 0..<2 {
-            guard let first = rest.first, prefixes.contains(first), rest.count > 2 else { return false }
+            guard let first = rest.first, prefixes.contains(first), rest.count > 2 else { return nil }
             rest = rest.dropFirst()
-            if numberWords.contains(String(rest)) { return true }
+            if numberWords.contains(String(rest)) {
+                return (String(rest), String(word.dropLast(rest.count)))
+            }
         }
-        return false
+        return nil
     }
 
     static let prefixes: Set<Character> = ["ו", "ב", "ל", "מ", "ה", "ש", "כ"]
 
     static let onesWords: Set<String> = ["אחד", "אחת"]
+    static let twoWords: Set<String> = ["שני", "שתי"]
     static let notACountBefore: Set<String> = ["אף", "ואף", "באף", "לאף", "כל", "וכל", "לכל", "בכל", "מכל", "בבת"]
+    /// The second half of "each other": "אחד לשני", "אחת מהשנייה".
+    static let otherOneWords: Set<String> = [
+        "השני", "לשני", "מהשני", "בשני", "והשני",
+        "השנייה", "לשנייה", "מהשנייה", "בשנייה",
+        "השניה", "לשניה", "מהשניה", "בשניה",
+    ]
 
     /// Counting words only. "שנים" (years), "שבוע" (a week) and ordinals
     /// stay out, and so does anything that is mostly used as another word.

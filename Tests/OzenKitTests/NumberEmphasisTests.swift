@@ -29,6 +29,14 @@ struct NumberEmphasisTests {
         #expect(emphasized("רק פעם אחת ביום") == ["אחת"])
     }
 
+    @Test("each other, the other one and the second are not counts; Monday and the two of them are")
+    func otherOne() {
+        #expect(emphasized("הם עוזרים אחד לשני, אחת את השנייה") == [])
+        #expect(emphasized("בצד השני, והשני לא בא") == [])
+        #expect(emphasized("ביום שני בשלוש, השניים באו עם שני ילדים") == ["שני", "בשלוש", "השניים", "שני"])
+        #expect(emphasized("נתראה בשני, זה מספיק לשני אנשים") == ["בשני", "לשני"])
+    }
+
     @Test("words that only contain a number word, or years and weeks, stay plain")
     func lookalikes() {
         #expect(emphasized("לפני שנים, בעוד שבוע, המונה") == [])
