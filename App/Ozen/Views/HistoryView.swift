@@ -257,11 +257,11 @@ private struct SessionRow: View {
                 .lineLimit(2)
                 .foregroundStyle(.secondary)
             HStack(spacing: 10) {
-                Text("\(session.segmentCount) שורות")
+                Text(ConversationStats.linesText(session.segmentCount))
                 if session.starredCount > 0 {
                     Label("\(session.starredCount)", systemImage: "star.fill")
                         .foregroundStyle(Color.yellow.readable(on: colorScheme))
-                        .accessibilityLabel("\(session.starredCount) שורות מסומנות")
+                        .accessibilityLabel(ConversationStats.linesText(session.starredCount, adjective: (singular: "מסומנת", plural: "מסומנות")))
                 }
             }
             .font(.caption2)

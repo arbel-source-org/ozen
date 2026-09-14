@@ -103,6 +103,12 @@ struct ConversationStatsTests {
         #expect(ConversationStats.wordsText(1) == "מילה אחת")
         #expect(ConversationStats.wordsText(2) == "שתי מילים")
         #expect(ConversationStats.wordsText(840) == "840 מילים")
+        #expect(ConversationStats.linesText(1) == "שורה אחת")
+        #expect(ConversationStats.linesText(2) == "שתי שורות")
+        #expect(ConversationStats.linesText(14) == "14 שורות")
+        let starred = (singular: "מסומנת", plural: "מסומנות")
+        #expect(ConversationStats.linesText(1, adjective: starred) == "שורה מסומנת אחת")
+        #expect(ConversationStats.linesText(3, adjective: starred) == "3 שורות מסומנות")
 
         let record = TranscriptSessionRecord(
             startedAt: 0, endedAt: 720, engine: .whisperKit, modelVariant: nil, inputName: nil,

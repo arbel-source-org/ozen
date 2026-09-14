@@ -162,6 +162,18 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    /// "one line", "two lines" and "7 lines", with `adjective` after the
+    /// noun as Hebrew puts it ("starred"), in its singular and plural.
+    public static func linesText(_ count: Int, adjective: (singular: String, plural: String)? = nil) -> String {
+        let singular = adjective.map { " " + $0.singular } ?? ""
+        let plural = adjective.map { " " + $0.plural } ?? ""
+        switch count {
+        case 1: return "שורה\(singular) אחת"
+        case 2: return "שתי שורות\(plural)"
+        default: return "\(count) שורות\(plural)"
+        }
+    }
+
     public static func wordsText(_ count: Int) -> String {
         switch count {
         case 0: return "אין מילים"

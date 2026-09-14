@@ -54,7 +54,7 @@ struct HistoryDetailView: View {
                 .accessibilityActions { copyButton(segment.text) }
             }
             if numberLineIDs.count > Self.listedNumberLines {
-                Text("ועוד \(numberLineIDs.count - Self.listedNumberLines) שורות עם מספרים בהמשך השיחה")
+                Text("ועוד \(ConversationStats.linesText(numberLineIDs.count - Self.listedNumberLines)) עם מספרים בהמשך השיחה")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
