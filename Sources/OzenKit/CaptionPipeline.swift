@@ -202,11 +202,17 @@ public final class CaptionPipeline {
         }
 
         if let soundObservations {
+            stats.soundDetectionRunning = true
             soundTask = Task { [weak self] in
                 for await observation in soundObservations {
                     guard let self, self.runID == run else { return }
                     self.handle(soundObservation: observation)
                 }
+                // The classifier's stream can end on its own (the request
+                // failed); captions carry on, but diagnostics should say
+                // sound alerts are off rather than let them look armed.
+                guard let self, self.runID == run else { return }
+                self.stats.soundDetectionRunning = false
             }
         }
 
@@ -604,6 +610,7 @@ public final class CaptionPipeline {
 
     private func tearDownSession() {
         runID = UUID()
+        stats.soundDetectionRunning = false
         currentEngine = nil
         recentSpeechCluster = nil
         streamTask?.cancel()

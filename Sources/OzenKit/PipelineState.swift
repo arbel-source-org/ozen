@@ -110,6 +110,9 @@ public struct PipelineStats: Sendable, Equatable {
     public var speakerClustersOpened: Int = 0
     /// A caption line is still being written (not yet final).
     public var hasOpenLine = false
+    /// Sound alerts are being listened for right now. False while
+    /// captions run means the classifier stopped on its own.
+    public var soundDetectionRunning = false
 
     public init() {}
 

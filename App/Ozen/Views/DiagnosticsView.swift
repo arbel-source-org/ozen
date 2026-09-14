@@ -38,6 +38,7 @@ struct DiagnosticsView: View {
                 LabeledContent("חבילות אודיו", value: "\(viewModel.stats.audioChunksReceived)")
                 LabeledContent("שניות אודיו", value: String(format: "%.1f", viewModel.stats.audioSecondsReceived))
                 LabeledContent("החלפות מיקרופון", value: "\(viewModel.stats.inputChanges)")
+                LabeledContent("זיהוי צלילים", value: viewModel.stats.soundDetectionRunning ? "פועל" : (viewModel.isListening ? "נעצר" : "—"))
             }
 
             Section("תמלול") {
@@ -136,7 +137,7 @@ struct DiagnosticsView: View {
         audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges)
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
-        retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem)
+        retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText)
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString)

@@ -173,6 +173,11 @@ final class FakeSoundDetector: SoundEventDetecting, @unchecked Sendable {
     func push(_ observation: SoundObservation) {
         lock.withLock { continuation }?.yield(observation)
     }
+
+    /// The classifier giving up on its own, mid-session.
+    func finish() {
+        lock.withLock { continuation }?.finish()
+    }
 }
 
 // MARK: - Helpers
@@ -981,5 +986,30 @@ struct CaptionPipelineSilenceSpeakerTests {
         engine.emit(token(UUID(), "שלום", at: clock.now))
         #expect(await eventually { pipeline.segments.count == 1 })
         #expect(pipeline.segments.first?.speakerClusterID == nil)
+    }
+}
+
+@Suite("CaptionPipeline sound detection status")
+@MainActor
+struct CaptionPipelineSoundStatusTests {
+    @Test("the stats say when sound detection is running, and when the classifier stops on its own")
+    func soundStatus() async {
+        let detector = FakeSoundDetector()
+        let (pipeline, _, _) = makePipeline(soundDetector: detector)
+        #expect(pipeline.stats.soundDetectionRunning == false)
+        await pipeline.start(settings: .default)
+        #expect(pipeline.stats.soundDetectionRunning)
+
+        detector.finish()
+        #expect(await eventually { pipeline.stats.soundDetectionRunning == false })
+        #expect(pipeline.phase.isListening)
+    }
+
+    @Test("stopping captions marks sound detection as not running")
+    func stopClears() async {
+        let (pipeline, _, _) = makePipeline(soundDetector: FakeSoundDetector())
+        await pipeline.start(settings: .default)
+        pipeline.stop()
+        #expect(pipeline.stats.soundDetectionRunning == false)
     }
 }
