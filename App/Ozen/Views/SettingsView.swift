@@ -9,6 +9,9 @@ struct SettingsView: View {
     @State private var confirmingClear = false
     @State private var renamingProfile: SpeakerProfile?
     @State private var renameText = ""
+    /// A saved speaker swiped away, waiting for a yes: getting them back
+    /// means recording their voice again.
+    @State private var pendingSpeakerRemoval: String?
     /// iOS has notifications for Ozen switched off, so the "notify when the
     /// screen is off" switch can't do anything until they're allowed.
     @State private var notificationsBlocked = false
@@ -64,6 +67,17 @@ struct SettingsView: View {
                 Button("ביטול", role: .cancel) { renamingProfile = nil }
             } message: {
                 Text("השם החדש יופיע גם על השורות שכבר בכתוביות.")
+            }
+            .confirmationDialog(
+                "למחוק את \(pendingSpeakerRemoval ?? "") מהדוברים השמורים?",
+                isPresented: Binding(get: { pendingSpeakerRemoval != nil }, set: { if !$0 { pendingSpeakerRemoval = nil } }),
+                titleVisibility: .visible,
+                presenting: pendingSpeakerRemoval
+            ) { name in
+                Button("מחיקה", role: .destructive) { viewModel.removeSpeaker(named: name) }
+                Button("ביטול", role: .cancel) {}
+            } message: { _ in
+                Text("כדי שיזוהו שוב בשמם צריך להקליט את הקול מחדש.")
             }
             .confirmationDialog("למחוק את כל הכתוביות מהמסך?", isPresented: $confirmingClear, titleVisibility: .visible) {
                 Button("מחיקה", role: .destructive) { viewModel.clearTranscript() }
@@ -420,14 +434,13 @@ struct SettingsView: View {
                 }
                 .foregroundStyle(.primary)
                 .accessibilityHint("הקישו כדי לשנות את השם")
-            }
-            .onDelete { offsets in
-                // Resolve names before removing anything: each removal
-                // shifts the rows the remaining offsets refer to.
-                let speakers = SavedSpeaker.grouping(viewModel.settings.speakerProfiles)
-                let names = offsets.compactMap { speakers.indices.contains($0) ? speakers[$0].name : nil }
-                for name in names {
-                    viewModel.removeSpeaker(named: name)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button {
+                        pendingSpeakerRemoval = speaker.name
+                    } label: {
+                        Label("מחיקה", systemImage: "trash")
+                    }
+                    .tint(.red)
                 }
             }
             Button {
