@@ -729,6 +729,11 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    /// Names a saved conversation, in order with any autosave in flight.
+    public func renameConversation(id: UUID, title: String) {
+        historyWriter.renameNow(id: id, title: title)
+    }
+
     private var currentHistorySegments: [TranscriptSegment] {
         let segments = pipeline.segments
         guard historySegmentOffset > 0 else { return segments }

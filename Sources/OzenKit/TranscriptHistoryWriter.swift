@@ -1,4 +1,5 @@
 import Dispatch
+import Foundation
 
 /// Writes conversations to history away from the caption screen's thread.
 ///
@@ -31,6 +32,15 @@ public final class TranscriptHistoryWriter: Sendable {
     public func saveNow(_ record: TranscriptSessionRecord) {
         queue.sync { [store] in
             _ = try? store.save(record)
+        }
+    }
+
+    /// Names a conversation in the same queue as the saves, so an autosave
+    /// that already read the old summary can't land after the new name
+    /// and drop it.
+    public func renameNow(id: UUID, title: String) {
+        queue.sync { [store] in
+            try? store.rename(id: id, title: title)
         }
     }
 

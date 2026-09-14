@@ -290,7 +290,7 @@ struct HistoryDetailView: View {
         .alert("שם לשיחה", isPresented: $renaming) {
             TextField("למשל: ביקור אצל הרופא", text: $newTitle)
             Button("שמירה") {
-                try? viewModel.historyStore.rename(id: sessionID, title: newTitle)
+                viewModel.renameConversation(id: sessionID, title: newTitle)
                 let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 record?.title = trimmed.isEmpty ? nil : trimmed
                 // The list behind this screen shows the name too.

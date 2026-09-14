@@ -54,6 +54,30 @@ struct TranscriptHistoryWriterTests {
         #expect(store.listSummaries().count == 1)
     }
 
+    @Test("a rename waits for autosaves already queued, so the name ends up on the newest copy")
+    func renameQueuesBehindAutosave() {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let queue = DispatchQueue(label: "test.writer")
+        let writer = TranscriptHistoryWriter(store: store, queue: queue)
+        let id = UUID()
+        writer.saveNow(record(id: id, lines: 1, ended: false))
+
+        queue.suspend()
+        let autosaved = offThread { writer.saveInBackground(self.record(id: id, lines: 4, ended: false)) }
+        let autosaveReturned = autosaved.wait(timeout: .now() + .seconds(1)) == .success
+        let renamed = offThread { writer.renameNow(id: id, title: "ארוחת ערב") }
+        let renameReturnedEarly = renamed.wait(timeout: .now() + .milliseconds(200)) == .success
+        queue.resume()
+        if !autosaveReturned { autosaved.wait() }
+        if !renameReturnedEarly { renamed.wait() }
+        writer.waitUntilIdle()
+
+        #expect(renameReturnedEarly == false)
+        #expect(store.load(id: id)?.title == "ארוחת ערב")
+        #expect(store.load(id: id)?.segments.count == 4)
+    }
+
     @Test("a save made now lands after an autosave that was still waiting, never under it")
     func saveNowWinsOverPendingAutosave() {
         let (store, dir) = makeStore()
