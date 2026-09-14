@@ -681,7 +681,8 @@ public struct TranscriptHistoryStore: Sendable {
         return "\(twoDigits(day)).\(twoDigits(month)).\(year)"
     }
 
-    static func formattedClockTime(_ timestamp: TimeInterval, utcOffsetSeconds: Int) -> String {
+    /// "14:02:07": the clock time of `timestamp` at the given offset from UTC.
+    public static func formattedClockTime(_ timestamp: TimeInterval, utcOffsetSeconds: Int) -> String {
         let totalSeconds = Int(timestamp.rounded(.down)) + utcOffsetSeconds
         // Wrap into a single day of seconds so a session that (in theory)
         // started with a huge or negative timestamp still prints a valid

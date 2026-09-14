@@ -678,6 +678,9 @@ public final class LiveCaptionViewModel {
     /// for the diagnostics report.
     public var lockScreenCaptionsShowing: Bool { lockScreenShowing }
 
+    /// Why iOS last refused to put them there, for the diagnostics report.
+    public var lockScreenCaptionsLastStartFailure: String? { lockScreen?.lastStartFailure }
+
     /// She has seen where the lines she missed begin.
     func acknowledgeAwayLines() {
         guard !awayCatchUp.isAcknowledged else { return }

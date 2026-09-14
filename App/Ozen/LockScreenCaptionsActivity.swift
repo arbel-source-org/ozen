@@ -15,6 +15,9 @@ public protocol LockScreenCaptionsDisplaying: AnyObject {
     /// False when Live Activities are switched off for the app in iOS
     /// Settings, where nothing the app does can show them.
     var isAllowedBySystem: Bool { get }
+    /// Why iOS last refused to start one, with the clock time, for the
+    /// diagnostics report; nil when it never has.
+    var lastStartFailure: String? { get }
 }
 
 /// The Live Activity itself (see `CaptionActivityAttributes`).
@@ -32,6 +35,7 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
     static let staleAfterSeconds: TimeInterval = 120
 
     private var activityID: String?
+    private(set) var lastStartFailure: String?
 
     init() {
         // One left from a previous run (the app was closed while it
@@ -64,8 +68,17 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
         // Ended by iOS (they last eight hours) or swiped away.
         activityID = nil
         guard mayStart, isAllowedBySystem else { return false }
-        activityID = Self.start(state: state, staleDate: staleDate)
-        return activityID != nil
+        do {
+            activityID = try Self.start(state: state, staleDate: staleDate)
+            return true
+        } catch {
+            let time = TranscriptHistoryStore.formattedClockTime(
+                Date().timeIntervalSince1970,
+                utcOffsetSeconds: TimeZone.current.secondsFromGMT()
+            )
+            lastStartFailure = "\(time) \(error)"
+            return false
+        }
     }
 
     func end() {
@@ -80,9 +93,9 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
         }
     }
 
-    private nonisolated static func start(state: CaptionActivityAttributes.ContentState, staleDate: Date) -> String? {
+    private nonisolated static func start(state: CaptionActivityAttributes.ContentState, staleDate: Date) throws -> String {
         let content = ActivityContent(state: state, staleDate: staleDate)
-        return try? Activity.request(attributes: CaptionActivityAttributes(), content: content, pushType: nil).id
+        return try Activity.request(attributes: CaptionActivityAttributes(), content: content, pushType: nil).id
     }
 
     private nonisolated static func update(id: String, state: CaptionActivityAttributes.ContentState, staleDate: Date) async {

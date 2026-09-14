@@ -1478,12 +1478,16 @@ struct LiveCaptionViewModelLockScreenTests {
         /// iOS refuses to start one even though they are allowed.
         var refusesStarts = false
         var startAttempts = 0
+        var lastStartFailure: String?
 
         func show(_ content: LockScreenCaptionContent, mayStart: Bool) -> Bool {
             if !isShowing {
                 guard mayStart, isAllowedBySystem else { return false }
                 startAttempts += 1
-                guard !refusesStarts else { return false }
+                guard !refusesStarts else {
+                    lastStartFailure = "refused"
+                    return false
+                }
                 isShowing = true
             }
             shown.append(content)
@@ -1569,6 +1573,7 @@ struct LiveCaptionViewModelLockScreenTests {
         #expect(await eventually { viewModel.segments.last?.text == "line 5" })
         try? await Task.sleep(for: .milliseconds(200))
         #expect(lockScreen.startAttempts == 1)
+        #expect(viewModel.lockScreenCaptionsLastStartFailure == "refused")
 
         lockScreen.refusesStarts = false
         viewModel.sceneActivityChanged(isActive: false)
