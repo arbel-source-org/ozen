@@ -16,6 +16,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The whole history and its tags, so the release notes can list
+          # what changed since the previous build.
+          fetch-depth: 0
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
@@ -61,9 +65,21 @@ jobs:
         run: |
           set -euo pipefail
           TAG="build-${{ github.run_number }}"
+          # What changed since the newest earlier build: one line per
+          # commit subject, so whoever installs it can see what's new.
+          PREVIOUS=$(git tag --list 'build-*' --sort=-version:refname | grep -v "^$TAG\$" | head -n 1 || true)
+          {
+            echo "Unsigned device build for sideloading via SideStore/AltStore (they re-sign it locally with your own Apple ID - this file is not code-signed and won't install any other way). Built from commit ${{ github.sha }}. Settings shows ${{ github.run_number }} in brackets after the version."
+            echo
+            if [ -n "$PREVIOUS" ]; then
+              echo "## Changes since $PREVIOUS"
+              echo
+              git log --no-merges --pretty='- %s' "$PREVIOUS..${{ github.sha }}"
+            fi
+          } > release-notes.md
           # --target: without it the tag lands on the default branch's
           # newest commit, not the commit this IPA was built from.
           gh release create "$TAG" Ozen.ipa \
             --target "${{ github.sha }}" \
             --title "Ozen build ${{ github.run_number }}" \
-            --notes "Unsigned device build for sideloading via SideStore/AltStore (they re-sign it locally with your own Apple ID - this file is not code-signed and won't install any other way). Built from commit ${{ github.sha }}."
+            --notes-file release-notes.md
