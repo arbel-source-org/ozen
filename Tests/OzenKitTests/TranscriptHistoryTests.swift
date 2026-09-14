@@ -777,3 +777,15 @@ struct TranscriptHistoryTitleTests {
         #expect(try JSONDecoder().decode(TranscriptSessionRecord.self, from: Data(json.utf8)).title == nil)
     }
 }
+
+@Suite("Transcript history sharing a named conversation")
+struct TranscriptHistoryTitledExportTests {
+    @Test("a named conversation's shared text starts with its name")
+    func titled() {
+        let line = SavedSegment(id: UUID(), text: "כדור בבוקר", speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true)
+        var record = TranscriptSessionRecord(startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [line])
+        #expect(TranscriptHistoryStore.exportText(record) == "[00:00:00] כדור בבוקר")
+        record.title = "ביקור אצל הרופא"
+        #expect(TranscriptHistoryStore.exportText(record) == "ביקור אצל הרופא\n\n[00:00:00] כדור בבוקר")
+    }
+}

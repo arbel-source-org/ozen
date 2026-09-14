@@ -566,7 +566,7 @@ public struct TranscriptHistoryStore: Sendable {
     /// on the phone. The app passes `TimeZone.current.secondsFromGMT()`;
     /// tests pass 0.
     public static func exportText(_ record: TranscriptSessionRecord, utcOffsetSeconds: Int = 0) -> String {
-        record.segments
+        let lines = record.segments
             .map { segment in
                 let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
                 let star = segment.isStarred ? "★ " : ""
@@ -576,6 +576,9 @@ public struct TranscriptHistoryStore: Sendable {
                 return "\(star)[\(time)] \(segment.text)"
             }
             .joined(separator: "\n")
+        // A named conversation says what it was before the first line.
+        guard let title = record.title else { return lines }
+        return "\(title)\n\n\(lines)"
     }
 
     /// Starred lines as plain text for sharing: one block per
