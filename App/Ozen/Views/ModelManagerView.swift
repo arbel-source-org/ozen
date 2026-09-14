@@ -16,6 +16,9 @@ struct ModelManagerView: View {
     /// it's picked.
     @State private var freeBytes: Int64?
     @State private var pendingDelete: WhisperModelOption?
+    /// A model still to download, picked while captions run: they stop
+    /// until it has arrived, which can be minutes, so that is asked first.
+    @State private var pendingSwitch: WhisperModelOption?
     @State private var deleteError: String?
 
     private let store = WhisperModelStore()
@@ -55,6 +58,19 @@ struct ModelManagerView: View {
                 Text("אפשר להוריד אותו שוב בכל עת.")
             }
         }
+        .confirmationDialog(
+            "להוריד את \(pendingSwitch?.displayName ?? "") ולעבור אליו?",
+            isPresented: Binding(get: { pendingSwitch != nil }, set: { if !$0 { pendingSwitch = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingSwitch
+        ) { option in
+            Button("להוריד ולעבור") {
+                Task { await viewModel.setWhisperModel(option.variant) }
+            }
+            Button("ביטול", role: .cancel) {}
+        } message: { option in
+            Text("הכתוביות ייעצרו עד שההורדה (\(option.sizeLabel)) תסתיים והמודל ייטען. בלי Wi-Fi ההורדה עשויה לחכות לו.")
+        }
         .alert("המחיקה נכשלה", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
             Button("סגור", role: .cancel) {}
         } message: {
@@ -73,7 +89,11 @@ struct ModelManagerView: View {
             && StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.sizeMB, availableBytes: freeBytes) != nil
 
         return Button {
-            Task { await viewModel.setWhisperModel(option.variant) }
+            if !isInstalled, !isSelected, viewModel.isListening {
+                pendingSwitch = option
+            } else {
+                Task { await viewModel.setWhisperModel(option.variant) }
+            }
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
