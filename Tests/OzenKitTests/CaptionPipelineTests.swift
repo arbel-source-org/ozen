@@ -238,18 +238,6 @@ final class FactoryLog {
 /// after the triggering call; waiting on the condition rather than a fixed
 /// sleep keeps these tests both fast and non-flaky.
 @MainActor
-private func eventually(
-    timeoutMilliseconds: Int = 2_000,
-    _ condition: @MainActor () -> Bool
-) async -> Bool {
-    let deadline = ContinuousClock.now + .milliseconds(timeoutMilliseconds)
-    while ContinuousClock.now < deadline {
-        if condition() { return true }
-        try? await Task.sleep(for: .milliseconds(5))
-    }
-    return condition()
-}
-
 private func token(_ id: UUID, _ text: String, final: Bool = false, at time: TimeInterval = 1_000) -> TranscriptToken {
     TranscriptToken(utteranceID: id, text: text, isFinal: final, timestamp: time)
 }

@@ -5,6 +5,9 @@ import Foundation
 /// milliseconds, so a passing test never gets near the ceiling; it is generous
 /// because a CI simulator running hundreds of tests in parallel can take whole
 /// seconds to get to a background task, and a short one failed a test that way.
+///
+/// Lives with the portable tests so both `swift test` and the app's test
+/// bundle, which compiles these files too, share this one definition.
 @MainActor
 @discardableResult
 func eventually(within timeout: Duration = .seconds(10), _ condition: @MainActor () -> Bool) async -> Bool {
