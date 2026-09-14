@@ -228,6 +228,19 @@ private func makePipeline(
     return (pipeline, audio, log)
 }
 
+/// Every engine a factory built, held weakly, to see which are still alive.
+@MainActor
+final class BuiltEngines {
+    private var references: [() -> FakeEngine?] = []
+
+    var count: Int { references.count }
+    var aliveCount: Int { references.filter { $0() != nil }.count }
+
+    func add(_ engine: FakeEngine) {
+        references.append { [weak engine] in engine }
+    }
+}
+
 @MainActor
 final class FactoryLog {
     var calls = 0
@@ -590,6 +603,32 @@ struct CaptionPipelineLifecycleTests {
         await pipeline.restart(settings: settings)
 
         #expect(log.calls == 2)
+    }
+
+    @Test("switching to another model lets go of the one before, so two models are never kept loaded")
+    func switchingModelReleasesPrevious() async {
+        let built = BuiltEngines()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                let engine = FakeEngine(kind: settings.engine)
+                built.add(engine)
+                return engine
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await pipeline.start(settings: .default)
+        var turbo = AppSettings.default
+        turbo.whisperModelVariant = "large-v3_turbo"
+        await pipeline.restart(settings: turbo)
+        #expect(pipeline.phase == .listening)
+        #expect(await eventually { built.aliveCount == 1 })
+
+        // Going back builds the first one again rather than having kept it.
+        await pipeline.restart(settings: .default)
+        #expect(built.count == 3)
+        #expect(pipeline.phase == .listening)
     }
 
     @Test("retry after a failure starts again with the same settings")
