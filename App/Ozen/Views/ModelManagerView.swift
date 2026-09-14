@@ -67,6 +67,10 @@ struct ModelManagerView: View {
         let isInstalled = installed.contains(option.variant)
         let isPartial = partial.contains(option.variant)
         let downloadProgress = downloadProgress(for: option)
+        // Picking it would stop captions that work for a download with no
+        // room to land; the row says why instead.
+        let wontFit = !isInstalled && !isPartial && !isSelected
+            && StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.sizeMB, availableBytes: freeBytes) != nil
 
         return Button {
             Task { await viewModel.setWhisperModel(option.variant) }
@@ -138,6 +142,7 @@ struct ModelManagerView: View {
             .contentShape(Rectangle())
         }
         .foregroundStyle(.primary)
+        .disabled(wontFit)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             if (isInstalled || isPartial) && !(isSelected && (viewModel.isListening || viewModel.phase.isTransitioning)) {
                 Button(role: .destructive) {
