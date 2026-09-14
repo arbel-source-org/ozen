@@ -1,0 +1,234 @@
+import SwiftUI
+import OzenKit
+
+struct HistoryDetailView: View {
+    let viewModel: LiveCaptionViewModel
+    let sessionID: UUID
+    /// The search that led here, if any: its lines are highlighted and
+    /// the first one is scrolled into view.
+    var searchQuery: String = ""
+    /// A line to open at, when arriving from the starred lines list.
+    var initialLineID: UUID?
+    /// Something in saved history changed here (a deletion, a new name).
+    let onHistoryChanged: () -> Void
+    @State private var record: TranscriptSessionRecord?
+    @State private var stats: ConversationStats?
+    @State private var matches: [UUID] = []
+    @State private var currentMatch = 0
+    @State private var hasJumped = false
+    @State private var scrollRequest = 0
+    @State private var hasLoaded = false
+    @State private var confirmingDelete = false
+    @State private var renaming = false
+    @State private var newTitle = ""
+    @Environment(\.dismiss) private var dismiss
+
+    private var isSearch: Bool {
+        !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        Group {
+            if !hasLoaded {
+                ProgressView()
+            } else if let record {
+                ScrollViewReader { proxy in
+                List {
+                    if let stats, stats.totalWords > 0 {
+                        ConversationSummarySection(stats: stats)
+                    }
+                    Section {
+                        ForEach(Array(record.segments.enumerated()), id: \.element.id) { index, segment in
+                            VStack(alignment: .leading, spacing: 2) {
+                                if let name = segment.speakerName,
+                                   CaptionLayout.showsSpeakerLabel(for: segment, after: index > 0 ? record.segments[index - 1] : nil) {
+                                    Text(name)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID))
+                                }
+                                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                    if segment.isStarred {
+                                        Image(systemName: "star.fill")
+                                            .foregroundStyle(.yellow)
+                                    }
+                                    if viewModel.display.markUncertainLines,
+                                       CaptionConfidence.isUncertain(confidence: segment.confidence, isCommitted: segment.isCommitted) {
+                                        Image(systemName: "questionmark.circle")
+                                            .foregroundStyle(.secondary)
+                                            .accessibilityLabel("ייתכן שלא נשמע נכון")
+                                    }
+                                    Text(CaptionLayout.readableText(segment.text))
+                                        .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
+                                }
+                            }
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel((segment.isStarred ? "מסומן כחשוב. " : "") + (segment.speakerName.map { "\($0): \(segment.text)" } ?? segment.text))
+                            .accessibilityHint(isSearch && matches.contains(segment.id) ? "מכיל את מה שחיפשת" : "")
+                            .listRowBackground(isSearch && matches.contains(segment.id) ? Color.yellow.opacity(0.3) : nil)
+                            .id(segment.id)
+                        }
+                    } header: {
+                        Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .long, time: .shortened))
+                    } footer: {
+                        Text("\(record.engine.displayName)\(record.modelVariant.map { " · \($0)" } ?? "")\(record.inputName.map { " · \($0)" } ?? "")")
+                    }
+                }
+                .task {
+                    // Give the list a moment to lay out, then open where the
+                    // search found something instead of at the top.
+                    guard let target = isSearch ? matches.first : initialLineID else { return }
+                    try? await Task.sleep(for: .milliseconds(150))
+                    withAnimation { proxy.scrollTo(target, anchor: .center) }
+                }
+                .onChange(of: scrollRequest) { _, _ in
+                    guard matches.indices.contains(currentMatch) else { return }
+                    withAnimation { proxy.scrollTo(matches[currentMatch], anchor: .center) }
+                }
+                }
+            } else {
+                ContentUnavailableView("השיחה לא נמצאה", systemImage: "questionmark.folder")
+            }
+        }
+        .navigationTitle(record?.title ?? "שיחה")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if matches.count > (isSearch ? 1 : 0) {
+                ToolbarItem(placement: .bottomBar) {
+                    Button {
+                        // Stars start from the first one; a search is
+                        // already showing its first match.
+                        currentMatch = isSearch || hasJumped ? (currentMatch + 1) % matches.count : 0
+                        hasJumped = true
+                        scrollRequest += 1
+                    } label: {
+                        Label(
+                            isSearch
+                                ? "המקום הבא (\(currentMatch + 1) מתוך \(matches.count))"
+                                : (hasJumped ? "הסימון הבא (\(currentMatch + 1) מתוך \(matches.count))" : "לשורות המסומנות (\(matches.count))"),
+                            systemImage: isSearch ? "chevron.down" : "star.fill"
+                        )
+                        .labelStyle(.titleAndIcon)
+                    }
+                }
+            }
+            if let record {
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(
+                        item: TranscriptHistoryStore.exportText(record, utcOffsetSeconds: TimeZone.current.secondsFromGMT()),
+                        subject: Text("שיחה מאוזן"),
+                        message: Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .abbreviated, time: .shortened))
+                    ) {
+                        Label("שיתוף", systemImage: "square.and.arrow.up")
+                    }
+                }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button {
+                        newTitle = record.title ?? ""
+                        renaming = true
+                    } label: {
+                        Label("מתן שם לשיחה", systemImage: "pencil")
+                    }
+                }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button(role: .destructive) {
+                        confirmingDelete = true
+                    } label: {
+                        Label("מחיקה", systemImage: "trash")
+                    }
+                }
+            }
+        }
+        .alert("שם לשיחה", isPresented: $renaming) {
+            TextField("למשל: ביקור אצל הרופא", text: $newTitle)
+            Button("שמירה") {
+                viewModel.renameConversation(id: sessionID, title: newTitle)
+                let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                record?.title = trimmed.isEmpty ? nil : trimmed
+                // The list behind this screen shows the name too.
+                onHistoryChanged()
+            }
+            Button("ביטול", role: .cancel) {}
+        } message: {
+            Text("השם יופיע ברשימת השיחות, ואפשר יהיה לחפש לפיו.")
+        }
+        .confirmationDialog("למחוק את השיחה הזו?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button("מחיקה", role: .destructive) {
+                try? viewModel.historyStore.delete(id: sessionID)
+                onHistoryChanged()
+                dismiss()
+            }
+            Button("ביטול", role: .cancel) {}
+        }
+        .task {
+            // Loaded and summarised once, off the main thread: a long
+            // conversation's words shouldn't be counted on every redraw, or
+            // hold up the screen sliding in.
+            guard !hasLoaded else { return }
+            let store = viewModel.historyStore
+            let id = sessionID
+            let query = searchQuery
+            let (loaded, summary, found) = await Task.detached(priority: .userInitiated) {
+                let loaded = store.load(id: id)
+                return (
+                    loaded,
+                    loaded.map(ConversationStats.compute(from:)),
+                    // With no search, the button steps through starred lines.
+                    loaded.map { record in
+                        query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? record.segments.filter(\.isStarred).map(\.id)
+                            : TranscriptHistoryStore.matchingSegmentIDs(in: record, query: query)
+                    } ?? []
+                )
+            }.value
+            record = loaded
+            stats = summary
+            matches = found
+            // Opened at a starred line: "next" continues from that one.
+            if let initialLineID, let index = found.firstIndex(of: initialLineID) {
+                currentMatch = index
+                hasJumped = true
+            }
+            hasLoaded = true
+        }
+    }
+}
+
+/// Who said how much, at the top of a saved conversation.
+private struct ConversationSummarySection: View {
+    let stats: ConversationStats
+
+    var body: some View {
+        Section {
+            Text(stats.hebrewSummary)
+                .font(.headline)
+
+            ForEach(stats.speakers) { speaker in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(speaker.name)
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Text("\(ConversationStats.wordsText(speaker.words)) · \(Int((stats.wordFraction(of: speaker) * 100).rounded()))%")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                    ProgressView(value: stats.wordFraction(of: speaker))
+                        .tint(SpeakerColor.color(forClusterID: speaker.clusterID))
+                        .accessibilityHidden(true)
+                }
+                .accessibilityElement(children: .combine)
+            }
+
+            if stats.wordsPerMinute > 0 {
+                LabeledContent("קצב דיבור", value: "\(Int(stats.wordsPerMinute.rounded())) מילים לדקה")
+            }
+            LabeledContent("חילופי דוברים", value: "\(stats.totalTurns)")
+            if let longest = stats.longestTurn, stats.speakers.count > 1 {
+                LabeledContent("הדיבור הארוך ביותר", value: "\(longest.speakerName) · \(ConversationStats.wordsText(longest.words))")
+            }
+        } header: {
+            Text("סיכום")
+        }
+    }
+}
