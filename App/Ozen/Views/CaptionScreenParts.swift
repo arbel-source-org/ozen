@@ -93,7 +93,17 @@ struct NameSpeakerSheet: View {
     let segment: TranscriptSegment
     let viewModel: LiveCaptionViewModel
     @State private var name = ""
+    @FocusState private var typing: Bool
     @Environment(\.dismiss) private var dismiss
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var canSave: Bool { !trimmedName.isEmpty && segment.speakerClusterID != nil }
+
+    /// Someone already saved, split off as a new "speaker 3": one tap puts
+    /// the right name back instead of typing it again.
+    private var savedNames: [String] {
+        SavedSpeaker.grouping(viewModel.settings.speakerProfiles).map(\.name)
+    }
 
     var body: some View {
         NavigationStack {
@@ -109,28 +119,46 @@ struct NameSpeakerSheet: View {
                 Section {
                     TextField("שם", text: $name)
                         .textInputAutocapitalization(.words)
+                        .focused($typing)
+                        .submitLabel(.done)
+                        .onSubmit { if canSave { save() } }
                 } footer: {
                     Text(segment.speakerClusterID == nil
                          ? "עדיין לא זוהה קול לשורה הזו. נסו שוב אחרי שהאדם ידבר עוד קצת."
                          : "מעכשיו כל מה שהקול הזה יגיד יופיע עם השם הזה.")
+                }
+                if segment.speakerClusterID != nil, !savedNames.isEmpty {
+                    Section("דוברים שמורים") {
+                        ForEach(savedNames, id: \.self) { saved in
+                            Button {
+                                name = saved
+                                save()
+                            } label: {
+                                Label(saved, systemImage: "person.wave.2")
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("שם לדובר")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("שמירה") {
-                        viewModel.nameSpeaker(of: segment, name: name.trimmingCharacters(in: .whitespaces))
-                        dismiss()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || segment.speakerClusterID == nil)
+                    Button("שמירה", action: save)
+                        .disabled(!canSave)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("ביטול") { dismiss() }
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
+        .onAppear { typing = segment.speakerClusterID != nil && savedNames.isEmpty }
+    }
+
+    private func save() {
+        viewModel.nameSpeaker(of: segment, name: trimmedName)
+        dismiss()
     }
 }
 
