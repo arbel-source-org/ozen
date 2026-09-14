@@ -255,6 +255,13 @@ struct LiveCaptionView: View {
                             } label: {
                                 Label(starred ? "ביטול הסימון" : "סימון כחשוב", systemImage: starred ? "star.slash" : "star")
                             }
+                            if viewModel.hasHebrewVoice {
+                                Button {
+                                    viewModel.askToRepeat()
+                                } label: {
+                                    Label("לבקש שיחזרו על זה", systemImage: "arrow.counterclockwise.circle")
+                                }
+                            }
                             Button {
                                 namingSegment = segment
                             } label: {

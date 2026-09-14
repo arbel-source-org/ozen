@@ -572,6 +572,14 @@ public final class LiveCaptionViewModel {
         synthesizer.speak(trimmed, rate: settings.speechRate)
     }
 
+    /// What the phone says for "ask them to repeat that" on a caption line.
+    public static let repeatRequest = "סליחה, אפשר לחזור על זה?"
+
+    /// Asks the room to say that again, aloud, straight from a caption line.
+    public func askToRepeat() {
+        speak(Self.repeatRequest)
+    }
+
     public func stopSpeaking() {
         synthesizer?.stop()
     }

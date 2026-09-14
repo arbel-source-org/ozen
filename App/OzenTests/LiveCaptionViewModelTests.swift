@@ -791,3 +791,27 @@ struct LiveCaptionViewModelStarAcrossBreakTests {
         #expect(later?.segmentCount == 1)
     }
 }
+
+@Suite("LiveCaptionViewModel ask to repeat")
+@MainActor
+struct LiveCaptionViewModelAskToRepeatTests {
+    @Test("asking to repeat says the request aloud and pauses captions so the phone doesn't caption itself")
+    func asksAloud() async {
+        let synthesizer = FakeSynthesizer()
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-repeat-\(UUID())", isDirectory: true)
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            synthesizer: synthesizer
+        )
+        await viewModel.start()
+        #expect(pipeline.phase.isListening)
+
+        viewModel.askToRepeat()
+
+        #expect(synthesizer.requests.last == LiveCaptionViewModel.repeatRequest)
+        #expect(pipeline.phase == .paused)
+    }
+}
