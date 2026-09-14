@@ -93,7 +93,9 @@ struct BatteryBanner: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .frame(maxWidth: .infinity)
-            .background((isCritical ? Color.red : Color.orange).opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
+            // White on the system orange is under 3:1: the deeper shade
+            // keeps the percentage readable at a glance.
+            .background((isCritical ? Color.red : Color.orange).deepShade.opacity(0.92), in: RoundedRectangle(cornerRadius: 16))
             .foregroundStyle(.white)
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }
