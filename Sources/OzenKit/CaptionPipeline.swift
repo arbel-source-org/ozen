@@ -532,7 +532,7 @@ public final class CaptionPipeline {
 
         var collected: [Float] = []
         let target = Int(seconds * Self.sampleRate)
-        if let stream = try? audio.startCapture() {
+        if let stream = await enrollmentCapture() {
             for await chunk in stream {
                 collected.append(contentsOf: chunk)
                 onProgress(min(Double(collected.count) / Double(target), 1))
@@ -545,6 +545,18 @@ public final class CaptionPipeline {
             await resume()
         }
         return collected
+    }
+
+    /// Starts capture for enrollment. Captions may never have run since the
+    /// app opened (it's done from Settings), and then there is no audio
+    /// session to capture from: set one up first, instead of recording
+    /// nothing and blaming a quiet room.
+    private func enrollmentCapture() async -> AsyncStream<[Float]>? {
+        if let stream = try? audio.startCapture() { return stream }
+        guard await audio.requestPermission() == .granted else { return nil }
+        let preferredInput = activeSettings?.preferredInputUID ?? audio.selectedInputUID
+        guard (try? audio.prepareSession(preferredInputUID: preferredInput)) != nil else { return nil }
+        return try? audio.startCapture()
     }
 
     /// Tags an inferred cluster with a real name after the fact, returning

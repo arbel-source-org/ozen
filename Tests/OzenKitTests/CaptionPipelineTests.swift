@@ -19,6 +19,9 @@ final class FakeAudioCapturer: AudioCapturing {
     var permissionAnswer: AudioPermission = .granted
     var prepareError: Error?
     var startError: Error?
+    /// Like the real session: capture can't start before one is prepared.
+    var requiresPreparedSession = false
+    private var isPrepared = false
     var calls: [String] = []
     private var continuation: AsyncStream<[Float]>.Continuation?
 
@@ -30,6 +33,7 @@ final class FakeAudioCapturer: AudioCapturing {
     func prepareSession(preferredInputUID: String?) throws {
         calls.append("prepareSession")
         if let prepareError { throw prepareError }
+        isPrepared = true
         selectedInputUID = AudioRoutePolicy.resolveSelection(
             available: availableInputs, preferredUID: preferredInputUID, currentUID: selectedInputUID
         )
@@ -38,6 +42,7 @@ final class FakeAudioCapturer: AudioCapturing {
     func startCapture() throws -> AsyncStream<[Float]> {
         calls.append("startCapture")
         if let startError { throw startError }
+        if requiresPreparedSession && !isPrepared { throw NSError(domain: "FakeAudio", code: 2) }
         let (stream, continuation) = AsyncStream<[Float]>.makeStream()
         self.continuation = continuation
         return stream
@@ -721,6 +726,32 @@ struct CaptionPipelineEnrollmentTests {
 
         #expect(samples.count == 8_000)
         #expect(pipeline.phase == .idle)
+    }
+
+    @Test("enrollment before captions ever ran sets up the audio session itself")
+    func enrollmentWithoutSession() async {
+        let (pipeline, audio, _) = makePipeline()
+        audio.requiresPreparedSession = true
+        let recording = Task { @MainActor in
+            await pipeline.captureEnrollmentSamples(seconds: 0.5)
+        }
+        #expect(await eventually { audio.calls.filter { $0 == "startCapture" }.count == 2 })
+        audio.push([Float](repeating: 0.1, count: 8_000))
+        let samples = await recording.value
+
+        #expect(samples.count == 8_000)
+        #expect(audio.calls.prefix(4) == ["startCapture", "requestPermission", "prepareSession", "startCapture"])
+    }
+
+    @Test("without microphone permission enrollment records nothing and sets nothing up")
+    func enrollmentWithoutPermission() async {
+        let (pipeline, audio, _) = makePipeline()
+        audio.requiresPreparedSession = true
+        audio.permissionAnswer = .denied
+        let samples = await pipeline.captureEnrollmentSamples(seconds: 0.5)
+
+        #expect(samples.isEmpty)
+        #expect(!audio.calls.contains("prepareSession"))
     }
 
     @Test("an empty token for an unknown utterance creates no row")
