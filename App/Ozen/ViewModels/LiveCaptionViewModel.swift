@@ -1204,10 +1204,10 @@ public final class LiveCaptionViewModel {
     }
 
     /// The saved conversation the line at `index` belongs to, so the
-    /// caption screen can open it; nil when saving is off or that
-    /// conversation was deleted.
+    /// caption screen can open it; nil when saving is off or failing (it
+    /// might never have reached the disk) or that conversation was deleted.
     public func savedConversationID(holdingLineAt index: Int) -> UUID? {
-        guard settings.saveHistory, pipeline.segments.indices.contains(index) else { return nil }
+        guard settings.saveHistory, historySaveFailure == nil, pipeline.segments.indices.contains(index) else { return nil }
         if index >= historySegmentOffset { return historySessionID }
         return closedHistorySessions.last(where: { $0.lines.contains(index) })?.id
     }

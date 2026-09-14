@@ -1465,7 +1465,7 @@ struct LiveCaptionViewModelSavingTroubleTests {
         #expect(saved.startedAt > listeningBy - 60)
     }
 
-    @Test("a conversation that can't be saved puts the banner up")
+    @Test("a conversation that can't be saved puts the banner up, and isn't offered for reading back")
     func historySaveFailure() async throws {
         let blocker = try blockedFolder()
         let engine = FakeEngine()
@@ -1482,6 +1482,7 @@ struct LiveCaptionViewModelSavingTroubleTests {
         viewModel.persistHistory(ended: false)
         #expect(viewModel.historySaveFailure != nil)
         #expect(viewModel.savingTrouble.shouldShow)
+        #expect(viewModel.savedConversationID(holdingLineAt: 0) == nil)
     }
 
     @Test("an autosave that fails in the background puts the banner up by itself, without waiting for the next save")
