@@ -3,18 +3,20 @@ import UIKit
 import OzenKit
 import OzenPlatform
 
-/// First launch. Five short pages in large type: what the app is, how it
+/// First launch. Six short pages in large type: what the app is, how it
 /// works, which engine (with the model download explained before it
-/// happens), the microphone permission asked with a reason, and go.
+/// happens), the microphone permission asked with a reason, the words
+/// that should buzz the phone (her name), and go.
 struct OnboardingView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var page = 0
     @State private var microphone: AudioPermission?
     @State private var notificationsAllowed: Bool?
     @State private var requesting = false
+    @State private var nameDraft = ""
     @Environment(\.openURL) private var openURL
 
-    private static let pageCount = 5
+    private static let pageCount = 6
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,7 +25,8 @@ struct OnboardingView: View {
                 howItWorksPage.tag(1)
                 enginePage.tag(2)
                 microphonePage.tag(3)
-                readyPage.tag(4)
+                namePage.tag(4)
+                readyPage.tag(5)
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .indexViewStyle(.page(backgroundDisplayMode: .always))
@@ -151,6 +154,60 @@ struct OnboardingView: View {
                 .disabled(requesting)
             }
         }
+    }
+
+    /// The alert for her name only works once someone has typed the name
+    /// in, and the screen for that is three levels deep in Settings; here
+    /// it's asked for while the family member setting the phone up is
+    /// still holding it.
+    private var namePage: some View {
+        OnboardingPage(symbol: "bell.and.waves.left.and.right", title: "כשקוראים לך") {
+            Text("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.")
+            HStack(spacing: 10) {
+                TextField("השם שלך", text: $nameDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .submitLabel(.done)
+                    .onSubmit(addName)
+                Button("להוסיף", action: addName)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(nameDraft.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            HStack(spacing: 10) {
+                ForEach(Self.suggestedNames, id: \.self) { word in
+                    let added = hasKeyword(word)
+                    Button {
+                        viewModel.addKeywordAlert(phrase: word)
+                    } label: {
+                        Label(word, systemImage: added ? "checkmark" : "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(added)
+                }
+            }
+            if !viewModel.settings.keywordAlerts.isEmpty {
+                Label(
+                    "הטלפון ירטוט על: " + viewModel.settings.keywordAlerts.map(\.phrase).joined(separator: ", "),
+                    systemImage: "checkmark.circle.fill"
+                )
+                .foregroundStyle(.green)
+            }
+            Text("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private static let suggestedNames = ["סבתא", "אמא"]
+
+    private func hasKeyword(_ word: String) -> Bool {
+        viewModel.settings.keywordAlerts.contains { HebrewText.normalize($0.phrase) == HebrewText.normalize(word) }
+    }
+
+    private func addName() {
+        viewModel.addKeywordAlert(phrase: nameDraft)
+        nameDraft = ""
     }
 
     private var readyPage: some View {

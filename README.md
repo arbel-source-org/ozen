@@ -154,8 +154,10 @@ things, for Hebrew conversation, entirely on-device.
 - **Saved speakers can be renamed**, and the new name follows onto lines
   already on screen and into the names list.
 - **First-launch walkthrough** in large type that explains the engines and
-  the one-time model download before it happens, and asks for the
-  microphone with a reason.
+  the one-time model download before it happens, asks for the
+  microphone with a reason, and asks for her name (with "סבתא" one tap
+  away), so the name alert works from the first conversation instead of
+  waiting for someone to find it in Settings.
 - **Siri and Shortcuts.** "היי סירי, התחל כתוביות באוזן", "עצור כתוביות",
   and "תגיד באוזן ..." to have the phone say something aloud.
 - **Diagnostics screen** with every pipeline counter (audio chunks, tokens,
