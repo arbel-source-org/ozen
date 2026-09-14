@@ -105,7 +105,7 @@ have a simulator":
   Takes a stream of partial/final tokens from the engine and produces a
   `TranscriptSegment` timeline where text is either "committed" (locked,
   never rewritten, safe to lay out permanently) or "pending" (may still
-  change, rendered visually distinct — dimmer/italic). A token commits when
+  change, rendered visually distinct — dimmer only, since Hebrew has no italic). A token commits when
   either the engine marks it final or a short silence gap has passed. Fully
   unit-testable with a fake token stream, no audio or UI involved.
 - `SpeakerEmbedder` (protocol) + `EmbeddingClusterer` — diarization.

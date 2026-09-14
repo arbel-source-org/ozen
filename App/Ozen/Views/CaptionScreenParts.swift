@@ -2,9 +2,11 @@ import SwiftUI
 import OzenKit
 
 /// One utterance. `isCommitted` drives the only visual difference that
-/// matters here: committed text is solid and permanent, pending text is
-/// dimmer and italic to signal "still settling" — nothing is ever
-/// truncated in either state.
+/// matters here: committed text is at full strength and permanent, pending
+/// text is dimmer to signal "still settling" — nothing is ever truncated in
+/// either state. Only the colour changes, never the slant or weight: Hebrew
+/// has no italic, so iOS would skew the letters of the very line being read,
+/// and a change of weight re-wraps the line at the moment it locks in.
 struct CaptionRow: View {
     let segment: TranscriptSegment
     let speakerName: String?
@@ -41,8 +43,7 @@ struct CaptionRow: View {
                         .foregroundStyle(theme.pendingText)
                 }
                 Text(CaptionLayout.displayText(segment.text))
-                    .font(.system(size: display.fontSize, weight: weight))
-                    .italic(!segment.isCommitted)
+                    .font(.system(size: display.fontSize, weight: display.boldText ? .bold : .medium))
                     .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
                     .multilineTextAlignment(.leading)
                     .lineSpacing(display.fontSize * 0.15)
@@ -70,11 +71,6 @@ struct CaptionRow: View {
         var line = speakerName.map { "\($0): \(segment.text)" } ?? segment.text
         if isUncertain { line = "ייתכן שלא נשמע נכון. " + line }
         return isStarred ? "מסומן כחשוב. \(line)" : line
-    }
-
-    private var weight: Font.Weight {
-        if display.boldText { return .bold }
-        return segment.isCommitted ? .medium : .regular
     }
 }
 
