@@ -64,15 +64,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="build-${{ github.run_number }}"
+          # Tagged as a version (v0.2.18 for build 18 of 0.2.0): GitHub
+          # orders releases made on the same day by their version, and a
+          # tag like build-18 isn't one, so they came out shuffled.
+          VERSION=$(sed -n 's/^ *MARKETING_VERSION: *"\([0-9.]*\)".*/\1/p' project.yml | head -n 1)
+          if [ -z "$VERSION" ]; then
+            echo "MARKETING_VERSION not found in project.yml" >&2
+            exit 1
+          fi
+          TAG="v${VERSION%.*}.${{ github.run_number }}"
           # What changed since the newest earlier build: one line per
           # commit subject, so whoever installs it can see what's new.
-          PREVIOUS=$(git tag --list 'build-*' --sort=-version:refname | grep -v "^$TAG\$" | head -n 1 || true)
+          PREVIOUS=$(git tag --list 'v*' --sort=-version:refname | grep -v "^$TAG\$" | head -n 1 || true)
           {
             echo "Unsigned device build for sideloading via SideStore/AltStore (they re-sign it locally with your own Apple ID - this file is not code-signed and won't install any other way). Built from commit ${{ github.sha }}. Settings shows ${{ github.run_number }} in brackets after the version."
             echo
             if [ -n "$PREVIOUS" ]; then
-              echo "## Changes since $PREVIOUS"
+              echo "## Changes since build ${PREVIOUS##*.}"
               echo
               # Hebrew quoted in a commit subject is replaced with a marker:
               # the repository's pages are kept free of Hebrew text.
@@ -85,4 +93,5 @@ jobs:
           gh release create "$TAG" Ozen.ipa \
             --target "${{ github.sha }}" \
             --title "Ozen build ${{ github.run_number }}" \
-            --notes-file release-notes.md
+            --notes-file release-notes.md \
+            --latest

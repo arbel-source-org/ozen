@@ -41,11 +41,13 @@ things were broken along the way, none of them in Ozen itself.
 ## Getting the build
 
 Each run of the release workflow attaches `Ozen.ipa` to a GitHub Release named
-`build-N`. The repository is private, so downloading needs an account with
-access: sign in on the Releases page, or with the GitHub CLI logged in,
+"Ozen build N", tagged `v0.2.N` (the app's version series, then the build
+number, which Settings shows in brackets). The repository is private, so
+downloading needs an account with access: sign in on the Releases page, or
+with the GitHub CLI logged in,
 
 ```
-gh release download build-N -R arbelonson-source/ozen -p Ozen.ipa --clobber
+gh release download v0.2.N -R arbelonson-source/ozen -p Ozen.ipa --clobber
 ```
 
 ## The command

@@ -3,7 +3,10 @@ name: CI
 on:
   # A change that only touches documentation can't break a build or a
   # test, and the iOS job holds a macOS runner for a quarter of an hour.
+  # Branches only: a release's version tag would otherwise start a run
+  # for a commit that was already tested.
   push:
+    branches: ['**']
     paths-ignore: ['docs/**', '**/*.md', 'LICENSE']
   pull_request:
     paths-ignore: ['docs/**', '**/*.md', 'LICENSE']
