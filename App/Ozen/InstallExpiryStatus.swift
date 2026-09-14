@@ -27,10 +27,11 @@ final class InstallExpiryStatus {
     }
 
     private func scheduleReminder(expiresAt: Date?) {
-        let now = Date()
-        let offset = TimeZone.current.secondsFromGMT()
+        // The local clock as it will be then: a daylight-saving change can
+        // fall inside the week.
+        let offset = expiresAt.map { TimeZone.current.secondsFromGMT(for: $0) } ?? 0
         guard let expiresAt,
-              let remindAt = InstallExpiry.reminderDate(expiresAt: expiresAt, now: now, utcOffsetSeconds: offset)
+              let remindAt = InstallExpiry.reminderDate(expiresAt: expiresAt, now: Date(), utcOffsetSeconds: offset)
         else {
             // Reinstalled with a profile that no longer needs one, or too
             // late for it: don't leave an old reminder waiting.

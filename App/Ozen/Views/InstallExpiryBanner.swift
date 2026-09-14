@@ -12,7 +12,7 @@ struct InstallExpiryBanner: View {
     let onDismiss: () -> Void
 
     private var title: String {
-        InstallExpiry.warningTitle(expiresAt: expiresAt, now: now, utcOffsetSeconds: TimeZone.current.secondsFromGMT())
+        InstallExpiry.warningTitle(expiresAt: expiresAt, now: now, utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: expiresAt))
     }
 
     var body: some View {
