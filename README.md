@@ -160,7 +160,9 @@ things, for Hebrew conversation, entirely on-device.
   the one-time model download before it happens, asks for the
   microphone with a reason, and asks for her name (with "סבתא" one tap
   away), so the name alert works from the first conversation instead of
-  waiting for someone to find it in Settings.
+  waiting for someone to find it in Settings. A phone set up before that
+  page existed gets the same question as a card on the empty caption
+  screen, until a word is added or it's turned down.
 - **Siri and Shortcuts.** "היי סירי, התחל כתוביות באוזן", "עצור כתוביות",
   and "תגיד באוזן ..." to have the phone say something aloud.
 - **Diagnostics screen** with every pipeline counter (audio chunks, tokens,
@@ -223,7 +225,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (435 tests). The platform layer (WhisperKit/Speech engines, real
+logic (436 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 75 tests).

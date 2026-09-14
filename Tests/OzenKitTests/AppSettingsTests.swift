@@ -163,3 +163,25 @@ struct AppSettingsFreshInstallTests {
         #expect(SettingsStore(fileURL: url).load().hasCompletedOnboarding)
     }
 }
+
+@Suite("AppSettings offer to set up the name alert")
+struct NameAlertOfferTests {
+    @Test("offered to a phone set up before the walkthrough asked, until a word is added or it's turned down")
+    func offer() throws {
+        let fromOlderBuild = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedOnboarding":true}"#.utf8))
+        #expect(fromOlderBuild.nameAlertOfferDismissed == false)
+        #expect(fromOlderBuild.offersNameAlert)
+
+        var withName = fromOlderBuild
+        withName.keywordAlerts = [KeywordAlert(phrase: "רותי")]
+        #expect(withName.offersNameAlert == false)
+
+        var turnedDown = fromOlderBuild
+        turnedDown.nameAlertOfferDismissed = true
+        let roundTripped = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(turnedDown))
+        #expect(roundTripped.offersNameAlert == false)
+
+        // During the walkthrough its own page asks instead.
+        #expect(AppSettings.default.offersNameAlert == false)
+    }
+}

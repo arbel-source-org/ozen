@@ -154,6 +154,17 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// Saved conversations delete themselves after this long; see
     /// `HistoryRetention`.
     public var historyRetention: HistoryRetention
+    /// "Not now" was tapped on the caption screen's offer to set up the
+    /// alert for her name; see `offersNameAlert`.
+    public var nameAlertOfferDismissed: Bool
+
+    /// Whether the caption screen should offer to set up the alert for her
+    /// name. The walkthrough asks for it, but only on a fresh install;
+    /// phones set up before it did never had the name asked for, and
+    /// without it the buzz for her name never comes.
+    public var offersNameAlert: Bool {
+        hasCompletedOnboarding && keywordAlerts.isEmpty && !nameAlertOfferDismissed
+    }
 
     public init(
         engine: TranscriptionEngineKind,
@@ -175,7 +186,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         hasCompletedOnboarding: Bool = false,
         notifyWhenInBackground: Bool = true,
         allowCellularModelDownload: Bool = false,
-        historyRetention: HistoryRetention = .forever
+        historyRetention: HistoryRetention = .forever,
+        nameAlertOfferDismissed: Bool = false
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -197,6 +209,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.notifyWhenInBackground = notifyWhenInBackground
         self.allowCellularModelDownload = allowCellularModelDownload
         self.historyRetention = historyRetention
+        self.nameAlertOfferDismissed = nameAlertOfferDismissed
     }
 
     /// The phrases a hard-of-hearing person needs most often in
@@ -227,6 +240,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding
         case notifyWhenInBackground, allowCellularModelDownload, historyRetention
+        case nameAlertOfferDismissed
     }
 
     public init(from decoder: any Decoder) throws {
@@ -259,6 +273,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         notifyWhenInBackground = container.lenient(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
         allowCellularModelDownload = container.lenient(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
         historyRetention = container.lenient(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
+        nameAlertOfferDismissed = container.lenient(Bool.self, forKey: .nameAlertOfferDismissed) ?? defaults.nameAlertOfferDismissed
     }
 }
 

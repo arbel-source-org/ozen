@@ -13,7 +13,6 @@ struct OnboardingView: View {
     @State private var microphone: AudioPermission?
     @State private var notificationsAllowed: Bool?
     @State private var requesting = false
-    @State private var nameDraft = ""
     @Environment(\.openURL) private var openURL
 
     private static let pageCount = 6
@@ -163,56 +162,11 @@ struct OnboardingView: View {
     private var namePage: some View {
         OnboardingPage(symbol: "bell.and.waves.left.and.right", title: "כשקוראים לך") {
             Text("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.")
-            HStack(spacing: 10) {
-                TextField("השם שלך", text: $nameDraft)
-                    .textFieldStyle(.roundedBorder)
-                    .submitLabel(.done)
-                    .onSubmit(addName)
-                Button("להוסיף", action: addName)
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .disabled(nameDraft.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            HStack(spacing: 10) {
-                ForEach(Self.suggestedNames, id: \.self) { word in
-                    let added = hasKeyword(word)
-                    Button {
-                        viewModel.addKeywordAlert(phrase: word)
-                    } label: {
-                        Label(word, systemImage: added ? "checkmark" : "plus")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .disabled(added)
-                }
-            }
-            if !viewModel.settings.keywordAlerts.isEmpty {
-                Label(
-                    "הטלפון ירטוט על: " + viewModel.settings.keywordAlerts.map(\.phrase).joined(separator: ", "),
-                    systemImage: "checkmark.circle.fill"
-                )
-                .foregroundStyle(.green)
-            }
+            NameAlertForm(viewModel: viewModel)
             Text("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
-    }
-
-    private static let suggestedNames = ["סבתא", "אמא"]
-
-    private func hasKeyword(_ word: String) -> Bool {
-        viewModel.settings.keywordAlerts.contains { HebrewText.normalize($0.phrase) == HebrewText.normalize(word) }
-    }
-
-    private func addName() {
-        let name = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return }
-        viewModel.addKeywordAlert(phrase: name)
-        // A name the engine has never heard is spelled some other way, and
-        // then never matches; on the names list, both engines expect it.
-        viewModel.addVocabularyTerm(name)
-        nameDraft = ""
     }
 
     private var readyPage: some View {

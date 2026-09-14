@@ -31,6 +31,7 @@ struct LiveCaptionView: View {
     @State private var showingBigText = false
     @State private var confirmingCellularDownload = false
     @State private var openedRecentConversation: TranscriptSessionSummary?
+    @State private var showingNameAlertForm = false
     /// Live scale while a pinch is in progress; 1 otherwise.
     @GestureState private var pinchScale: Double = 1
     @Environment(\.openURL) private var openURL
@@ -345,6 +346,18 @@ struct LiveCaptionView: View {
     @State private var scrollProxy: ScrollViewProxy?
 
     private var transcript: some View {
+        transcriptScroll
+            // Here rather than on the offer card: the card goes as soon as
+            // the first caption line arrives, and would take the sheet
+            // with it. Its own expression: the list is already near what
+            // the type checker manages in one.
+            .sheet(isPresented: $showingNameAlertForm) {
+                NameAlertSheet(viewModel: viewModel)
+                    .alertOverlay(for: viewModel)
+            }
+    }
+
+    private var transcriptScroll: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: max(12, liveDisplay.fontSize * 0.6)) {
@@ -433,10 +446,50 @@ struct LiveCaptionView: View {
             if let recent = viewModel.recentConversation {
                 recentConversationCard(recent)
                     .padding(.top, 8)
+            } else if viewModel.settings.offersNameAlert {
+                nameAlertOfferCard
+                    .padding(.top, 8)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 40)
+    }
+
+    /// For a phone set up before the walkthrough asked for her name: the
+    /// buzz for her name only works once the name is in.
+    private var nameAlertOfferCard: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                showingNameAlertForm = true
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "bell.and.waves.left.and.right")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("שהטלפון ירטוט כשקוראים לך?")
+                            .font(.headline)
+                        Text("הקישו כדי לכתוב את השם שלך")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Button {
+                withAnimation { viewModel.dismissNameAlertOffer() }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("לא עכשיו")
+        }
+        .foregroundStyle(theme.chrome)
+        .padding(14)
+        .background(theme.chrome.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
     }
 
     /// After iOS closed the app in the middle of a conversation: what was
@@ -668,7 +721,7 @@ struct LiveCaptionView: View {
     /// half-height sheet both would show, twice, for one doorbell. The
     /// vibration and the VoiceOver announcement still come from here, once.
     private var isCoveredByAlertScreen: Bool {
-        showingMicPicker || showingSettings || showingTypeToSpeak || showingBigText
+        showingMicPicker || showingSettings || showingTypeToSpeak || showingBigText || showingNameAlertForm
     }
 
     /// Vibrates for an alert while the sound classifier looks away, so the

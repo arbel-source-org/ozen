@@ -722,6 +722,12 @@ public final class LiveCaptionViewModel {
         keywordAlertsChanged()
     }
 
+    /// "Not now" on the caption screen's offer to set up her name alert.
+    public func dismissNameAlertOffer() {
+        settings.nameAlertOfferDismissed = true
+        persist()
+    }
+
     public func setKeywordAlert(id: UUID, enabled: Bool) {
         guard let index = settings.keywordAlerts.firstIndex(where: { $0.id == id }) else { return }
         settings.keywordAlerts[index].isEnabled = enabled
