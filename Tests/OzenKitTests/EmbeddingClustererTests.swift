@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import OzenKit
 
@@ -111,5 +112,32 @@ struct EmbeddingClustererTests {
         // A voice found live still starts at one sample.
         let live = clusterer.assign(embedding: [0, 0, 1])
         #expect(clusterer.clusters.first { $0.id == live }?.sampleCount == 1)
+    }
+}
+
+@Suite("EmbeddingClusterer with bad input")
+struct EmbeddingClustererBadInputTests {
+    @Test("a voice print of another length never merges, even with the threshold at zero")
+    func mismatchedLengths() {
+        var clusterer = EmbeddingClusterer()
+        clusterer.similarityThreshold = 0
+        let old = clusterer.enroll(name: "שרה", embedding: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        let live = clusterer.assign(embedding: [1, 0, 0])
+        #expect(live != old)
+        #expect(clusterer.clusters.count == 2)
+    }
+}
+
+@Suite("AppSettings speaker threshold from a file")
+struct AppSettingsThresholdDecodingTests {
+    @Test("a threshold outside the slider's range is brought back to its nearest edge")
+    func clamped() throws {
+        func decode(_ value: String) throws -> Float {
+            try JSONDecoder().decode(AppSettings.self, from: Data(#"{"speakerSimilarityThreshold":\#(value)}"#.utf8)).speakerSimilarityThreshold
+        }
+        #expect(try decode("0") == 0.5)
+        #expect(try decode("-3") == 0.5)
+        #expect(try decode("7") == 0.95)
+        #expect(try decode("0.8") == 0.8)
     }
 }

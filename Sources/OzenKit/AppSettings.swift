@@ -222,6 +222,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
         display = try container.decodeIfPresent(DisplayPreferences.self, forKey: .display) ?? defaults.display
         hapticOnSpeechResume = try container.decodeIfPresent(Bool.self, forKey: .hapticOnSpeechResume) ?? defaults.hapticOnSpeechResume
         speakerSimilarityThreshold = try container.decodeIfPresent(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold
+        // The Settings slider's range; a file saying otherwise gets the nearest edge.
+        speakerSimilarityThreshold = speakerSimilarityThreshold.isFinite
+            ? min(max(speakerSimilarityThreshold, 0.5), 0.95)
+            : defaults.speakerSimilarityThreshold
         keywordAlerts = try container.decodeIfPresent([KeywordAlert].self, forKey: .keywordAlerts) ?? defaults.keywordAlerts
         soundAlerts = try container.decodeIfPresent(SoundAlertPreferences.self, forKey: .soundAlerts) ?? defaults.soundAlerts
         saveHistory = try container.decodeIfPresent(Bool.self, forKey: .saveHistory) ?? defaults.saveHistory

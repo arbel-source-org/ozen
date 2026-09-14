@@ -1340,3 +1340,24 @@ struct CaptionPipelineDownloadNetworkTests {
         #expect(engine.prepareCount == 1)
     }
 }
+
+struct NaNEmbedder: SpeakerEmbedding {
+    func embed(samples: [Float], sampleRate: Double) -> [Float]? {
+        [.nan, 0, 0]
+    }
+}
+
+@Suite("CaptionPipeline broken voice prints")
+@MainActor
+struct CaptionPipelineNaNEmbeddingTests {
+    @Test("a voice print full of NaNs is skipped instead of opening a phantom speaker")
+    func nanSkipped() async throws {
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in FakeEngine() }, embedder: NaNEmbedder(), recovery: .disabled)
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.5, count: 48_000))
+        #expect(await eventually { pipeline.stats.audioChunksReceived == 1 })
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(pipeline.speakerClusters.isEmpty)
+    }
+}

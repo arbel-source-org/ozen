@@ -562,7 +562,9 @@ public final class CaptionPipeline {
                 embedder.embed(samples: window, sampleRate: sampleRate)
             }.value
             guard runID == run else { return }
-            guard let embedding = computed else { continue }
+            // A glitched buffer can make NaNs; one NaN centroid would never
+            // match anything again and open a new "speaker" every window.
+            guard let embedding = computed, embedding.allSatisfy(\.isFinite) else { continue }
             let clusterCountBefore = clusterer.clusters.count
             let clusterID = clusterer.assign(embedding: embedding)
             if clusterer.clusters.count > clusterCountBefore {

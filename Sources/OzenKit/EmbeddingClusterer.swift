@@ -30,7 +30,13 @@ public struct EmbeddingClusterer: Sendable {
     /// enough. Returns the cluster id.
     @discardableResult
     public mutating func assign(embedding: [Float]) -> Int {
-        guard let (bestIndex, bestSimilarity) = bestMatch(for: embedding), bestSimilarity >= similarityThreshold else {
+        // A voice print of a different length (a profile saved by an older
+        // build's embedder) can't be averaged into this one, whatever the
+        // threshold says.
+        guard let (bestIndex, bestSimilarity) = bestMatch(for: embedding),
+              bestSimilarity >= similarityThreshold,
+              clusters[bestIndex].centroid.count == embedding.count
+        else {
             return openCluster(with: embedding, name: nil)
         }
         updateCentroid(at: bestIndex, with: embedding)
