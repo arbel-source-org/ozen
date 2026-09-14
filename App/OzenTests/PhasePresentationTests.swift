@@ -45,6 +45,18 @@ struct PhasePresentationTests {
         #expect(presentation.tint == .red)
     }
 
+    @Test("cloud captions without a usable key or credit send the person to Settings; no internet offers a retry")
+    func cloudFailures() {
+        let key = PhasePresentation(phase: failure(EngineUnavailability(kind: .cloudKeyNeeded, detail: "")), engine: .cloud, interruptedBySystem: false)
+        let credit = PhasePresentation(phase: failure(EngineUnavailability(kind: .cloudOutOfCredit, detail: "")), engine: .cloud, interruptedBySystem: false)
+        let offline = PhasePresentation(phase: failure(EngineUnavailability(kind: .noInternet, detail: "")), engine: .cloud, interruptedBySystem: false)
+        #expect(key.action == .openEngineSettings)
+        #expect(key.title.contains("OpenRouter"))
+        #expect(credit.action == .openEngineSettings)
+        #expect(offline.action == .retry)
+        #expect(key.isBusy == false)
+    }
+
     @Test("paused while the phone talks says so, and that captions come back by themselves")
     func pausedForSpeech() {
         let speaking = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false, pausedForSpeech: true)

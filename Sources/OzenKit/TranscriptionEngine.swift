@@ -6,11 +6,14 @@ import Foundation
 public enum TranscriptionEngineKind: String, Codable, Sendable, CaseIterable {
     case whisperKit
     case appleSpeech
+    /// A speech model on the internet (see `CloudSpeech`).
+    case cloud
 
     public var displayName: String {
         switch self {
         case .whisperKit: return "Whisper (on-device)"
         case .appleSpeech: return "Apple Speech"
+        case .cloud: return "Cloud (OpenRouter)"
         }
     }
 }
@@ -111,6 +114,12 @@ public struct EngineUnavailability: Sendable, Equatable, Error {
         case waitingForWiFi
         /// The phone doesn't have room for the model (see `StorageSpaceGate`).
         case notEnoughStorage
+        /// Cloud captions have no key, or OpenRouter turned the key down.
+        case cloudKeyNeeded
+        /// The OpenRouter key has used up its credit or spending limit.
+        case cloudOutOfCredit
+        /// Cloud captions can't reach the internet.
+        case noInternet
         case temporarilyUnavailable
         case other
     }

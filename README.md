@@ -25,13 +25,21 @@ things, for Hebrew conversation, entirely on-device.
   so a person's turns are labeled by name. Unnamed voices are numbered from
   1 in each conversation, so a phone listening all week doesn't reach
   "speaker 140".
-- **Two swappable on-device engines** — [WhisperKit](https://github.com/argmaxinc/WhisperKit)
+- **Two swappable on-device engines, plus the cloud** — [WhisperKit](https://github.com/argmaxinc/WhisperKit)
   (Whisper via CoreML) and Apple's own on-device Speech framework — picked
   in Settings, since which one is actually better for Hebrew on a given
   device is an open, testable question rather than an assumption.
-- **Nothing leaves the phone.** No server, no account, no API key. (The one
-  exception is an explicit, off-by-default switch to let Apple's recognizer
-  use Apple's servers when iOS has no on-device Hebrew model.)
+- **Optional cloud captions** for when the phone's models are too slow or
+  lose track of several people talking: each sentence goes to a speech
+  model through [OpenRouter](https://openrouter.ai) with a key pasted into
+  Settings (stored only in the phone's Keychain). On Hebrew test recordings
+  it got 29% of words wrong against 39% for Whisper large-v3 turbo and 60%
+  for Whisper small, and puts each change of speaker on its own line. About
+  15 cents per hour of continuous speech. See `CloudSpeech`.
+- **Nothing leaves the phone unless you choose the cloud.** No server, no
+  account. The exceptions are both explicit and off by default: cloud
+  captions above, and a switch to let Apple's recognizer use Apple's
+  servers when iOS has no on-device Hebrew model.
 - **A status control that always says what's happening** — asking for the
   microphone, downloading the model (with a percentage and the time left
   at its current pace), loading it,

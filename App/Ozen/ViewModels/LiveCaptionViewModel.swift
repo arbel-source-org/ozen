@@ -111,6 +111,8 @@ public final class LiveCaptionViewModel {
                     return WhisperKitEngine(modelVariant: settings.whisperModelVariant)
                 case .appleSpeech:
                     return AppleSpeechEngine(allowServerFallback: settings.allowServerFallbackForAppleSpeech)
+                case .cloud:
+                    return CloudSpeechEngine(model: settings.cloudModel, apiKey: { CloudKeyStore.read() })
                 }
             },
             embedder: MFCCSpeakerEmbedder(),
@@ -685,6 +687,23 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    public func setCloudModel(_ model: String) async {
+        guard settings.cloudModel != model else { return }
+        settings.cloudModel = model
+        persist()
+        if settings.engine == .cloud {
+            await restartIfRunning()
+        }
+    }
+
+    /// The OpenRouter key was saved or removed in Settings. The engine reads
+    /// it at every start, so a running or failed session just starts again.
+    public func cloudKeyChanged() async {
+        if settings.engine == .cloud {
+            await restartIfRunning()
+        }
+    }
+
     public func setAllowServerFallback(_ allowed: Bool) async {
         guard settings.allowServerFallbackForAppleSpeech != allowed else { return }
         settings.allowServerFallbackForAppleSpeech = allowed
@@ -1149,7 +1168,7 @@ public final class LiveCaptionViewModel {
             startedAt: startedAt,
             endedAt: ended ? (endedAt ?? Date().timeIntervalSince1970) : nil,
             engine: settings.engine,
-            modelVariant: settings.engine == .whisperKit ? settings.whisperModelVariant : nil,
+            modelVariant: settings.modelDescription,
             inputName: selectedInput?.portName,
             starred: starredSegmentIDs
         )
@@ -1256,7 +1275,7 @@ public final class LiveCaptionViewModel {
                 startedAt: startedAt,
                 endedAt: lastCaptionAt,
                 engine: settings.engine,
-                modelVariant: settings.engine == .whisperKit ? settings.whisperModelVariant : nil,
+                modelVariant: settings.modelDescription,
                 inputName: selectedInput?.portName
             ))
         }

@@ -157,7 +157,12 @@ struct PhasePresentation {
     }
 
     private init(engineFailure: EngineUnavailability?, engine: TranscriptionEngineKind?) {
-        let engineName = engine == .appleSpeech ? "זיהוי הדיבור של אפל" : "Whisper"
+        let engineName: String
+        switch engine {
+        case .appleSpeech: engineName = "זיהוי הדיבור של אפל"
+        case .cloud: engineName = "התמלול בענן"
+        case .whisperKit, .none: engineName = "Whisper"
+        }
         switch engineFailure?.kind {
         case .permissionDenied:
             self.init(
@@ -207,6 +212,30 @@ struct PhasePresentation {
                 detail: "הקישו לנסות שוב, או בחרו מודל קטן יותר בהגדרות",
                 systemImage: "cpu",
                 tint: .red,
+                action: .retry
+            )
+        case .cloudKeyNeeded:
+            self.init(
+                title: "התמלול בענן צריך מפתח OpenRouter תקין",
+                detail: "הקישו כדי להזין מפתח בהגדרות",
+                systemImage: "key",
+                tint: .orange,
+                action: .openEngineSettings
+            )
+        case .cloudOutOfCredit:
+            self.init(
+                title: "נגמר הקרדיט של מפתח OpenRouter",
+                detail: "הוסיפו קרדיט באתר OpenRouter, או הקישו לעבור ל‑Whisper שבטלפון",
+                systemImage: "creditcard",
+                tint: .orange,
+                action: .openEngineSettings
+            )
+        case .noInternet:
+            self.init(
+                title: "אין חיבור לאינטרנט",
+                detail: "התמלול בענן צריך אינטרנט · הקישו לנסות שוב",
+                systemImage: "wifi.slash",
+                tint: .orange,
                 action: .retry
             )
         case .temporarilyUnavailable:

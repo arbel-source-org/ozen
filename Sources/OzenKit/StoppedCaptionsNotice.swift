@@ -112,6 +112,10 @@ public struct StoppedCaptionsNotice: Sendable, Equatable {
                 return "אין מספיק מקום בטלפון. פתחו את אוזן לפרטים."
             case (.noAudioInputs, _):
                 return "לא נמצא מיקרופון. פתחו את אוזן כדי להמשיך."
+            case (_, .cloudKeyNeeded?), (_, .cloudOutOfCredit?):
+                return "יש בעיה במפתח של התמלול בענן. פתחו את אוזן לפרטים."
+            case (_, .noInternet?):
+                return "אין אינטרנט, והתמלול בענן צריך אותו. פתחו את אוזן כדי לעבור ל‑Whisper שבטלפון."
             default:
                 return "פתחו את אוזן כדי להמשיך."
             }

@@ -107,13 +107,18 @@ struct StoppedCaptionsNoticeTests {
         let storage = StoppedCaptionsNotice.content(for: .failed(engineFailure(.notEnoughStorage))).body
         let noMic = StoppedCaptionsNotice.content(for: .failed(PipelineFailure(kind: .noAudioInputs, detail: ""))).body
         let other = StoppedCaptionsNotice.content(for: .failed(glitch)).body
+        let cloudKey = StoppedCaptionsNotice.content(for: .failed(engineFailure(.cloudKeyNeeded))).body
+        let cloudCredit = StoppedCaptionsNotice.content(for: .failed(engineFailure(.cloudOutOfCredit))).body
+        let offline = StoppedCaptionsNotice.content(for: .failed(engineFailure(.noInternet))).body
 
         #expect(callEnded.contains("אחרי השיחה"))
         #expect(permission == speechPermission)
         #expect(permission.contains("הרשאה"))
         #expect(storage.contains("מקום"))
         #expect(noMic.contains("מיקרופון"))
-        #expect(Set([callEnded, permission, storage, noMic, other]).count == 5)
+        #expect(cloudKey == cloudCredit)
+        #expect(offline.contains("אינטרנט"))
+        #expect(Set([callEnded, permission, storage, noMic, other, cloudKey, offline]).count == 7)
     }
 }
 

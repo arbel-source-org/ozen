@@ -151,6 +151,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// servers. That's a privacy decision the user makes explicitly, never
     /// a silent fallback.
     public var allowServerFallbackForAppleSpeech: Bool
+    /// The OpenRouter model cloud captions use (see `CloudSpeech`). The key
+    /// itself is kept in the Keychain, never in this file.
+    public var cloudModel: String
     public var display: DisplayPreferences
     /// A short buzz when speech resumes after a quiet stretch — the reader
     /// may have looked away from the screen.
@@ -204,6 +207,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         creditLine: String,
         whisperModelVariant: String = "small",
         allowServerFallbackForAppleSpeech: Bool = false,
+        cloudModel: String = CloudSpeech.fastModel,
         display: DisplayPreferences = .default,
         hapticOnSpeechResume: Bool = true,
         speakerSimilarityThreshold: Float = 0.75,
@@ -226,6 +230,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.creditLine = creditLine
         self.whisperModelVariant = whisperModelVariant
         self.allowServerFallbackForAppleSpeech = allowServerFallbackForAppleSpeech
+        self.cloudModel = cloudModel
         self.display = display
         self.hapticOnSpeechResume = hapticOnSpeechResume
         self.speakerSimilarityThreshold = speakerSimilarityThreshold
@@ -266,7 +271,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case engine, languageCode, preferredInputUID, speakerProfiles, creditLine
-        case whisperModelVariant, allowServerFallbackForAppleSpeech, display
+        case whisperModelVariant, allowServerFallbackForAppleSpeech, cloudModel, display
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding
@@ -288,6 +293,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         creditLine = defaults.creditLine
         whisperModelVariant = container.lenient(String.self, forKey: .whisperModelVariant) ?? defaults.whisperModelVariant
         allowServerFallbackForAppleSpeech = container.lenient(Bool.self, forKey: .allowServerFallbackForAppleSpeech) ?? defaults.allowServerFallbackForAppleSpeech
+        cloudModel = container.lenient(String.self, forKey: .cloudModel).flatMap { $0.isEmpty ? nil : $0 } ?? defaults.cloudModel
         display = container.lenient(DisplayPreferences.self, forKey: .display) ?? defaults.display
         hapticOnSpeechResume = container.lenient(Bool.self, forKey: .hapticOnSpeechResume) ?? defaults.hapticOnSpeechResume
         speakerSimilarityThreshold = container.lenient(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold
@@ -307,6 +313,16 @@ public struct AppSettings: Codable, Sendable, Equatable {
         allowCellularModelDownload = container.lenient(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
         historyRetention = container.lenient(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
         nameAlertOfferDismissed = container.lenient(Bool.self, forKey: .nameAlertOfferDismissed) ?? defaults.nameAlertOfferDismissed
+    }
+
+    /// The model behind the engine in use, for saved conversations and
+    /// diagnostics: the Whisper size or the cloud model. Apple's has none.
+    public var modelDescription: String? {
+        switch engine {
+        case .whisperKit: return whisperModelVariant
+        case .cloud: return cloudModel
+        case .appleSpeech: return nil
+        }
     }
 }
 

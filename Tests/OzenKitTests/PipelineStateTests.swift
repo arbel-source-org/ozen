@@ -55,6 +55,9 @@ struct PipelineStateTests {
         #expect(failure(.modelLoadFailed).suggestsOtherEngine)
         #expect(!failure(.permissionDenied).suggestsOtherEngine)
         #expect(!failure(.temporarilyUnavailable).suggestsOtherEngine)
+        #expect(failure(.noInternet).suggestsOtherEngine)
+        #expect(!failure(.cloudKeyNeeded).suggestsOtherEngine)
+        #expect(!failure(.cloudOutOfCredit).suggestsOtherEngine)
         #expect(!PipelineFailure(kind: .audioSessionFailed, detail: "").suggestsOtherEngine)
     }
 

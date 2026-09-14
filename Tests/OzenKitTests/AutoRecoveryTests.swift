@@ -19,6 +19,9 @@ struct AutoRecoveryPolicyTests {
         #expect(AutoRecoveryPolicy.schedule(for: failure(.engineUnavailable, engine: .temporarilyUnavailable)) == .glitch)
         #expect(AutoRecoveryPolicy.schedule(for: failure(.engineUnavailable, engine: .modelDownloadFailed)) == .download)
         #expect(AutoRecoveryPolicy.schedule(for: failure(.engineUnavailable, engine: .modelLoadFailed)) == .loadFailure)
+        #expect(AutoRecoveryPolicy.schedule(for: failure(.engineUnavailable, engine: .cloudKeyNeeded)) == .never)
+        #expect(AutoRecoveryPolicy.schedule(for: failure(.engineUnavailable, engine: .cloudOutOfCredit)) == .never)
+        #expect(AutoRecoveryPolicy.schedule(for: failure(.engineUnavailable, engine: .noInternet)) == .glitch)
     }
 
     @Test("glitches back off through their delays and then stop")

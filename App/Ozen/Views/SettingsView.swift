@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import AppIntents
 import OzenKit
+import OzenPlatform
 
 struct SettingsView: View {
     @Bindable var viewModel: LiveCaptionViewModel
@@ -19,6 +20,11 @@ struct SettingsView: View {
     /// iOS has Live Activities for Ozen switched off, so the lock screen
     /// captions switch can't show anything until they're allowed.
     @State private var lockScreenBlocked = false
+    /// What's typed in the OpenRouter key field. The saved key itself is
+    /// never read back onto the screen, only whether there is one.
+    @State private var cloudKeyDraft = ""
+    @State private var hasCloudKey = CloudKeyStore.hasKey
+    @State private var cloudKeySaveFailed = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
@@ -27,10 +33,10 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 engineSection
-                if viewModel.settings.engine == .whisperKit {
-                    whisperModelSection
-                } else {
-                    appleSpeechSection
+                switch viewModel.settings.engine {
+                case .whisperKit: whisperModelSection
+                case .appleSpeech: appleSpeechSection
+                case .cloud: cloudSection
                 }
                 displaySection
                 alertsSection
@@ -121,6 +127,7 @@ struct SettingsView: View {
         switch kind {
         case .whisperKit: return "Whisper (במכשיר)"
         case .appleSpeech: return "זיהוי הדיבור של אפל"
+        case .cloud: return "תמלול בענן (OpenRouter)"
         }
     }
 
@@ -128,6 +135,7 @@ struct SettingsView: View {
         switch kind {
         case .whisperKit: return "מודל קוד פתוח שרץ על הטלפון. עברית טובה, אפשר לבחור גודל מודל."
         case .appleSpeech: return "מובנה ב‑iOS. מהיר מאוד, אבל עברית במכשיר לא זמינה בכל גרסה."
+        case .cloud: return "מודל גדול באינטרנט. הכי מדויק, גם כשכמה אנשים מדברים. צריך אינטרנט ומפתח OpenRouter."
         }
     }
 
@@ -174,6 +182,62 @@ struct SettingsView: View {
         } footer: {
             Text("כבוי: הכול נשאר בטלפון. אם עברית במכשיר לא זמינה, המנוע פשוט לא יעבוד ותוצע חלופה. דולק: כשאין מודל עברית במכשיר, האודיו נשלח לשרתי אפל לזיהוי. זו החלטת פרטיות שלכם — האפליקציה אף פעם לא עושה את זה לבד.")
         }
+    }
+
+    // MARK: - Cloud
+
+    private var cloudModelBinding: Binding<String> {
+        Binding(
+            get: { viewModel.settings.cloudModel },
+            set: { model in Task { await viewModel.setCloudModel(model) } }
+        )
+    }
+
+    private var cloudSection: some View {
+        Section {
+            if hasCloudKey {
+                Label("מפתח שמור בטלפון", systemImage: "key.fill")
+                    .foregroundStyle(.green)
+            }
+            SecureField(hasCloudKey ? "מפתח חדש במקום השמור" : "הדביקו כאן מפתח OpenRouter", text: $cloudKeyDraft)
+                .textContentType(.password)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .onSubmit(saveCloudKey)
+            if !cloudKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button("שמירת המפתח", action: saveCloudKey)
+            }
+            if cloudKeySaveFailed {
+                Label("המפתח לא נשמר. נסו שוב.", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            }
+            if hasCloudKey {
+                Button("מחיקת המפתח", role: .destructive) {
+                    CloudKeyStore.remove()
+                    hasCloudKey = false
+                    Task { await viewModel.cloudKeyChanged() }
+                }
+            }
+            Picker("מודל", selection: cloudModelBinding) {
+                Text("מהיר (Gemini Flash Lite)").tag(CloudSpeech.fastModel)
+                Text("מדויק יותר, קצת איטי (Gemini Flash)").tag(CloudSpeech.accurateModel)
+            }
+        } header: {
+            Text("תמלול בענן")
+        } footer: {
+            Text("הקול נשלח דרך האינטרנט ל‑OpenRouter, ומשם לדגם של Google שכותב את הכתוביות. רק כשמישהו מדבר, משפט אחרי משפט. שעת דיבור רצוף עולה בערך 15 סנט מהקרדיט של המפתח (המדויק יותר: כ‑30 סנט). המפתח נשמר רק בטלפון. בלי אינטרנט הכתוביות נעצרות, ואפשר לחזור ל‑Whisper שבטלפון.")
+        }
+    }
+
+    private func saveCloudKey() {
+        let key = cloudKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return }
+        let saved = CloudKeyStore.save(key)
+        cloudKeySaveFailed = !saved
+        guard saved else { return }
+        cloudKeyDraft = ""
+        hasCloudKey = true
+        Task { await viewModel.cloudKeyChanged() }
     }
 
     // MARK: - Display

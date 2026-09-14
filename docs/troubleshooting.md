@@ -33,6 +33,9 @@ leave the phone.
 | "No access to the microphone" (ein gisha la-mikrofon) | Microphone permission was turned off for Ozen. | Tap it: it opens iOS Settings. Turn Microphone on. |
 | "No permission for speech recognition" (ein ishur le-zihuy dibur) | Speech recognition permission is off (Apple's engine only). | Tap it: it opens iOS Settings. |
 | "… not available in Hebrew on this device" (… lo zamin be-ivrit ba-machshir ha-ze) | Apple's engine has no on-device Hebrew on this iPhone. | Tap to switch to Whisper in Settings. |
+| "Cloud captions need a valid OpenRouter key" (ha-tamlul ba-anan tzarich mafte'ach OpenRouter takin) | Cloud captions are chosen but there is no key, or OpenRouter turned it down. | Tap it: Settings opens. Paste the key from openrouter.ai (Keys) and tap Save. |
+| "The OpenRouter key is out of credit" (nigmar ha-kredit shel mafte'ach OpenRouter) | The key used up its credit or its spending limit. | Add credit on openrouter.ai, or tap and switch back to Whisper. |
+| "No internet connection" (ein chibur la-internet) | Cloud captions can't reach the internet. | Check Wi-Fi or cellular data. It retries by itself; or switch to Whisper, which works offline. |
 | "Retrying by itself · tap to try now" (menase shuv le-vad · hakishu kedei lenasot achshav) | Something failed and a retry is already scheduled. | Wait a few seconds, or tap to retry now. |
 
 ## Things that are working as intended

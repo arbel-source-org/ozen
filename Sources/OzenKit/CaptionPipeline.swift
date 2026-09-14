@@ -846,7 +846,7 @@ public final class CaptionPipeline {
     }
 
     private func cachedEngine(for settings: AppSettings) -> any TranscriptionEngine {
-        let key = "\(settings.engine.rawValue)|\(settings.whisperModelVariant)|\(settings.allowServerFallbackForAppleSpeech)"
+        let key = "\(settings.engine.rawValue)|\(settings.whisperModelVariant)|\(settings.allowServerFallbackForAppleSpeech)|\(settings.cloudModel)"
         if let cached = engineCache[key] { return cached }
         // Only the engine in use is kept. A Whisper engine holds its loaded
         // model, hundreds of megabytes to 3 GB; every model tried once in
