@@ -71,6 +71,16 @@ public final class CaptionPipeline {
     private var soundTask: Task<Void, Never>?
     private var staleCommitTask: Task<Void, Never>?
     private var utteranceClusterAssignments: [UUID: Int] = [:]
+    /// Decides whether an embedding window holds a voice at all. Silence
+    /// and background noise must not open phantom speakers or drag a real
+    /// person's voice profile toward the fridge hum.
+    private var embeddingVoiceDetector = EnergyVoiceDetector()
+    /// The speaker of the most recent window that held speech. A short
+    /// reply ("כן") is often over before its caption line exists, so a new
+    /// line with no speaker yet takes this one if it is recent.
+    private var recentSpeechCluster: (id: Int, at: TimeInterval)?
+    private static let minimumSpeechFractionForEmbedding = 0.4
+    private static let recentSpeechClusterSeconds: TimeInterval = 4
     /// Every `start()` gets a fresh run id; async continuations from an
     /// earlier run (a progress callback arriving after a restart, say)
     /// compare against it and drop themselves instead of clobbering state.
@@ -453,7 +463,12 @@ public final class CaptionPipeline {
         }
         var enriched = token
         if enriched.speakerClusterID == nil {
-            enriched.speakerClusterID = utteranceClusterAssignments[token.utteranceID]
+            if let assigned = utteranceClusterAssignments[token.utteranceID] {
+                enriched.speakerClusterID = assigned
+            } else if !isKnown, let recent = recentSpeechCluster, now() - recent.at <= Self.recentSpeechClusterSeconds {
+                enriched.speakerClusterID = recent.id
+                utteranceClusterAssignments[token.utteranceID] = recent.id
+            }
         }
         let wasCommitted = stabilizer.segments.first(where: { $0.id == token.utteranceID })?.isCommitted ?? false
         let segment = stabilizer.ingest(enriched)
@@ -466,6 +481,7 @@ public final class CaptionPipeline {
 
     private func consumeEmbeddings(_ audioStream: AsyncStream<[Float]>, run: UUID) async {
         var buffer: [Float] = []
+        var speechSamples = 0
         let windowSamples = Int(Self.embeddingWindowSeconds * Self.sampleRate)
         for await chunk in audioStream {
             guard runID == run else { return }
@@ -474,9 +490,15 @@ public final class CaptionPipeline {
             stats.lastAudioAt = now()
 
             buffer.append(contentsOf: chunk)
+            if embeddingVoiceDetector.isSpeech(chunk) {
+                speechSamples += chunk.count
+            }
             guard buffer.count >= windowSamples else { continue }
             let window = buffer
+            let speechFraction = Double(speechSamples) / Double(window.count)
             buffer.removeAll(keepingCapacity: true)
+            speechSamples = 0
+            guard speechFraction >= Self.minimumSpeechFractionForEmbedding else { continue }
 
             guard let embedding = embedder.embed(samples: window, sampleRate: Self.sampleRate) else { continue }
             let clusterCountBefore = clusterer.clusters.count
@@ -485,6 +507,7 @@ public final class CaptionPipeline {
                 stats.speakerClustersOpened += 1
             }
             speakerClusters = clusterer.clusters
+            recentSpeechCluster = (clusterID, now())
 
             guard let currentUtteranceID = stabilizer.segments.last(where: { !$0.isCommitted })?.id else { continue }
             utteranceClusterAssignments[currentUtteranceID] = clusterID
@@ -578,6 +601,7 @@ public final class CaptionPipeline {
     private func tearDownSession() {
         runID = UUID()
         currentEngine = nil
+        recentSpeechCluster = nil
         streamTask?.cancel()
         streamTask = nil
         embeddingTask?.cancel()

@@ -931,3 +931,55 @@ struct CaptionPipelineAlertHookTests {
         #expect(await eventually { raised == ["door_bell"] })
     }
 }
+
+@Suite("CaptionPipeline speaker detection ignores silence")
+@MainActor
+struct CaptionPipelineSilenceSpeakerTests {
+    @Test("silence and faint noise never open a speaker or label a line")
+    func silenceOpensNothing() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let id = UUID()
+        engine.emit(token(id, "..."))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        audio.push([Float](repeating: 0, count: 24_000))
+        audio.push([Float](repeating: 0.001, count: 24_000))
+        #expect(await eventually { pipeline.stats.audioSecondsReceived == 3 })
+        #expect(pipeline.speakerClusters.isEmpty)
+        #expect(pipeline.segments.first?.speakerClusterID == nil)
+    }
+
+    @Test("a short reply spoken before its line appears still gets that voice")
+    func shortReplyGetsRecentSpeaker() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.count == 1 })
+        let voice = pipeline.speakerClusters[0].id
+
+        let id = UUID()
+        engine.emit(token(id, "כן", final: true))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.first?.speakerClusterID == voice)
+    }
+
+    @Test("an old voice is not pinned on a line that starts much later")
+    func staleVoiceNotUsed() async {
+        let clock = TestClock()
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine], now: { clock.now })
+        await pipeline.start(settings: .default)
+
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.count == 1 })
+        clock.advance(10)
+
+        engine.emit(token(UUID(), "שלום", at: clock.now))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.first?.speakerClusterID == nil)
+    }
+}
