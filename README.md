@@ -63,7 +63,10 @@ things, for Hebrew conversation, entirely on-device.
 - **Robust audio**: a live level meter per microphone, automatic recovery
   from phone-call interruptions and route changes (AirPods in/out, USB mic
   unplugged), Whisper-hallucination filtering on silence, no model runs on
-  pure silence at all.
+  pure silence at all. A glitching microphone's broken samples are turned
+  into silence before anything hears them, so one bad moment can't leave
+  the speech detector deaf or a voice print unmatchable, and the
+  diagnostics report counts them.
 - **Recovers by itself.** A recognizer that drops out mid-conversation,
   an audio session that fails, or a model download that hit a dead Wi-Fi
   is retried automatically with growing delays, and the status line says
