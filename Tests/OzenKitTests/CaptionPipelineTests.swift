@@ -1113,7 +1113,8 @@ struct CaptionPipelineSilenceSpeakerTests {
         #expect(await eventually { pipeline.segments.count == 1 })
 
         audio.push([Float](repeating: 0, count: 24_000))
-        audio.push([Float](repeating: 0.001, count: 24_000))
+        // About -70 dBFS: a quiet room, below the -60 dBFS speech threshold.
+        audio.push([Float](repeating: 0.0003, count: 24_000))
         #expect(await eventually { pipeline.stats.audioSecondsReceived == 3 })
         #expect(pipeline.speakerClusters.isEmpty)
         #expect(pipeline.segments.first?.speakerClusterID == nil)

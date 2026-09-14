@@ -71,6 +71,15 @@ leave the phone.
   joined. Build 13 and earlier put everyone under one label (and a
   saved voice's name on everybody's lines); updating fixes that, and saved
   voices keep working.
+- **People further away aren't captioned, or lines stop mid-sentence.**
+  The report's `levels:` line says how loud the microphone hears the room
+  (quiet / middle / loud, in dBFS) and `speech:` how much of it counted as
+  someone talking; the same numbers are in Diagnostics as "Sound levels"
+  (ramot kol) and "Heard as speech" (nishma ke-dibur). Speech needs to
+  reach about -60 dBFS: if "loud" stays below that through a conversation,
+  the phone is too far from the people talking, or an external microphone
+  helps. Build 14 and earlier ignored anything under -44 dBFS, which in
+  practice was most conversation more than a metre away.
 - **A small question mark next to a line.** The engine wasn't sure it heard
   that line right. Holding the line offers to ask the speaker to repeat it.
 - **No phone notifications when the screen is off.** Settings → Notifications (hatra'ot) shows

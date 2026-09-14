@@ -8,48 +8,67 @@ struct EnergyVoiceDetectorTests {
         (0..<count).map { i in amplitude * sin(Float(i) * 0.3) }
     }
 
-    @Test("silence is not speech, a normal speaking level is")
+    @Test("silence is not speech; conversation as quiet as measurement mode delivers it is")
     func basicClassification() {
         var detector = EnergyVoiceDetector()
         let silence = detector.isSpeech([Float](repeating: 0, count: 1_024))
-        let whisperQuiet = detector.isSpeech(tone(amplitude: 0.002))
+        // RMS about -65 dBFS: a quiet room.
+        let room = detector.isSpeech(tone(amplitude: 0.0008))
+        // RMS about -55 dBFS: someone talking across the table. Under the
+        // old -44 dBFS threshold this never counted.
+        let acrossTheTable = detector.isSpeech(tone(amplitude: 0.0025))
         let speaking = detector.isSpeech(tone(amplitude: 0.05))
         #expect(!silence)
-        #expect(!whisperQuiet)
+        #expect(!room)
+        #expect(acrossTheTable)
         #expect(speaking)
     }
 
-    @Test("a long stretch of continuous speech stays classified as speech")
+    @Test("a long stretch of speech, with the short gaps speech has, stays classified as speech")
     func sustainedSpeechDoesNotBecomeNoise() {
         var detector = EnergyVoiceDetector()
-        var speechChunks = 0
-        for _ in 0..<500 {
-            if detector.isSpeech(tone(amplitude: 0.05)) { speechChunks += 1 }
+        var words = 0
+        var wordsHeard = 0
+        // 1024-sample chunks are 64 ms: words of about 320 ms between gaps
+        // of about 130 ms, for over three minutes.
+        for index in 0..<3_000 {
+            if index % 7 < 5 {
+                words += 1
+                if detector.isSpeech(tone(amplitude: 0.01)) { wordsHeard += 1 }
+            } else {
+                detector.isSpeech(tone(amplitude: 0.0005))
+            }
         }
-        #expect(speechChunks == 500)
-        #expect(detector.noiseFloor <= 0.002)
+        #expect(wordsHeard == words)
+        #expect(detector.noiseFloor < 0.001)
     }
 
-    @Test("the floor rises toward a steady background hum so that hum stops counting as speech")
+    @Test("a steady hum louder than the threshold stops counting as speech within seconds, with no quieter moments")
     func floorAdaptsToHum() {
-        var detector = EnergyVoiceDetector(absoluteThreshold: 0.001)
-        // A hum whose RMS (amplitude / √2 ≈ 0.0064) sits just above the
-        // initial threshold (0.002 × 2.5 = 0.005).
+        var detector = EnergyVoiceDetector()
+        // RMS about -44 dBFS: a fridge or an air conditioner near the phone.
         let hum = tone(amplitude: 0.009)
         let humAtFirst = detector.isSpeech(hum)
         #expect(humAtFirst)
-        // It never enters the floor while classified as speech, so the
-        // detector can only adapt through quieter moments between - real
-        // rooms aren't perfectly constant. Dips at RMS ≈ 0.0035 are below
-        // threshold, so they feed the floor up toward ~0.0035, which lifts
-        // the threshold to ~0.0088: above the hum, below speech.
-        for _ in 0..<300 {
-            detector.isSpeech(tone(amplitude: 0.005))
+        // Ten seconds of nothing but the hum.
+        for _ in 0..<156 {
+            detector.isSpeech(hum)
         }
         let humLater = detector.isSpeech(hum)
-        let speechLater = detector.isSpeech(tone(amplitude: 0.05))
+        let speechOverIt = detector.isSpeech(tone(amplitude: 0.05))
         #expect(!humLater)
-        #expect(speechLater)
+        #expect(speechOverIt)
+    }
+
+    @Test("without the recent-minimum rule a steady hum would count as speech for good")
+    func humWithoutRecentMinimum() {
+        var detector = EnergyVoiceDetector(recentWindowSamples: 0)
+        let hum = tone(amplitude: 0.009)
+        for _ in 0..<156 {
+            detector.isSpeech(hum)
+        }
+        let humLater = detector.isSpeech(hum)
+        #expect(humLater)
     }
 
     @Test("the floor is capped so a loud fan can't disable detection")
@@ -79,7 +98,9 @@ struct EnergyVoiceDetectorTests {
         #expect(EnergyVoiceDetector.meterLevel(forRMS: 0) == 0)
         #expect(EnergyVoiceDetector.meterLevel(forRMS: 1) == 1)
         let mid = EnergyVoiceDetector.meterLevel(forRMS: 0.0316) // ≈ -30 dBFS
-        #expect(mid > 0.35 && mid < 0.45)
-        #expect(EnergyVoiceDetector.meterLevel(forRMS: 0.00001) == 0)
+        #expect(mid > 0.52 && mid < 0.62)
+        // Conversation at -55 dBFS moves the meter; a -80 dBFS room doesn't.
+        #expect(EnergyVoiceDetector.meterLevel(forRMS: 0.0018) > 0.15)
+        #expect(EnergyVoiceDetector.meterLevel(forRMS: 0.0001) == 0)
     }
 }
