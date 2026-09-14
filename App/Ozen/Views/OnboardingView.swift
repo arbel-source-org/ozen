@@ -49,7 +49,7 @@ struct OnboardingView: View {
         OnboardingPage(symbol: "text.bubble", title: "איך זה עובד") {
             OnboardingRow(symbol: "mic.fill", text: "מניחים את הטלפון על השולחן, והכתוביות רצות לבד.")
             OnboardingRow(symbol: "person.2.fill", text: "האפליקציה מבדילה בין דוברים ויכולה ללמוד את השמות שלהם.")
-            OnboardingRow(symbol: "bell.badge.fill", text: "היא מתריעה על שמות שחשובים לך, ועל צלצול בדלת או אזעקה.")
+            OnboardingRow(symbol: "bell.badge.fill", text: "היא מתריעה על שמות שחשובים לך, ועל צלצול בדלת או אזעקה, ברטט שונה לכל אחד.")
             OnboardingRow(symbol: "keyboard", text: "ואפשר להקליד תשובה, והטלפון יגיד אותה בקול.")
         }
     }
