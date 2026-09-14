@@ -86,7 +86,14 @@ public final class AVAudioInputManager: AudioCapturing {
         activeTap = tap
         installTap(tap)
         engine.prepare()
-        try engine.start()
+        do {
+            try engine.start()
+        } catch {
+            // Nobody will read this stream: don't leave its tap installed
+            // on an engine that never ran.
+            stopCapture()
+            throw error
+        }
         return stream
     }
 
@@ -166,8 +173,11 @@ public final class AVAudioInputManager: AudioCapturing {
         let engineID = ObjectIdentifier(engine)
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
-            // Capture stopped or restarted meanwhile: nothing to repair.
-            guard let self, self.activeTap != nil, ObjectIdentifier(self.engine) == engineID else { return }
+            // Capture stopped or restarted meanwhile, or another recovery
+            // (the end of a call, a second route change) already got the
+            // engine running: nothing to repair, and rebuilding the tap
+            // now would drop the audio that just came back.
+            guard let self, self.activeTap != nil, ObjectIdentifier(self.engine) == engineID, !self.engine.isRunning else { return }
             self.recoverFromConfigurationChange(attempt: attempt + 1)
         }
     }
