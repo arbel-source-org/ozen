@@ -40,7 +40,15 @@ leave the phone.
   nothing said, the phone locks as usual to save the battery. Captions and
   doorbell or alarm alerts keep running; unlock to read.
 - **An empty screen with a card about "השיחה מלפני … דקות".** iOS closed the
-  app in the background mid-conversation. The card opens what was said.
+  app in the background mid-conversation. The card opens what was said. If
+  it keeps happening, look in the report for "iOS low on memory (app using
+  … MB)" and at the "זיכרון" row in Diagnostics: the speech model is most of
+  that, so pick a smaller one in Settings → מודל Whisper (the recommended
+  Turbo (compressed) rather than a 3 GB one), or switch to Apple's engine.
+- **Some words are in a different colour.** Numbers (a time, how many pills,
+  a phone number) stand out so they aren't missed: yellow on the white
+  theme, white on the yellow one, blue on the light one. Settings → תצוגה →
+  "מספרים בולטים" turns it off.
 - **A small question mark next to a line.** The engine wasn't sure it heard
   that line right. Holding the line offers to ask the speaker to repeat it.
 - **No phone notifications when the screen is off.** Settings → התראות shows
