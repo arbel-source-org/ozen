@@ -32,12 +32,18 @@ public final class AppleSpeechEngine: TranscriptionEngine, @unchecked Sendable {
     /// next roll-over picks it up (a request's contextual strings can't be
     /// changed once it's running).
     public func setVocabulary(_ terms: [String]) async {
+        // Apple documents contextual strings as meant for up to about 100
+        // phrases. The list is ordered most important first, so the front
+        // of it is what gets through.
+        let limited = Array(terms.prefix(Self.maximumContextualStrings))
         let session: RecognitionSession? = stateLock.withLock {
-            vocabulary = terms
+            vocabulary = limited
             return activeSession
         }
-        session?.updateContextualStrings(terms)
+        session?.updateContextualStrings(limited)
     }
+
+    static let maximumContextualStrings = 100
 
     public func prepare(
         languageCode: String,
