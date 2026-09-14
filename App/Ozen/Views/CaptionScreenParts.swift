@@ -40,7 +40,7 @@ struct CaptionRow: View {
                         .font(.system(size: max(14, display.fontSize * 0.6)))
                         .foregroundStyle(theme.pendingText)
                 }
-                Text(CaptionLayout.readableText(segment.text))
+                Text(CaptionLayout.displayText(segment.text))
                     .font(.system(size: display.fontSize, weight: weight))
                     .italic(!segment.isCommitted)
                     .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
@@ -88,7 +88,7 @@ struct NameSpeakerSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(CaptionLayout.readableText(segment.text))
+                    Text(CaptionLayout.displayText(segment.text))
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .lineLimit(3)

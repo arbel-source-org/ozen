@@ -32,6 +32,32 @@ public enum CaptionLayout {
         return paragraphs.joined(separator: "\n")
     }
 
+    /// `readableText`, ready to draw: in a right-to-left language each
+    /// paragraph starts with an invisible right-to-left mark.
+    ///
+    /// A paragraph takes its reading direction from its first letter.
+    /// "OK, אז נתראה מחר" starts with a Latin one, so it was laid out left
+    /// to right, and read from the right it came out as "אז נתראה מחר"
+    /// followed by "OK": the words in the wrong order. Same for a line that
+    /// opens with a name like "WhatsApp". The mark makes Hebrew the
+    /// paragraph's direction whatever word comes first. For display only:
+    /// copied, shared and spoken text stays as recognized.
+    public static func displayText(_ text: String, languageCode: String = "he") -> String {
+        let readable = readableText(text)
+        guard isRightToLeft(languageCode: languageCode) else { return readable }
+        return readable
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { rightToLeftMark + $0 }
+            .joined(separator: "\n")
+    }
+
+    static let rightToLeftMark = "\u{200F}"
+
+    static func isRightToLeft(languageCode: String) -> Bool {
+        let base = languageCode.split(separator: "-").first.map { String($0).lowercased() } ?? ""
+        return ["he", "iw", "yi", "ar", "fa", "ur"].contains(base)
+    }
+
     /// Splits after ".", "?", "!" or "…" (and any closing quote or bracket
     /// right after it) when whitespace follows. "3.5" and "ד״ר" never
     /// split, because no space follows the dot or the gershayim.

@@ -279,7 +279,7 @@ private struct SavedLineRow: View {
                         .foregroundStyle(.secondary)
                         .accessibilityLabel("ייתכן שלא נשמע נכון")
                 }
-                Text(CaptionLayout.readableText(segment.text))
+                Text(CaptionLayout.displayText(segment.text))
                     .font(.system(size: max(17, fontSize * 0.7)))
             }
         }

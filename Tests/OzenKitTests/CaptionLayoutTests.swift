@@ -33,6 +33,26 @@ struct CaptionLayoutTests {
         #expect(CaptionLayout.splitSentences("היא אמרה \"די!\" והלכה. באמת?!  כן") == ["היא אמרה \"די!\"", "והלכה.", "באמת?!", "כן"])
     }
 
+    @Test("in Hebrew every paragraph reads right to left, even one opening with a Latin word")
+    func rightToLeftParagraphs() {
+        let mark = "\u{200F}"
+        #expect(CaptionLayout.displayText("OK, אז נתראה מחר") == mark + "OK, אז נתראה מחר")
+        #expect(CaptionLayout.displayText("שלום", languageCode: "he-IL") == mark + "שלום")
+
+        let long = "אתמול הלכנו לשוק בבוקר מוקדם. WhatsApp שלחה הודעה וקנינו ירקות טריים לכל השבוע. אחר כך ישבנו בבית קפה קטן ליד התחנה."
+        let shown = CaptionLayout.displayText(long)
+        let paragraphs = shown.split(separator: "\n")
+        #expect(paragraphs.count >= 2)
+        #expect(paragraphs.allSatisfy { $0.hasPrefix(mark) })
+        // Only the marks were added.
+        #expect(shown.replacingOccurrences(of: mark, with: "") == CaptionLayout.readableText(long))
+    }
+
+    @Test("a left-to-right language is shown exactly as laid out")
+    func leftToRightUntouched() {
+        #expect(CaptionLayout.displayText("OK, see you tomorrow.", languageCode: "en") == "OK, see you tomorrow.")
+    }
+
     @Test("a single sentence longer than a paragraph stays whole")
     func oneLongSentence() {
         let text = String(repeating: "מילה ", count: 40).trimmingCharacters(in: .whitespaces)
