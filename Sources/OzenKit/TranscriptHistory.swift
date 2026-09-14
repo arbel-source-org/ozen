@@ -441,29 +441,28 @@ public struct TranscriptHistoryStore: Sendable {
         strippingNiqqud(text.replacingOccurrences(of: "\n", with: " ")).lowercased()
     }
 
-    private static func record(_ record: TranscriptSessionRecord, matches needle: String) -> Bool {
-        if let title = record.title, strippingNiqqud(title).lowercased().contains(needle) {
-            return true
-        }
-        return record.segments.contains { segment($0, matches: needle) }
-    }
-
-    private static func segment(_ segment: SavedSegment, matches needle: String) -> Bool {
-        if strippingNiqqud(segment.text).lowercased().contains(needle) {
-            return true
-        }
-        guard let name = segment.speakerName else { return false }
-        return strippingNiqqud(name).lowercased().contains(needle)
+    /// The words of a search, compared the way saved text is: without
+    /// niqqud, in lower case. A conversation is found when it holds every
+    /// one of them, in any order and on any line, so "rofe kadurim"
+    /// ("doctor pills") finds the visit where the doctor spoke about pills
+    /// three lines before naming them.
+    private static func searchWords(_ query: String) -> [String] {
+        normalizedForSearch(query).split(whereSeparator: \.isWhitespace).map(String.init)
     }
 
     /// The lines of a conversation that a search for `query` found, in
-    /// order, by the same rules as `search`: the words of the line or the
-    /// name of who said it. Opening a search result jumps to these.
+    /// order, by the words of the line and the name of who said it: those
+    /// holding every word, or when no line does, those holding any.
+    /// Opening a search result jumps to these.
     public static func matchingSegmentIDs(in record: TranscriptSessionRecord, query: String) -> [UUID] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return [] }
-        let needle = strippingNiqqud(trimmed).lowercased()
-        return record.segments.filter { segment($0, matches: needle) }.map(\.id)
+        let words = searchWords(query)
+        guard !words.isEmpty else { return [] }
+        let lines = record.segments.map { segment in
+            (id: segment.id, text: normalizedForSearch(segment.text) + "\n" + (segment.speakerName.map(normalizedForSearch) ?? ""))
+        }
+        let holdingAll = lines.filter { line in words.allSatisfy(line.text.contains) }
+        guard holdingAll.isEmpty else { return holdingAll.map(\.id) }
+        return lines.filter { line in words.contains(where: line.text.contains) }.map(\.id)
     }
 
     public func listSummaries() -> [TranscriptSessionSummary] {
@@ -502,26 +501,25 @@ public struct TranscriptHistoryStore: Sendable {
     /// word would fail to find a session where the transcript happened to
     /// include the pointed form.
     public func search(_ query: String) -> [TranscriptSessionSummary] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return listSummaries() }
-        let needle = Self.strippingNiqqud(trimmed).lowercased()
+        let words = Self.searchWords(query)
+        guard !words.isEmpty else { return listSummaries() }
 
         return recordFiles()
             .compactMap { url -> TranscriptSessionSummary? in
                 // Fast path: the conversation's prepared search text says
                 // no, or says yes and its summary is ready.
                 if let text = cachedSearchText(forRecordFile: url) {
-                    let found = text.split(separator: "\n", omittingEmptySubsequences: false).contains { $0.contains(needle) }
-                    guard found else { return nil }
+                    guard words.allSatisfy(text.contains) else { return nil }
                     if let summary = cachedSummary(forRecordFile: url) { return summary }
                 }
                 // Slow path, once per conversation: read it whole and write
                 // the files that make the next search fast.
                 guard let record = Self.decodeRecord(at: url) else { return nil }
                 let summary = TranscriptSessionSummary(summarizing: record)
+                let text = Self.searchableText(of: record)
                 writeSummary(summary, forRecordFile: url)
-                writeSearchText(Self.searchableText(of: record), forRecordFile: url)
-                return Self.record(record, matches: needle) ? summary : nil
+                writeSearchText(text, forRecordFile: url)
+                return words.allSatisfy(text.contains) ? summary : nil
             }
             .sorted { $0.startedAt > $1.startedAt }
     }

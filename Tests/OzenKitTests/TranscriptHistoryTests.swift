@@ -160,6 +160,22 @@ struct TranscriptHistoryTests {
         #expect(store.search("nonexistent").isEmpty)
     }
 
+    @Test("a search of several words finds a conversation holding all of them, in any order, on any line or in a name")
+    func searchMatchesEveryWord() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "הרופא אמר"), segment(text: "שני כדורים ביום", speakerName: "דני")]))
+        try store.save(record(startedAt: 200, segments: [segment(text: "כדורים של שוקולד")]))
+
+        #expect(store.search("רופא כדורים").count == 1)
+        #expect(store.search("כדורים   רופא").count == 1)
+        #expect(store.search("דני רופא").count == 1)
+        #expect(store.search("כדורים").count == 2)
+        #expect(store.search("רופא שוקולד").isEmpty)
+    }
+
     @Test("search matches on speaker name even when the text doesn't contain the query")
     func searchMatchesSpeakerNames() throws {
         let dir = makeTempDirectory()
@@ -530,7 +546,7 @@ struct TranscriptHistorySearchCacheTests {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try JSONEncoder().encode(old).write(to: recordFile(dir, old.id))
 
-        #expect(store.search("שלום").map(\.id) == [old.id])
+        #expect(store.search("לכולם שלום").map(\.id) == [old.id])
         #expect(FileManager.default.fileExists(atPath: searchFile(dir, old.id).path))
         // And the file it wrote answers the next search the same way.
         #expect(store.search("שלום").map(\.id) == [old.id])
@@ -552,15 +568,16 @@ struct TranscriptHistorySearchCacheTests {
         #expect(store.search("ערב").map(\.id) == [id])
     }
 
-    @Test("a word split across two caption lines does not count as found")
+    @Test("a word split across two caption lines does not count as found; two words on two lines do")
     func noMatchAcrossLines() throws {
         let dir = makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let store = TranscriptHistoryStore(directoryURL: dir)
         try store.save(record(lines: [("אבא", nil), ("בית", nil)]))
 
-        #expect(store.search("אבא\nבית").isEmpty)
         #expect(store.search("אבית").isEmpty)
+        #expect(store.search("אבאבית").isEmpty)
+        #expect(store.search("אבא\nבית").count == 1)
     }
 
     @Test("deleting a conversation removes its text file")
@@ -597,6 +614,20 @@ struct TranscriptHistoryMatchingLinesTests {
         #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: " תרופה ") == [lines[0].id, lines[2].id])
         #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "שרה") == [lines[1].id])
         #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "ASPIRIN") == [lines[3].id])
+    }
+
+    @Test("with several words, the lines holding all of them; when no line does, the lines holding any")
+    func matchingLinesForSeveralWords() {
+        let lines = [
+            line("הרופא אמר לקחת את התרופה בבוקר", "דני"),
+            line("טוב", "שרה"),
+            line("ואת התרופה השנייה בערב", "דני"),
+        ]
+        let conversation = record(lines)
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "בבוקר תרופה") == [lines[0].id])
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "דני ערב") == [lines[2].id])
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "רופא ערב") == [lines[0].id, lines[2].id])
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: conversation, query: "רופא ים") == [lines[0].id])
     }
 
     @Test("an empty search, or one that matches nothing, finds no lines")
