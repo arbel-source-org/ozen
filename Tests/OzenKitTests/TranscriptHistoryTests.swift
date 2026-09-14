@@ -681,3 +681,33 @@ struct TranscriptHistoryAllStarredTests {
         #expect(store.starredLines().isEmpty)
     }
 }
+
+@Suite("Transcript history sharing starred lines")
+struct TranscriptHistoryStarredExportTests {
+    @Test("starred lines share as dated blocks with times and real names only")
+    func exportFormat() {
+        let first = UUID()
+        let second = UUID()
+        // 2026-09-14 09:05:00 UTC and 2025-02-28 23:30:00 UTC.
+        let september: TimeInterval = 1_789_376_700
+        let february: TimeInterval = 1_740_785_400
+        let lines = [
+            StarredLine(sessionID: first, sessionStartedAt: september, segment: SavedSegment(id: UUID(), text: "כדור בבוקר", speakerName: "ד״ר כהן", speakerClusterID: 0, startTimestamp: september, isCommitted: true, isStarred: true)),
+            StarredLine(sessionID: first, sessionStartedAt: september, segment: SavedSegment(id: UUID(), text: "ושניים בערב", speakerName: "דובר 2", speakerClusterID: 1, startTimestamp: september + 65, isCommitted: true, isStarred: true)),
+            StarredLine(sessionID: second, sessionStartedAt: february, segment: SavedSegment(id: UUID(), text: "התור ביום שלישי", speakerName: nil, speakerClusterID: nil, startTimestamp: february, isCommitted: true, isStarred: true)),
+        ]
+        let text = TranscriptHistoryStore.exportStarredText(lines)
+        #expect(text == "14.09.2026\n[09:05:00] ד״ר כהן: כדור בבוקר\n[09:06:05] ושניים בערב\n\n28.02.2025\n[23:30:00] התור ביום שלישי")
+    }
+
+    @Test("the date follows the phone's time zone across midnight")
+    func dateUsesOffset() {
+        let lateUTC: TimeInterval = 1_740_785_400 // 2025-02-28 23:30 UTC
+        let line = StarredLine(sessionID: UUID(), sessionStartedAt: lateUTC, segment: SavedSegment(id: UUID(), text: "x", speakerName: nil, speakerClusterID: nil, startTimestamp: lateUTC, isCommitted: true, isStarred: true))
+        #expect(TranscriptHistoryStore.exportStarredText([line], utcOffsetSeconds: 2 * 3_600) == "01.03.2025\n[01:30:00] x")
+        #expect(TranscriptHistoryStore.exportStarredText([]) == "")
+        let leapDay: TimeInterval = 1_709_208_000 // 2024-02-29 12:00 UTC
+        let leap = StarredLine(sessionID: UUID(), sessionStartedAt: leapDay, segment: SavedSegment(id: UUID(), text: "y", speakerName: nil, speakerClusterID: nil, startTimestamp: leapDay, isCommitted: true, isStarred: true))
+        #expect(TranscriptHistoryStore.exportStarredText([leap]) == "29.02.2024\n[12:00:00] y")
+    }
+}

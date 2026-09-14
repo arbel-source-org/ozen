@@ -385,6 +385,18 @@ struct StarredLinesView: View {
         }
         .navigationTitle("שורות מסומנות")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !lines.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(
+                        item: TranscriptHistoryStore.exportStarredText(lines, utcOffsetSeconds: TimeZone.current.secondsFromGMT()),
+                        subject: Text("שורות מסומנות מאוזן")
+                    ) {
+                        Label("שיתוף", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
+        }
         .task {
             let store = viewModel.historyStore
             lines = await Task.detached(priority: .userInitiated) { store.starredLines() }.value

@@ -538,6 +538,47 @@ public struct TranscriptHistoryStore: Sendable {
             .joined(separator: "\n")
     }
 
+    /// Starred lines as plain text for sharing: one block per
+    /// conversation, headed by its date, then each line with its time and
+    /// who said it. Dates are computed by hand for the same reason as the
+    /// clock times: identical output on the phone and in tests.
+    public static func exportStarredText(_ lines: [StarredLine], utcOffsetSeconds: Int = 0) -> String {
+        var blocks: [String] = []
+        var currentSession: UUID?
+        var block: [String] = []
+        for line in lines {
+            if line.sessionID != currentSession {
+                if !block.isEmpty { blocks.append(block.joined(separator: "\n")) }
+                block = [formattedDate(line.sessionStartedAt, utcOffsetSeconds: utcOffsetSeconds)]
+                currentSession = line.sessionID
+            }
+            let time = formattedClockTime(line.segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
+            if let name = line.segment.speakerName, !name.isEmpty, !TranscriptSessionSummary.isGenericLabel(name) {
+                block.append("[\(time)] \(name): \(line.segment.text)")
+            } else {
+                block.append("[\(time)] \(line.segment.text)")
+            }
+        }
+        if !block.isEmpty { blocks.append(block.joined(separator: "\n")) }
+        return blocks.joined(separator: "\n\n")
+    }
+
+    /// Day.month.year of a timestamp in the given UTC offset.
+    private static func formattedDate(_ timestamp: TimeInterval, utcOffsetSeconds: Int) -> String {
+        let days = Int((Double(Int(timestamp.rounded(.down)) + utcOffsetSeconds) / 86_400).rounded(.down))
+        // Civil-from-days (Howard Hinnant's algorithm), valid for any day count.
+        let z = days + 719_468
+        let era = (z >= 0 ? z : z - 146_096) / 146_097
+        let dayOfEra = z - era * 146_097
+        let yearOfEra = (dayOfEra - dayOfEra / 1_460 + dayOfEra / 36_524 - dayOfEra / 146_096) / 365
+        let dayOfYear = dayOfEra - (365 * yearOfEra + yearOfEra / 4 - yearOfEra / 100)
+        let mp = (5 * dayOfYear + 2) / 153
+        let day = dayOfYear - (153 * mp + 2) / 5 + 1
+        let month = mp < 10 ? mp + 3 : mp - 9
+        let year = yearOfEra + era * 400 + (month <= 2 ? 1 : 0)
+        return "\(twoDigits(day)).\(twoDigits(month)).\(year)"
+    }
+
     private static func formattedClockTime(_ timestamp: TimeInterval, utcOffsetSeconds: Int) -> String {
         let totalSeconds = Int(timestamp.rounded(.down)) + utcOffsetSeconds
         // Wrap into a single day of seconds so a session that (in theory)
