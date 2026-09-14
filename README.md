@@ -84,7 +84,9 @@ things, for Hebrew conversation, entirely on-device.
 - **Type to speak.** The other half of a conversation: type a reply, or
   tap one of the ready-made phrases ("Wait, I didn't understand" (rega, lo
   hevanti), "Can you repeat that?" (efshar lachzor al ze?)), and the phone
-  says it in Hebrew. Captions pause while the phone
+  says it in Hebrew. The last typed sentence stays under the field, to say
+  again when it wasn't caught or keep as a ready-made phrase in one tap.
+  Captions pause while the phone
   talks, so it doesn't caption itself, and come back on their own. A
   full-screen pad in huge letters lets someone type to her where captions
   can't keep up, or turns what she typed upside down for the person facing

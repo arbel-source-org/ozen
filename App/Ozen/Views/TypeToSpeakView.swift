@@ -7,6 +7,9 @@ import OzenKit
 struct TypeToSpeakView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var text = ""
+    /// The typed sentence last said, kept after the field clears so it can
+    /// be said again when the other person didn't catch it.
+    @State private var lastTyped: String?
     @State private var editingPhrases = false
     @State private var showingBigText = false
     @FocusState private var isTyping: Bool
@@ -101,7 +104,11 @@ struct TypeToSpeakView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+
+            if let lastTyped {
+                sayAgainRow(lastTyped)
             }
 
             Button {
@@ -122,10 +129,36 @@ struct TypeToSpeakView: View {
         }
     }
 
+    private func sayAgainRow(_ phrase: String) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                viewModel.speak(phrase)
+            } label: {
+                Label(phrase, systemImage: "arrow.counterclockwise")
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityLabel("להשמיע שוב: \(phrase)")
+
+            if !viewModel.settings.quickPhrases.contains(phrase) {
+                Button {
+                    viewModel.addQuickPhrase(phrase)
+                } label: {
+                    Image(systemName: "plus.bubble")
+                        .frame(minWidth: 44, minHeight: 32)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityLabel("להוסיף למשפטים המוכנים")
+            }
+        }
+    }
+
     private func speakTyped() {
         let phrase = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !phrase.isEmpty else { return }
         viewModel.speak(phrase)
+        lastTyped = phrase
         text = ""
     }
 }
