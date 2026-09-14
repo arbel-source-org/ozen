@@ -58,7 +58,7 @@ struct OnboardingView: View {
         OnboardingPage(symbol: "cpu", title: "איזה מנוע?") {
             EngineCard(
                 title: "Whisper (מומלץ)",
-                subtitle: "מדויק יותר בעברית. מוריד פעם אחת קובץ של כ-\(modelSizeText) ואז עובד בלי אינטרנט.",
+                subtitle: "מדויק יותר בעברית. מוריד פעם אחת קובץ של כ-\(modelSizeText), ב-Wi-Fi, ואז עובד בלי אינטרנט.",
                 symbol: "sparkles",
                 selected: viewModel.settings.engine == .whisperKit
             ) {
