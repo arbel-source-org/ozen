@@ -23,3 +23,21 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
         var large: Bool
     }
 }
+
+extension CaptionActivityAttributes.ContentState {
+    enum CodingKeys: String, CodingKey {
+        case lines, status, large
+    }
+
+    /// Lines sent by an older build, still on the lock screen after an
+    /// update, carry no `large`; they are drawn regular rather than not at
+    /// all.
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            lines: try container.decode([Line].self, forKey: .lines),
+            status: try container.decodeIfPresent(String.self, forKey: .status),
+            large: try container.decodeIfPresent(Bool.self, forKey: .large) ?? false
+        )
+    }
+}
