@@ -101,6 +101,9 @@ struct DiagnosticsView: View {
             }
 
             Section {
+                ShareLink(item: report, subject: Text("דוח אבחון מאוזן")) {
+                    Label("שליחת הדוח", systemImage: "square.and.arrow.up")
+                }
                 Button {
                     UIPasteboard.general.string = report
                     copied = true
