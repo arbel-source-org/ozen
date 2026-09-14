@@ -30,7 +30,12 @@ targets:
         NSSpeechRecognitionUsageDescription: "Ozen uses on-device speech recognition to caption conversation live. Nothing is sent off the phone."
         UILaunchScreen: {}
         CFBundleDevelopmentRegion: he
-        CFBundleDisplayName: "אוזן"
+        CFBundleDisplayName: "Ozen"
+        # The home screen shows the English name; Siri still answers to the
+        # Hebrew one ("start captions in Ozen", said in Hebrew).
+        INAlternativeAppNames:
+          - INAlternativeAppName: "אוזן"
+            INAlternativeAppNamePronunciationHint: "Ozen"
         # Spelled out so a release build's number (set by release.yml)
         # is what Settings and Diagnostics show.
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -63,7 +68,7 @@ targets:
     info:
       path: App/OzenWidget/Info.plist
       properties:
-        CFBundleDisplayName: "אוזן"
+        CFBundleDisplayName: "Ozen"
         CFBundleDevelopmentRegion: he
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
