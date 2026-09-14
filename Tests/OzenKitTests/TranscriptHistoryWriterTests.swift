@@ -165,6 +165,66 @@ struct TranscriptHistoryWriterTests {
         #expect(store.listSummaries().isEmpty)
     }
 
+    private func removeRecordFiles(in dir: URL) throws {
+        for name in try FileManager.default.contentsOfDirectory(atPath: dir.path) where name.hasSuffix(".json") {
+            try FileManager.default.removeItem(at: dir.appendingPathComponent(name))
+        }
+    }
+
+    @Test("an autosave with nothing new since the last write leaves the disk alone; a new line is written")
+    func unchangedAutosaveIsSkipped() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let writer = TranscriptHistoryWriter(store: store)
+        let id = UUID()
+        let quiet = record(id: id, lines: 2, ended: false)
+        writer.saveInBackground(quiet)
+        writer.waitUntilIdle()
+        #expect(store.load(id: id) == quiet)
+
+        // Removed behind the writer's back: only a write brings it back.
+        try removeRecordFiles(in: dir)
+        writer.saveInBackground(quiet)
+        writer.waitUntilIdle()
+        #expect(store.load(id: id) == nil)
+
+        var grown = quiet
+        grown.segments.append(SavedSegment(id: UUID(), text: "עוד שורה", speakerName: nil, speakerClusterID: nil, startTimestamp: 150, isCommitted: true))
+        writer.saveInBackground(grown)
+        writer.waitUntilIdle()
+        #expect(store.load(id: id) == grown)
+    }
+
+    @Test("after a failed write, a delete or a rename, the same conversation is written again")
+    func unchangedAutosaveWrittenAfterTrouble() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let writer = TranscriptHistoryWriter(store: store)
+        let conversation = record(id: UUID(), lines: 1, ended: false)
+
+        writer.saveNow(conversation)
+        try FileManager.default.removeItem(at: dir)
+        try Data("not a folder".utf8).write(to: dir)
+        writer.saveNow(conversation)
+        #expect(writer.lastFailure != nil)
+        try FileManager.default.removeItem(at: dir)
+        writer.saveInBackground(conversation)
+        writer.waitUntilIdle()
+        #expect(store.load(id: conversation.id) == conversation)
+        #expect(writer.lastFailure == nil)
+
+        try writer.deleteNow(id: conversation.id)
+        writer.saveInBackground(conversation)
+        writer.waitUntilIdle()
+        #expect(store.load(id: conversation.id) == conversation)
+
+        writer.renameNow(id: conversation.id, title: "ביקור")
+        try removeRecordFiles(in: dir)
+        writer.saveInBackground(conversation)
+        writer.waitUntilIdle()
+        #expect(store.load(id: conversation.id) != nil)
+    }
+
     @Test("a save that can't reach the disk is reported, and the next one that does clears it")
     func saveFailureIsReported() throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-writer-fail-\(UUID())", isDirectory: true)
