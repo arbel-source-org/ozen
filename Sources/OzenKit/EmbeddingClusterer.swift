@@ -40,10 +40,17 @@ public struct EmbeddingClusterer: Sendable {
     /// Seeds a cluster with a known name from a reference embedding
     /// recorded during enrollment, before any live audio has arrived for
     /// that person.
+    ///
+    /// The reference counts as several samples: it was recorded on purpose,
+    /// close to the microphone, in a quiet moment, while live windows carry
+    /// room noise and cross-talk. Counting it as one would let the very
+    /// first live window move the profile halfway.
     @discardableResult
-    public mutating func enroll(name: String, embedding: [Float]) -> Int {
-        openCluster(with: embedding, name: name)
+    public mutating func enroll(name: String, embedding: [Float], weight: Int = EmbeddingClusterer.enrollmentWeight) -> Int {
+        openCluster(with: embedding, name: name, sampleCount: max(1, weight))
     }
+
+    public static let enrollmentWeight = 6
 
     /// Tags an existing (already-inferred) cluster with a name after the
     /// fact — the "who is this?" flow on a transcript segment.
@@ -97,10 +104,10 @@ public struct EmbeddingClusterer: Sendable {
         return (bestIndex, bestSimilarity)
     }
 
-    private mutating func openCluster(with embedding: [Float], name: String?) -> Int {
+    private mutating func openCluster(with embedding: [Float], name: String?, sampleCount: Int = 1) -> Int {
         let id = nextID
         nextID += 1
-        clusters.append(SpeakerCluster(id: id, centroid: embedding, sampleCount: 1, name: name))
+        clusters.append(SpeakerCluster(id: id, centroid: embedding, sampleCount: sampleCount, name: name))
         return id
     }
 

@@ -96,4 +96,20 @@ struct EmbeddingClustererTests {
         #expect(clusterer.displayName(forClusterID: avi) == EmbeddingClusterer.genericName(forClusterID: avi))
         #expect(clusterer.displayName(forClusterID: ruti) == "רותי")
     }
+
+    @Test("an enrolled voice moves only a little toward a noisy first live window")
+    func enrolledReferenceIsHeavy() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.7)
+        let id = clusterer.enroll(name: "סבתא", embedding: [1, 0, 0])
+        let assigned = clusterer.assign(embedding: [0.8, 0.6, 0])
+        #expect(assigned == id)
+        let centroid = clusterer.clusters[0].centroid
+        let weight = Float(EmbeddingClusterer.enrollmentWeight)
+        #expect(abs(centroid[1] - 0.6 / (weight + 1)) < 0.0001)
+        #expect(clusterer.clusters[0].sampleCount == EmbeddingClusterer.enrollmentWeight + 1)
+
+        // A voice found live still starts at one sample.
+        let live = clusterer.assign(embedding: [0, 0, 1])
+        #expect(clusterer.clusters.first { $0.id == live }?.sampleCount == 1)
+    }
 }
