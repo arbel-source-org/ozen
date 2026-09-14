@@ -58,11 +58,24 @@ struct OnboardingView: View {
         OnboardingPage(symbol: "cpu", title: "איזה מנוע?") {
             EngineCard(
                 title: "Whisper (מומלץ)",
-                subtitle: "מדויק יותר בעברית. מוריד פעם אחת קובץ של כ-\(Self.modelSizeText) ואז עובד בלי אינטרנט.",
+                subtitle: "מדויק יותר בעברית. מוריד פעם אחת קובץ של כ-\(modelSizeText) ואז עובד בלי אינטרנט.",
                 symbol: "sparkles",
                 selected: viewModel.settings.engine == .whisperKit
             ) {
                 Task { await viewModel.setEngine(.whisperKit) }
+            }
+            if viewModel.settings.engine == .whisperKit {
+                Picker("מודל", selection: Binding(
+                    get: { viewModel.settings.whisperModelVariant },
+                    set: { variant in Task { await viewModel.setWhisperModel(variant) } }
+                )) {
+                    Text("מדויק").tag(WhisperModelCatalog.recommendedVariant)
+                    Text("מהיר").tag("small")
+                }
+                .pickerStyle(.segmented)
+                Text(modelChoiceNote)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
             EngineCard(
                 title: "Apple",
@@ -182,10 +195,19 @@ struct OnboardingView: View {
         withAnimation { viewModel.completeOnboarding() }
     }
 
-    private static var modelSizeText: String {
-        let variant = AppSettings.default.whisperModelVariant
-        guard let option = WhisperModelCatalog.options.first(where: { $0.variant == variant }) else { return "500MB" }
-        return option.sizeLabel
+    private var modelSizeText: String {
+        WhisperModelCatalog.option(for: viewModel.settings.whisperModelVariant)?.sizeLabel ?? "500 MB"
+    }
+
+    private var modelChoiceNote: String {
+        switch viewModel.settings.whisperModelVariant {
+        case WhisperModelCatalog.recommendedVariant:
+            return "מדויק: עברית טובה בהרבה, מתעדכן קצת יותר לאט. מתאים לאייפון חדש."
+        case "small":
+            return "מהיר: מגיב מיד, עם יותר טעויות בעברית. מתאים לטלפון ישן."
+        default:
+            return "נבחר מודל אחר בהגדרות."
+        }
     }
 }
 
