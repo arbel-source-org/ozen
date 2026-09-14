@@ -101,7 +101,8 @@ things, for Hebrew conversation, entirely on-device.
   of the eye (slower than any seizure risk, and a steady glow with Reduce
   Motion on). The phone vibrates differently for each, so they can be told
   apart in a pocket: long buzzes for an alarm, a double knock for the door,
-  three quick taps for her name.
+  three quick taps for her name. The banner and flash also show over
+  whatever screen is open, such as the keyboard for typing a reply.
 - **Alerts reach her with the screen off.** With the phone in a pocket or
   locked, a sound alert or her name becomes a phone notification (once per
   30 seconds per sound or word), so the doorbell isn't missed just because

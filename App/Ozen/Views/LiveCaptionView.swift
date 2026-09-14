@@ -287,12 +287,15 @@ struct LiveCaptionView: View {
         }
         .sheet(isPresented: $showingMicPicker) {
             MicPickerView(viewModel: viewModel)
+                .soundAlertOverlay(viewModel.soundAlerts.last)
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(viewModel: viewModel)
+                .soundAlertOverlay(viewModel.soundAlerts.last)
         }
         .sheet(isPresented: $showingTypeToSpeak) {
             TypeToSpeakView(viewModel: viewModel)
+                .soundAlertOverlay(viewModel.soundAlerts.last)
         }
         .onChange(of: viewModel.isShowingBigText, initial: true) { _, asked in
             if asked { presentBigText() }
@@ -304,6 +307,7 @@ struct LiveCaptionView: View {
                 canSpeak: viewModel.hasHebrewVoice,
                 onSpeak: { viewModel.speak($0) }
             )
+            .soundAlertOverlay(viewModel.soundAlerts.last)
         }
         .sheet(item: $namingSegment) { segment in
             NameSpeakerSheet(segment: segment, viewModel: viewModel)
