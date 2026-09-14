@@ -3,15 +3,16 @@ import Testing
 
 @Suite("AlertVibration")
 struct AlertVibrationTests {
-    private let kinds: [AlertVibration] = SoundEvent.Importance.allCases.map(AlertVibration.pattern(for:)) + [AlertVibration.keyword]
+    private let kinds: [AlertVibration] = SoundEvent.Importance.allCases.map(AlertVibration.pattern(for:)) + [AlertVibration.keyword, AlertVibration.speechResumed]
 
-    @Test("a siren, the door, anything else and her name each feel different")
+    @Test("a siren, the door, anything else, her name and someone starting to talk each feel different")
     func eachKindFeelsDifferent() {
         let distinct = [
             AlertVibration.pattern(for: .critical),
             AlertVibration.pattern(for: .high),
             AlertVibration.pattern(for: .medium),
             AlertVibration.keyword,
+            AlertVibration.speechResumed,
         ]
         for (index, pattern) in distinct.enumerated() {
             for other in distinct[(index + 1)...] {
@@ -31,6 +32,15 @@ struct AlertVibrationTests {
         for (lower, higher) in zip(ordered, ordered.dropFirst()) {
             #expect(higher.totalSeconds >= lower.totalSeconds)
             #expect(higher.pulses.count >= lower.pulses.count)
+        }
+    }
+
+    @Test("someone starting to talk is gentler than any alert")
+    func speechResumedIsGentlest() {
+        let strongest = AlertVibration.speechResumed.pulses.map(\.intensity).max() ?? 0
+        let alerts = SoundEvent.Importance.allCases.map(AlertVibration.pattern(for:)) + [AlertVibration.keyword]
+        for alert in alerts {
+            #expect(strongest < alert.pulses.map(\.intensity).min() ?? 0)
         }
     }
 

@@ -14,7 +14,6 @@ struct LiveCaptionView: View {
     @State private var showingTypeToSpeak = false
     @State private var namingSegment: TranscriptSegment?
     @State private var isPinnedToBottom = true
-    @State private var hapticTrigger = 0
     @State private var lastSegmentUpdate: TimeInterval = 0
     /// Advanced every half minute, so a long quiet can let the phone lock
     /// (see `ScreenAwakePolicy`) and the install-expiry warning appears on
@@ -267,7 +266,6 @@ struct LiveCaptionView: View {
                 viewModel.persistHistory(ended: false)
             }
         }
-        .sensoryFeedback(.impact(weight: .medium), trigger: hapticTrigger)
     }
 
     var body: some View {
@@ -528,7 +526,7 @@ struct LiveCaptionView: View {
         let now = Date().timeIntervalSince1970
         defer { lastSegmentUpdate = now }
         guard viewModel.hapticOnSpeechResume, lastSegmentUpdate > 0, now - lastSegmentUpdate > 8 else { return }
-        hapticTrigger += 1
+        vibrate(.speechResumed)
     }
 
     // MARK: - Control bar

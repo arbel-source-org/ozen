@@ -60,4 +60,10 @@ public struct AlertVibration: Sendable, Equatable {
     public static let keyword = AlertVibration(pulses: [0, 0.14, 0.28].map {
         Pulse(start: $0, duration: 0, intensity: 0.9, sharpness: 0.4)
     })
+
+    /// Someone started talking after a long quiet (an optional setting): one
+    /// short, soft hum, gentler than any alert and unlike their taps.
+    public static let speechResumed = AlertVibration(pulses: [
+        Pulse(start: 0, duration: 0.2, intensity: 0.5, sharpness: 0.1),
+    ])
 }
