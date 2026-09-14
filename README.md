@@ -36,6 +36,13 @@ things, for Hebrew conversation, entirely on-device.
   it got 29% of words wrong against 39% for Whisper large-v3 turbo and 60%
   for Whisper small, and puts each change of speaker on its own line. About
   15 cents per hour of continuous speech. See `CloudSpeech`.
+- **Hebrew or English interface**, following the phone's language or a
+  choice in Settings. Every piece of text holds both versions side by side
+  (`tr(hebrew, english)`, checked by `scripts/check-translations.py`);
+  caption lines stay right to left either way.
+- **Bottom buttons that get out of the way**: while captions follow the
+  newest line on their own, the buttons slide away after a few seconds so
+  they never cover it; a touch brings them back.
 - **Nothing leaves the phone unless you choose the cloud.** No server, no
   account. The exceptions are both explicit and off by default: cloud
   captions above, and a switch to let Apple's recognizer use Apple's
@@ -280,7 +287,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (442 tests). The platform layer (WhisperKit/Speech engines, real
+logic (584 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 77 tests).

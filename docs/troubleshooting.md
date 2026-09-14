@@ -40,6 +40,17 @@ leave the phone.
 
 ## Things that are working as intended
 
+- **The buttons at the bottom disappeared.** While captions run and follow
+  the newest line, they slide away after a few seconds so they don't cover
+  it. Touch the screen, or the small arrow at the bottom, to bring them back.
+  To keep them always: Settings → Display → hide the buttons while captions
+  run, off.
+- **The app is in English (or Hebrew) and should be the other.** Settings →
+  App language. "Same as the phone" follows the iPhone's own language.
+- **All settings went back to the start.** The settings file couldn't be
+  read. The damaged file is kept next to it as `ozen-settings.damaged.json`;
+  send the diagnostics report and say so.
+
 - **Speaker numbers start again from 1.** After a long quiet stretch (a new
   conversation), or when the screen is cleared, unnamed voices are numbered
   from "Speaker 1" (dover 1) again, so a phone left listening all week
