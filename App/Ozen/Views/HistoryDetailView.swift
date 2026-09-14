@@ -46,16 +46,7 @@ struct HistoryDetailView: View {
                 Button {
                     withAnimation { proxy.scrollTo(segment.id, anchor: .center) }
                 } label: {
-                    Text(
-                        caption: CaptionLayout.directed(segment.text),
-                        emphasizingNumbers: true,
-                        size: 17,
-                        numberColor: nil
-                    )
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    NumberLineLabel(segment: segment)
                 }
                 .accessibilityHint("מעבר לשורה בשיחה")
             }
@@ -272,6 +263,32 @@ struct HistoryDetailView: View {
             hasJumped = true
         }
         hasLoaded = true
+    }
+}
+
+/// One line under "numbers said": who said it, when known, and the line
+/// with its numbers standing out. "3 כדורים" means more with "הרופא" on it.
+private struct NumberLineLabel: View {
+    let segment: SavedSegment
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let name = segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
+                Text(name)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            Text(
+                caption: CaptionLayout.directed(segment.text),
+                emphasizingNumbers: true,
+                size: 17,
+                numberColor: nil
+            )
+            .font(.body)
+            .foregroundStyle(.primary)
+            .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
