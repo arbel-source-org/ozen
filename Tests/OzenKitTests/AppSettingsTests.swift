@@ -146,3 +146,20 @@ struct AppSettingsTests {
         #expect(DisplayPreferences.fontSize(30, scaledBy: .nan) == 30)
     }
 }
+
+@Suite("AppSettings on a fresh install")
+struct AppSettingsFreshInstallTests {
+    @Test("saving works even when the folder doesn't exist yet, and the walkthrough stays done")
+    func savesIntoMissingFolder() throws {
+        let base = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-fresh-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: base) }
+        let url = base.appendingPathComponent("Application Support").appendingPathComponent("ozen-settings.json")
+        let store = SettingsStore(fileURL: url)
+
+        var settings = store.load()
+        settings.hasCompletedOnboarding = true
+        try store.save(settings)
+
+        #expect(SettingsStore(fileURL: url).load().hasCompletedOnboarding)
+    }
+}

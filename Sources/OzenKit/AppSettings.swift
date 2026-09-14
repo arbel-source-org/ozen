@@ -255,8 +255,12 @@ public struct SettingsStore: Sendable {
         return settings
     }
 
+    /// Creates the folder first: on a fresh install iOS hasn't made
+    /// Application Support yet, and without this the very first saves
+    /// (finishing the walkthrough, say) fail and are forgotten on relaunch.
     public func save(_ settings: AppSettings) throws {
         let data = try JSONEncoder().encode(settings)
+        try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: fileURL, options: .atomic)
     }
 }
