@@ -165,7 +165,7 @@ struct LiveCaptionViewModelAlertTests {
         FileManager.default.temporaryDirectory.appendingPathComponent("ozen-\(name)-\(UUID())")
     }
 
-    @Test("keyword alerts round-trip through settings and reach the pipeline without a restart")
+    @Test("keyword alerts round-trip through settings and reach the pipeline without a restart; adding a listed word switches it back on")
     func keywordAlertsCRUD() async {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
         let engine = FakeEngine()
@@ -186,6 +186,11 @@ struct LiveCaptionViewModelAlertTests {
         let id = viewModel.keywordAlerts[0].id
         viewModel.setKeywordAlert(id: id, enabled: false)
         #expect(store.load().keywordAlerts.first?.isEnabled == false)
+        #expect(viewModel.listedKeywordAlert(matching: "סבתא!")?.id == id)
+        #expect(viewModel.listedKeywordAlert(matching: "סבא") == nil)
+        viewModel.addKeywordAlert(phrase: "סבתא")
+        #expect(viewModel.keywordAlerts.count == 1)
+        #expect(store.load().keywordAlerts.first?.isEnabled == true)
         viewModel.removeKeywordAlert(id: id)
         #expect(store.load().keywordAlerts.isEmpty)
     }

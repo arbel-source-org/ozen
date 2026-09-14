@@ -826,13 +826,24 @@ public final class LiveCaptionViewModel {
 
     public var keywordAlerts: [KeywordAlert] { settings.keywordAlerts }
 
+    /// Adds a word to the list; one already there that was switched off is
+    /// switched back on instead of being listed twice.
     public func addKeywordAlert(phrase: String) {
         let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty,
-              !settings.keywordAlerts.contains(where: { HebrewText.normalize($0.phrase) == HebrewText.normalize(trimmed) })
-        else { return }
+        guard !trimmed.isEmpty else { return }
+        if let listed = listedKeywordAlert(matching: trimmed) {
+            if !listed.isEnabled { setKeywordAlert(id: listed.id, enabled: true) }
+            return
+        }
         settings.keywordAlerts.append(KeywordAlert(phrase: trimmed))
         keywordAlertsChanged()
+    }
+
+    /// The word on the list that `phrase` would duplicate, if any.
+    public func listedKeywordAlert(matching phrase: String) -> KeywordAlert? {
+        let typed = HebrewText.normalize(phrase)
+        guard !typed.isEmpty else { return nil }
+        return settings.keywordAlerts.first { HebrewText.normalize($0.phrase) == typed }
     }
 
     /// Captions are paused only while the phone says something aloud, and
