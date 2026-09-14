@@ -161,10 +161,7 @@ struct LiveCaptionViewModelAlertTests {
         #expect(viewModel.stats.engineRestarts == 0)
 
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום לסבתא", isFinal: false, timestamp: 1))
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.keywordHits.isEmpty && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { !viewModel.keywordHits.isEmpty }
         #expect(viewModel.keywordHits.count == 1)
 
         let id = viewModel.keywordAlerts[0].id
@@ -199,10 +196,7 @@ struct LiveCaptionViewModelAlertTests {
         await viewModel.start()
 
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: 1))
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { !viewModel.segments.isEmpty }
 
         await viewModel.togglePause()
         let sessions = history.listSummaries()
@@ -213,10 +207,7 @@ struct LiveCaptionViewModelAlertTests {
         await viewModel.togglePause()
         viewModel.clearTranscript()
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: 2))
-        let deadline2 = ContinuousClock.now + .seconds(2)
-        while viewModel.segments.isEmpty && ContinuousClock.now < deadline2 {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { !viewModel.segments.isEmpty }
         viewModel.persistHistory(ended: true)
         #expect(history.listSummaries().count == 2)
     }
@@ -230,10 +221,7 @@ struct LiveCaptionViewModelAlertTests {
         let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
         await viewModel.start()
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום", isFinal: true, timestamp: 1))
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { !viewModel.segments.isEmpty }
 
         viewModel.persistHistory(ended: false, inBackground: true)
         viewModel.persistHistory(ended: true)
@@ -290,10 +278,7 @@ struct LiveCaptionViewModelVocabularyTests {
         #expect(viewModel.vocabulary == ["רותי"])
         let saved = SettingsStore(fileURL: file).load()
         #expect(saved.vocabulary == ["רותי"])
-        let deadline = Date().addingTimeInterval(2)
-        while engine.vocabularySeen.last != ["רותי"], Date() < deadline {
-            await Task.yield()
-        }
+        await eventually { engine.vocabularySeen.last == ["רותי"] }
         #expect(engine.vocabularySeen.last == ["רותי"])
     }
 
@@ -377,13 +362,6 @@ struct LiveCaptionViewModelSpeechTests {
         return (viewModel, synthesizer)
     }
 
-    private func waitFor(_ condition: @MainActor () -> Bool, seconds: Double = 3) async {
-        let deadline = Date().addingTimeInterval(seconds)
-        while !condition(), Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(20))
-        }
-    }
-
     @Test("captions pause while the phone talks and come back by themselves afterwards")
     func roundTrip() async {
         let (viewModel, synthesizer) = makeViewModel()
@@ -393,7 +371,7 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.phase == .paused)
         synthesizer.startNext()
         synthesizer.finishCurrent()
-        await waitFor { viewModel.phase.isListening }
+        await eventually { viewModel.phase.isListening }
         #expect(viewModel.phase.isListening)
     }
 
@@ -409,7 +387,7 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.phase == .paused)
         synthesizer.startNext()
         synthesizer.finishCurrent()
-        await waitFor { viewModel.phase.isListening }
+        await eventually { viewModel.phase.isListening }
         #expect(viewModel.phase.isListening)
         #expect(synthesizer.requests == ["כן", "תודה"])
     }
@@ -555,10 +533,7 @@ struct LiveCaptionViewModelBackgroundAlertTests {
 
         viewModel.sceneActivityChanged(isActive: false)
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, את ערה?", isFinal: true, timestamp: Date().timeIntervalSince1970))
-        let deadline = Date().addingTimeInterval(2)
-        while posted.isEmpty, Date() < deadline {
-            try? await Task.sleep(for: .milliseconds(20))
-        }
+        await eventually { !posted.isEmpty }
         #expect(posted.count == 1)
         #expect(posted.first?.title == "נאמר: סבתא")
         #expect(posted.first?.body == "סבתא, את ערה?")
@@ -616,20 +591,14 @@ struct LiveCaptionViewModelConversationBreakTests {
 
         let longAgo = Date().timeIntervalSince1970 - 30 * 60
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: longAgo))
-        let deadline = Date().addingTimeInterval(2)
-        while viewModel.segments.isEmpty, Date() < deadline {
-            try await Task.sleep(for: .milliseconds(20))
-        }
+        await eventually { !viewModel.segments.isEmpty }
 
         #expect(viewModel.checkForConversationBreak())
         #expect(history.listSummaries().count == 1)
         #expect(history.listSummaries().first?.durationSeconds != nil)
 
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: Date().timeIntervalSince1970))
-        let deadline2 = Date().addingTimeInterval(2)
-        while viewModel.segments.count < 2, Date() < deadline2 {
-            try await Task.sleep(for: .milliseconds(20))
-        }
+        await eventually { viewModel.segments.count >= 2 }
         viewModel.persistHistory(ended: false)
 
         let summaries = history.listSummaries()
@@ -673,15 +642,6 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
         )
     }
 
-    private func waitFor(_ condition: @MainActor () -> Bool) async -> Bool {
-        let deadline = ContinuousClock.now + .seconds(2)
-        while ContinuousClock.now < deadline {
-            if condition() { return true }
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        return condition()
-    }
-
     @Test("back on screen after the call, captions that failed during it recover")
     func reclaimsAndRecovers() async {
         let reclaimer = Reclaimer(answer: true)
@@ -691,7 +651,7 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
         viewModel.sceneActivityChanged(isActive: false)
         viewModel.systemInterruptionChanged(began: true)
         engine.endStream(throwing: TestError())
-        #expect(await waitFor { viewModel.pipeline.phase.failure != nil })
+        #expect(await eventually { viewModel.pipeline.phase.failure != nil })
         // No retry while the call holds the microphone.
         #expect(viewModel.pipeline.scheduledRetry == nil)
 
@@ -699,7 +659,7 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
 
         #expect(reclaimer.calls == 1)
         #expect(viewModel.isInterruptedBySystem == false)
-        #expect(await waitFor { viewModel.pipeline.phase.isListening })
+        #expect(await eventually { viewModel.pipeline.phase.isListening })
     }
 
     @Test("while the call still holds the microphone, it stays interrupted")
@@ -764,15 +724,6 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
         )
         viewModel.callEndGrace = .zero
         return viewModel
-    }
-
-    private func waitFor(_ condition: @MainActor () -> Bool) async -> Bool {
-        let deadline = ContinuousClock.now + .seconds(2)
-        while ContinuousClock.now < deadline {
-            if condition() { return true }
-            try? await Task.sleep(for: .milliseconds(5))
-        }
-        return condition()
     }
 
     @Test("after a call iOS never ended, running captions take the microphone back by themselves")
@@ -843,7 +794,7 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
 
         engine.endStream(throwing: TestError())
 
-        #expect(await waitFor { phone.posted.count == 1 })
+        #expect(await eventually { phone.posted.count == 1 })
         #expect(phone.posted.first?.identifier == StoppedCaptionsNotice.identifier)
     }
 
@@ -857,7 +808,7 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
 
         engine.endStream(throwing: TestError())
 
-        #expect(await waitFor { viewModel.pipeline.scheduledRetry != nil })
+        #expect(await eventually { viewModel.pipeline.scheduledRetry != nil })
         try? await Task.sleep(for: .milliseconds(50))
         #expect(phone.posted.isEmpty)
     }
@@ -908,10 +859,7 @@ struct LiveCaptionViewModelStarTests {
         )
         await viewModel.start()
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "כדור אחד בבוקר", isFinal: true, timestamp: Date().timeIntervalSince1970))
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { !viewModel.segments.isEmpty }
         guard let line = viewModel.segments.first else {
             Issue.record("no caption line arrived")
             return
@@ -951,16 +899,10 @@ struct LiveCaptionViewModelStarAcrossBreakTests {
 
         let longAgo = Date().timeIntervalSince1970 - 30 * 60
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "הרופא אמר כדור אחד", isFinal: true, timestamp: longAgo))
-        let deadline = Date().addingTimeInterval(2)
-        while viewModel.segments.isEmpty, Date() < deadline {
-            try await Task.sleep(for: .milliseconds(20))
-        }
+        await eventually { !viewModel.segments.isEmpty }
         #expect(viewModel.checkForConversationBreak())
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: Date().timeIntervalSince1970))
-        let deadline2 = Date().addingTimeInterval(2)
-        while viewModel.segments.count < 2, Date() < deadline2 {
-            try await Task.sleep(for: .milliseconds(20))
-        }
+        await eventually { viewModel.segments.count >= 2 }
 
         viewModel.toggleStar(viewModel.segments[0])
         // A save that must finish now waits behind the star's background save.
@@ -1041,10 +983,7 @@ struct LiveCaptionViewModelDeleteConversationTests {
 
     private func say(_ text: String, at timestamp: TimeInterval, into engine: FakeEngine, until viewModel: LiveCaptionViewModel, count: Int) async {
         engine.emit(TranscriptToken(utteranceID: UUID(), text: text, isFinal: true, timestamp: timestamp))
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.segments.count < count && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { viewModel.segments.count >= count }
     }
 
     @Test("deleting the conversation still being captioned keeps it deleted through autosaves and stopping")
@@ -1134,10 +1073,7 @@ struct LiveCaptionViewModelHistoryRetentionTests {
 
         await viewModel.start()
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "היום", isFinal: true, timestamp: now))
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { !viewModel.segments.isEmpty }
         viewModel.persistHistory(ended: false)
         #expect(history.listSummaries().count == 3)
 
@@ -1219,10 +1155,7 @@ struct LiveCaptionViewModelAnnouncementTests {
 
         func say(_ text: String, count: Int) async {
             engine.emit(TranscriptToken(utteranceID: UUID(), text: text, isFinal: true, timestamp: Date().timeIntervalSince1970))
-            let deadline = ContinuousClock.now + .seconds(2)
-            while viewModel.segments.count < count && ContinuousClock.now < deadline {
-                try? await Task.sleep(for: .milliseconds(5))
-            }
+            await eventually { viewModel.segments.count >= count }
         }
 
         await say("בוקר טוב", count: 1)
@@ -1264,10 +1197,7 @@ struct LiveCaptionViewModelActivityTests {
 
         let spokenAt = (started ?? 0) + 120
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום", isFinal: true, timestamp: spokenAt))
-        let deadline = ContinuousClock.now + .seconds(2)
-        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(5))
-        }
+        await eventually { !viewModel.segments.isEmpty }
         #expect(viewModel.lastCaptionActivityAt == spokenAt)
     }
 }
