@@ -63,6 +63,8 @@ struct OzenShortcuts: AppShortcutsProvider {
             phrases: [
                 "התחל כתוביות ב\(.applicationName)",
                 "תתחיל כתוביות ב\(.applicationName)",
+                "התחילי כתוביות ב\(.applicationName)",
+                "תתחילי כתוביות ב\(.applicationName)",
                 "Start captions in \(.applicationName)",
             ],
             shortTitle: "התחלת כתוביות",
@@ -72,6 +74,9 @@ struct OzenShortcuts: AppShortcutsProvider {
             intent: StopCaptionsIntent(),
             phrases: [
                 "עצור כתוביות ב\(.applicationName)",
+                "תעצור כתוביות ב\(.applicationName)",
+                "עצרי כתוביות ב\(.applicationName)",
+                "תעצרי כתוביות ב\(.applicationName)",
                 "Stop captions in \(.applicationName)",
             ],
             shortTitle: "עצירת כתוביות",
@@ -81,6 +86,7 @@ struct OzenShortcuts: AppShortcutsProvider {
             intent: SpeakIntent(),
             phrases: [
                 "תגיד ב\(.applicationName)",
+                "תגידי ב\(.applicationName)",
                 "Say with \(.applicationName)",
             ],
             shortTitle: "להגיד משהו",
