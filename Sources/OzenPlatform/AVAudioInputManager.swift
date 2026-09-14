@@ -118,18 +118,33 @@ public final class AVAudioInputManager: AudioCapturing {
     /// input's native format), the old tap is bound to the old format.
     /// Rebuild the converter and re-install, keeping the same output
     /// stream so the pipeline above never notices.
-    private func recoverFromConfigurationChange() {
-        guard let old = activeTap else { return }
+    ///
+    /// A Bluetooth microphone that is still connecting can report a 0 Hz
+    /// format, or refuse to start, for a moment. Try again a few times
+    /// before giving up; if it never settles, the pipeline's audio
+    /// watchdog sees no audio arriving and restarts capture from scratch.
+    private func recoverFromConfigurationChange(attempt: Int = 0) {
+        guard let current = activeTap else { return }
         engine.inputNode.removeTap(onBus: 0)
         let newFormat = engine.inputNode.outputFormat(forBus: 0)
-        guard let tap = try? TapState(inputFormat: newFormat, continuation: old.continuation, onLevel: old.onLevel) else {
-            return
+        if newFormat.sampleRate > 0, newFormat.channelCount > 0,
+           let tap = try? TapState(inputFormat: newFormat, continuation: current.continuation, onLevel: current.onLevel) {
+            activeTap = tap
+            installTap(tap)
+            engine.prepare()
+            if (try? engine.start()) != nil { return }
         }
-        activeTap = tap
-        installTap(tap)
-        engine.prepare()
-        try? engine.start()
+        guard attempt < Self.configurationRetryLimit else { return }
+        let engineID = ObjectIdentifier(engine)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            // Capture stopped or restarted meanwhile: nothing to repair.
+            guard let self, self.activeTap != nil, ObjectIdentifier(self.engine) == engineID else { return }
+            self.recoverFromConfigurationChange(attempt: attempt + 1)
+        }
     }
+
+    private static let configurationRetryLimit = 5
 
     public func refreshInputs() {
         if !sessionPrepared {
