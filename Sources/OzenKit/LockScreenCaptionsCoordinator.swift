@@ -58,7 +58,9 @@ public final class LockScreenCaptionsCoordinator {
     /// Nothing said for a while sends nothing, and the lines would turn
     /// stale on the lock screen while captions are in fact running; they
     /// are sent again this often, so "not updating" means the app stopped.
-    /// It also moves the "said N minutes ago" note on.
+    /// It also moves the "said N minutes ago" note on, so every 30 seconds:
+    /// the note is at most that far behind, and the lines' 120-second stale
+    /// date is never reached while the app runs.
     private let keepAliveSeconds: TimeInterval
 
     private var throttle = LockScreenUpdateThrottle(minimumInterval: LockScreenUpdateThrottle.foregroundInterval)
@@ -73,7 +75,7 @@ public final class LockScreenCaptionsCoordinator {
     /// many lines there is room for and how large they are.
     public init(
         display: any LockScreenCaptionsDisplaying,
-        keepAliveSeconds: TimeInterval = 50,
+        keepAliveSeconds: TimeInterval = 30,
         now: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 },
         situation: @escaping @MainActor () -> Situation,
         lines: @escaping @MainActor (_ count: Int, _ textSize: LockScreenTextSize) -> [LockScreenCaptionLine]
