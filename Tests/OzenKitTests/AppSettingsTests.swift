@@ -118,12 +118,36 @@ struct AppSettingsTests {
         #expect(decoded == AppSettings.default)
     }
 
+    @Test("the model shown for a conversation is the one its engine used")
+    func modelDescription() {
+        var settings = AppSettings.default
+        settings.whisperModelVariant = "small"
+        settings.cloudModel = CloudSpeech.accurateModel
+        settings.engine = .whisperKit
+        let whisper = settings.modelDescription
+        settings.engine = .cloud
+        let cloud = settings.modelDescription
+        settings.engine = .appleSpeech
+        let apple = settings.modelDescription
+        #expect(whisper == "small")
+        #expect(cloud == CloudSpeech.accurateModel)
+        #expect(apple == nil)
+    }
+
+    @Test("an empty cloud model name falls back to the fast model")
+    func emptyCloudModel() throws {
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"cloudModel":""}"#.utf8))
+        #expect(decoded.cloudModel == CloudSpeech.fastModel)
+        #expect(decoded.display.autoHideControls)
+    }
+
     @Test("newer settings round-trip through JSON intact")
     func newFieldsRoundTrip() throws {
         var settings = AppSettings.default
         settings.whisperModelVariant = "large-v3_turbo"
         settings.allowServerFallbackForAppleSpeech = true
-        settings.display = DisplayPreferences(fontSize: 44, theme: .highContrast, boldText: true, showSpeakerNames: false, keepScreenAwake: false)
+        settings.cloudModel = CloudSpeech.accurateModel
+        settings.display = DisplayPreferences(fontSize: 44, theme: .highContrast, boldText: true, showSpeakerNames: false, keepScreenAwake: false, autoHideControls: false)
         settings.hapticOnSpeechResume = false
         settings.speakerSimilarityThreshold = 0.6
         settings.keywordAlerts = [KeywordAlert(phrase: "סבתא"), KeywordAlert(phrase: "תרופה", isEnabled: false)]

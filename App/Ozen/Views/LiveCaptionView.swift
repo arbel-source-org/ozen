@@ -14,6 +14,16 @@ struct LiveCaptionView: View {
     @State private var showingTypeToSpeak = false
     @State private var namingSegment: TranscriptSegment?
     @State private var isPinnedToBottom = true
+    /// Whether her finger is on the captions, or they're still coasting
+    /// from a flick, and when that last ended. Only scrolling she does
+    /// stops the captions following the newest line.
+    @State private var userIsScrolling = false
+    @State private var userScrollEndedAt: TimeInterval = 0
+    /// The buttons at the bottom slide away while captions run on their
+    /// own, so they don't cover the newest line (see `ControlBarAutoHide`).
+    @State private var controlsHidden = false
+    @State private var lastTouchAt = Date().timeIntervalSince1970
+    @State private var controlBarHeight: CGFloat = 96
     /// How many lines there were when she scrolled up, so the way back down
     /// can say how many came since.
     @State private var lineCountWhenUnpinned = 0
@@ -118,11 +128,23 @@ struct LiveCaptionView: View {
 
             if !isPinnedToBottom && !viewModel.segments.isEmpty {
                 jumpToLatestPill
-                    .padding(.bottom, 96)
+                    .padding(.bottom, controlBarHeight)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            controlBar
+            hidingControlBar
+
+            if controlsHidden {
+                showControlsButton
+                    .transition(.opacity)
+            }
+        }
+        .simultaneousGesture(TapGesture().onEnded { revealControls() })
+        .task(id: viewModel.isListening) {
+            while !Task.isCancelled {
+                updateControlsVisibility()
+                try? await Task.sleep(for: .seconds(1))
+            }
         }
         .overlay(alignment: .top) {
             VStack(spacing: 8) {
@@ -224,6 +246,10 @@ struct LiveCaptionView: View {
         }
         .onChange(of: viewModel.phase.step) { _, phase in
             announceStopOrReturn(phase)
+            updateControlsVisibility()
+        }
+        .onChange(of: isPinnedToBottom) { _, _ in
+            updateControlsVisibility()
         }
         .onChange(of: viewModel.segments.count) { _, _ in
             noteSpeechActivity()
@@ -382,20 +408,35 @@ struct LiveCaptionView: View {
                     // reader is at the bottom and auto-scroll stays on;
                     // once they scroll up to re-read, it leaves and we
                     // stop yanking the view away from them.
+                    // Room for the buttons above it, so following the
+                    // newest line keeps that line clear of them.
+                    Color.clear
+                        .frame(height: controlsHidden ? 56 : controlBarHeight + 16)
                     Color.clear
                         .frame(height: 1)
                         .id("bottom-sentinel")
                         .onAppear { withAnimation { isPinnedToBottom = true } }
                         .onDisappear {
+                            // A line growing, or the scroll animation itself,
+                            // also moves this out of view for a moment; that
+                            // used to stop the captions following part way.
+                            guard userIsScrolling || Date().timeIntervalSince1970 - userScrollEndedAt < 1 else { return }
                             lineCountWhenUnpinned = viewModel.segments.count
                             withAnimation { isPinnedToBottom = false }
                         }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
-                .padding(.bottom, 140)
             }
             .scrollIndicators(.hidden)
+            .onUserScroll { scrolling in
+                if scrolling {
+                    revealControls()
+                } else if userIsScrolling {
+                    userScrollEndedAt = Date().timeIntervalSince1970
+                }
+                userIsScrolling = scrolling
+            }
             .onAppear { scrollProxy = proxy }
         }
     }
@@ -757,6 +798,54 @@ struct LiveCaptionView: View {
         let newLines = viewModel.segments.count - lineCountWhenUnpinned
         guard newLines > 0 else { return "לשורה האחרונה" }
         return ConversationStats.linesText(newLines, adjective: (singular: "חדשה", plural: "חדשות"))
+    }
+
+    private var hidingControlBar: some View {
+        controlBar
+            .onGeometryChange(for: CGFloat.self) { proxy in proxy.size.height } action: { height in controlBarHeight = height }
+            .offset(y: controlsHidden ? controlBarHeight + 40 : 0)
+            .opacity(controlsHidden ? 0 : 1)
+            .allowsHitTesting(!controlsHidden)
+            .accessibilityHidden(controlsHidden)
+    }
+
+    private var showControlsButton: some View {
+        Button {
+            revealControls()
+        } label: {
+            Image(systemName: "chevron.up")
+                .font(.title3.weight(.semibold))
+                .frame(width: 64, height: 40)
+                .background(.ultraThinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(theme.chrome)
+        .padding(.bottom, 8)
+        .accessibilityLabel("הצגת הכפתורים")
+    }
+
+    private func revealControls() {
+        lastTouchAt = Date().timeIntervalSince1970
+        updateControlsVisibility()
+    }
+
+    private func updateControlsVisibility() {
+        let hide = ControlBarAutoHide.hides(
+            enabled: viewModel.display.autoHideControls,
+            isListening: viewModel.isListening,
+            followingLatest: isPinnedToBottom,
+            hasLines: !viewModel.segments.isEmpty,
+            voiceOverRunning: UIAccessibility.isVoiceOverRunning,
+            lastTouchAt: lastTouchAt,
+            now: Date().timeIntervalSince1970
+        )
+        guard hide != controlsHidden else { return }
+        if reduceMotion {
+            controlsHidden = hide
+        } else {
+            withAnimation(.easeInOut(duration: 0.3)) { controlsHidden = hide }
+        }
+        scrollToLatestIfPinned()
     }
 
     private func scrollToLatestIfPinned() {

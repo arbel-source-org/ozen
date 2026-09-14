@@ -71,6 +71,9 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
     /// The newest lines on the lock screen, as a Live Activity, while
     /// captions run. See `LockScreenCaptions`.
     public var lockScreenCaptions: Bool
+    /// The buttons at the bottom slide away while captions run on their
+    /// own, so they don't cover the newest line. See `ControlBarAutoHide`.
+    public var autoHideControls: Bool
 
     public static let minimumFontSize: Double = 20
     public static let maximumFontSize: Double = 64
@@ -84,7 +87,8 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         markUncertainLines: Bool = true,
         announceNewLines: Bool = true,
         emphasizeNumbers: Bool = true,
-        lockScreenCaptions: Bool = true
+        lockScreenCaptions: Bool = true,
+        autoHideControls: Bool = true
     ) {
         self.fontSize = fontSize
         self.theme = theme
@@ -95,6 +99,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         self.announceNewLines = announceNewLines
         self.emphasizeNumbers = emphasizeNumbers
         self.lockScreenCaptions = lockScreenCaptions
+        self.autoHideControls = autoHideControls
     }
 
     public static let `default` = DisplayPreferences()
@@ -109,7 +114,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case fontSize, theme, boldText, showSpeakerNames, keepScreenAwake, markUncertainLines, announceNewLines, emphasizeNumbers
-        case lockScreenCaptions
+        case lockScreenCaptions, autoHideControls
     }
 
     public init(from decoder: any Decoder) throws {
@@ -124,6 +129,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         announceNewLines = container.lenient(Bool.self, forKey: .announceNewLines) ?? defaults.announceNewLines
         emphasizeNumbers = container.lenient(Bool.self, forKey: .emphasizeNumbers) ?? defaults.emphasizeNumbers
         lockScreenCaptions = container.lenient(Bool.self, forKey: .lockScreenCaptions) ?? defaults.lockScreenCaptions
+        autoHideControls = container.lenient(Bool.self, forKey: .autoHideControls) ?? defaults.autoHideControls
         fontSize = min(max(fontSize, Self.minimumFontSize), Self.maximumFontSize)
     }
 }
