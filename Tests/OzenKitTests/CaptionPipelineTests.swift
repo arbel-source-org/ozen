@@ -1,6 +1,7 @@
 import Testing
 @testable import OzenKit
 import Foundation
+import Observation
 
 // MARK: - Fakes
 
@@ -391,6 +392,35 @@ struct CaptionPipelineStartupTests {
 @Suite("CaptionPipeline tokens, segments and speakers")
 @MainActor
 struct CaptionPipelineTokenTests {
+    final class Flag: @unchecked Sendable {
+        var raised = false
+    }
+
+    @Test("audio coming in doesn't wake what watches for finished lines; a finished line does")
+    func committedLineCountIsObservedOnItsOwn() async {
+        let audio = FakeAudioCapturer()
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(audio: audio, engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let chunksBefore = pipeline.stats.audioChunksReceived
+
+        #expect(pipeline.listeningStartedAt == pipeline.stats.sessionStartedAt)
+        let woken = Flag()
+        withObservationTracking {
+            _ = pipeline.committedLineCount
+            _ = pipeline.listeningStartedAt
+        } onChange: { woken.raised = true }
+        for _ in 0..<5 {
+            audio.push([Float](repeating: 0.01, count: 1_600))
+        }
+        #expect(await eventually { pipeline.stats.audioChunksReceived >= chunksBefore + 5 })
+        #expect(!woken.raised)
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום", isFinal: true, timestamp: 1_000))
+        #expect(await eventually { pipeline.committedLineCount == 1 })
+        #expect(woken.raised)
+    }
+
     @Test("tokens become segments; the same utterance updates in place; final commits it")
     func tokensBecomeSegments() async {
         let engine = FakeEngine()
@@ -409,6 +439,7 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.segments.count == 1)
         #expect(pipeline.stats.tokensReceived == 3)
         #expect(pipeline.stats.segmentsCommitted == 1)
+        #expect(pipeline.committedLineCount == 1)
     }
 
     @Test("a segment the engine never finalizes is committed by the stale timer")

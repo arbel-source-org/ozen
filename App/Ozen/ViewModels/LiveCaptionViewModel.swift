@@ -432,6 +432,9 @@ public final class LiveCaptionViewModel {
     public var isListening: Bool { pipeline.phase.isListening }
     public var inputLevel: Float { pipeline.inputLevel }
     public var stats: PipelineStats { pipeline.stats }
+    /// For views that only need to hear of finished lines (see
+    /// `CaptionPipeline.committedLineCount`).
+    public var committedLineCount: Int { pipeline.committedLineCount }
     public var keywordHits: [KeywordHit] { pipeline.keywordHits }
     public var keywordHitSegmentIDs: Set<UUID> { pipeline.keywordHitSegmentIDs }
     public var soundAlerts: [SoundAlert] { pipeline.soundAlerts }
@@ -729,7 +732,7 @@ public final class LiveCaptionViewModel {
     /// When captions last changed, or listening last began if later: what
     /// "nothing has been said for a while" is measured from.
     public var lastCaptionActivityAt: TimeInterval? {
-        [pipeline.segments.last?.lastUpdateTimestamp, pipeline.stats.sessionStartedAt].compactMap { $0 }.max()
+        [pipeline.segments.last?.lastUpdateTimestamp, pipeline.listeningStartedAt].compactMap { $0 }.max()
     }
 
     /// What VoiceOver should read out for lines finished since the last

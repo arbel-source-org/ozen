@@ -33,6 +33,14 @@ public final class CaptionPipeline {
     public private(set) var activeEngineKind: TranscriptionEngineKind?
     public private(set) var speakerClusters: [SpeakerCluster] = []
     public private(set) var stats = PipelineStats()
+    /// Lines finished since launch, as `stats.segmentsCommitted`, but
+    /// observed on its own: `stats` changes with every chunk of audio, and
+    /// a caption screen that read it to hear of finished lines was drawn
+    /// again ten or more times a second, silence included.
+    public private(set) var committedLineCount = 0
+    /// When listening last began, as `stats.sessionStartedAt`, observed on
+    /// its own for the same reason.
+    public private(set) var listeningStartedAt: TimeInterval?
     /// Alert sounds heard too faintly to alert, for the diagnostics report.
     public private(set) var soundNearMisses = SoundNearMisses()
     /// The classifier confidence a sound needs to raise an alert.
@@ -277,6 +285,7 @@ public final class CaptionPipeline {
         let soundObservations = soundDetector.map { $0.observations(audio: fan.outputs[2]) }
 
         stats.sessionStartedAt = now()
+        listeningStartedAt = stats.sessionStartedAt
         phase = .listening
         eventLog.record(.listening, at: now())
         listeningSince = now()
@@ -687,7 +696,7 @@ public final class CaptionPipeline {
         let committed = stabilizer.commitStale(now: override ?? now())
         for segment in committed {
             upsert(segment)
-            stats.segmentsCommitted += 1
+            countCommittedLine()
         }
         if !committed.isEmpty {
             stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
@@ -717,7 +726,7 @@ public final class CaptionPipeline {
         let wasCommitted = stabilizer.segments.last(where: { $0.id == token.utteranceID })?.isCommitted ?? false
         let segment = stabilizer.ingest(enriched)
         if segment.isCommitted && !wasCommitted {
-            stats.segmentsCommitted += 1
+            countCommittedLine()
         }
         upsert(segment)
         stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
@@ -782,6 +791,11 @@ public final class CaptionPipeline {
                 segments[index].speakerClusterID = clusterID
             }
         }
+    }
+
+    private func countCommittedLine() {
+        stats.segmentsCommitted += 1
+        committedLineCount += 1
     }
 
     private func upsert(_ segment: TranscriptSegment) {
@@ -985,7 +999,7 @@ public final class CaptionPipeline {
         guard !finished.isEmpty else { return }
         for segment in finished {
             upsert(segment)
-            stats.segmentsCommitted += 1
+            countCommittedLine()
         }
         stats.hasOpenLine = false
     }

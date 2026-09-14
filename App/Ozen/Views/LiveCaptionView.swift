@@ -232,7 +232,7 @@ struct LiveCaptionView: View {
             noteSpeechActivity()
             scrollToLatestIfPinned()
         }
-        .onChange(of: viewModel.stats.segmentsCommitted) { _, _ in
+        .onChange(of: viewModel.committedLineCount) { _, _ in
             announceNewLines()
         }
         .onChange(of: viewModel.segments.isEmpty) { _, _ in
