@@ -51,19 +51,19 @@ struct HistoryDetailView: View {
                 } label: {
                     NumberLineLabel(segment: segment)
                 }
-                .accessibilityHint("מעבר לשורה בשיחה")
+                .accessibilityHint(tr("מעבר לשורה בשיחה", "Jump to this line in the conversation"))
                 .contextMenu { copyButton(segment.text) }
                 .accessibilityActions { copyButton(segment.text) }
             }
             if numberLineIDs.count > Self.listedNumberLines {
-                Text("ועוד \(ConversationStats.linesText(numberLineIDs.count - Self.listedNumberLines)) עם מספרים בהמשך השיחה")
+                Text(tr("ועוד \(ConversationStats.linesText(numberLineIDs.count - Self.listedNumberLines)) עם מספרים בהמשך השיחה", "Plus \(ConversationStats.linesText(numberLineIDs.count - Self.listedNumberLines)) with numbers later in the conversation"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         } header: {
-            Text("מספרים שנאמרו")
+            Text(tr("מספרים שנאמרו", "Numbers mentioned"))
         } footer: {
-            Text("שעות, כמויות ומספרי טלפון מהשיחה. נגיעה בשורה מובילה אליה.")
+            Text(tr("שעות, כמויות ומספרי טלפון מהשיחה. נגיעה בשורה מובילה אליה.", "Times, amounts, and phone numbers from the conversation. Tap a line to jump to it."))
         }
     }
 
@@ -122,7 +122,7 @@ struct HistoryDetailView: View {
         Button {
             UIPasteboard.general.string = text
         } label: {
-            Label("העתקה", systemImage: "doc.on.doc")
+            Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
         }
     }
 
@@ -134,11 +134,11 @@ struct HistoryDetailView: View {
 
     private var nextMatchTitle: String {
         if isSearch {
-            return "המקום הבא (\(currentMatch + 1) מתוך \(matches.count))"
+            return tr("המקום הבא (\(currentMatch + 1) מתוך \(matches.count))", "Next match (\(currentMatch + 1) of \(matches.count))")
         }
         return hasJumped
-            ? "הסימון הבא (\(currentMatch + 1) מתוך \(matches.count))"
-            : "לשורות המסומנות (\(matches.count))"
+            ? tr("הסימון הבא (\(currentMatch + 1) מתוך \(matches.count))", "Next starred (\(currentMatch + 1) of \(matches.count))")
+            : tr("לשורות המסומנות (\(matches.count))", "To starred lines (\(matches.count))")
     }
 
     @ToolbarContentBuilder
@@ -161,10 +161,10 @@ struct HistoryDetailView: View {
             ToolbarItem(placement: .primaryAction) {
                 ShareLink(
                     item: TranscriptHistoryStore.exportText(record, utcOffsetSeconds: TimeZone.current.secondsFromGMT()),
-                    subject: Text("שיחה מאוזן"),
+                    subject: Text(tr("שיחה מאוזן", "Conversation from Ozen")),
                     message: Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .abbreviated, time: .shortened))
                 ) {
-                    Label("שיתוף", systemImage: "square.and.arrow.up")
+                    Label(tr("שיתוף", "Share"), systemImage: "square.and.arrow.up")
                 }
             }
             ToolbarItem(placement: .secondaryAction) {
@@ -172,14 +172,14 @@ struct HistoryDetailView: View {
                     newTitle = record.title ?? ""
                     renaming = true
                 } label: {
-                    Label("מתן שם לשיחה", systemImage: "pencil")
+                    Label(tr("מתן שם לשיחה", "Name this conversation"), systemImage: "pencil")
                 }
             }
             ToolbarItem(placement: .secondaryAction) {
                 Button(role: .destructive) {
                     confirmingDelete = true
                 } label: {
-                    Label("מחיקה", systemImage: "trash")
+                    Label(tr("מחיקה", "Delete"), systemImage: "trash")
                 }
             }
         }
@@ -192,32 +192,32 @@ struct HistoryDetailView: View {
             } else if let record {
                 transcriptList(record)
             } else {
-                ContentUnavailableView("השיחה לא נמצאה", systemImage: "questionmark.folder")
+                ContentUnavailableView(tr("השיחה לא נמצאה", "Conversation not found"), systemImage: "questionmark.folder")
             }
         }
-        .navigationTitle(record?.title ?? "שיחה")
+        .navigationTitle(record?.title ?? tr("שיחה", "Conversation"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .alert("שם לשיחה", isPresented: $renaming) {
-            TextField("למשל: ביקור אצל הרופא", text: $newTitle)
-            Button("שמירה") {
+        .alert(tr("שם לשיחה", "Conversation name"), isPresented: $renaming) {
+            TextField(tr("למשל: ביקור אצל הרופא", "For example: doctor’s visit"), text: $newTitle)
+            Button(tr("שמירה", "Save")) {
                 viewModel.renameConversation(id: sessionID, title: newTitle)
                 let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 record?.title = trimmed.isEmpty ? nil : trimmed
                 // The list behind this screen shows the name too.
                 onHistoryChanged()
             }
-            Button("ביטול", role: .cancel) {}
+            Button(tr("ביטול", "Cancel"), role: .cancel) {}
         } message: {
-            Text("השם יופיע ברשימת השיחות, ואפשר יהיה לחפש לפיו.")
+            Text(tr("השם יופיע ברשימת השיחות, ואפשר יהיה לחפש לפיו.", "The name will appear in the conversations list, and you’ll be able to search by it."))
         }
-        .alert("המחיקה נכשלה", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
-            Button("סגור", role: .cancel) {}
+        .alert(tr("המחיקה נכשלה", "Deletion failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button(tr("סגור", "Close"), role: .cancel) {}
         } message: {
-            Text("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")")
+            Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")", "What wasn’t deleted is still saved on the phone. You can try again.\n\(deleteError ?? "")"))
         }
-        .confirmationDialog("למחוק את השיחה הזו?", isPresented: $confirmingDelete, titleVisibility: .visible) {
-            Button("מחיקה", role: .destructive) {
+        .confirmationDialog(tr("למחוק את השיחה הזו?", "Delete this conversation?"), isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button(tr("מחיקה", "Delete"), role: .destructive) {
                 do {
                     try viewModel.deleteConversation(id: sessionID)
                     onHistoryChanged()
@@ -226,7 +226,7 @@ struct HistoryDetailView: View {
                     deleteError = error.localizedDescription
                 }
             }
-            Button("ביטול", role: .cancel) {}
+            Button(tr("ביטול", "Cancel"), role: .cancel) {}
         }
         .task { await load() }
     }
@@ -341,14 +341,14 @@ private struct ConversationSummarySection: View {
             }
 
             if stats.wordsPerMinute > 0 {
-                LabeledContent("קצב דיבור", value: "\(Int(stats.wordsPerMinute.rounded())) מילים לדקה")
+                LabeledContent(tr("קצב דיבור", "Speaking pace"), value: tr("\(Int(stats.wordsPerMinute.rounded())) מילים לדקה", "\(Int(stats.wordsPerMinute.rounded())) words per minute"))
             }
-            LabeledContent("חילופי דוברים", value: "\(stats.totalTurns)")
+            LabeledContent(tr("חילופי דוברים", "Speaker turns"), value: "\(stats.totalTurns)")
             if let longest = stats.longestTurn, stats.speakers.count > 1 {
-                LabeledContent("הדיבור הארוך ביותר", value: "\(longest.speakerName) · \(ConversationStats.wordsText(longest.words))")
+                LabeledContent(tr("הדיבור הארוך ביותר", "Longest turn"), value: "\(longest.speakerName) · \(ConversationStats.wordsText(longest.words))")
             }
         } header: {
-            Text("סיכום")
+            Text(tr("סיכום", "Summary"))
         }
     }
 }
@@ -385,7 +385,7 @@ private struct SavedLineRow: View {
                 if isUncertain {
                     Image(systemName: "questionmark.circle")
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel("ייתכן שלא נשמע נכון")
+                        .accessibilityLabel(tr("ייתכן שלא נשמע נכון", "May not have been heard correctly"))
                 }
                 Text(
                     caption: CaptionLayout.displayText(segment.text),
@@ -396,9 +396,11 @@ private struct SavedLineRow: View {
                     .font(.system(size: max(17, fontSize * 0.7)))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .environment(\.layoutDirection, .rightToLeft)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
-        .accessibilityHint(isMatch ? "מכילה את מה שחיפשת" : "")
+        .accessibilityHint(isMatch ? tr("מכילה את מה שחיפשת", "Contains what you searched for") : "")
     }
 
     private var isUncertain: Bool {
@@ -406,7 +408,7 @@ private struct SavedLineRow: View {
     }
 
     private var accessibilityText: String {
-        let star = segment.isStarred ? "מסומן כחשוב. " : ""
+        let star = segment.isStarred ? tr("מסומן כחשוב. ", "Marked as important. ") : ""
         guard let name = segment.speakerName else { return star + segment.text }
         return star + "\(name): \(segment.text)"
     }

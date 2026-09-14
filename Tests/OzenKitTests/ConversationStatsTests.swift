@@ -133,4 +133,44 @@ struct ConversationStatsTests {
         )
         #expect(ConversationStats.compute(from: record).hebrewSummary == "12 דקות · שני דוברים · 3 מילים")
     }
+
+    @Test("English wording for minutes, speakers, words and lines")
+    func englishWording() {
+        Localization.$override.withValue(.english) {
+            #expect(ConversationStats.minutesText(20) == "less than a minute")
+            #expect(ConversationStats.minutesText(60) == "1 minute")
+            #expect(ConversationStats.minutesText(125) == "2 minutes")
+            #expect(ConversationStats.minutesText(12 * 60) == "12 minutes")
+            let minute: Double = 60
+            #expect(ConversationStats.minutesText(60 * minute) == "1 hour")
+            #expect(ConversationStats.minutesText(61 * minute) == "1 hour 1 minute")
+            #expect(ConversationStats.minutesText(75 * minute) == "1 hour 15 minutes")
+            #expect(ConversationStats.minutesText(120 * minute) == "2 hours")
+            #expect(ConversationStats.minutesText(200 * minute) == "3 hours 20 minutes")
+
+            #expect(ConversationStats.speakersText(1) == "1 speaker")
+            #expect(ConversationStats.speakersText(2) == "2 speakers")
+            #expect(ConversationStats.wordsText(0) == "no words")
+            #expect(ConversationStats.wordsText(1) == "1 word")
+            #expect(ConversationStats.wordsText(2) == "2 words")
+
+            #expect(ConversationStats.linesText(1) == "1 line")
+            #expect(ConversationStats.linesText(3) == "3 lines")
+            #expect(ConversationStats.linesText(1, englishAdjective: "starred") == "1 starred line")
+            #expect(ConversationStats.linesText(3, englishAdjective: "new") == "3 new lines")
+
+            let record = TranscriptSessionRecord(
+                startedAt: 0, endedAt: 720, engine: .whisperKit, modelVariant: nil, inputName: nil,
+                segments: [line("שלום לך", "רותי", at: 1), line("שלום", "אבי", at: 2)]
+            )
+            #expect(ConversationStats.compute(from: record).hebrewSummary == "12 minutes · 2 speakers · 3 words")
+        }
+    }
+
+    @Test("the unknown speaker name follows the language")
+    func englishUnknownSpeakerName() {
+        Localization.$override.withValue(.english) {
+            #expect(ConversationStats.unknownSpeakerName == "Unknown speaker")
+        }
+    }
 }

@@ -41,6 +41,6 @@ struct InstallExpiryBanner: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
-        .accessibilityHint("הקישו לסגירה")
+        .accessibilityHint(tr("הקישו לסגירה", "Tap to close"))
     }
 }

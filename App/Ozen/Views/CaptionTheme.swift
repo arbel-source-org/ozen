@@ -45,9 +45,9 @@ struct CaptionTheme {
 
     static func name(for theme: DisplayPreferences.Theme) -> String {
         switch theme {
-        case .dark: return "לבן על שחור"
-        case .highContrast: return "צהוב על שחור"
-        case .light: return "שחור על לבן"
+        case .dark: return tr("לבן על שחור", "White on black")
+        case .highContrast: return tr("צהוב על שחור", "Yellow on black")
+        case .light: return tr("שחור על לבן", "Black on white")
         }
     }
 }

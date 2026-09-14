@@ -8,6 +8,7 @@ extension HistoryDays {
 
     static func heading(startedAt: TimeInterval) -> String {
         let day = title(of: startedAt, now: Date().timeIntervalSince1970, utcOffsetSeconds: localOffset)
-        return "\(day) בשעה \(Date(timeIntervalSince1970: startedAt).formatted(date: .omitted, time: .shortened))"
+        let time = Date(timeIntervalSince1970: startedAt).formatted(date: .omitted, time: .shortened)
+        return tr("\(day) בשעה \(time)", "\(day) at \(time)")
     }
 }

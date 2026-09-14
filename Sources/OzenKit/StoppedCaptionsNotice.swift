@@ -93,7 +93,7 @@ public struct StoppedCaptionsNotice: Sendable, Equatable {
     static func content(for cause: Cause) -> AlertNotificationContent {
         AlertNotificationContent(
             identifier: identifier,
-            title: "הכתוביות נעצרו",
+            title: tr("הכתוביות נעצרו", "Captions stopped"),
             body: body(for: cause),
             threadIdentifier: "status",
             isUrgent: true
@@ -103,21 +103,39 @@ public struct StoppedCaptionsNotice: Sendable, Equatable {
     private static func body(for cause: Cause) -> String {
         switch cause {
         case .callEnded:
-            return "אחרי השיחה הכתוביות לא חזרו לבד. פתחו את אוזן כדי להמשיך."
+            return tr(
+                "אחרי השיחה הכתוביות לא חזרו לבד. פתחו את אוזן כדי להמשיך.",
+                "After the call, captions didn't come back on their own. Open Ozen to continue."
+            )
         case .failed(let failure):
             switch (failure.kind, failure.engineUnavailability?.kind) {
             case (.microphonePermissionDenied, _), (_, .permissionDenied?):
-                return "לאוזן אין הרשאה להקשיב. פתחו את האפליקציה כדי לתקן."
+                return tr(
+                    "לאוזן אין הרשאה להקשיב. פתחו את האפליקציה כדי לתקן.",
+                    "Ozen doesn't have permission to listen. Open the app to fix it."
+                )
             case (_, .notEnoughStorage?):
-                return "אין מספיק מקום בטלפון. פתחו את אוזן לפרטים."
+                return tr(
+                    "אין מספיק מקום בטלפון. פתחו את אוזן לפרטים.",
+                    "There isn't enough space on the phone. Open Ozen for details."
+                )
             case (.noAudioInputs, _):
-                return "לא נמצא מיקרופון. פתחו את אוזן כדי להמשיך."
+                return tr(
+                    "לא נמצא מיקרופון. פתחו את אוזן כדי להמשיך.",
+                    "No microphone was found. Open Ozen to continue."
+                )
             case (_, .cloudKeyNeeded?), (_, .cloudOutOfCredit?):
-                return "יש בעיה במפתח של התמלול בענן. פתחו את אוזן לפרטים."
+                return tr(
+                    "יש בעיה במפתח של התמלול בענן. פתחו את אוזן לפרטים.",
+                    "There's a problem with the cloud transcription key. Open Ozen for details."
+                )
             case (_, .noInternet?):
-                return "אין אינטרנט, והתמלול בענן צריך אותו. פתחו את אוזן כדי לעבור ל‑Whisper שבטלפון."
+                return tr(
+                    "אין אינטרנט, והתמלול בענן צריך אותו. פתחו את אוזן כדי לעבור ל‑Whisper שבטלפון.",
+                    "There's no internet, and cloud transcription needs it. Open Ozen to switch to Whisper on the phone."
+                )
             default:
-                return "פתחו את אוזן כדי להמשיך."
+                return tr("פתחו את אוזן כדי להמשיך.", "Open Ozen to continue.")
             }
         }
     }

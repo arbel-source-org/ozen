@@ -127,7 +127,7 @@ extension LockScreenCaptions {
 
     /// "said 3 minutes ago", for the lock screen.
     public static func ageNote(minutes: Int) -> String {
-        "נאמר \(HebrewTime.minutesAgo(minutes))"
+        tr("נאמר \(HebrewTime.minutesAgo(minutes))", "said \(HebrewTime.minutesAgo(minutes))")
     }
 }
 
@@ -135,10 +135,18 @@ extension LockScreenCaptions {
 public enum HebrewTime {
     /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago".
     public static func minutesAgo(_ minutes: Int) -> String {
+        if Localization.language == .english { return englishMinutesAgo(minutes) }
         switch minutes {
         case ...1: return "לפני דקה"
         case 2: return "לפני שתי דקות"
         default: return "לפני \(minutes) דקות"
+        }
+    }
+
+    private static func englishMinutesAgo(_ minutes: Int) -> String {
+        switch minutes {
+        case ...1: return "a minute ago"
+        default: return "\(minutes) minutes ago"
         }
     }
 }
@@ -195,17 +203,17 @@ extension LockScreenCaptions {
         pausedForSpeech: Bool
     ) -> (keep: Bool, status: String?) {
         if interruptedByCall {
-            return (true, "הכתוביות מושהות בגלל שיחה")
+            return (true, tr("הכתוביות מושהות בגלל שיחה", "Captions paused for a call"))
         }
         switch phase {
         case .listening:
             return (true, nil)
         case .requestingMicrophonePermission, .preparingEngine, .startingAudio:
-            return (true, "הכתוביות מתחילות…")
+            return (true, tr("הכתוביות מתחילות…", "Captions starting…"))
         case .failed:
-            return (true, "הכתוביות נעצרו. פתחו את אוזן.")
+            return (true, tr("הכתוביות נעצרו. פתחו את אוזן.", "Captions stopped. Open Ozen."))
         case .paused:
-            return pausedForSpeech ? (true, "הטלפון מדבר") : (false, nil)
+            return pausedForSpeech ? (true, tr("הטלפון מדבר", "The phone is talking")) : (false, nil)
         case .idle:
             return (false, nil)
         }

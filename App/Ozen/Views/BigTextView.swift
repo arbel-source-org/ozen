@@ -50,7 +50,7 @@ struct BigTextView: View {
         } else {
             ZStack(alignment: .topLeading) {
                 if isEmpty {
-                    Text("כתבו כאן…")
+                    Text(tr("כתבו כאן…", "Type here…"))
                         .font(.system(size: Self.fontSize, weight: .bold))
                         .foregroundStyle(theme.pendingText)
                         .padding(.horizontal, 29)
@@ -63,7 +63,7 @@ struct BigTextView: View {
                     .scrollContentBackground(.hidden)
                     .focused($isTyping)
                     .padding(24)
-                    .accessibilityLabel("טקסט גדול")
+                    .accessibilityLabel(tr("טקסט גדול", "Big text"))
             }
         }
     }
@@ -77,7 +77,7 @@ struct BigTextView: View {
                 isFlipped = false
                 isTyping = true
             } label: {
-                Label("ניקוי", systemImage: "eraser")
+                Label(tr("ניקוי", "Clear"), systemImage: "eraser")
                     .frame(maxWidth: .infinity)
             }
             .disabled(isEmpty)
@@ -86,17 +86,17 @@ struct BigTextView: View {
                 isFlipped.toggle()
                 isTyping = !isFlipped
             } label: {
-                Label(isFlipped ? "חזרה" : "להפוך", systemImage: "arrow.up.arrow.down")
+                Label(isFlipped ? tr("חזרה", "Back") : tr("להפוך", "Flip"), systemImage: "arrow.up.arrow.down")
                     .frame(maxWidth: .infinity)
             }
             .disabled(isEmpty)
-            .accessibilityHint("הופך את הטקסט כדי שמי שיושב מולך יוכל לקרוא")
+            .accessibilityHint(tr("הופך את הטקסט כדי שמי שיושב מולך יוכל לקרוא", "Flips the text so the person sitting across from you can read it"))
 
             if canSpeak {
                 Button {
                     onSpeak(text)
                 } label: {
-                    Label("להשמיע", systemImage: "speaker.wave.3.fill")
+                    Label(tr("להשמיע", "Speak"), systemImage: "speaker.wave.3.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .disabled(isEmpty)
@@ -105,7 +105,7 @@ struct BigTextView: View {
             Button {
                 dismiss()
             } label: {
-                Label("סגירה", systemImage: "xmark")
+                Label(tr("סגירה", "Close"), systemImage: "xmark")
                     .frame(maxWidth: .infinity)
             }
         }

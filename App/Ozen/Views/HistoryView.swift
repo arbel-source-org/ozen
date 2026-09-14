@@ -20,11 +20,11 @@ struct HistoryView: View {
     private var savingSection: some View {
         Section {
             if viewModel.saveHistory, viewModel.historySaveFailure != nil {
-                Label("השמירה האחרונה של שיחה נכשלה, כנראה כי אין מקום פנוי בטלפון. מה שנאמר מאז אולי לא נשמר.", systemImage: "exclamationmark.triangle.fill")
+                Label(tr("השמירה האחרונה של שיחה נכשלה, כנראה כי אין מקום פנוי בטלפון. מה שנאמר מאז אולי לא נשמר.", "The last conversation save failed, probably because the phone is out of space. What was said since then may not have been saved."), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             }
-            Toggle("לשמור שיחות", isOn: $viewModel.saveHistory)
-            Picker("מחיקה אוטומטית", selection: retentionChoice) {
+            Toggle(tr("לשמור שיחות", "Save conversations"), isOn: $viewModel.saveHistory)
+            Picker(tr("מחיקה אוטומטית", "Automatic deletion"), selection: retentionChoice) {
                 ForEach(HistoryRetention.allCases, id: \.self) { retention in
                     Text(Self.name(for: retention)).tag(retention)
                 }
@@ -36,9 +36,9 @@ struct HistoryView: View {
 
     private var savingFooter: String {
         let size = ModelManagerView.format(bytes: totalSize)
-        let base = "השיחות נשמרות רק בטלפון הזה (\(size)). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע."
+        let base = tr("השיחות נשמרות רק בטלפון הזה (\(size)). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע.", "Conversations are saved only on this phone (\(size)). They aren’t backed up anywhere, and can be deleted anytime.")
         guard viewModel.historyRetention != .forever else { return base }
-        return base + " שיחות עם שורה מסומנת או עם שם נשמרות תמיד."
+        return base + tr(" שיחות עם שורה מסומנת או עם שם נשמרות תמיד.", " Conversations with a starred line or a name are always kept.")
     }
 
     private var starredSection: some View {
@@ -46,7 +46,7 @@ struct HistoryView: View {
             NavigationLink {
                 StarredLinesView(viewModel: viewModel, onHistoryChanged: reload)
             } label: {
-                Label("השורות המסומנות", systemImage: "star.fill")
+                Label(tr("השורות המסומנות", "Starred lines"), systemImage: "star.fill")
                     .badge(sessions.reduce(0) { $0 + $1.starredCount })
             }
         }
@@ -58,10 +58,10 @@ struct HistoryView: View {
     private var conversationsSection: some View {
         if sessions.isEmpty {
             Section {
-                Text(query.isEmpty ? "עדיין אין שיחות שמורות." : "לא נמצא כלום עבור \"\(query)\".")
+                Text(query.isEmpty ? tr("עדיין אין שיחות שמורות.", "No saved conversations yet.") : tr("לא נמצא כלום עבור \"\(query)\".", "Nothing found for “\(query)”."))
                     .foregroundStyle(.secondary)
             } header: {
-                Text("שיחות")
+                Text(tr("שיחות", "Conversations"))
             }
         }
         ForEach(sessionDays) { day in
@@ -91,7 +91,7 @@ struct HistoryView: View {
             Button {
                 pendingDeletion = session
             } label: {
-                Label("מחיקה", systemImage: "trash")
+                Label(tr("מחיקה", "Delete"), systemImage: "trash")
             }
             .tint(.red)
         }
@@ -116,7 +116,7 @@ struct HistoryView: View {
             }
             conversationsSection
         }
-        .searchable(text: $query, prompt: "חיפוש במה שנאמר")
+        .searchable(text: $query, prompt: tr("חיפוש במה שנאמר", "Search what was said"))
         .task(id: query) {
             // Every search reads every saved conversation from disk. Wait
             // for a pause in typing, then do it off the main thread, so a
@@ -127,14 +127,14 @@ struct HistoryView: View {
             }
             await reloadInBackground()
         }
-        .navigationTitle("היסטוריה")
+        .navigationTitle(tr("היסטוריה", "History"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(role: .destructive) {
                     confirmingDeleteAll = true
                 } label: {
-                    Label("מחיקת הכול", systemImage: "trash")
+                    Label(tr("מחיקת הכול", "Delete all"), systemImage: "trash")
                 }
                 .disabled(sessions.isEmpty)
             }
@@ -144,35 +144,35 @@ struct HistoryView: View {
             isPresented: Binding(get: { pendingRetention != nil }, set: { if !$0 { pendingRetention = nil } }),
             titleVisibility: .visible
         ) {
-            Button("למחוק ולהמשיך כך", role: .destructive) {
+            Button(tr("למחוק ולהמשיך כך", "Delete and continue this way"), role: .destructive) {
                 if let retention = pendingRetention {
                     apply(retention)
                 }
             }
-            Button("ביטול", role: .cancel) {}
+            Button(tr("ביטול", "Cancel"), role: .cancel) {}
         } message: {
-            Text("שיחות עם שורה מסומנת או עם שם לא יימחקו.")
+            Text(tr("שיחות עם שורה מסומנת או עם שם לא יימחקו.", "Conversations with a starred line or a name won’t be deleted."))
         }
-        .alert("המחיקה נכשלה", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
-            Button("סגור", role: .cancel) {}
+        .alert(tr("המחיקה נכשלה", "Deletion failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button(tr("סגור", "Close"), role: .cancel) {}
         } message: {
-            Text("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")")
+            Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")", "What wasn’t deleted is still saved on the phone. You can try again.\n\(deleteError ?? "")"))
         }
         .confirmationDialog(
-            "למחוק את השיחה הזו?",
+            tr("למחוק את השיחה הזו?", "Delete this conversation?"),
             isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }),
             titleVisibility: .visible,
             presenting: pendingDeletion
         ) { session in
-            Button("מחיקה", role: .destructive) {
+            Button(tr("מחיקה", "Delete"), role: .destructive) {
                 delete(session)
             }
-            Button("ביטול", role: .cancel) {}
+            Button(tr("ביטול", "Cancel"), role: .cancel) {}
         } message: { session in
             Text(session.title ?? CaptionLayout.directed(session.preview))
         }
-        .confirmationDialog("למחוק את כל השיחות השמורות?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
-            Button("מחיקת הכול", role: .destructive) {
+        .confirmationDialog(tr("למחוק את כל השיחות השמורות?", "Delete all saved conversations?"), isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
+            Button(tr("מחיקת הכול", "Delete all"), role: .destructive) {
                 do {
                     try viewModel.deleteAllConversations()
                 } catch {
@@ -180,7 +180,7 @@ struct HistoryView: View {
                 }
                 reload()
             }
-            Button("ביטול", role: .cancel) {}
+            Button(tr("ביטול", "Cancel"), role: .cancel) {}
         }
     }
 
@@ -214,19 +214,19 @@ struct HistoryView: View {
 
     static func expiryWarning(count: Int) -> String {
         switch count {
-        case 1: return "שיחה ישנה אחת תימחק עכשיו"
-        case 2: return "שתי שיחות ישנות יימחקו עכשיו"
-        default: return "\(count) שיחות ישנות יימחקו עכשיו"
+        case 1: return tr("שיחה ישנה אחת תימחק עכשיו", "1 old conversation will be deleted now")
+        case 2: return tr("שתי שיחות ישנות יימחקו עכשיו", "2 old conversations will be deleted now")
+        default: return tr("\(count) שיחות ישנות יימחקו עכשיו", "\(count) old conversations will be deleted now")
         }
     }
 
     static func name(for retention: HistoryRetention) -> String {
         switch retention {
-        case .forever: return "אף פעם"
-        case .year: return "אחרי שנה"
-        case .threeMonths: return "אחרי 3 חודשים"
-        case .month: return "אחרי חודש"
-        case .week: return "אחרי שבוע"
+        case .forever: return tr("אף פעם", "Never")
+        case .year: return tr("אחרי שנה", "After a year")
+        case .threeMonths: return tr("אחרי 3 חודשים", "After 3 months")
+        case .month: return tr("אחרי חודש", "After a month")
+        case .week: return tr("אחרי שבוע", "After a week")
         }
     }
 
@@ -269,7 +269,7 @@ private struct SessionRow: View {
                 }
             }
             if !session.speakerNames.isEmpty {
-                Label(session.speakerNames.prefix(3).joined(separator: ", ") + (session.speakerNames.count > 3 ? " ועוד" : ""), systemImage: "person.2")
+                Label(session.speakerNames.prefix(3).joined(separator: ", ") + (session.speakerNames.count > 3 ? tr(" ועוד", " and more") : ""), systemImage: "person.2")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -282,7 +282,7 @@ private struct SessionRow: View {
                 if session.starredCount > 0 {
                     Label("\(session.starredCount)", systemImage: "star.fill")
                         .foregroundStyle(Color.yellow.readable(on: colorScheme))
-                        .accessibilityLabel(ConversationStats.linesText(session.starredCount, adjective: (singular: "מסומנת", plural: "מסומנות")))
+                        .accessibilityLabel(ConversationStats.linesText(session.starredCount, adjective: (singular: "מסומנת", plural: "מסומנות"), englishAdjective: "starred"))
                 }
             }
             .font(.caption2)

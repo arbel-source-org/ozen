@@ -246,6 +246,23 @@ struct TranscriptHistoryTests {
         #expect(text == "שיחה מתאריך 01.01.1970\n\n[01:01:01] סבתא: שלום\n[01:01:05] מה נשמע")
     }
 
+    @Test("the export heading and numbers block are in English when the app is")
+    func exportTextEnglishHeading() {
+        Localization.$override.withValue(.english) {
+            let untitled = record(startedAt: 3_661, segments: [segment(text: "שלום", startTimestamp: 3_661)])
+            #expect(TranscriptHistoryStore.exportText(untitled).hasPrefix("Conversation from 01.01.1970"))
+
+            var segments = (0..<19).map { index in
+                segment(text: "line", startTimestamp: 3_600 + TimeInterval(index))
+            }
+            segments[3] = segment(text: "10:30", speakerName: "doctor", startTimestamp: 3_603)
+            segments.append(segment(text: "thanks", startTimestamp: 3_619))
+            let long = TranscriptHistoryStore.exportText(record(startedAt: 3_600, segments: segments))
+            #expect(long.contains("Numbers mentioned:"))
+            #expect(long.contains("The conversation:"))
+        }
+    }
+
     @Test("a long conversation shared as text opens with its lines that had numbers; a short one doesn't")
     func exportTextNumbersBlock() {
         var segments = (0..<19).map { index in

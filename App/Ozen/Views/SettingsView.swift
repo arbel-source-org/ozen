@@ -38,6 +38,7 @@ struct SettingsView: View {
                 case .appleSpeech: appleSpeechSection
                 case .cloud: cloudSection
                 }
+                languageSection
                 displaySection
                 alertsSection
                 speechSection
@@ -49,45 +50,45 @@ struct SettingsView: View {
                 maintenanceSection
                 aboutSection
             }
-            .navigationTitle("הגדרות")
+            .navigationTitle(tr("הגדרות", "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("סגור") { dismiss() }
+                    Button(tr("סגור", "Close")) { dismiss() }
                 }
             }
             .sheet(isPresented: $showingEnrollment) {
                 SpeakerEnrollmentView(viewModel: viewModel)
             }
             .alert(
-                "שינוי שם",
+                tr("שינוי שם", "Rename"),
                 isPresented: Binding(get: { renamingProfile != nil }, set: { if !$0 { renamingProfile = nil } })
             ) {
-                TextField("שם", text: $renameText)
-                Button("שמירה") {
+                TextField(tr("שם", "Name"), text: $renameText)
+                Button(tr("שמירה", "Save")) {
                     if let profile = renamingProfile {
                         viewModel.renameProfile(id: profile.id, to: renameText)
                     }
                     renamingProfile = nil
                 }
-                Button("ביטול", role: .cancel) { renamingProfile = nil }
+                Button(tr("ביטול", "Cancel"), role: .cancel) { renamingProfile = nil }
             } message: {
-                Text("השם החדש יופיע גם על השורות שכבר בכתוביות.")
+                Text(tr("השם החדש יופיע גם על השורות שכבר בכתוביות.", "The new name will also appear on lines already in the captions."))
             }
             .confirmationDialog(
-                "למחוק את \(pendingSpeakerRemoval ?? "") מהדוברים השמורים?",
+                tr("למחוק את \(pendingSpeakerRemoval ?? "") מהדוברים השמורים?", "Delete \(pendingSpeakerRemoval ?? "") from saved speakers?"),
                 isPresented: Binding(get: { pendingSpeakerRemoval != nil }, set: { if !$0 { pendingSpeakerRemoval = nil } }),
                 titleVisibility: .visible,
                 presenting: pendingSpeakerRemoval
             ) { name in
-                Button("מחיקה", role: .destructive) { viewModel.removeSpeaker(named: name) }
-                Button("ביטול", role: .cancel) {}
+                Button(tr("מחיקה", "Delete"), role: .destructive) { viewModel.removeSpeaker(named: name) }
+                Button(tr("ביטול", "Cancel"), role: .cancel) {}
             } message: { _ in
-                Text("כדי שיזוהו שוב בשמם צריך להקליט את הקול מחדש.")
+                Text(tr("כדי שיזוהו שוב בשמם צריך להקליט את הקול מחדש.", "To be recognized by name again, their voice needs to be recorded again."))
             }
-            .confirmationDialog("למחוק את כל הכתוביות מהמסך?", isPresented: $confirmingClear, titleVisibility: .visible) {
-                Button("מחיקה", role: .destructive) { viewModel.clearTranscript() }
-                Button("ביטול", role: .cancel) {}
+            .confirmationDialog(tr("למחוק את כל הכתוביות מהמסך?", "Delete all captions from the screen?"), isPresented: $confirmingClear, titleVisibility: .visible) {
+                Button(tr("מחיקה", "Delete"), role: .destructive) { viewModel.clearTranscript() }
+                Button(tr("ביטול", "Cancel"), role: .cancel) {}
             }
         }
     }
@@ -103,7 +104,7 @@ struct SettingsView: View {
 
     private var engineSection: some View {
         Section {
-            Picker("מנוע תמלול", selection: engineBinding) {
+            Picker(tr("מנוע תמלול", "Transcription engine"), selection: engineBinding) {
                 ForEach(TranscriptionEngineKind.allCases, id: \.self) { kind in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(engineName(kind))
@@ -117,25 +118,25 @@ struct SettingsView: View {
             .pickerStyle(.inline)
             .labelsHidden()
         } header: {
-            Text("מנוע תמלול")
+            Text(tr("מנוע תמלול", "Transcription engine"))
         } footer: {
-            Text("שינוי המנוע מפעיל מחדש את ההאזנה. הכתוביות שכבר על המסך נשארות.")
+            Text(tr("שינוי המנוע מפעיל מחדש את ההאזנה. הכתוביות שכבר על המסך נשארות.", "Changing the engine restarts listening. Captions already on screen stay."))
         }
     }
 
     private func engineName(_ kind: TranscriptionEngineKind) -> String {
         switch kind {
-        case .whisperKit: return "Whisper (במכשיר)"
-        case .appleSpeech: return "זיהוי הדיבור של אפל"
-        case .cloud: return "תמלול בענן (OpenRouter)"
+        case .whisperKit: return tr("Whisper (במכשיר)", "Whisper (on device)")
+        case .appleSpeech: return tr("זיהוי הדיבור של אפל", "Apple's speech recognition")
+        case .cloud: return tr("תמלול בענן (OpenRouter)", "Cloud transcription (OpenRouter)")
         }
     }
 
     private func engineSummary(_ kind: TranscriptionEngineKind) -> String {
         switch kind {
-        case .whisperKit: return "מודל קוד פתוח שרץ על הטלפון. עברית טובה, אפשר לבחור גודל מודל."
-        case .appleSpeech: return "מובנה ב‑iOS. מהיר מאוד, אבל עברית במכשיר לא זמינה בכל גרסה."
-        case .cloud: return "מודל גדול באינטרנט. הכי מדויק, גם כשכמה אנשים מדברים. צריך אינטרנט ומפתח OpenRouter."
+        case .whisperKit: return tr("מודל קוד פתוח שרץ על הטלפון. עברית טובה, אפשר לבחור גודל מודל.", "An open-source model that runs on the phone. Good Hebrew, and you can choose the model size.")
+        case .appleSpeech: return tr("מובנה ב‑iOS. מהיר מאוד, אבל עברית במכשיר לא זמינה בכל גרסה.", "Built into iOS. Very fast, but on-device Hebrew isn’t available in every version.")
+        case .cloud: return tr("מודל גדול באינטרנט. הכי מדויק, גם כשכמה אנשים מדברים. צריך אינטרנט ומפתח OpenRouter.", "A large model online. The most accurate, even with several people talking. Needs internet and an OpenRouter key.")
         }
     }
 
@@ -146,16 +147,16 @@ struct SettingsView: View {
             NavigationLink {
                 ModelManagerView(viewModel: viewModel)
             } label: {
-                LabeledContent("מודל") {
+                LabeledContent(tr("מודל", "Model")) {
                     Text(currentModelLabel)
                         .foregroundStyle(.secondary)
                 }
             }
-            Toggle("להוריד מודלים גם בחבילת הגלישה", isOn: $viewModel.allowCellularModelDownload)
+            Toggle(tr("להוריד מודלים גם בחבילת הגלישה", "Download models on cellular data too"), isOn: $viewModel.allowCellularModelDownload)
         } header: {
             Text("Whisper")
         } footer: {
-            Text("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \"Turbo (compressed)\" הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.")
+            Text(tr("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \"Turbo (compressed)\" הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.", "A bigger model understands Hebrew better but responds more slowly. “Turbo (compressed)” is the recommended choice for this iPhone. Models weigh hundreds of MB, so by default they only download over Wi‑Fi."))
         }
     }
 
@@ -176,11 +177,11 @@ struct SettingsView: View {
 
     private var appleSpeechSection: some View {
         Section {
-            Toggle("לאפשר עיבוד בשרתי אפל", isOn: serverFallbackBinding)
+            Toggle(tr("לאפשר עיבוד בשרתי אפל", "Allow processing on Apple’s servers"), isOn: serverFallbackBinding)
         } header: {
-            Text("זיהוי הדיבור של אפל")
+            Text(tr("זיהוי הדיבור של אפל", "Apple’s speech recognition"))
         } footer: {
-            Text("כבוי: הכול נשאר בטלפון. אם עברית במכשיר לא זמינה, המנוע פשוט לא יעבוד ותוצע חלופה. דולק: כשאין מודל עברית במכשיר, האודיו נשלח לשרתי אפל לזיהוי. זו החלטת פרטיות שלכם — האפליקציה אף פעם לא עושה את זה לבד.")
+            Text(tr("כבוי: הכול נשאר בטלפון. אם עברית במכשיר לא זמינה, המנוע פשוט לא יעבוד ותוצע חלופה. דולק: כשאין מודל עברית במכשיר, האודיו נשלח לשרתי אפל לזיהוי. זו החלטת פרטיות שלכם — האפליקציה אף פעם לא עושה את זה לבד.", "Off: everything stays on the phone. If on-device Hebrew isn’t available, the engine simply won’t work and an alternative will be suggested. On: when there’s no on-device Hebrew model, the audio is sent to Apple’s servers for recognition. This is your privacy choice — the app never does this on its own."))
         }
     }
 
@@ -196,36 +197,36 @@ struct SettingsView: View {
     private var cloudSection: some View {
         Section {
             if hasCloudKey {
-                Label("מפתח שמור בטלפון", systemImage: "key.fill")
+                Label(tr("מפתח שמור בטלפון", "Key saved on the phone"), systemImage: "key.fill")
                     .foregroundStyle(.green)
             }
-            SecureField(hasCloudKey ? "מפתח חדש במקום השמור" : "הדביקו כאן מפתח OpenRouter", text: $cloudKeyDraft)
+            SecureField(hasCloudKey ? tr("מפתח חדש במקום השמור", "New key instead of the saved one") : tr("הדביקו כאן מפתח OpenRouter", "Paste your OpenRouter key here"), text: $cloudKeyDraft)
                 .textContentType(.password)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .onSubmit(saveCloudKey)
             if !cloudKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button("שמירת המפתח", action: saveCloudKey)
+                Button(tr("שמירת המפתח", "Save key"), action: saveCloudKey)
             }
             if cloudKeySaveFailed {
-                Label("המפתח לא נשמר. נסו שוב.", systemImage: "exclamationmark.triangle.fill")
+                Label(tr("המפתח לא נשמר. נסו שוב.", "The key wasn’t saved. Try again."), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             }
             if hasCloudKey {
-                Button("מחיקת המפתח", role: .destructive) {
+                Button(tr("מחיקת המפתח", "Delete key"), role: .destructive) {
                     CloudKeyStore.remove()
                     hasCloudKey = false
                     Task { await viewModel.cloudKeyChanged() }
                 }
             }
-            Picker("מודל", selection: cloudModelBinding) {
-                Text("מהיר (Gemini Flash Lite)").tag(CloudSpeech.fastModel)
-                Text("מדויק יותר, קצת איטי (Gemini Flash)").tag(CloudSpeech.accurateModel)
+            Picker(tr("מודל", "Model"), selection: cloudModelBinding) {
+                Text(tr("מהיר (Gemini Flash Lite)", "Fast (Gemini Flash Lite)")).tag(CloudSpeech.fastModel)
+                Text(tr("מדויק יותר, קצת איטי (Gemini Flash)", "More accurate, a bit slower (Gemini Flash)")).tag(CloudSpeech.accurateModel)
             }
         } header: {
-            Text("תמלול בענן")
+            Text(tr("תמלול בענן", "Cloud transcription"))
         } footer: {
-            Text("הקול נשלח דרך האינטרנט ל‑OpenRouter, ומשם לדגם של Google שכותב את הכתוביות. רק כשמישהו מדבר, משפט אחרי משפט. שעת דיבור רצוף עולה בערך 15 סנט מהקרדיט של המפתח (המדויק יותר: כ‑30 סנט). המפתח נשמר רק בטלפון. בלי אינטרנט הכתוביות נעצרות, ואפשר לחזור ל‑Whisper שבטלפון.")
+            Text(tr("הקול נשלח דרך האינטרנט ל‑OpenRouter, ומשם לדגם של Google שכותב את הכתוביות. רק כשמישהו מדבר, משפט אחרי משפט. שעת דיבור רצוף עולה בערך 15 סנט מהקרדיט של המפתח (המדויק יותר: כ‑30 סנט). המפתח נשמר רק בטלפון. בלי אינטרנט הכתוביות נעצרות, ואפשר לחזור ל‑Whisper שבטלפון.", "The audio is sent over the internet to OpenRouter, and from there to a Google model that writes the captions. Only while someone is speaking, sentence by sentence. An hour of continuous speech costs about 15 cents from the key’s credit (the more accurate one: about 30 cents). The key is saved only on the phone. Without internet the captions stop, and you can switch back to the on-phone Whisper."))
         }
     }
 
@@ -240,13 +241,34 @@ struct SettingsView: View {
         Task { await viewModel.cloudKeyChanged() }
     }
 
+    // MARK: - Language
+
+    private var appLanguageBinding: Binding<AppLanguage> {
+        Binding(
+            get: { viewModel.settings.appLanguage },
+            set: { viewModel.setAppLanguage($0) }
+        )
+    }
+
+    private var languageSection: some View {
+        Section {
+            Picker(tr("שפת האפליקציה", "App language"), selection: appLanguageBinding) {
+                Text(tr("כמו בטלפון", "Same as the phone")).tag(AppLanguage.system)
+                Text("עברית").tag(AppLanguage.hebrew)
+                Text("English").tag(AppLanguage.english)
+            }
+        } footer: {
+            Text(tr("השפה של הכפתורים וההגדרות. הכתוביות נשארות בשפה שמדברים בה.", "The language of the buttons and settings. Captions stay in the language people speak."))
+        }
+    }
+
     // MARK: - Display
 
     private var displaySection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("גודל טקסט")
+                    Text(tr("גודל טקסט", "Text size"))
                     Spacer()
                     Text("\(Int(viewModel.display.fontSize))")
                         .foregroundStyle(.secondary)
@@ -257,7 +279,7 @@ struct SettingsView: View {
                     in: DisplayPreferences.minimumFontSize...DisplayPreferences.maximumFontSize,
                     step: 2
                 ) {
-                    Text("גודל טקסט")
+                    Text(tr("גודל טקסט", "Text size"))
                 } minimumValueLabel: {
                     Image(systemName: "textformat.size.smaller")
                 } maximumValueLabel: {
@@ -267,7 +289,7 @@ struct SettingsView: View {
                 // With a number in it, so the number switch below shows
                 // what it does right here.
                 Text(
-                    caption: "שלום סבתא, נגיע בשש עם שלושה ילדים.",
+                    caption: tr("שלום סבתא, נגיע בשש עם שלושה ילדים.", "Hello grandma, we’ll arrive at six with three kids."),
                     emphasizingNumbers: viewModel.display.emphasizeNumbers,
                     size: viewModel.display.fontSize,
                     numberColor: CaptionTheme(viewModel.display.theme).numberText
@@ -279,27 +301,27 @@ struct SettingsView: View {
                     .foregroundStyle(CaptionTheme(viewModel.display.theme).text)
             }
 
-            Picker("צבעים", selection: $viewModel.display.theme) {
+            Picker(tr("צבעים", "Colors"), selection: $viewModel.display.theme) {
                 ForEach(DisplayPreferences.Theme.allCases, id: \.self) { theme in
                     Text(CaptionTheme.name(for: theme)).tag(theme)
                 }
             }
 
-            Toggle("טקסט מודגש", isOn: $viewModel.display.boldText)
-            Toggle("להציג שמות דוברים", isOn: $viewModel.display.showSpeakerNames)
-            Toggle("המסך לא נכבה בזמן האזנה", isOn: $viewModel.display.keepScreenAwake)
-            Toggle("להסתיר את הכפתורים כשהכתוביות רצות", isOn: $viewModel.display.autoHideControls)
-            Toggle("סימן שאלה ליד שורות שהמנוע לא בטוח בהן", isOn: $viewModel.display.markUncertainLines)
-            Toggle("מספרים בולטים (שעות, כמויות, טלפונים)", isOn: $viewModel.display.emphasizeNumbers)
-            Toggle("כתוביות גם במסך הנעילה", isOn: $viewModel.display.lockScreenCaptions)
+            Toggle(tr("טקסט מודגש", "Bold text"), isOn: $viewModel.display.boldText)
+            Toggle(tr("להציג שמות דוברים", "Show speaker names"), isOn: $viewModel.display.showSpeakerNames)
+            Toggle(tr("המסך לא נכבה בזמן האזנה", "Screen doesn’t turn off while listening"), isOn: $viewModel.display.keepScreenAwake)
+            Toggle(tr("להסתיר את הכפתורים כשהכתוביות רצות", "Hide the buttons while captions are running"), isOn: $viewModel.display.autoHideControls)
+            Toggle(tr("סימן שאלה ליד שורות שהמנוע לא בטוח בהן", "Question mark next to lines the engine isn’t sure about"), isOn: $viewModel.display.markUncertainLines)
+            Toggle(tr("מספרים בולטים (שעות, כמויות, טלפונים)", "Bold numbers (times, amounts, phone numbers)"), isOn: $viewModel.display.emphasizeNumbers)
+            Toggle(tr("כתוביות גם במסך הנעילה", "Captions on the lock screen too"), isOn: $viewModel.display.lockScreenCaptions)
             if viewModel.display.lockScreenCaptions && lockScreenBlocked {
                 lockScreenBlockedNotice
             }
-            Toggle("VoiceOver מקריא שורות חדשות", isOn: $viewModel.display.announceNewLines)
+            Toggle(tr("VoiceOver מקריא שורות חדשות", "VoiceOver reads new lines aloud"), isOn: $viewModel.display.announceNewLines)
         } header: {
-            Text("תצוגה")
+            Text(tr("תצוגה", "Display"))
         } footer: {
-            Text("סימן שאלה ליד שורה אומר שייתכן שהיא לא נשמעה נכון. מספרים כמו שעה, כמות כדורים או מספר טלפון מודגשים בצבע אחר, כדי שלא יתפספסו. לחיצה ארוכה על השורה מאפשרת לבקש שיחזרו עליה. כש-VoiceOver פועל, כל שורה שהסתיימה מוקראת או נשלחת לצג ברייל מעצמה. אחרי רבע שעה בלי דיבור המסך ננעל כרגיל, והכתוביות וההתראות ממשיכות. כשהכתוביות רצות לבד, הכפתורים למטה יורדים אחרי כמה שניות כדי לא להסתיר את השורה החדשה; נגיעה במסך מחזירה אותם. השורות האחרונות מופיעות גם במסך הנעילה, בלי לפתוח את הטלפון; מי שמסתכל על הטלפון יכול לקרוא אותן.")
+            Text(tr("סימן שאלה ליד שורה אומר שייתכן שהיא לא נשמעה נכון. מספרים כמו שעה, כמות כדורים או מספר טלפון מודגשים בצבע אחר, כדי שלא יתפספסו. לחיצה ארוכה על השורה מאפשרת לבקש שיחזרו עליה. כש-VoiceOver פועל, כל שורה שהסתיימה מוקראת או נשלחת לצג ברייל מעצמה. אחרי רבע שעה בלי דיבור המסך ננעל כרגיל, והכתוביות וההתראות ממשיכות. כשהכתוביות רצות לבד, הכפתורים למטה יורדים אחרי כמה שניות כדי לא להסתיר את השורה החדשה; נגיעה במסך מחזירה אותם. השורות האחרונות מופיעות גם במסך הנעילה, בלי לפתוח את הטלפון; מי שמסתכל על הטלפון יכול לקרוא אותן.", "A question mark next to a line means it may not have been heard correctly. Numbers like the time, a pill count, or a phone number are highlighted in another color so they aren’t missed. A long press on a line lets you ask for it to be repeated. When VoiceOver is on, every finished line is read aloud or sent to a braille display on its own. After a quarter hour without speech the screen locks as usual, and captions and alerts keep going. While captions are running on their own, the buttons at the bottom drop away after a few seconds so they don’t hide the new line; touching the screen brings them back. The last lines also appear on the lock screen without unlocking the phone; anyone looking at the phone can read them."))
         }
         .task(id: scenePhase) {
             // Again on coming back from the Settings app, as for notifications.
@@ -310,9 +332,9 @@ struct SettingsView: View {
 
     private var lockScreenBlockedNotice: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("פעילויות בזמן אמת כבויות לאוזן בהגדרות הטלפון, אז הכתוביות לא יופיעו במסך הנעילה.", systemImage: "lock.slash.fill")
+            Label(tr("פעילויות בזמן אמת כבויות לאוזן בהגדרות הטלפון, אז הכתוביות לא יופיעו במסך הנעילה.", "Live Activities are turned off for Ozen in the phone’s settings, so captions won’t appear on the lock screen."), systemImage: "lock.slash.fill")
                 .foregroundStyle(.red)
-            Button("לפתוח את הגדרות הטלפון") {
+            Button(tr("לפתוח את הגדרות הטלפון", "Open the phone’s settings")) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     openURL(url)
                 }
@@ -336,9 +358,9 @@ struct SettingsView: View {
             }
         } label: {
             if testNotificationSent {
-                Label("נשלחה. נעלו את הטלפון, ותוך 10 שניות היא תגיע", systemImage: "checkmark")
+                Label(tr("נשלחה. נעלו את הטלפון, ותוך 10 שניות היא תגיע", "Sent. Lock the phone, and it will arrive within 10 seconds"), systemImage: "checkmark")
             } else {
-                Label("לבדוק שהתראה מגיעה כשהטלפון נעול", systemImage: "bell.and.waves.left.and.right")
+                Label(tr("לבדוק שהתראה מגיעה כשהטלפון נעול", "Test that an alert arrives when the phone is locked"), systemImage: "bell.and.waves.left.and.right")
             }
         }
     }
@@ -349,20 +371,20 @@ struct SettingsView: View {
                 KeywordAlertsView(viewModel: viewModel)
             } label: {
                 LabeledContent {
-                    Text(viewModel.keywordAlerts.isEmpty ? "אין" : "\(viewModel.keywordAlerts.filter(\.isEnabled).count)")
+                    Text(viewModel.keywordAlerts.isEmpty ? tr("אין", "None") : "\(viewModel.keywordAlerts.filter(\.isEnabled).count)")
                         .foregroundStyle(.secondary)
                 } label: {
-                    Label("מילים חשובות", systemImage: "text.badge.star")
+                    Label(tr("מילים חשובות", "Important words"), systemImage: "text.badge.star")
                 }
             }
             NavigationLink {
                 SoundAlertsView(viewModel: viewModel)
             } label: {
                 LabeledContent {
-                    Text(viewModel.soundAlertPreferences.isEnabled ? SoundAlertsView.floorName(viewModel.soundAlertPreferences.minimumImportance) : "כבוי")
+                    Text(viewModel.soundAlertPreferences.isEnabled ? SoundAlertsView.floorName(viewModel.soundAlertPreferences.minimumImportance) : tr("כבוי", "Off"))
                         .foregroundStyle(.secondary)
                 } label: {
-                    Label("צלילים בבית", systemImage: "bell.badge")
+                    Label(tr("צלילים בבית", "Sounds at home"), systemImage: "bell.badge")
                 }
             }
             Toggle(isOn: Binding(
@@ -377,16 +399,16 @@ struct SettingsView: View {
                     }
                 }
             )) {
-                Label("התראה בטלפון כשהמסך כבוי", systemImage: "iphone.radiowaves.left.and.right")
+                Label(tr("התראה בטלפון כשהמסך כבוי", "Alert on phone when the screen is off"), systemImage: "iphone.radiowaves.left.and.right")
             }
             if viewModel.notifyWhenInBackground && !notificationsBlocked {
                 testNotificationButton
             }
             if viewModel.notifyWhenInBackground && notificationsBlocked {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("ההודעות של אוזן כבויות בהגדרות הטלפון, אז כשהמסך כבוי לא תגיע שום התראה.", systemImage: "bell.slash.fill")
+                    Label(tr("ההודעות של אוזן כבויות בהגדרות הטלפון, אז כשהמסך כבוי לא תגיע שום התראה.", "Ozen’s notifications are turned off in the phone’s settings, so no alert will arrive when the screen is off."), systemImage: "bell.slash.fill")
                         .foregroundStyle(.red)
-                    Button("לפתוח את הגדרות הטלפון") {
+                    Button(tr("לפתוח את הגדרות הטלפון", "Open the phone’s settings")) {
                         if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                             openURL(url)
                         }
@@ -394,9 +416,9 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            Text("התראות")
+            Text(tr("התראות", "Alerts"))
         } footer: {
-            Text("רטט והדגשה כשנאמרת מילה חשובה; כרזה כשנשמע פעמון דלת, טלפון, אזעקה ועוד. כשהטלפון בכיס או נעול, אותן התראות מגיעות כהודעה בטלפון, וגם הודעה אם הכתוביות נעצרו ולא חזרו לבד. כדי שגם פנס המצלמה יהבהב בכל הודעה: הגדרות הטלפון ← נגישות ← שמע וחזותי ← הבהוב LED להתראות.")
+            Text(tr("רטט והדגשה כשנאמרת מילה חשובה; כרזה כשנשמע פעמון דלת, טלפון, אזעקה ועוד. כשהטלפון בכיס או נעול, אותן התראות מגיעות כהודעה בטלפון, וגם הודעה אם הכתוביות נעצרו ולא חזרו לבד. כדי שגם פנס המצלמה יהבהב בכל הודעה: הגדרות הטלפון ← נגישות ← שמע וחזותי ← הבהוב LED להתראות.", "Vibration and highlighting when an important word is said; a banner when a doorbell, phone, alarm, and more are heard. When the phone is in a pocket or locked, the same alerts arrive as a phone notification, plus a notification if captions stopped and didn’t come back on their own. For the camera flash to blink on every notification too: phone settings ← Accessibility ← Audio & Visual ← LED Flash for Alerts."))
         }
         .task(id: scenePhase) {
             // Checked on opening and again on coming back from the
@@ -412,19 +434,19 @@ struct SettingsView: View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("מהירות דיבור")
+                    Text(tr("מהירות דיבור", "Speech rate"))
                     Spacer()
                     Text(String(format: "%.2f", viewModel.speechRate))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
                 Slider(value: $viewModel.speechRate, in: 0.2...0.7, step: 0.05)
-                    .accessibilityLabel("מהירות דיבור")
+                    .accessibilityLabel(tr("מהירות דיבור", "Speech rate"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speechRate))
                 HStack {
-                    Text("לאט")
+                    Text(tr("לאט", "Slow"))
                     Spacer()
-                    Text("מהר")
+                    Text(tr("מהר", "Fast"))
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -432,17 +454,17 @@ struct SettingsView: View {
             Button {
                 viewModel.speak("שלום, זה קול הטלפון. ככה אני נשמע.")
             } label: {
-                Label("להשמיע דוגמה", systemImage: "speaker.wave.2")
+                Label(tr("להשמיע דוגמה", "Play a sample"), systemImage: "speaker.wave.2")
             }
             if !viewModel.hasHebrewVoice {
-                Text("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר ← נגישות ← תוכן מדובר ← קולות ← עברית.")
+                Text(tr("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice is installed. Add one in the device settings ← Accessibility ← Spoken Content ← Voices ← Hebrew."))
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
         } header: {
-            Text("להגיד משהו (הקלדה לדיבור)")
+            Text(tr("להגיד משהו (הקלדה לדיבור)", "Say something (type to speak)"))
         } footer: {
-            Text("הכתוביות מושהות בזמן שהטלפון מדבר, ומתחדשות לבד.")
+            Text(tr("הכתוביות מושהות בזמן שהטלפון מדבר, ומתחדשות לבד.", "Captions pause while the phone is speaking, and resume on their own."))
         }
     }
 
@@ -453,12 +475,12 @@ struct SettingsView: View {
             NavigationLink {
                 HistoryView(viewModel: viewModel)
             } label: {
-                Label("שיחות קודמות", systemImage: "clock.arrow.circlepath")
+                Label(tr("שיחות קודמות", "Previous conversations"), systemImage: "clock.arrow.circlepath")
             }
         } header: {
-            Text("היסטוריה")
+            Text(tr("היסטוריה", "History"))
         } footer: {
-            Text(viewModel.saveHistory ? "השיחות נשמרות בטלפון בלבד." : "שמירת שיחות כבויה.")
+            Text(viewModel.saveHistory ? tr("השיחות נשמרות בטלפון בלבד.", "Conversations are saved on the phone only.") : tr("שמירת שיחות כבויה.", "Saving conversations is off."))
         }
     }
 
@@ -470,14 +492,14 @@ struct SettingsView: View {
                 VocabularyView(viewModel: viewModel)
             } label: {
                 HStack {
-                    Label("שמות ומילים מיוחדות", systemImage: "character.book.closed")
+                    Label(tr("שמות ומילים מיוחדות", "Names and special words"), systemImage: "character.book.closed")
                     Spacer()
-                    Text(viewModel.vocabulary.isEmpty ? "ריק" : "\(viewModel.vocabulary.count)")
+                    Text(viewModel.vocabulary.isEmpty ? tr("ריק", "Empty") : "\(viewModel.vocabulary.count)")
                         .foregroundStyle(.secondary)
                 }
             }
         } footer: {
-            Text("שני המנועים מקבלים את הרשימה כרמז, כדי ששמות של בני משפחה ייכתבו נכון.")
+            Text(tr("שני המנועים מקבלים את הרשימה כרמז, כדי ששמות של בני משפחה ייכתבו נכון.", "Both engines get the list as a hint, so family members’ names are spelled correctly."))
         }
     }
 
@@ -498,12 +520,12 @@ struct SettingsView: View {
                     }
                 }
                 .foregroundStyle(.primary)
-                .accessibilityHint("הקישו כדי לשנות את השם")
+                .accessibilityHint(tr("הקישו כדי לשנות את השם", "Tap to change the name"))
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button {
                         pendingSpeakerRemoval = speaker.name
                     } label: {
-                        Label("מחיקה", systemImage: "trash")
+                        Label(tr("מחיקה", "Delete"), systemImage: "trash")
                     }
                     .tint(.red)
                 }
@@ -511,12 +533,12 @@ struct SettingsView: View {
             Button {
                 showingEnrollment = true
             } label: {
-                Label("הוספת דובר", systemImage: "plus.circle")
+                Label(tr("הוספת דובר", "Add speaker"), systemImage: "plus.circle")
             }
         } header: {
-            Text("דוברים שמורים")
+            Text(tr("דוברים שמורים", "Saved speakers"))
         } footer: {
-            Text("דובר שמור מזוהה בשמו מהמשפט הראשון. אפשר גם להקיש על שורה בכתוביות ולתת שם אחרי שהאדם כבר דיבר.")
+            Text(tr("דובר שמור מזוהה בשמו מהמשפט הראשון. אפשר גם להקיש על שורה בכתוביות ולתת שם אחרי שהאדם כבר דיבר.", "A saved speaker is recognized by name from the first sentence. You can also tap a line in the captions and give a name after the person has already spoken."))
         }
     }
 
@@ -524,31 +546,31 @@ struct SettingsView: View {
 
     private var behaviourSection: some View {
         Section {
-            Toggle("רטט כשמישהו מתחיל לדבר אחרי שקט", isOn: $viewModel.hapticOnSpeechResume)
+            Toggle(tr("רטט כשמישהו מתחיל לדבר אחרי שקט", "Vibrate when someone starts talking after silence"), isOn: $viewModel.hapticOnSpeechResume)
 
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("רגישות הפרדת דוברים")
+                    Text(tr("רגישות הפרדת דוברים", "Speaker separation sensitivity"))
                     Spacer()
                     Text(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
                 Slider(value: $viewModel.speakerSimilarityThreshold, in: 0.5...0.95, step: 0.01)
-                    .accessibilityLabel("רגישות הפרדת דוברים")
+                    .accessibilityLabel(tr("רגישות הפרדת דוברים", "Speaker separation sensitivity"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
                 HStack {
-                    Text("מאחד יותר")
+                    Text(tr("מאחד יותר", "More merging"))
                     Spacer()
-                    Text("מפריד יותר")
+                    Text(tr("מפריד יותר", "More separating"))
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
         } header: {
-            Text("התנהגות")
+            Text(tr("התנהגות", "Behavior"))
         } footer: {
-            Text("אם האפליקציה ממציאה \"דובר 3\" לאדם שכבר דיבר, הזיזו לכיוון \"מאחד יותר\". אם היא מאחדת שני אנשים, הזיזו לכיוון \"מפריד יותר\".")
+            Text(tr("אם האפליקציה ממציאה \"דובר 3\" לאדם שכבר דיבר, הזיזו לכיוון \"מאחד יותר\". אם היא מאחדת שני אנשים, הזיזו לכיוון \"מפריד יותר\".", "If the app invents “Speaker 3” for someone who already spoke, move toward “More merging”. If it merges two people, move toward “More separating”."))
         }
     }
 
@@ -558,21 +580,21 @@ struct SettingsView: View {
         Section {
             SiriTipView(intent: StartCaptionsIntent())
             VStack(alignment: .leading, spacing: 6) {
-                Text("״היי סירי, התחל כתוביות באוזן״")
-                Text("״היי סירי, עצור כתוביות באוזן״")
-                Text("״היי סירי, תגיד באוזן שאני כבר באה״")
+                Text(tr("״היי סירי, התחל כתוביות באוזן״", "Hey Siri, start captions in Ozen"))
+                Text(tr("״היי סירי, עצור כתוביות באוזן״", "Hey Siri, stop captions in Ozen"))
+                Text(tr("״היי סירי, תגיד באוזן שאני כבר באה״", "Hey Siri, tell Ozen I’m already on my way"))
             }
             .font(.callout)
             ShortcutsLink()
         } header: {
-            Text("סירי וקיצורי דרך")
+            Text(tr("סירי וקיצורי דרך", "Siri and shortcuts"))
         } footer: {
             if #available(iOS 18.0, *) {
                 // The Control Center button (StartCaptionsControl) is only
                 // found by someone who knows to look for it.
-                Text("הפקודות עובדות גם מהמסך הנעול, וגם באוטומציות של אפליקציית קיצורי דרך. יש גם כפתור ״התחלת כתוביות״ למרכז הבקרה או לתחתית המסך הנעול, במקום הפנס או המצלמה: לחיצה ארוכה על מקום ריק במרכז הבקרה, ואז חיפוש ״Ozen״.")
+                Text(tr("הפקודות עובדות גם מהמסך הנעול, וגם באוטומציות של אפליקציית קיצורי דרך. יש גם כפתור ״התחלת כתוביות״ למרכז הבקרה או לתחתית המסך הנעול, במקום הפנס או המצלמה: לחיצה ארוכה על מקום ריק במרכז הבקרה, ואז חיפוש ״Ozen״.", "The commands also work from the lock screen, and in automations in the Shortcuts app. There’s also a “Start Captions” button for Control Center or the bottom of the lock screen, instead of the flashlight or camera: long-press an empty spot in Control Center, then search for “Ozen”."))
             } else {
-                Text("הפקודות עובדות גם מהמסך הנעול, וגם באוטומציות של אפליקציית קיצורי דרך.")
+                Text(tr("הפקודות עובדות גם מהמסך הנעול, וגם באוטומציות של אפליקציית קיצורי דרך.", "The commands also work from the lock screen, and in automations in the Shortcuts app."))
             }
         }
     }
@@ -584,20 +606,20 @@ struct SettingsView: View {
             NavigationLink {
                 DiagnosticsView(viewModel: viewModel)
             } label: {
-                Label("אבחון", systemImage: "stethoscope")
+                Label(tr("אבחון", "Diagnostics"), systemImage: "stethoscope")
             }
             Button {
                 viewModel.showOnboardingAgain()
             } label: {
-                Label("להציג שוב את ההסבר הראשוני", systemImage: "questionmark.circle")
+                Label(tr("להציג שוב את ההסבר הראשוני", "Show the initial walkthrough again"), systemImage: "questionmark.circle")
             }
             Button(role: .destructive) {
                 confirmingClear = true
             } label: {
-                Label("ניקוי הכתוביות מהמסך", systemImage: "trash")
+                Label(tr("ניקוי הכתוביות מהמסך", "Clear captions from the screen"), systemImage: "trash")
             }
         } header: {
-            Text("תחזוקה")
+            Text(tr("תחזוקה", "Maintenance"))
         }
     }
 
@@ -605,23 +627,23 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section {
-            LabeledContent("נוצר על ידי", value: viewModel.settings.creditLine)
-            LabeledContent("גרסה", value: Self.versionString)
+            LabeledContent(tr("נוצר על ידי", "Made by"), value: viewModel.settings.creditLine)
+            LabeledContent(tr("גרסה", "Version"), value: Self.versionString)
             if let expiresAt = InstallExpiryStatus.shared.expiresAt {
                 // Installed with a free Apple ID: when it has to be
                 // installed again, for whoever does that.
-                LabeledContent("ההתקנה תקפה עד", value: expiresAt.formatted(date: .abbreviated, time: .shortened))
+                LabeledContent(tr("ההתקנה תקפה עד", "Install valid until"), value: expiresAt.formatted(date: .abbreviated, time: .shortened))
             }
             Link(destination: URL(string: "https://github.com/arbelonson-source/ozen")!) {
-                Label("קוד המקור בגיטהאב", systemImage: "chevron.left.forwardslash.chevron.right")
+                Label(tr("קוד המקור בגיטהאב", "Source code on GitHub"), systemImage: "chevron.left.forwardslash.chevron.right")
             }
             Link(destination: URL(string: "https://github.com/argmaxinc/WhisperKit")!) {
-                Label("WhisperKit (MIT) — מנוע Whisper", systemImage: "shippingbox")
+                Label(tr("WhisperKit (MIT) — מנוע Whisper", "WhisperKit (MIT) — Whisper engine"), systemImage: "shippingbox")
             }
         } header: {
-            Text("אודות")
+            Text(tr("אודות", "About"))
         } footer: {
-            Text("אוזן היא תוכנה חופשית בקוד פתוח (MIT). כל העיבוד נעשה בטלפון; שום דבר לא נשלח החוצה אלא אם ביקשתם זאת במפורש למעלה.")
+            Text(tr("אוזן היא תוכנה חופשית בקוד פתוח (MIT). כל העיבוד נעשה בטלפון; שום דבר לא נשלח החוצה אלא אם ביקשתם זאת במפורש למעלה.", "Ozen is free, open-source software (MIT). All processing happens on the phone; nothing is sent out unless you explicitly asked for it above."))
         }
     }
 

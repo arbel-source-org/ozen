@@ -68,6 +68,15 @@ public enum InstallExpiry {
         let today = nowLocal / 86_400
         let secondsIntoDay = expiryLocal - expiryDay * 86_400
         let time = String(format: "%02d:%02d", secondsIntoDay / 3_600, secondsIntoDay % 3_600 / 60)
+        if Localization.language == .english {
+            switch expiryDay - today {
+            case 0: return "today at \(time)"
+            case 1: return "tomorrow at \(time)"
+            default:
+                let weekday = (expiryDay + 4) % 7
+                return "on \(englishWeekdayNames[weekday]) at \(time)"
+            }
+        }
         switch expiryDay - today {
         case 0: return "היום בשעה \(time)"
         case 1: return "מחר בשעה \(time)"
@@ -82,10 +91,16 @@ public enum InstallExpiry {
 
     /// The warning on the caption screen, as seen from `now`.
     public static func warningTitle(expiresAt: Date, now: Date, utcOffsetSeconds: Int) -> String {
-        "אוזן תפסיק להיפתח \(whenText(expiresAt: expiresAt, now: now, utcOffsetSeconds: utcOffsetSeconds))"
+        let when = whenText(expiresAt: expiresAt, now: now, utcOffsetSeconds: utcOffsetSeconds)
+        return tr("אוזן תפסיק להיפתח \(when)", "Ozen will stop opening \(when)")
     }
 
-    public static let warningDetail = "צריך להתקין אותה מחדש מהמחשב לפני כן, כדי שהכתוביות לא ייעלמו."
+    public static var warningDetail: String {
+        tr(
+            "צריך להתקין אותה מחדש מהמחשב לפני כן, כדי שהכתוביות לא ייעלמו.",
+            "It needs to be reinstalled from a computer before then, so captions don't disappear."
+        )
+    }
 
     /// The reminder notification, worded for the moment it is delivered
     /// rather than the moment it was scheduled, so "machar" ("tomorrow")
@@ -101,4 +116,5 @@ public enum InstallExpiry {
     }
 
     private static let weekdayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"]
+    private static let englishWeekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 }

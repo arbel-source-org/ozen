@@ -98,6 +98,27 @@ struct InstallExpiryTests {
         #expect(dayBefore.title == "אוזן תפסיק להיפתח מחר בשעה 07:24")
     }
 
+    @Test("English wording: today, tomorrow, or the day of the week")
+    func englishWording() {
+        Localization.$override.withValue(.english) {
+            let now = monday(9)
+            #expect(InstallExpiry.whenText(expiresAt: monday(22, 5), now: now, utcOffsetSeconds: israel) == "today at 22:05")
+            #expect(InstallExpiry.whenText(expiresAt: monday(0, 30, plusDays: 1), now: now, utcOffsetSeconds: israel) == "tomorrow at 00:30")
+            #expect(InstallExpiry.whenText(expiresAt: monday(7, 24, plusDays: 2), now: now, utcOffsetSeconds: israel) == "on Wednesday at 07:24")
+        }
+    }
+
+    @Test("English reminder title and detail")
+    func englishReminderWording() {
+        Localization.$override.withValue(.english) {
+            let expiry = monday(7, 24, plusDays: 7)
+            let content = InstallExpiry.reminderContent(expiresAt: expiry, remindAt: monday(19, 59, plusDays: 5), utcOffsetSeconds: israel)
+            #expect(content.title == "Ozen will stop opening on Monday at 07:24")
+            #expect(content.body == InstallExpiry.warningDetail)
+            #expect(InstallExpiry.warningDetail.contains("reinstalled"))
+        }
+    }
+
     @Test("a reminder is always in daytime and at least a day before expiry")
     func reminderInvariants() {
         let now = monday(0)

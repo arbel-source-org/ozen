@@ -13,11 +13,11 @@ struct NameAlertForm: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 10) {
-                TextField("השם שלך", text: $nameDraft)
+                TextField(tr("השם שלך", "Your name"), text: $nameDraft)
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
                     .onSubmit(addName)
-                Button("להוסיף", action: addName)
+                Button(tr("להוסיף", "Add"), action: addName)
                     .buttonStyle(.bordered)
                     .controlSize(.large)
                     .disabled(nameDraft.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -35,7 +35,7 @@ struct NameAlertForm: View {
     }
 
     private var addedText: String {
-        "הטלפון ירטוט על: " + viewModel.settings.keywordAlerts.map(\.phrase).joined(separator: ", ")
+        tr("הטלפון ירטוט על: ", "The phone will vibrate for: ") + viewModel.settings.keywordAlerts.map(\.phrase).joined(separator: ", ")
     }
 
     private func suggestionButton(_ word: String) -> some View {
@@ -72,20 +72,20 @@ struct NameAlertSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    Text("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.")
+                    Text(tr("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.", "When someone says your name, the phone vibrates and the line is marked, even when you’re not looking at the screen."))
                     NameAlertForm(viewModel: viewModel)
-                    Text("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.")
+                    Text(tr("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.", "You can add more words, or delete them, in Settings ← Alerts ← Important words."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
                 .font(.title3)
                 .padding(24)
             }
-            .navigationTitle("כשקוראים לך")
+            .navigationTitle(tr("כשקוראים לך", "When your name is called"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("סיום") { dismiss() }
+                    Button(tr("סיום", "Done")) { dismiss() }
                 }
             }
         }

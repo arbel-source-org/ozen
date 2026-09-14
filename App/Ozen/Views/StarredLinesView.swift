@@ -17,7 +17,7 @@ struct StarredLinesView: View {
             if !hasLoaded {
                 ProgressView()
             } else if lines.isEmpty {
-                ContentUnavailableView("אין שורות מסומנות", systemImage: "star", description: Text("לחיצה ארוכה על שורה בזמן השיחה מסמנת אותה כחשובה."))
+                ContentUnavailableView(tr("אין שורות מסומנות", "No starred lines"), systemImage: "star", description: Text(tr("לחיצה ארוכה על שורה בזמן השיחה מסמנת אותה כחשובה.", "Press and hold a line during the conversation to mark it as important.")))
             } else {
                 List {
                     ForEach(groups) { group in
@@ -49,12 +49,14 @@ struct StarredLinesView: View {
                                         )
                                             .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
                                     }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .environment(\.layoutDirection, .rightToLeft)
                                 }
                                 .contextMenu {
                                     Button {
                                         UIPasteboard.general.string = line.segment.text
                                     } label: {
-                                        Label("העתקה", systemImage: "doc.on.doc")
+                                        Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
                                     }
                                 }
                             }
@@ -65,16 +67,16 @@ struct StarredLinesView: View {
                 }
             }
         }
-        .navigationTitle("שורות מסומנות")
+        .navigationTitle(tr("שורות מסומנות", "Starred lines"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if !lines.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
                     ShareLink(
                         item: TranscriptHistoryStore.exportStarredText(lines, utcOffsetSeconds: TimeZone.current.secondsFromGMT()),
-                        subject: Text("שורות מסומנות מאוזן")
+                        subject: Text(tr("שורות מסומנות מאוזן", "Starred lines from Ozen"))
                     ) {
-                        Label("שיתוף", systemImage: "square.and.arrow.up")
+                        Label(tr("שיתוף", "Share"), systemImage: "square.and.arrow.up")
                     }
                 }
             }

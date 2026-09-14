@@ -103,6 +103,16 @@ struct SoundEventsTests {
         #expect(try alert("siren").takesBanner(from: smoke))
     }
 
+    @Test("catalog names are in English when the app is")
+    func englishNames() {
+        Localization.$override.withValue(.english) {
+            #expect(SoundEventCatalog.event(for: "door_bell")?.name == "Doorbell")
+            #expect(SoundEventCatalog.event(for: "civil_defense_siren")?.name == "Air raid siren")
+            let identifiers = SoundEventCatalog.events.map(\.identifier)
+            #expect(Set(identifiers).count == identifiers.count)
+        }
+    }
+
     @Test("preferences decode tolerantly and round-trip")
     func preferencesCodable() throws {
         let decoded = try JSONDecoder().decode(SoundAlertPreferences.self, from: Data("{}".utf8))

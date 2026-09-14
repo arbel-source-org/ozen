@@ -17,15 +17,15 @@ struct SoundAlertsView: View {
     var body: some View {
         List {
             Section {
-                Toggle("התראות על צלילים", isOn: $viewModel.soundAlertPreferences.isEnabled)
-                Picker("להתריע על", selection: $viewModel.soundAlertPreferences.minimumImportance) {
+                Toggle(tr("התראות על צלילים", "Sound alerts"), isOn: $viewModel.soundAlertPreferences.isEnabled)
+                Picker(tr("להתריע על", "Alert for"), selection: $viewModel.soundAlertPreferences.minimumImportance) {
                     ForEach(SoundEvent.Importance.allCases.reversed(), id: \.self) { importance in
                         Text(Self.floorName(importance)).tag(importance)
                     }
                 }
                 .disabled(!viewModel.soundAlertPreferences.isEnabled)
             } footer: {
-                Text("הזיהוי נעשה בטלפון בלבד, על אותו אודיו שמשמש לכתוביות. אותו צליל לא יופיע שוב במשך 20 שניות.")
+                Text(tr("הזיהוי נעשה בטלפון בלבד, על אותו אודיו שמשמש לכתוביות. אותו צליל לא יופיע שוב במשך 20 שניות.", "Detection happens only on the phone, using the same audio as the captions. The same sound won’t appear again for 20 seconds."))
             }
 
             vibrationSamples
@@ -51,13 +51,13 @@ struct SoundAlertsView: View {
 
             if viewModel.knownSoundIdentifiers == nil {
                 Section {
-                    Text("לא ניתן לבדוק אילו צלילים המכשיר הזה מזהה; כל הצלילים מוצגים.")
+                    Text(tr("לא ניתן לבדוק אילו צלילים המכשיר הזה מזהה; כל הצלילים מוצגים.", "Can’t check which sounds this device recognizes; all sounds are shown."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
         }
-        .navigationTitle("צלילים בבית")
+        .navigationTitle(tr("צלילים בבית", "Sounds at home"))
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -66,15 +66,15 @@ struct SoundAlertsView: View {
     /// with her, feel each one.
     private var vibrationSamples: some View {
         Section {
-            sampleButton("חירום: אזעקה, גלאי עשן", vibration: .pattern(for: .critical))
-            sampleButton("חשוב: פעמון, דפיקה בדלת, בכי של תינוק", vibration: .pattern(for: .high))
-            sampleButton("צליל אחר בבית", vibration: .pattern(for: .medium))
-            sampleButton("מילה מהרשימה, כמו השם שלך", vibration: .keyword)
-            sampleButton("מישהו מתחיל לדבר אחרי שקט", vibration: .speechResumed)
+            sampleButton(tr("חירום: אזעקה, גלאי עשן", "Emergency: alarm, smoke detector"), vibration: .pattern(for: .critical))
+            sampleButton(tr("חשוב: פעמון, דפיקה בדלת, בכי של תינוק", "Important: doorbell, knock at the door, baby crying"), vibration: .pattern(for: .high))
+            sampleButton(tr("צליל אחר בבית", "Other sound at home"), vibration: .pattern(for: .medium))
+            sampleButton(tr("מילה מהרשימה, כמו השם שלך", "A word from the list, like your name"), vibration: .keyword)
+            sampleButton(tr("מישהו מתחיל לדבר אחרי שקט", "Someone starts speaking after silence"), vibration: .speechResumed)
         } header: {
-            Text("איך כל התראה מרגישה")
+            Text(tr("איך כל התראה מרגישה", "How each alert feels"))
         } footer: {
-            Text("כשהאפליקציה פתוחה, כל סוג התראה רוטט אחרת, כך שאפשר לדעת מה קרה גם בלי להסתכל. הקישו כדי להרגיש.")
+            Text(tr("כשהאפליקציה פתוחה, כל סוג התראה רוטט אחרת, כך שאפשר לדעת מה קרה גם בלי להסתכל. הקישו כדי להרגיש.", "When the app is open, each kind of alert vibrates differently, so you can tell what happened without looking. Tap to feel it."))
         }
     }
 
@@ -90,19 +90,19 @@ struct SoundAlertsView: View {
 
     static func floorName(_ importance: SoundEvent.Importance) -> String {
         switch importance {
-        case .critical: return "רק חירום"
-        case .high: return "חשוב ומעלה"
-        case .medium: return "בית ומעלה"
-        case .low: return "הכול"
+        case .critical: return tr("רק חירום", "Emergency only")
+        case .high: return tr("חשוב ומעלה", "Important and above")
+        case .medium: return tr("בית ומעלה", "Home and above")
+        case .low: return tr("הכול", "Everything")
         }
     }
 
     static func groupName(_ importance: SoundEvent.Importance) -> String {
         switch importance {
-        case .critical: return "חירום"
-        case .high: return "חשוב"
-        case .medium: return "בבית"
-        case .low: return "רקע"
+        case .critical: return tr("חירום", "Emergency")
+        case .high: return tr("חשוב", "Important")
+        case .medium: return tr("בבית", "At home")
+        case .low: return tr("רקע", "Background")
         }
     }
 
@@ -139,7 +139,7 @@ private struct SoundEventRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(event.name)
                     if !isSupported {
-                        Text("לא נתמך במכשיר הזה")
+                        Text(tr("לא נתמך במכשיר הזה", "Not supported on this device"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

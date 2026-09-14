@@ -79,9 +79,9 @@ struct BatteryBanner: View {
                 Image(systemName: isCritical ? "battery.0percent" : "battery.25percent")
                     .font(.system(size: 26, weight: .semibold))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("הסוללה ב-\(notice.warning.percent)%")
+                    Text(tr("הסוללה ב-\(notice.warning.percent)%", "Battery at \(notice.warning.percent)%"))
                         .font(.headline)
-                    Text(isCritical ? "הטלפון עלול לכבות באמצע השיחה. חברו למטען." : "כדאי לחבר למטען.")
+                    Text(isCritical ? tr("הטלפון עלול לכבות באמצע השיחה. חברו למטען.", "The phone might shut down mid-conversation. Plug in a charger.") : tr("כדאי לחבר למטען.", "Consider plugging in a charger."))
                         .font(.subheadline)
                         .opacity(0.9)
                 }
@@ -100,7 +100,7 @@ struct BatteryBanner: View {
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("הסוללה ב-\(notice.warning.percent) אחוזים")
-        .accessibilityHint("הקישו לסגירה")
+        .accessibilityLabel(tr("הסוללה ב-\(notice.warning.percent) אחוזים", "Battery at \(notice.warning.percent) percent"))
+        .accessibilityHint(tr("הקישו לסגירה", "Tap to close"))
     }
 }

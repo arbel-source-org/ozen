@@ -75,17 +75,20 @@ struct CaptionRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        // Hebrew speech reads from the right, whatever language the
+        // buttons around it are in.
+        .environment(\.layoutDirection, .rightToLeft)
         .accessibilityElement(children: .ignore)
         // VoiceOver reads the speaker on every line, even where the
         // screen leaves the repeated name out.
         .accessibilityLabel(accessibilityText)
-        .accessibilityHint(isKeywordHit ? "מכילה מילה חשובה" : "")
+        .accessibilityHint(isKeywordHit ? tr("מכילה מילה חשובה", "Contains an important word") : "")
     }
 
     private var accessibilityText: String {
         var line = speakerName.map { "\($0): \(segment.text)" } ?? segment.text
-        if isUncertain { line = "ייתכן שלא נשמע נכון. " + line }
-        return isStarred ? "מסומן כחשוב. \(line)" : line
+        if isUncertain { line = tr("ייתכן שלא נשמע נכון. ", "May not have been heard correctly. ") + line }
+        return isStarred ? tr("מסומן כחשוב. \(line)", "Marked as important. \(line)") : line
     }
 }
 
@@ -114,21 +117,21 @@ struct NameSpeakerSheet: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
                 } header: {
-                    Text("מי אמר את זה?")
+                    Text(tr("מי אמר את זה?", "Who said this?"))
                 }
                 Section {
-                    TextField("שם", text: $name)
+                    TextField(tr("שם", "Name"), text: $name)
                         .textInputAutocapitalization(.words)
                         .focused($typing)
                         .submitLabel(.done)
                         .onSubmit { if canSave { save() } }
                 } footer: {
                     Text(segment.speakerClusterID == nil
-                         ? "עדיין לא זוהה קול לשורה הזו. נסו שוב אחרי שהאדם ידבר עוד קצת."
-                         : "מעכשיו כל מה שהקול הזה יגיד יופיע עם השם הזה.")
+                         ? tr("עדיין לא זוהה קול לשורה הזו. נסו שוב אחרי שהאדם ידבר עוד קצת.", "No voice has been identified for this line yet. Try again after the person talks a bit more.")
+                         : tr("מעכשיו כל מה שהקול הזה יגיד יופיע עם השם הזה.", "From now on, everything this voice says will show with this name."))
                 }
                 if segment.speakerClusterID != nil, !savedNames.isEmpty {
-                    Section("דוברים שמורים") {
+                    Section(tr("דוברים שמורים", "Saved speakers")) {
                         ForEach(savedNames, id: \.self) { saved in
                             Button {
                                 name = saved
@@ -140,15 +143,15 @@ struct NameSpeakerSheet: View {
                     }
                 }
             }
-            .navigationTitle("שם לדובר")
+            .navigationTitle(tr("שם לדובר", "Name the speaker"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("שמירה", action: save)
+                    Button(tr("שמירה", "Save"), action: save)
                         .disabled(!canSave)
                 }
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("ביטול") { dismiss() }
+                    Button(tr("ביטול", "Cancel")) { dismiss() }
                 }
             }
         }
@@ -182,7 +185,7 @@ struct SoundAlertBanner: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(alert.event.name)
                         .font(.title3.weight(.bold))
-                    Text(alert.event.importance == .critical ? "שימו לב!" : "נשמע עכשיו")
+                    Text(alert.event.importance == .critical ? tr("שימו לב!", "Attention!") : tr("נשמע עכשיו", "Heard just now"))
                         .font(.subheadline)
                         .opacity(0.85)
                 }
@@ -201,8 +204,8 @@ struct SoundAlertBanner: View {
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("התראה: \(alert.event.name)")
-        .accessibilityHint("הקישו לסגירה")
+        .accessibilityLabel(tr("התראה: \(alert.event.name)", "Alert: \(alert.event.name)"))
+        .accessibilityHint(tr("הקישו לסגירה", "Tap to close"))
     }
 }
 
@@ -267,7 +270,7 @@ struct KeywordHitPill: View {
     let hit: KeywordHit
 
     var body: some View {
-        Label("נאמר: \(hit.match.matchedText)", systemImage: "text.badge.star")
+        Label(tr("נאמר: \(hit.match.matchedText)", "Said: \(hit.match.matchedText)"), systemImage: "text.badge.star")
             .font(.headline)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)

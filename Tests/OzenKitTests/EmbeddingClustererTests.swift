@@ -113,6 +113,17 @@ struct EmbeddingClustererTests {
         let live = clusterer.assign(embedding: [0, 0, 1])
         #expect(clusterer.clusters.first { $0.id == live }?.sampleCount == 1)
     }
+
+    @Test("generic labels are in English when the app is")
+    func englishLabels() {
+        Localization.$override.withValue(.english) {
+            var clusterer = EmbeddingClusterer()
+            let id = clusterer.assign(embedding: [1, 0, 0])
+            #expect(clusterer.displayName(forClusterID: id) == "Speaker 1")
+            #expect(clusterer.displayName(forClusterID: nil) == "Unknown speaker")
+            #expect(EmbeddingClusterer.genericName(number: 3) == "Speaker 3")
+        }
+    }
 }
 
 @Suite("EmbeddingClusterer numbering across conversations")

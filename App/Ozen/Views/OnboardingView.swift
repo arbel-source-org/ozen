@@ -40,82 +40,82 @@ struct OnboardingView: View {
     // MARK: - Pages
 
     private var welcomePage: some View {
-        OnboardingPage(symbol: "ear", title: "אוזן") {
-            Text("כתוביות חיות לשיחה.")
-            Text("מה שאומרים לידך מופיע על המסך, באותיות גדולות, תוך כדי הדיבור.")
-            Text("הכל קורה בתוך הטלפון. שום דבר לא נשלח לאינטרנט.")
+        OnboardingPage(symbol: "ear", title: tr("אוזן", "Ozen")) {
+            Text(tr("כתוביות חיות לשיחה.", "Live captions for conversation."))
+            Text(tr("מה שאומרים לידך מופיע על המסך, באותיות גדולות, תוך כדי הדיבור.", "What’s said near you appears on the screen, in large letters, as it’s spoken."))
+            Text(tr("הכל קורה בתוך הטלפון. שום דבר לא נשלח לאינטרנט.", "It all happens on the phone. Nothing is sent to the internet."))
         }
     }
 
     private var howItWorksPage: some View {
-        OnboardingPage(symbol: "text.bubble", title: "איך זה עובד") {
-            OnboardingRow(symbol: "mic.fill", text: "מניחים את הטלפון על השולחן, והכתוביות רצות לבד.")
-            OnboardingRow(symbol: "person.2.fill", text: "האפליקציה מבדילה בין דוברים ויכולה ללמוד את השמות שלהם.")
-            OnboardingRow(symbol: "bell.badge.fill", text: "היא מתריעה על שמות שחשובים לך, ועל צלצול בדלת או אזעקה, ברטט שונה לכל אחד.")
-            OnboardingRow(symbol: "keyboard", text: "ואפשר להקליד תשובה, והטלפון יגיד אותה בקול.")
+        OnboardingPage(symbol: "text.bubble", title: tr("איך זה עובד", "How it works")) {
+            OnboardingRow(symbol: "mic.fill", text: tr("מניחים את הטלפון על השולחן, והכתוביות רצות לבד.", "Set the phone on the table, and the captions run on their own."))
+            OnboardingRow(symbol: "person.2.fill", text: tr("האפליקציה מבדילה בין דוברים ויכולה ללמוד את השמות שלהם.", "The app tells speakers apart and can learn their names."))
+            OnboardingRow(symbol: "bell.badge.fill", text: tr("היא מתריעה על שמות שחשובים לך, ועל צלצול בדלת או אזעקה, ברטט שונה לכל אחד.", "It alerts you to names that matter to you, and to a doorbell or alarm, with a different vibration for each."))
+            OnboardingRow(symbol: "keyboard", text: tr("ואפשר להקליד תשובה, והטלפון יגיד אותה בקול.", "And you can type a reply, and the phone will speak it aloud."))
         }
     }
 
     private var enginePage: some View {
-        OnboardingPage(symbol: "cpu", title: "איזה מנוע?") {
+        OnboardingPage(symbol: "cpu", title: tr("איזה מנוע?", "Which engine?")) {
             EngineCard(
-                title: "Whisper (מומלץ)",
-                subtitle: "מדויק יותר בעברית. מוריד פעם אחת קובץ של כ-\(modelSizeText), ב-Wi-Fi, ואז עובד בלי אינטרנט.",
+                title: tr("Whisper (מומלץ)", "Whisper (recommended)"),
+                subtitle: tr("מדויק יותר בעברית. מוריד פעם אחת קובץ של כ-\(modelSizeText), ב-Wi-Fi, ואז עובד בלי אינטרנט.", "More accurate in Hebrew. Downloads a file of about \(modelSizeText) once, over Wi‑Fi, then works without the internet."),
                 symbol: "sparkles",
                 selected: viewModel.settings.engine == .whisperKit
             ) {
                 Task { await viewModel.setEngine(.whisperKit) }
             }
             if viewModel.settings.engine == .whisperKit {
-                Picker("מודל", selection: Binding(
+                Picker(tr("מודל", "Model"), selection: Binding(
                     get: { viewModel.settings.whisperModelVariant },
                     set: { variant in Task { await viewModel.setWhisperModel(variant) } }
                 )) {
-                    Text("מדויק").tag(WhisperModelCatalog.recommendedVariant)
-                    Text("מהיר").tag("small")
+                    Text(tr("מדויק", "Accurate")).tag(WhisperModelCatalog.recommendedVariant)
+                    Text(tr("מהיר", "Fast")).tag("small")
                 }
                 .pickerStyle(.segmented)
                 Text(modelChoiceNote)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 if let missing = modelStorageShortfall {
-                    Label("אין מספיק מקום בטלפון למודל הזה. צריך לפנות עוד \(PhasePresentation.sizeText(megabytes: missing)).", systemImage: "externaldrive.badge.exclamationmark")
+                    Label(tr("אין מספיק מקום בטלפון למודל הזה. צריך לפנות עוד \(PhasePresentation.sizeText(megabytes: missing)).", "Not enough room on the phone for this model. \(PhasePresentation.sizeText(megabytes: missing)) more needs to be freed up."), systemImage: "externaldrive.badge.exclamationmark")
                         .font(.callout)
                         .foregroundStyle(.red)
                 }
             }
             EngineCard(
-                title: "Apple",
-                subtitle: "מובנה בטלפון, מתחיל מיד. עברית זמינה רק בחלק מגרסאות iOS.",
+                title: tr("Apple", "Apple"),
+                subtitle: tr("מובנה בטלפון, מתחיל מיד. עברית זמינה רק בחלק מגרסאות iOS.", "Built into the phone, starts right away. Hebrew is only available on some iOS versions."),
                 symbol: "apple.logo",
                 selected: viewModel.settings.engine == .appleSpeech
             ) {
                 Task { await viewModel.setEngine(.appleSpeech) }
             }
-            Text("אפשר להחליף בכל רגע בהגדרות.")
+            Text(tr("אפשר להחליף בכל רגע בהגדרות.", "You can switch anytime in Settings."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var microphonePage: some View {
-        OnboardingPage(symbol: "mic.circle", title: "המיקרופון") {
-            Text("כדי לכתב את השיחה, אוזן צריכה להאזין דרך המיקרופון.")
-            Text("ההקלטה לא נשמרת ולא יוצאת מהטלפון.")
+        OnboardingPage(symbol: "mic.circle", title: tr("המיקרופון", "The microphone")) {
+            Text(tr("כדי לכתב את השיחה, אוזן צריכה להאזין דרך המיקרופון.", "To caption the conversation, Ozen needs to listen through the microphone."))
+            Text(tr("ההקלטה לא נשמרת ולא יוצאת מהטלפון.", "Nothing recorded is saved or leaves the phone."))
             switch microphone {
             case .granted:
-                Label("המיקרופון מאושר", systemImage: "checkmark.circle.fill")
+                Label(tr("המיקרופון מאושר", "Microphone approved"), systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
                     .font(.title3.weight(.semibold))
-                Text("ועוד דבר אחד: כשהטלפון בכיס או נעול, אוזן יכולה להודיע על צלצול בדלת, אזעקה או השם שלך.")
+                Text(tr("ועוד דבר אחד: כשהטלפון בכיס או נעול, אוזן יכולה להודיע על צלצול בדלת, אזעקה או השם שלך.", "One more thing: when the phone is in a pocket or locked, Ozen can notify you about a doorbell, an alarm, or your name."))
                 if let notificationsAllowed {
-                    Label(notificationsAllowed ? "ההתראות מאושרות" : "בלי התראות. אפשר לשנות בהגדרות.", systemImage: notificationsAllowed ? "checkmark.circle.fill" : "bell.slash")
+                    Label(notificationsAllowed ? tr("ההתראות מאושרות", "Notifications approved") : tr("בלי התראות. אפשר לשנות בהגדרות.", "No notifications. This can be changed in Settings."), systemImage: notificationsAllowed ? "checkmark.circle.fill" : "bell.slash")
                         .foregroundStyle(notificationsAllowed ? Color.green : Color.secondary)
                 } else {
                     Button {
                         Task { notificationsAllowed = await AlertNotifier.shared.requestAuthorization() }
                     } label: {
-                        Label("לאשר התראות", systemImage: "bell.badge")
+                        Label(tr("לאשר התראות", "Approve notifications"), systemImage: "bell.badge")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
@@ -123,16 +123,16 @@ struct OnboardingView: View {
                 }
             case .denied:
                 VStack(alignment: .leading, spacing: 12) {
-                    Label("המיקרופון חסום", systemImage: "xmark.circle.fill")
+                    Label(tr("המיקרופון חסום", "Microphone blocked"), systemImage: "xmark.circle.fill")
                         .foregroundStyle(.red)
                         .font(.title3.weight(.semibold))
-                    Text("בלי מיקרופון אין כתוביות. אפשר לאשר בהגדרות הטלפון.")
+                    Text(tr("בלי מיקרופון אין כתוביות. אפשר לאשר בהגדרות הטלפון.", "Without a microphone there are no captions. It can be approved in the phone’s Settings."))
                     Button {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             openURL(url)
                         }
                     } label: {
-                        Label("פתיחת הגדרות הטלפון", systemImage: "gear")
+                        Label(tr("פתיחת הגדרות הטלפון", "Open phone settings"), systemImage: "gear")
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
@@ -145,7 +145,7 @@ struct OnboardingView: View {
                         requesting = false
                     }
                 } label: {
-                    Label("לאשר את המיקרופון", systemImage: "mic.fill")
+                    Label(tr("לאשר את המיקרופון", "Approve the microphone"), systemImage: "mic.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -160,23 +160,23 @@ struct OnboardingView: View {
     /// it's asked for while the family member setting the phone up is
     /// still holding it.
     private var namePage: some View {
-        OnboardingPage(symbol: "bell.and.waves.left.and.right", title: "כשקוראים לך") {
-            Text("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.")
+        OnboardingPage(symbol: "bell.and.waves.left.and.right", title: tr("כשקוראים לך", "When you’re called")) {
+            Text(tr("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.", "When someone says your name, the phone vibrates and the line is highlighted, even when no one is looking at the screen."))
             NameAlertForm(viewModel: viewModel)
-            Text("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.")
+            Text(tr("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.", "More words can be added or removed in Settings ← Notifications ← Important words."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
     }
 
     private var readyPage: some View {
-        OnboardingPage(symbol: "checkmark.seal", title: "מוכן") {
+        OnboardingPage(symbol: "checkmark.seal", title: tr("מוכן", "Ready")) {
             if viewModel.settings.engine == .whisperKit {
-                Text("בהפעלה הראשונה אוזן תוריד את מודל השפה. זה לוקח כמה דקות ומוצג על המסך. אחר כך — מיד.")
+                Text(tr("בהפעלה הראשונה אוזן תוריד את מודל השפה. זה לוקח כמה דקות ומוצג על המסך. אחר כך — מיד.", "The first time it runs, Ozen will download the language model. This takes a few minutes and shows on the screen. After that — instantly."))
             } else {
-                Text("בהפעלה הראשונה iOS עשוי לבקש אישור לזיהוי דיבור.")
+                Text(tr("בהפעלה הראשונה iOS עשוי לבקש אישור לזיהוי דיבור.", "The first time it runs, iOS may ask for permission to recognize speech."))
             }
-            Text("הכפתור למטה מתחיל את הכתוביות. בהצלחה, סבתא.")
+            Text(tr("הכפתור למטה מתחיל את הכתוביות. בהצלחה, סבתא.", "The button below starts the captions. Good luck, Grandma."))
         }
     }
 
@@ -185,7 +185,7 @@ struct OnboardingView: View {
     private var footer: some View {
         HStack {
             if page < Self.pageCount - 1 {
-                Button("דילוג") {
+                Button(tr("דילוג", "Skip")) {
                     finish()
                 }
                 .foregroundStyle(.secondary)
@@ -193,7 +193,7 @@ struct OnboardingView: View {
                 Button {
                     withAnimation { page += 1 }
                 } label: {
-                    Text("הבא")
+                    Text(tr("הבא", "Next"))
                         .frame(minWidth: 120)
                 }
                 .buttonStyle(.borderedProminent)
@@ -202,7 +202,7 @@ struct OnboardingView: View {
                 Button {
                     finish()
                 } label: {
-                    Label("להתחיל", systemImage: "captions.bubble.fill")
+                    Label(tr("להתחיל", "Start"), systemImage: "captions.bubble.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -232,11 +232,11 @@ struct OnboardingView: View {
     private var modelChoiceNote: String {
         switch viewModel.settings.whisperModelVariant {
         case WhisperModelCatalog.recommendedVariant:
-            return "מדויק: עברית טובה בהרבה, מתעדכן קצת יותר לאט. מתאים לאייפון חדש."
+            return tr("מדויק: עברית טובה בהרבה, מתעדכן קצת יותר לאט. מתאים לאייפון חדש.", "Accurate: much better Hebrew, updates a bit slower. Good for a newer iPhone.")
         case "small":
-            return "מהיר: מגיב מיד, עם יותר טעויות בעברית. מתאים לטלפון ישן."
+            return tr("מהיר: מגיב מיד, עם יותר טעויות בעברית. מתאים לטלפון ישן.", "Fast: responds instantly, with more Hebrew mistakes. Good for an older phone.")
         default:
-            return "נבחר מודל אחר בהגדרות."
+            return tr("נבחר מודל אחר בהגדרות.", "A different model is selected in Settings.")
         }
     }
 }

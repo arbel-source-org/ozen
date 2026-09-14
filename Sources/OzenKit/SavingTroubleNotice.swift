@@ -29,6 +29,11 @@ public struct SavingTroubleNotice: Sendable, Equatable {
         isDismissed = true
     }
 
-    public static let title = "השמירה בטלפון נכשלה"
-    public static let detail = "כנראה שהטלפון מלא. שיחות והגדרות חדשות לא יישמרו עד שיתפנה מקום: הגדרות ← כללי ← אחסון iPhone."
+    public static var title: String { tr("השמירה בטלפון נכשלה", "Saving on the phone failed") }
+    public static var detail: String {
+        tr(
+            "כנראה שהטלפון מלא. שיחות והגדרות חדשות לא יישמרו עד שיתפנה מקום: הגדרות ← כללי ← אחסון iPhone.",
+            "The phone is probably full. New conversations and settings won't be saved until space frees up: Settings → General → iPhone Storage."
+        )
+    }
 }

@@ -24,37 +24,37 @@ struct MicPickerView: View {
                         .foregroundStyle(.primary)
                     }
                     if let refusedInputName {
-                        Label("הטלפון לא עבר ל\"\(refusedInputName)\", והמיקרופון המסומן עדיין מקליט. נסו לנתק ולחבר אותו שוב.", systemImage: "exclamationmark.triangle.fill")
+                        Label(tr("הטלפון לא עבר ל\"\(refusedInputName)\", והמיקרופון המסומן עדיין מקליט. נסו לנתק ולחבר אותו שוב.", "The phone did not switch to “\(refusedInputName)”, and the marked microphone is still recording. Try unplugging and reconnecting it."), systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                             .font(.footnote)
                     }
                 } header: {
-                    Text("מיקרופונים זמינים")
+                    Text(tr("מיקרופונים זמינים", "Available microphones"))
                 } footer: {
-                    Text("המיקרופון המסומן הוא זה שמקליט עכשיו. אוזניות או מיקרופון שיתחברו יופיעו כאן אוטומטית.")
+                    Text(tr("המיקרופון המסומן הוא זה שמקליט עכשיו. אוזניות או מיקרופון שיתחברו יופיעו כאן אוטומטית.", "The marked microphone is the one recording now. Headphones or a microphone that connect will appear here automatically."))
                 }
 
-                Section("עוצמת קליטה") {
+                Section(tr("עוצמת קליטה", "Input level")) {
                     LevelMeter(level: viewModel.inputLevel, isActive: viewModel.isListening)
                     if viewModel.isListening {
-                        Text("דברו ותראו את הפס זז. אם הוא לא זז, המיקרופון שנבחר לא שומע.")
+                        Text(tr("דברו ותראו את הפס זז. אם הוא לא זז, המיקרופון שנבחר לא שומע.", "Speak and watch the bar move. If it doesn’t move, the selected microphone isn’t hearing anything."))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("המד פעיל רק בזמן האזנה.")
+                        Text(tr("המד פעיל רק בזמן האזנה.", "The meter is only active while listening."))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
 
-                Section("טיפים") {
+                Section(tr("טיפים", "Tips")) {
                     Label {
-                        Text("מיקרופון USB‑C צריך להיות מסוג \"USB Audio\" (כמו רוב מיקרופוני הדש). אם הוא לא מופיע ברשימה, האייפון לא מזהה אותו בכלל, ולא רק האפליקציה.")
+                        Text(tr("מיקרופון USB‑C צריך להיות מסוג \"USB Audio\" (כמו רוב מיקרופוני הדש). אם הוא לא מופיע ברשימה, האייפון לא מזהה אותו בכלל, ולא רק האפליקציה.", "A USB‑C microphone needs to be of the “USB Audio” type (like most lapel mics). If it doesn’t appear in the list, the iPhone isn’t recognizing it at all, not just the app."))
                     } icon: {
                         Image(systemName: "cable.connector")
                     }
                     Label {
-                        Text("AirPods מופיעים כשהם באוזניים ומחוברים. איכות ההקלטה דרכם נמוכה יותר מאשר מיקרופון חוטי.")
+                        Text(tr("AirPods מופיעים כשהם באוזניים ומחוברים. איכות ההקלטה דרכם נמוכה יותר מאשר מיקרופון חוטי.", "AirPods appear when they’re in the ears and connected. Recording quality through them is lower than a wired microphone."))
                     } icon: {
                         Image(systemName: "airpodspro")
                     }
@@ -63,27 +63,27 @@ struct MicPickerView: View {
             }
             .overlay {
                 if viewModel.availableInputs.isEmpty {
-                    ContentUnavailableView(
-                        "אין מיקרופונים זמינים",
-                        systemImage: "mic.slash",
-                        description: Text("אם האפליקציה עדיין מתחילה, חכו רגע. אחרת חברו אוזניות או מיקרופון חיצוני והקישו על רענון.")
-                    )
+                    ContentUnavailableView {
+                        Label(tr("אין מיקרופונים זמינים", "No microphones available"), systemImage: "mic.slash")
+                    } description: {
+                        Text(tr("אם האפליקציה עדיין מתחילה, חכו רגע. אחרת חברו אוזניות או מיקרופון חיצוני והקישו על רענון.", "If the app is still starting up, wait a moment. Otherwise, connect headphones or an external microphone and tap refresh."))
+                    }
                 }
             }
             // Opened before captions ever set up the microphone, the list
             // would otherwise be empty until someone found the refresh button.
             .onAppear { viewModel.refreshInputs() }
-            .navigationTitle("בחירת מיקרופון")
+            .navigationTitle(tr("בחירת מיקרופון", "Choose microphone"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("סגור") { dismiss() }
+                    Button(tr("סגור", "Close")) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         viewModel.refreshInputs()
                     } label: {
-                        Label("רענון", systemImage: "arrow.clockwise")
+                        Label(tr("רענון", "Refresh"), systemImage: "arrow.clockwise")
                     }
                 }
             }
@@ -103,12 +103,12 @@ struct MicPickerView: View {
 
     static func typeName(for type: AudioPortType) -> String {
         switch type {
-        case .builtInMic: return "מובנה"
+        case .builtInMic: return tr("מובנה", "Built-in")
         case .bluetooth: return "Bluetooth"
-        case .wired: return "חוטי"
+        case .wired: return tr("חוטי", "Wired")
         case .usb: return "USB"
-        case .hearingAid: return "מכשיר שמיעה"
-        case .other: return "אחר"
+        case .hearingAid: return tr("מכשיר שמיעה", "Hearing aid")
+        case .other: return tr("אחר", "Other")
         }
     }
 
@@ -117,7 +117,7 @@ struct MicPickerView: View {
     /// is called "iPhone Microphone", which is too long and says nothing.
     static func shortName(for input: AudioInputDescriptor) -> String {
         switch input.portType {
-        case .builtInMic: return "אייפון"
+        case .builtInMic: return tr("אייפון", "iPhone")
         default: return input.portName
         }
     }
@@ -183,8 +183,8 @@ struct LevelMeter: View {
                 peak = max(newLevel, peak - 0.02)
             }
         }
-        .accessibilityLabel("עוצמת קליטה")
-        .accessibilityValue("\(Int(level * 100)) אחוז")
+        .accessibilityLabel(tr("עוצמת קליטה", "Input level"))
+        .accessibilityValue(tr("\(Int(level * 100)) אחוז", "\(Int(level * 100)) percent"))
     }
 
     private var meterColor: Color {

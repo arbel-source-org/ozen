@@ -184,6 +184,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// The first-launch walkthrough (what the app does, engine choice,
     /// microphone permission) has been seen once.
     public var hasCompletedOnboarding: Bool
+    /// The language of the app's own words (see `Localization`). Captions
+    /// stay in the language people speak.
+    public var appLanguage: AppLanguage
     /// Doorbell, siren or her name while the app isn't on screen (pocket,
     /// locked phone) also becomes a phone notification.
     public var notifyWhenInBackground: Bool
@@ -224,6 +227,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         speechRate: Float = 0.45,
         vocabulary: [String] = [],
         hasCompletedOnboarding: Bool = false,
+        appLanguage: AppLanguage = .system,
         notifyWhenInBackground: Bool = true,
         allowCellularModelDownload: Bool = false,
         historyRetention: HistoryRetention = .forever,
@@ -247,6 +251,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.speechRate = speechRate
         self.vocabulary = VocabularyHints.normalized(vocabulary)
         self.hasCompletedOnboarding = hasCompletedOnboarding
+        self.appLanguage = appLanguage
         self.notifyWhenInBackground = notifyWhenInBackground
         self.allowCellularModelDownload = allowCellularModelDownload
         self.historyRetention = historyRetention
@@ -280,7 +285,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case whisperModelVariant, allowServerFallbackForAppleSpeech, cloudModel, display
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
-        case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding
+        case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding, appLanguage
         case notifyWhenInBackground, allowCellularModelDownload, historyRetention
         case nameAlertOfferDismissed
     }
@@ -315,6 +320,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         speechRate = min(max(speechRate, 0.2), 0.7)
         vocabulary = VocabularyHints.normalized(container.lenient([String].self, forKey: .vocabulary) ?? [])
         hasCompletedOnboarding = container.lenient(Bool.self, forKey: .hasCompletedOnboarding) ?? false
+        appLanguage = container.lenient(AppLanguage.self, forKey: .appLanguage) ?? defaults.appLanguage
         notifyWhenInBackground = container.lenient(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
         allowCellularModelDownload = container.lenient(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
         historyRetention = container.lenient(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention

@@ -12,13 +12,13 @@ struct DiagnosticsView: View {
 
     var body: some View {
         Form {
-            Section("מצב") {
-                LabeledContent("שלב", value: Self.describe(viewModel.phase))
-                LabeledContent("מנוע פעיל", value: viewModel.pipeline.activeEngineKind?.displayName ?? "—")
-                LabeledContent("מודל Whisper", value: viewModel.settings.whisperModelVariant)
-                LabeledContent("שפה", value: viewModel.settings.languageCode)
+            Section(tr("מצב", "Status")) {
+                LabeledContent(tr("שלב", "Stage"), value: Self.describe(viewModel.phase))
+                LabeledContent(tr("מנוע פעיל", "Active engine"), value: viewModel.pipeline.activeEngineKind?.displayName ?? "—")
+                LabeledContent(tr("מודל Whisper", "Whisper model"), value: viewModel.settings.whisperModelVariant)
+                LabeledContent(tr("שפה", "Language"), value: viewModel.settings.languageCode)
                 if let failure = viewModel.phase.failure {
-                    LabeledContent("פרטי תקלה") {
+                    LabeledContent(tr("פרטי תקלה", "Failure details")) {
                         Text(failure.detail)
                             .font(.caption)
                             .multilineTextAlignment(.leading)
@@ -26,53 +26,53 @@ struct DiagnosticsView: View {
                 }
             }
 
-            Section("אודיו") {
-                LabeledContent("מיקרופון נבחר", value: viewModel.selectedInput?.portName ?? "—")
-                LabeledContent("מיקרופונים זמינים", value: "\(viewModel.availableInputs.count)")
+            Section(tr("אודיו", "Audio")) {
+                LabeledContent(tr("מיקרופון נבחר", "Selected microphone"), value: viewModel.selectedInput?.portName ?? "—")
+                LabeledContent(tr("מיקרופונים זמינים", "Available microphones"), value: "\(viewModel.availableInputs.count)")
                 ForEach(viewModel.availableInputs) { input in
                     Text("\(input.portName) · \(MicPickerView.typeName(for: input.portType))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                LabeledContent("עוצמה עכשיו", value: String(format: "%.0f%%", viewModel.inputLevel * 100))
-                LabeledContent("חבילות אודיו", value: "\(viewModel.stats.audioChunksReceived)")
-                LabeledContent("שניות אודיו", value: String(format: "%.1f", viewModel.stats.audioSecondsReceived))
-                LabeledContent("החלפות מיקרופון", value: "\(viewModel.stats.inputChanges)")
-                LabeledContent("המיקרופון נתקע", value: "\(viewModel.stats.audioStalls)")
-                LabeledContent("רמות קול (dBFS)", value: Self.levelsText(viewModel.stats.inputLevels))
-                LabeledContent("נשמע כדיבור", value: viewModel.stats.speechShare.map { String(format: "%.0f%%", $0 * 100) } ?? "—")
-                LabeledContent("זיהוי צלילים", value: viewModel.stats.soundDetectionRunning ? "פועל" : (viewModel.isListening ? "נעצר" : "—"))
+                LabeledContent(tr("עוצמה עכשיו", "Level now"), value: String(format: "%.0f%%", viewModel.inputLevel * 100))
+                LabeledContent(tr("חבילות אודיו", "Audio chunks"), value: "\(viewModel.stats.audioChunksReceived)")
+                LabeledContent(tr("שניות אודיו", "Audio seconds"), value: String(format: "%.1f", viewModel.stats.audioSecondsReceived))
+                LabeledContent(tr("החלפות מיקרופון", "Microphone changes"), value: "\(viewModel.stats.inputChanges)")
+                LabeledContent(tr("המיקרופון נתקע", "Microphone stalls"), value: "\(viewModel.stats.audioStalls)")
+                LabeledContent(tr("רמות קול (dBFS)", "Sound levels (dBFS)"), value: Self.levelsText(viewModel.stats.inputLevels))
+                LabeledContent(tr("נשמע כדיבור", "Sounded like speech"), value: viewModel.stats.speechShare.map { String(format: "%.0f%%", $0 * 100) } ?? "—")
+                LabeledContent(tr("זיהוי צלילים", "Sound detection"), value: viewModel.stats.soundDetectionRunning ? tr("פועל", "Running") : (viewModel.isListening ? tr("נעצר", "Stopped") : "—"))
             }
 
             nearMissesSection
 
-            Section("תמלול") {
-                LabeledContent("עדכונים מהמנוע", value: "\(viewModel.stats.tokensReceived)")
-                LabeledContent("שורות שנסגרו", value: "\(viewModel.stats.segmentsCommitted)")
-                LabeledContent("שורות על המסך", value: "\(viewModel.segments.count)")
-                LabeledContent("פיגור כתוביות", value: viewModel.stats.captionLagSeconds.map { String(format: "%.1f שנ׳", $0) } ?? "—")
-                LabeledContent("הפעלות מחדש", value: "\(viewModel.stats.engineRestarts)")
-                LabeledContent("דוברים שזוהו", value: "\(viewModel.pipeline.speakerClusters.count)")
-                LabeledContent("דוברים חדשים בסשן", value: "\(viewModel.stats.speakerClustersOpened)")
+            Section(tr("תמלול", "Transcription")) {
+                LabeledContent(tr("עדכונים מהמנוע", "Updates from engine"), value: "\(viewModel.stats.tokensReceived)")
+                LabeledContent(tr("שורות שנסגרו", "Lines closed"), value: "\(viewModel.stats.segmentsCommitted)")
+                LabeledContent(tr("שורות על המסך", "Lines on screen"), value: "\(viewModel.segments.count)")
+                LabeledContent(tr("פיגור כתוביות", "Caption lag"), value: viewModel.stats.captionLagSeconds.map { String(format: tr("%.1f שנ׳", "%.1f s"), $0) } ?? "—")
+                LabeledContent(tr("הפעלות מחדש", "Restarts"), value: "\(viewModel.stats.engineRestarts)")
+                LabeledContent(tr("דוברים שזוהו", "Speakers identified"), value: "\(viewModel.pipeline.speakerClusters.count)")
+                LabeledContent(tr("דוברים חדשים בסשן", "New speakers this session"), value: "\(viewModel.stats.speakerClustersOpened)")
                 if let started = viewModel.stats.sessionStartedAt {
-                    LabeledContent("התחלת סשן", value: Date(timeIntervalSince1970: started).formatted(date: .omitted, time: .standard))
+                    LabeledContent(tr("התחלת סשן", "Session started"), value: Date(timeIntervalSince1970: started).formatted(date: .omitted, time: .standard))
                 }
             }
 
-            Section("התאוששות") {
-                LabeledContent("ניסיון חוזר אוטומטי", value: retryText)
-                LabeledContent("שיחת טלפון תופסת את האודיו", value: viewModel.isInterruptedBySystem ? "כן" : "לא")
-                LabeledContent("שמירת הגדרות", value: viewModel.settingsSaveError == nil ? "תקינה" : "נכשלה")
-                LabeledContent("שמירת שיחות", value: viewModel.historySaveFailure == nil ? "תקינה" : "נכשלה")
-                LabeledContent("הודעה אחרונה בטלפון", value: AlertNotifier.shared.lastFailure == nil ? "תקינה" : "נכשלה")
-                LabeledContent("רטט להתראות", value: Self.vibrationText)
-                LabeledContent("חיבור לאינטרנט", value: Self.describe(viewModel.pipeline.networkConditions))
+            Section(tr("התאוששות", "Recovery")) {
+                LabeledContent(tr("ניסיון חוזר אוטומטי", "Automatic retry"), value: retryText)
+                LabeledContent(tr("שיחת טלפון תופסת את האודיו", "Phone call is using the audio"), value: viewModel.isInterruptedBySystem ? tr("כן", "Yes") : tr("לא", "No"))
+                LabeledContent(tr("שמירת הגדרות", "Settings save"), value: viewModel.settingsSaveError == nil ? tr("תקינה", "OK") : tr("נכשלה", "Failed"))
+                LabeledContent(tr("שמירת שיחות", "Conversation history save"), value: viewModel.historySaveFailure == nil ? tr("תקינה", "OK") : tr("נכשלה", "Failed"))
+                LabeledContent(tr("הודעה אחרונה בטלפון", "Last phone notification"), value: AlertNotifier.shared.lastFailure == nil ? tr("תקינה", "OK") : tr("נכשלה", "Failed"))
+                LabeledContent(tr("רטט להתראות", "Alert vibration"), value: Self.vibrationText)
+                LabeledContent(tr("חיבור לאינטרנט", "Internet connection"), value: Self.describe(viewModel.pipeline.networkConditions))
             }
 
             Section {
                 let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds)
                 if lines.isEmpty {
-                    Text("עוד לא קרה כלום")
+                    Text(tr("עוד לא קרה כלום", "Nothing has happened yet"))
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(Array(lines.suffix(12).reversed().enumerated()), id: \.offset) { _, line in
@@ -83,43 +83,43 @@ struct DiagnosticsView: View {
                     }
                 }
             } header: {
-                Text("אירועים אחרונים")
+                Text(tr("אירועים אחרונים", "Recent events"))
             } footer: {
-                Text("החדש ביותר למעלה. הדוח המועתק כולל את כל הרשימה.")
+                Text(tr("החדש ביותר למעלה. הדוח המועתק כולל את כל הרשימה.", "Newest at the top. The copied report includes the full list."))
             }
 
-            Section("מודל ומילים") {
-                LabeledContent("מצב המודל", value: Self.describe(modelState))
-                LabeledContent("טוקנייזר שמור", value: store.hasCachedTokenizer() ? "כן" : "לא (צריך אינטרנט פעם אחת)")
-                LabeledContent("שמות ומילים", value: "\(viewModel.vocabulary.count)")
-                LabeledContent("התראות מילים", value: "\(viewModel.settings.keywordAlerts.filter(\.isEnabled).count)")
+            Section(tr("מודל ומילים", "Model and words")) {
+                LabeledContent(tr("מצב המודל", "Model state"), value: Self.describe(modelState))
+                LabeledContent(tr("טוקנייזר שמור", "Tokenizer cached"), value: store.hasCachedTokenizer() ? tr("כן", "Yes") : tr("לא (צריך אינטרנט פעם אחת)", "No (needs internet once)"))
+                LabeledContent(tr("שמות ומילים", "Names and words"), value: "\(viewModel.vocabulary.count)")
+                LabeledContent(tr("התראות מילים", "Word alerts"), value: "\(viewModel.settings.keywordAlerts.filter(\.isEnabled).count)")
             }
 
-            Section("מכשיר") {
-                LabeledContent("חום", value: Self.describe(ProcessInfo.processInfo.thermalState))
-                LabeledContent("מצב חיסכון בסוללה", value: ProcessInfo.processInfo.isLowPowerModeEnabled ? "פעיל" : "כבוי")
-                LabeledContent("סוללה", value: Self.batteryText)
-                LabeledContent("מקום פנוי", value: Self.freeSpaceText)
-                LabeledContent("זיכרון", value: Self.memoryText)
-                LabeledContent("דגם", value: UIDevice.current.model)
+            Section(tr("מכשיר", "Device")) {
+                LabeledContent(tr("חום", "Temperature"), value: Self.describe(ProcessInfo.processInfo.thermalState))
+                LabeledContent(tr("מצב חיסכון בסוללה", "Low power mode"), value: ProcessInfo.processInfo.isLowPowerModeEnabled ? tr("פעיל", "On") : tr("כבוי", "Off"))
+                LabeledContent(tr("סוללה", "Battery"), value: Self.batteryText)
+                LabeledContent(tr("מקום פנוי", "Free space"), value: Self.freeSpaceText)
+                LabeledContent(tr("זיכרון", "Memory"), value: Self.memoryText)
+                LabeledContent(tr("דגם", "Model"), value: UIDevice.current.model)
                 LabeledContent("iOS", value: UIDevice.current.systemVersion)
-                LabeledContent("אפליקציה", value: SettingsView.versionString)
-                LabeledContent("ההתקנה תקפה עד", value: Self.installExpiryText)
+                LabeledContent(tr("אפליקציה", "App"), value: SettingsView.versionString)
+                LabeledContent(tr("ההתקנה תקפה עד", "Install valid until"), value: Self.installExpiryText)
             }
 
             Section {
-                ShareLink(item: report, subject: Text("דוח אבחון מאוזן")) {
-                    Label("שליחת הדוח", systemImage: "square.and.arrow.up")
+                ShareLink(item: report, subject: Text(tr("דוח אבחון מאוזן", "Ozen diagnostics report"))) {
+                    Label(tr("שליחת הדוח", "Send report"), systemImage: "square.and.arrow.up")
                 }
                 Button {
                     UIPasteboard.general.string = report
                     copied = true
                 } label: {
-                    Label(copied ? "הועתק" : "העתקת הדוח", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    Label(copied ? tr("הועתק", "Copied") : tr("העתקת הדוח", "Copy report"), systemImage: copied ? "checkmark" : "doc.on.doc")
                 }
             }
         }
-        .navigationTitle("אבחון")
+        .navigationTitle(tr("אבחון", "Diagnostics"))
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -132,7 +132,7 @@ struct DiagnosticsView: View {
     private var retryText: String {
         guard let retry = viewModel.pipeline.scheduledRetry else { return "—" }
         let seconds = max(0, Int((retry.at - Date().timeIntervalSince1970).rounded()))
-        return "ניסיון \(retry.attempt), בעוד \(seconds) שנ׳"
+        return tr("ניסיון \(retry.attempt), בעוד \(seconds) שנ׳", "Attempt \(retry.attempt), in \(seconds) s")
     }
 
     private static var installExpiryText: String {
@@ -142,15 +142,15 @@ struct DiagnosticsView: View {
 
     private static var vibrationText: String {
         let player = AlertHapticPlayer.shared
-        guard player.supportsHaptics else { return "לא נתמך במכשיר" }
-        return player.lastFailure == nil ? "תקין" : "נכשל, רטט רגיל במקום"
+        guard player.supportsHaptics else { return tr("לא נתמך במכשיר", "Not supported on this device") }
+        return player.lastFailure == nil ? tr("תקין", "OK") : tr("נכשל, רטט רגיל במקום", "Failed, using standard vibration instead")
     }
 
     private static var batteryText: String {
         let device = UIDevice.current
         guard device.isBatteryMonitoringEnabled, device.batteryLevel >= 0 else { return "—" }
         let plugged = device.batteryState == .charging || device.batteryState == .full
-        return "\(Int((device.batteryLevel * 100).rounded()))%\(plugged ? " · בטעינה" : "")"
+        return "\(Int((device.batteryLevel * 100).rounded()))%\(plugged ? tr(" · בטעינה", " · charging") : "")"
     }
 
     private static func format(bytes: Int64) -> String {
@@ -170,8 +170,8 @@ struct DiagnosticsView: View {
     /// iOS lets it have before ending it.
     private static var memoryText: String {
         var parts: [String] = []
-        if let used = DeviceMemory.footprintBytes() { parts.append("\(format(bytes: used)) בשימוש") }
-        if let left = DeviceMemory.availableBytes() { parts.append("עוד \(format(bytes: left))") }
+        if let used = DeviceMemory.footprintBytes() { parts.append(tr("\(format(bytes: used)) בשימוש", "\(format(bytes: used)) in use")) }
+        if let left = DeviceMemory.availableBytes() { parts.append(tr("עוד \(format(bytes: left))", "\(format(bytes: left)) more")) }
         return parts.isEmpty ? "—" : parts.joined(separator: " · ")
     }
 
@@ -182,20 +182,20 @@ struct DiagnosticsView: View {
 
     static func describe(_ state: ModelFolderState) -> String {
         switch state {
-        case .missing: return "לא הורד"
-        case .partial: return "הורדה נקטעה"
-        case .unverified: return "מותקן (לא אומת)"
-        case .verified: return "מותקן"
+        case .missing: return tr("לא הורד", "Not downloaded")
+        case .partial: return tr("הורדה נקטעה", "Download interrupted")
+        case .unverified: return tr("מותקן (לא אומת)", "Installed (unverified)")
+        case .verified: return tr("מותקן", "Installed")
         }
     }
 
     static func describe(_ thermal: ProcessInfo.ThermalState) -> String {
         switch thermal {
-        case .nominal: return "רגיל"
-        case .fair: return "חמים"
-        case .serious: return "חם · הכתוביות מאטות"
-        case .critical: return "חם מאוד · הכתוביות מאטות מאוד"
-        @unknown default: return "לא ידוע"
+        case .nominal: return tr("רגיל", "Normal")
+        case .fair: return tr("חמים", "Warm")
+        case .serious: return tr("חם · הכתוביות מאטות", "Hot · captions are slowing down")
+        case .critical: return tr("חם מאוד · הכתוביות מאטות מאוד", "Very hot · captions are slowing a lot")
+        @unknown default: return tr("לא ידוע", "Unknown")
         }
     }
 
@@ -240,9 +240,9 @@ struct DiagnosticsView: View {
                     )
                 }
             } header: {
-                Text("צלילים שנשמעו חלש מדי להתראה")
+                Text(tr("צלילים שנשמעו חלש מדי להתראה", "Sounds heard too faint to alert"))
             } footer: {
-                Text("התראה צריכה ביטחון של \(Int((viewModel.pipeline.soundAlertConfidence * 100).rounded()))%. צליל שמופיע כאן נשמע, אבל רחוק או חלש מדי.")
+                Text(tr("התראה צריכה ביטחון של \(Int((viewModel.pipeline.soundAlertConfidence * 100).rounded()))%. צליל שמופיע כאן נשמע, אבל רחוק או חלש מדי.", "An alert needs \(Int((viewModel.pipeline.soundAlertConfidence * 100).rounded()))% confidence. A sound listed here was heard, but too far or too faint."))
             }
         }
     }
@@ -254,14 +254,14 @@ struct DiagnosticsView: View {
               let middle = levels.decibels(atFraction: 0.5),
               let loud = levels.decibels(atFraction: 0.9)
         else { return "—" }
-        return "שקט \(quiet) · אמצע \(middle) · חזק \(loud)"
+        return tr("שקט \(quiet) · אמצע \(middle) · חזק \(loud)", "quiet \(quiet) · mid \(middle) · loud \(loud)")
     }
 
     static func describe(_ network: NetworkConditions?) -> String {
         guard let network else { return "—" }
-        guard network.isConnected else { return "אין חיבור" }
-        var parts = [network.isExpensive ? "סלולרי" : "Wi-Fi"]
-        if network.isConstrained { parts.append("חיסכון בנתונים") }
+        guard network.isConnected else { return tr("אין חיבור", "No connection") }
+        var parts = [network.isExpensive ? tr("סלולרי", "Cellular") : "Wi-Fi"]
+        if network.isConstrained { parts.append(tr("חיסכון בנתונים", "Data saving")) }
         return parts.joined(separator: " · ")
     }
 

@@ -42,9 +42,9 @@ struct TypeToSpeakView: View {
                         }
                     } header: {
                         HStack {
-                            Text("משפטים מוכנים")
+                            Text(tr("משפטים מוכנים", "Quick phrases"))
                             Spacer()
-                            Button(editingPhrases ? "סיום" : "עריכה") { editingPhrases.toggle() }
+                            Button(editingPhrases ? tr("סיום", "Done") : tr("עריכה", "Edit")) { editingPhrases.toggle() }
                                 .font(.subheadline.weight(.semibold))
                                 .frame(minWidth: 44, minHeight: 44)
                                 .contentShape(Rectangle())
@@ -56,11 +56,11 @@ struct TypeToSpeakView: View {
                     }
                 }
             }
-            .navigationTitle("להגיד משהו")
+            .navigationTitle(tr("להגיד משהו", "Say something"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("סגור") { dismiss() }
+                    Button(tr("סגור", "Close")) { dismiss() }
                 }
             }
             .onAppear { isTyping = true }
@@ -79,7 +79,7 @@ struct TypeToSpeakView: View {
 
     private var composer: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("הקלידו מה להגיד…", text: $text, axis: .vertical)
+            TextField(tr("הקלידו מה להגיד…", "Type what to say…"), text: $text, axis: .vertical)
                 .font(.title2)
                 .lineLimit(1...4)
                 .focused($isTyping)
@@ -92,14 +92,14 @@ struct TypeToSpeakView: View {
                     Button {
                         viewModel.stopSpeaking()
                     } label: {
-                        Label("עצירה", systemImage: "stop.fill")
+                        Label(tr("עצירה", "Stop"), systemImage: "stop.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.large)
                 }
                 Button(action: speakTyped) {
-                    Label("להשמיע", systemImage: "speaker.wave.3.fill")
+                    Label(tr("להשמיע", "Play"), systemImage: "speaker.wave.3.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -115,14 +115,14 @@ struct TypeToSpeakView: View {
                 isTyping = false
                 showingBigText = true
             } label: {
-                Label("מסך מלא באותיות גדולות", systemImage: "textformat.size.larger")
+                Label(tr("מסך מלא באותיות גדולות", "Full screen, big letters"), systemImage: "textformat.size.larger")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            .accessibilityHint("כדי שמישהו יכתוב לך, או כדי להראות למי שמולך מה כתבת")
+            .accessibilityHint(tr("כדי שמישהו יכתוב לך, או כדי להראות למי שמולך מה כתבת", "So someone can write to you, or to show the person you’re talking with what you wrote"))
 
             if !viewModel.hasHebrewVoice {
-                Label("אין קול עברי מותקן. הגדרות ← נגישות ← תוכן מדובר ← קולות ← עברית.", systemImage: "exclamationmark.triangle")
+                Label(tr("אין קול עברי מותקן. הגדרות ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice installed. Settings ← Accessibility ← Spoken Content ← Voices ← Hebrew."), systemImage: "exclamationmark.triangle")
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
@@ -139,7 +139,7 @@ struct TypeToSpeakView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.bordered)
-            .accessibilityLabel("להשמיע שוב: \(phrase)")
+            .accessibilityLabel(tr("להשמיע שוב: \(phrase)", "Play again: \(phrase)"))
 
             if !viewModel.settings.quickPhrases.contains(phrase) {
                 Button {
@@ -149,7 +149,7 @@ struct TypeToSpeakView: View {
                         .frame(minWidth: 44, minHeight: 32)
                 }
                 .buttonStyle(.bordered)
-                .accessibilityLabel("להוסיף למשפטים המוכנים")
+                .accessibilityLabel(tr("להוסיף למשפטים המוכנים", "Add to quick phrases"))
             }
         }
     }
@@ -169,9 +169,9 @@ private struct QuickPhrasesEditor: View {
     @State private var confirmingReset = false
 
     var body: some View {
-        Section("עריכת המשפטים") {
+        Section(tr("עריכת המשפטים", "Edit phrases")) {
             HStack {
-                TextField("משפט חדש", text: $newPhrase)
+                TextField(tr("משפט חדש", "New phrase"), text: $newPhrase)
                     .onSubmit(add)
                 Button(action: add) {
                     Image(systemName: "plus.circle.fill")
@@ -179,7 +179,7 @@ private struct QuickPhrasesEditor: View {
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
-                .accessibilityLabel("הוספה")
+                .accessibilityLabel(tr("הוספה", "Add"))
                 .disabled(newPhrase.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             ForEach(viewModel.settings.quickPhrases, id: \.self) { phrase in
@@ -191,16 +191,16 @@ private struct QuickPhrasesEditor: View {
             .onMove { from, to in
                 viewModel.moveQuickPhrases(from: from, to: to)
             }
-            Button("לשחזר את ברירת המחדל", role: .destructive) {
+            Button(tr("לשחזר את ברירת המחדל", "Restore defaults"), role: .destructive) {
                 confirmingReset = true
             }
             .disabled(viewModel.settings.quickPhrases == AppSettings.defaultQuickPhrases)
-            .confirmationDialog("לשחזר את המשפטים המוכנים?", isPresented: $confirmingReset, titleVisibility: .visible) {
-                Button("לשחזר", role: .destructive) {
+            .confirmationDialog(tr("לשחזר את המשפטים המוכנים?", "Restore the default phrases?"), isPresented: $confirmingReset, titleVisibility: .visible) {
+                Button(tr("לשחזר", "Restore"), role: .destructive) {
                     viewModel.resetQuickPhrases()
                 }
             } message: {
-                Text("המשפטים שנוספו או שונו יימחקו.")
+                Text(tr("המשפטים שנוספו או שונו יימחקו.", "Phrases that were added or changed will be deleted."))
             }
         }
     }

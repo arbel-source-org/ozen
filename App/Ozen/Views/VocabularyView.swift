@@ -10,7 +10,7 @@ struct VocabularyView: View {
         List {
             Section {
                 HStack {
-                    TextField("שם או מילה", text: $newTerm)
+                    TextField(tr("שם או מילה", "Name or word"), text: $newTerm)
                         .focused($editing)
                         .submitLabel(.done)
                         .onSubmit(add)
@@ -22,10 +22,10 @@ struct VocabularyView: View {
                             .contentShape(Rectangle())
                     }
                     .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
-                    .accessibilityLabel("הוספה")
+                    .accessibilityLabel(tr("הוספה", "Add"))
                 }
             } footer: {
-                Text("שמות של בני משפחה, שכנים, רופאים, תרופות, מקומות — כל מילה שהכתוביות מתקשות איתה. הראשונים ברשימה חשובים ביותר.")
+                Text(tr("שמות של בני משפחה, שכנים, רופאים, תרופות, מקומות — כל מילה שהכתוביות מתקשות איתה. הראשונים ברשימה חשובים ביותר.", "Names of family members, neighbors, doctors, medicines, places — any word the captions struggle with. The first ones on the list matter most."))
             }
 
             if speakerNamesMissing {
@@ -33,7 +33,7 @@ struct VocabularyView: View {
                     Button {
                         viewModel.addSpeakerNamesToVocabulary()
                     } label: {
-                        Label("להוסיף את שמות הדוברים השמורים", systemImage: "person.2.badge.plus")
+                        Label(tr("להוסיף את שמות הדוברים השמורים", "Add the saved speaker names"), systemImage: "person.2.badge.plus")
                     }
                 }
             }
@@ -41,9 +41,9 @@ struct VocabularyView: View {
             Section {
                 if viewModel.vocabulary.isEmpty {
                     ContentUnavailableView(
-                        "עדיין אין שמות",
+                        tr("עדיין אין שמות", "No names yet"),
                         systemImage: "character.book.closed",
-                        description: Text("הוסיפו את השמות שנאמרים הכי הרבה בבית.")
+                        description: Text(tr("הוסיפו את השמות שנאמרים הכי הרבה בבית.", "Add the names said most often at home."))
                     )
                 } else {
                     ForEach(viewModel.vocabulary, id: \.self) { term in
@@ -59,16 +59,16 @@ struct VocabularyView: View {
                 }
             } header: {
                 HStack {
-                    Text("הרשימה")
+                    Text(tr("הרשימה", "List"))
                     Spacer()
                     Text("\(viewModel.vocabulary.count) / \(VocabularyHints.maximumTerms)")
                         .monospacedDigit()
                 }
             } footer: {
-                Text("השינויים נכנסים לתוקף מהמשפט הבא, בלי להפעיל מחדש.")
+                Text(tr("השינויים נכנסים לתוקף מהמשפט הבא, בלי להפעיל מחדש.", "Changes take effect from the next sentence, without restarting."))
             }
         }
-        .navigationTitle("שמות ומילים")
+        .navigationTitle(tr("שמות ומילים", "Names and words"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

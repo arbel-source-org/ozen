@@ -59,4 +59,17 @@ struct HistoryDaysTests {
     func empty() {
         #expect(HistoryDays.grouped([], now: mondayNoonUTC, utcOffsetSeconds: { _ in 0 }).isEmpty)
     }
+
+    @Test("English titles: today, yesterday, a weekday, then the weekday with the date")
+    func englishTitles() {
+        Localization.$override.withValue(.english) {
+            let today = CivilDate.localDay(of: mondayNoonUTC, utcOffsetSeconds: israel)
+            #expect(HistoryDays.title(day: today, today: today) == "Today")
+            #expect(HistoryDays.title(day: today - 1, today: today) == "Yesterday")
+            #expect(HistoryDays.title(day: today - 2, today: today) == "Saturday")
+            #expect(HistoryDays.title(day: today - 6, today: today) == "Tuesday")
+            #expect(HistoryDays.title(day: today - 7, today: today) == "Monday, 7 September")
+            #expect(HistoryDays.title(day: today - 258, today: today) == "Tuesday, 30 December 2025")
+        }
+    }
 }

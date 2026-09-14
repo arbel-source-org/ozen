@@ -3,6 +3,14 @@ import Testing
 
 @Suite("SavingTroubleNotice")
 struct SavingTroubleNoticeTests {
+    @Test("English title and detail")
+    func englishWording() {
+        Localization.$override.withValue(.english) {
+            #expect(SavingTroubleNotice.title == "Saving on the phone failed")
+            #expect(SavingTroubleNotice.detail.contains("iPhone Storage"))
+        }
+    }
+
     @Test("nothing to say while every save works")
     func quietWhileSaving() {
         var notice = SavingTroubleNotice()

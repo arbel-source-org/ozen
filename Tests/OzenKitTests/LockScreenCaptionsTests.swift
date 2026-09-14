@@ -86,6 +86,16 @@ struct LockScreenCaptionsTests {
         #expect(HebrewTime.minutesAgo(7) == "לפני 7 דקות")
     }
 
+    @Test("English wording for how long ago a line was said")
+    func englishQuietWording() {
+        Localization.$override.withValue(.english) {
+            #expect(HebrewTime.minutesAgo(0) == "a minute ago")
+            #expect(HebrewTime.minutesAgo(1) == "a minute ago")
+            #expect(HebrewTime.minutesAgo(7) == "7 minutes ago")
+            #expect(LockScreenCaptions.ageNote(minutes: 2) == "said 2 minutes ago")
+        }
+    }
+
     @Test("a long line keeps its newest words, from a word boundary, marked as cut")
     func longLineTail() {
         let words = (1...60).map { "word\($0)" }.joined(separator: " ")
@@ -184,5 +194,16 @@ struct LockScreenPresenceTests {
         #expect(LockScreenCaptions.presence(phase: .paused, interruptedByCall: false, pausedForSpeech: true).keep)
         #expect(!LockScreenCaptions.presence(phase: .paused, interruptedByCall: false, pausedForSpeech: false).keep)
         #expect(!LockScreenCaptions.presence(phase: .idle, interruptedByCall: false, pausedForSpeech: false).keep)
+    }
+
+    @Test("the lock screen status is in English when the app is")
+    func englishStatus() {
+        Localization.$override.withValue(.english) {
+            let failure = PipelineFailure(kind: .transcriptionStopped, detail: "")
+            #expect(LockScreenCaptions.presence(phase: .listening, interruptedByCall: true, pausedForSpeech: false).status == "Captions paused for a call")
+            #expect(LockScreenCaptions.presence(phase: .startingAudio, interruptedByCall: false, pausedForSpeech: false).status == "Captions starting…")
+            #expect(LockScreenCaptions.presence(phase: .failed(failure), interruptedByCall: false, pausedForSpeech: false).status == "Captions stopped. Open Ozen.")
+            #expect(LockScreenCaptions.presence(phase: .paused, interruptedByCall: false, pausedForSpeech: true).status == "The phone is talking")
+        }
     }
 }

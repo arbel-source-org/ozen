@@ -460,6 +460,26 @@ public final class LiveCaptionViewModel {
 
     public var hasCompletedOnboarding: Bool { settings.hasCompletedOnboarding }
 
+    /// The language the app's words are in right now: the setting, with
+    /// "like the phone" worked out from the phone's languages.
+    public private(set) var uiLanguage: UILanguage = Localization.language
+
+    /// Puts the language setting into effect. Called at launch, when the
+    /// setting changes and when the app comes back (the phone's language
+    /// may have changed meanwhile).
+    public func applyAppLanguage(preferredLanguages: [String] = Locale.preferredLanguages) {
+        let language = settings.appLanguage.resolved(preferredLanguages: preferredLanguages)
+        Localization.language = language
+        if uiLanguage != language { uiLanguage = language }
+    }
+
+    public func setAppLanguage(_ language: AppLanguage) {
+        guard settings.appLanguage != language else { return }
+        settings.appLanguage = language
+        persist()
+        applyAppLanguage()
+    }
+
     public func completeOnboarding() {
         settings.hasCompletedOnboarding = true
         persist()

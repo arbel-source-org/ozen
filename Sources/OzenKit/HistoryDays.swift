@@ -35,6 +35,7 @@ public enum HistoryDays {
     }
 
     public static func title(day: Int, today: Int) -> String {
+        if Localization.language == .english { return englishTitle(day: day, today: today) }
         let weekday = "יום \(weekdayNames[CivilDate.weekday(ofDay: day)])"
         switch today - day {
         case 0: return "היום"
@@ -47,6 +48,24 @@ public enum HistoryDays {
         }
     }
 
+    private static func englishTitle(day: Int, today: Int) -> String {
+        let weekday = englishWeekdayNames[CivilDate.weekday(ofDay: day)]
+        switch today - day {
+        case 0: return "Today"
+        case 1: return "Yesterday"
+        case 2...6: return weekday
+        default:
+            let date = CivilDate(daysSinceEpoch: day)
+            let year = date.year == CivilDate(daysSinceEpoch: today).year ? "" : " \(date.year)"
+            return "\(weekday), \(date.day) \(englishMonthNames[date.month - 1])\(year)"
+        }
+    }
+
     private static let weekdayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"]
     private static let monthNames = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"]
+    private static let englishWeekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    private static let englishMonthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    ]
 }

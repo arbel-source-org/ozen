@@ -115,7 +115,7 @@ struct LiveCaptionView: View {
                 .simultaneousGesture(pinchToResize)
 
             if pinchScale != 1 {
-                Text("גודל טקסט \(Int(liveDisplay.fontSize))")
+                Text(tr("גודל טקסט \(Int(liveDisplay.fontSize))", "Text size \(Int(liveDisplay.fontSize))"))
                     .font(.headline.monospacedDigit())
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -216,7 +216,7 @@ struct LiveCaptionView: View {
                 withAnimation { visibleSoundAlert = alert }
             }
             vibrate(.pattern(for: alert.event.importance))
-            announceAlert(alert.event.importance == .critical ? "שימו לב! \(alert.event.name)" : "התראה: \(alert.event.name)")
+            announceAlert(alert.event.importance == .critical ? tr("שימו לב! \(alert.event.name)", "Attention! \(alert.event.name)") : tr("התראה: \(alert.event.name)", "Alert: \(alert.event.name)"))
         }
         .task(id: visibleSoundAlert?.id) {
             // Banners clear themselves; critical ones stay twice as long.
@@ -235,7 +235,7 @@ struct LiveCaptionView: View {
                 withAnimation { visibleKeywordHit = hit }
             }
             vibrate(.keyword)
-            announceAlert("נאמר: \(hit.match.phrase)")
+            announceAlert(tr("נאמר: \(hit.match.phrase)", "Said: \(hit.match.phrase)"))
         }
         .task(id: visibleKeywordHit?.id) {
             guard let hit = visibleKeywordHit else { return }
@@ -329,7 +329,7 @@ struct LiveCaptionView: View {
                 }
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("סגירה") { openedConversation = nil }
+                        Button(tr("סגירה", "Close")) { openedConversation = nil }
                     }
                 }
             }
@@ -362,14 +362,14 @@ struct LiveCaptionView: View {
             NameSpeakerSheet(segment: segment, viewModel: viewModel)
         }
         .confirmationDialog(
-            "להוריד את המודל בחבילת הגלישה?",
+            tr("להוריד את המודל בחבילת הגלישה?", "Download the model over cellular data?"),
             isPresented: $confirmingCellularDownload,
             titleVisibility: .visible
         ) {
-            Button("להוריד עכשיו") {
+            Button(tr("להוריד עכשיו", "Download now")) {
                 Task { await viewModel.approveCellularDownload() }
             }
-            Button("לחכות ל-Wi-Fi", role: .cancel) {}
+            Button(tr("לחכות ל-Wi-Fi", "Wait for Wi‑Fi"), role: .cancel) {}
         } message: {
             Text(cellularDownloadMessage)
         }
@@ -467,36 +467,36 @@ struct LiveCaptionView: View {
             Button {
                 viewModel.toggleStar(segment)
             } label: {
-                Label(starred ? "ביטול הסימון" : "סימון כחשוב", systemImage: starred ? "star.slash" : "star")
+                Label(starred ? tr("ביטול הסימון", "Remove mark") : tr("סימון כחשוב", "Mark as important"), systemImage: starred ? "star.slash" : "star")
             }
             if viewModel.hasHebrewVoice {
                 Button {
                     viewModel.askToRepeat()
                 } label: {
-                    Label("לבקש שיחזרו על זה", systemImage: "arrow.counterclockwise.circle")
+                    Label(tr("לבקש שיחזרו על זה", "Ask them to repeat that"), systemImage: "arrow.counterclockwise.circle")
                 }
             }
             Button {
                 namingSegment = segment
             } label: {
-                Label("מי מדבר?", systemImage: "person.crop.circle.badge.questionmark")
+                Label(tr("מי מדבר?", "Who is speaking?"), systemImage: "person.crop.circle.badge.questionmark")
             }
             Button {
                 UIPasteboard.general.string = segment.text
             } label: {
-                Label("העתקה", systemImage: "doc.on.doc")
+                Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
             }
         }
         .accessibilityActions {
-            Button(viewModel.starredSegmentIDs.contains(segment.id) ? "ביטול הסימון" : "סימון כחשוב") {
+            Button(viewModel.starredSegmentIDs.contains(segment.id) ? tr("ביטול הסימון", "Remove mark") : tr("סימון כחשוב", "Mark as important")) {
                 viewModel.toggleStar(segment)
             }
             if viewModel.hasHebrewVoice {
-                Button("לבקש שיחזרו על זה") {
+                Button(tr("לבקש שיחזרו על זה", "Ask them to repeat that")) {
                     viewModel.askToRepeat()
                 }
             }
-            Button("מי מדבר?") {
+            Button(tr("מי מדבר?", "Who is speaking?")) {
                 namingSegment = segment
             }
         }
@@ -548,12 +548,12 @@ struct LiveCaptionView: View {
         }
         .padding(.top, 8)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("אחרי הפסקה, מהשעה \(time)")
+        .accessibilityLabel(tr("אחרי הפסקה, מהשעה \(time)", "After a break, from \(time)"))
     }
 
     private func awayDivider(lineCount: Int) -> some View {
         HStack(spacing: 10) {
-            Text("נאמר כשהאפליקציה הייתה סגורה · \(ConversationStats.linesText(lineCount))")
+            Text(tr("נאמר כשהאפליקציה הייתה סגורה · \(ConversationStats.linesText(lineCount))", "Said while the app was closed · \(ConversationStats.linesText(lineCount))"))
                 .font(.system(size: max(15, liveDisplay.fontSize * 0.5), weight: .semibold))
                 .foregroundStyle(theme.pendingText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -563,7 +563,7 @@ struct LiveCaptionView: View {
         }
         .padding(.top, 8)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("מכאן, מה שנאמר כשהאפליקציה הייתה סגורה: \(ConversationStats.linesText(lineCount))")
+        .accessibilityLabel(tr("מכאן, מה שנאמר כשהאפליקציה הייתה סגורה: \(ConversationStats.linesText(lineCount))", "From here, what was said while the app was closed: \(ConversationStats.linesText(lineCount))"))
         // On screen, it has been seen: no need to offer the jump.
         .onAppear { viewModel.acknowledgeAwayLines() }
     }
@@ -588,7 +588,7 @@ struct LiveCaptionView: View {
                     }
                 }
             } label: {
-                Label("מה שנאמר בינתיים · \(ConversationStats.linesText(mark.count))", systemImage: "arrow.up.to.line")
+                Label(tr("מה שנאמר בינתיים · \(ConversationStats.linesText(mark.count))", "What was said meanwhile · \(ConversationStats.linesText(mark.count))"), systemImage: "arrow.up.to.line")
                     .font(.headline)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -622,7 +622,7 @@ struct LiveCaptionView: View {
                 viewModel.persistHistory(ended: false)
                 openedConversation = OpenedConversation(id: saved, lineID: lineID)
             } label: {
-                Label("שורות מוקדמות יותר נשמרו. הקישו כדי לקרוא אותן", systemImage: "text.bubble")
+                Label(tr("שורות מוקדמות יותר נשמרו. הקישו כדי לקרוא אותן", "Earlier lines were saved. Tap to read them"), systemImage: "text.bubble")
                     .font(.system(size: max(15, liveDisplay.fontSize * 0.5), weight: .semibold))
                     .foregroundStyle(theme.chrome)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -630,7 +630,7 @@ struct LiveCaptionView: View {
             }
             .buttonStyle(.plain)
         } else {
-            Text("שורות מוקדמות יותר כבר לא מוצגות")
+            Text(tr("שורות מוקדמות יותר כבר לא מוצגות", "Earlier lines are no longer shown"))
                 .font(.system(size: max(15, liveDisplay.fontSize * 0.5)))
                 .foregroundStyle(theme.pendingText)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -639,12 +639,12 @@ struct LiveCaptionView: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(viewModel.isListening ? "מקשיב." : "הכתוביות יופיעו כאן.")
+            Text(viewModel.isListening ? tr("מקשיב.", "Listening.") : tr("הכתוביות יופיעו כאן.", "Captions will appear here."))
                 .font(.system(size: liveDisplay.fontSize, weight: .medium))
                 .foregroundStyle(theme.text)
             Text(viewModel.isListening
-                 ? "כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. הקישו על שורה כדי לתת שם לדובר, לחצו עליה ארוכות כדי לסמן אותה כחשובה, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט."
-                 : "אפשר לבחור מיקרופון בכפתור למטה מימין ולשנות מנוע תמלול בהגדרות.")
+                 ? tr("כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. הקישו על שורה כדי לתת שם לדובר, לחצו עליה ארוכות כדי לסמן אותה כחשובה, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט.", "When someone talks, the words will appear here in real time. Tap a line to name the speaker, press and hold it to mark it as important, and pinch with two fingers to make the text bigger or smaller.")
+                 : tr("אפשר לבחור מיקרופון בכפתור למטה מימין ולשנות מנוע תמלול בהגדרות.", "You can choose a microphone with the button at the bottom right, and change the transcription engine in Settings."))
                 .font(.system(size: max(17, liveDisplay.fontSize * 0.6)))
                 .foregroundStyle(theme.pendingText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -671,9 +671,9 @@ struct LiveCaptionView: View {
                     Image(systemName: "bell.and.waves.left.and.right")
                         .font(.title2)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("שהטלפון ירטוט כשקוראים לך?")
+                        Text(tr("שהטלפון ירטוט כשקוראים לך?", "Have the phone buzz when someone calls your name?"))
                             .font(.headline)
-                        Text("הקישו כדי לכתוב את השם שלך")
+                        Text(tr("הקישו כדי לכתוב את השם שלך", "Tap to write your name"))
                             .font(.subheadline.weight(.semibold))
                     }
                     .multilineTextAlignment(.leading)
@@ -690,7 +690,7 @@ struct LiveCaptionView: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("לא עכשיו")
+            .accessibilityLabel(tr("לא עכשיו", "Not now"))
         }
         .foregroundStyle(theme.chrome)
         .padding(14)
@@ -709,13 +709,13 @@ struct LiveCaptionView: View {
                     Image(systemName: "text.bubble")
                         .font(.title2)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("השיחה מ\(Self.minutesAgoText(minutes)) נשמרה")
+                        Text(tr("השיחה מ\(Self.minutesAgoText(minutes)) נשמרה", "The conversation from \(Self.minutesAgoText(minutes)) was saved"))
                             .font(.headline)
                         Text(CaptionLayout.directed(recent.title ?? recent.preview))
                             .font(.subheadline)
                             .lineLimit(2)
                             .opacity(0.8)
-                        Text("הקישו כדי לקרוא אותה")
+                        Text(tr("הקישו כדי לקרוא אותה", "Tap to read it"))
                             .font(.subheadline.weight(.semibold))
                     }
                     .multilineTextAlignment(.leading)
@@ -732,7 +732,7 @@ struct LiveCaptionView: View {
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("סגירה")
+            .accessibilityLabel(tr("סגירה", "Close"))
         }
         .foregroundStyle(theme.chrome)
         .padding(14)
@@ -763,9 +763,9 @@ struct LiveCaptionView: View {
     private func announceStopOrReturn(_ phase: PipelinePhase) {
         switch stopAnnouncer.phaseChanged(to: phase) {
         case .stopped?:
-            announceAlert("הכתוביות נעצרו: \(presentation.title)")
+            announceAlert(tr("הכתוביות נעצרו: \(presentation.title)", "Captions stopped: \(presentation.title)"))
         case .back?:
-            announceAlert("הכתוביות חזרו")
+            announceAlert(tr("הכתוביות חזרו", "Captions are back"))
         case nil:
             break
         }
@@ -791,13 +791,13 @@ struct LiveCaptionView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.chrome)
-        .accessibilityHint("מעבר לשורה האחרונה")
+        .accessibilityHint(tr("מעבר לשורה האחרונה", "Jump to the last line"))
     }
 
     private var jumpToLatestTitle: String {
         let newLines = viewModel.segments.count - lineCountWhenUnpinned
-        guard newLines > 0 else { return "לשורה האחרונה" }
-        return ConversationStats.linesText(newLines, adjective: (singular: "חדשה", plural: "חדשות"))
+        guard newLines > 0 else { return tr("לשורה האחרונה", "To the last line") }
+        return ConversationStats.linesText(newLines, adjective: (singular: "חדשה", plural: "חדשות"), englishAdjective: "new")
     }
 
     private var hidingControlBar: some View {
@@ -821,7 +821,7 @@ struct LiveCaptionView: View {
         .buttonStyle(.plain)
         .foregroundStyle(theme.chrome)
         .padding(.bottom, 8)
-        .accessibilityLabel("הצגת הכפתורים")
+        .accessibilityLabel(tr("הצגת הכפתורים", "Show the buttons"))
     }
 
     private func revealControls() {
@@ -897,14 +897,14 @@ struct LiveCaptionView: View {
             VStack(spacing: 4) {
                 Image(systemName: MicPickerView.icon(for: viewModel.selectedInput?.portType ?? .other))
                     .font(.title2)
-                Text(viewModel.selectedInput.map(MicPickerView.shortName) ?? "מיקרופון")
+                Text(viewModel.selectedInput.map(MicPickerView.shortName) ?? tr("מיקרופון", "Microphone"))
                     .font(.caption2)
                     .lineLimit(1)
             }
             .frame(width: 56)
         }
         .buttonStyle(.bordered)
-        .accessibilityLabel("בחירת מיקרופון")
+        .accessibilityLabel(tr("בחירת מיקרופון", "Choose microphone"))
     }
 
     private var typeToSpeakButton: some View {
@@ -914,13 +914,13 @@ struct LiveCaptionView: View {
             VStack(spacing: 4) {
                 Image(systemName: viewModel.isSpeaking ? "speaker.wave.3.fill" : "keyboard")
                     .font(.title2)
-                Text("להגיד")
+                Text(tr("להגיד", "Say"))
                     .font(.caption2)
             }
             .frame(width: 56)
         }
         .buttonStyle(.bordered)
-        .accessibilityLabel("להגיד משהו בקול")
+        .accessibilityLabel(tr("להגיד משהו בקול", "Say something out loud"))
     }
 
     private var settingsButton: some View {
@@ -930,13 +930,13 @@ struct LiveCaptionView: View {
             VStack(spacing: 4) {
                 Image(systemName: "gearshape")
                     .font(.title2)
-                Text("הגדרות")
+                Text(tr("הגדרות", "Settings"))
                     .font(.caption2)
             }
             .frame(width: 56)
         }
         .buttonStyle(.bordered)
-        .accessibilityLabel("הגדרות")
+        .accessibilityLabel(tr("הגדרות", "Settings"))
     }
 
     private var statusControl: some View {
@@ -1023,8 +1023,8 @@ struct LiveCaptionView: View {
 
     private var cellularDownloadMessage: String {
         let megabytes = viewModel.phase.failure?.engineUnavailability?.downloadMegabytes ?? 0
-        let size = megabytes > 0 ? "\(megabytes) MB" : "כמה מאות MB"
-        return "המודל שוקל \(size). בחבילת גלישה זה יכול לעלות כסף או לגמור את נפח הגלישה. ב-Wi-Fi ההורדה תתחיל לבד."
+        let size = megabytes > 0 ? "\(megabytes) MB" : tr("כמה מאות MB", "A few hundred MB")
+        return tr("המודל שוקל \(size). בחבילת גלישה זה יכול לעלות כסף או לגמור את נפח הגלישה. ב-Wi-Fi ההורדה תתחיל לבד.", "The model is about \(size). Over cellular data this can cost money or use up your data plan. On Wi‑Fi the download will start on its own.")
     }
 
     private func perform(_ action: PhasePresentation.Action) {

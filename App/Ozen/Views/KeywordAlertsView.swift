@@ -10,7 +10,7 @@ struct KeywordAlertsView: View {
         List {
             Section {
                 HStack {
-                    TextField("מילה או שם, למשל: סבתא", text: $newPhrase)
+                    TextField(tr("מילה או שם, למשל: סבתא", "A word or name, e.g., grandma"), text: $newPhrase)
                         .focused($isEditing)
                         .submitLabel(.done)
                         .onSubmit(add)
@@ -21,20 +21,20 @@ struct KeywordAlertsView: View {
                             .contentShape(Rectangle())
                     }
                     .disabled(newPhrase.trimmingCharacters(in: .whitespaces).isEmpty || typedWordIsOn)
-                    .accessibilityLabel(Text(listed == nil ? "הוספה" : "הפעלה"))
+                    .accessibilityLabel(Text(listed == nil ? tr("הוספה", "Add") : tr("הפעלה", "Turn on")))
                 }
                 if let listed {
-                    Text(listed.isEnabled ? "\"\(listed.phrase)\" כבר ברשימה." : "\"\(listed.phrase)\" כבר ברשימה, במצב כבוי. הקישו על הפלוס כדי להפעיל מחדש.")
+                    Text(listed.isEnabled ? tr("\"\(listed.phrase)\" כבר ברשימה.", "“\(listed.phrase)” is already in the list.") : tr("\"\(listed.phrase)\" כבר ברשימה, במצב כבוי. הקישו על הפלוס כדי להפעיל מחדש.", "“\(listed.phrase)” is already in the list, turned off. Tap the plus to turn it back on."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
             } footer: {
-                Text("כשמילה מהרשימה נאמרת, הטלפון ירטוט והשורה תודגש בצהוב עם פעמון. גם צורות כמו \"לסבתא\" או \"וסבתא\" נחשבות. כדאי לכתוב מילים בלי ה׳ בהתחלה: \"רופא\" ולא \"הרופא\", כדי שגם \"לרופא\" ייחשב.")
+                Text(tr("כשמילה מהרשימה נאמרת, הטלפון ירטוט והשורה תודגש בצהוב עם פעמון. גם צורות כמו \"לסבתא\" או \"וסבתא\" נחשבות. כדאי לכתוב מילים בלי ה׳ בהתחלה: \"רופא\" ולא \"הרופא\", כדי שגם \"לרופא\" ייחשב.", "When a word from the list is said, the phone will vibrate and the line will be highlighted in yellow with a bell. Forms like “to grandma” or “and grandma” count too. It’s best to write words without a leading “the”: “doctor” instead of “the doctor”, so “to the doctor” counts too."))
             }
 
-            Section("הרשימה") {
+            Section(tr("הרשימה", "List")) {
                 if viewModel.keywordAlerts.isEmpty {
-                    Text("עדיין אין מילים. הוסיפו את השם שלך, שמות של נכדים, או מילים כמו \"תרופה\".")
+                    Text(tr("עדיין אין מילים. הוסיפו את השם שלך, שמות של נכדים, או מילים כמו \"תרופה\".", "No words yet. Add your name, grandchildren’s names, or words like “medicine”."))
                         .foregroundStyle(.secondary)
                 }
                 ForEach(viewModel.keywordAlerts) { alert in
@@ -56,13 +56,13 @@ struct KeywordAlertsView: View {
                     Button {
                         viewModel.addKeywordAlert(phrase: word)
                     } label: {
-                        Label("להוסיף: \(word)", systemImage: "plus.circle")
+                        Label(tr("להוסיף: \(word)", "Add: \(word)"), systemImage: "plus.circle")
                     }
                 }
             }
 
             if !viewModel.keywordHits.isEmpty {
-                Section("נשמעו לאחרונה") {
+                Section(tr("נשמעו לאחרונה", "Recently heard")) {
                     ForEach(viewModel.keywordHits.suffix(10).reversed()) { hit in
                         HStack {
                             Text(hit.match.matchedText)
@@ -75,7 +75,7 @@ struct KeywordAlertsView: View {
                 }
             }
         }
-        .navigationTitle("מילים חשובות")
+        .navigationTitle(tr("מילים חשובות", "Important words"))
         .navigationBarTitleDisplayMode(.inline)
     }
 

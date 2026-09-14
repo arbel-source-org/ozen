@@ -63,4 +63,21 @@ struct BackgroundAlertPolicyTests {
         #expect(cut.count <= 121)
         #expect(cut.dropLast().hasSuffix("מילה"))
     }
+
+    @Test("notification bodies are in English when the app is")
+    func englishWording() {
+        Localization.$override.withValue(.english) {
+            var policy = BackgroundAlertPolicy()
+            let bell = policy.notification(for: sound("door_bell"), appIsActive: false, now: 0)
+            #expect(bell?.title == "Doorbell")
+            #expect(bell?.body == "Heard just now near the phone.")
+            let siren = policy.notification(for: sound("civil_defense_siren"), appIsActive: false, now: 0)
+            #expect(siren?.body == "Attention! Heard just now near the phone.")
+
+            let hitContent = policy.notification(for: hit("grandma"), lineText: "grandma", appIsActive: false, now: 100)
+            #expect(hitContent?.title == "Said: grandma")
+
+            #expect(BackgroundAlertPolicy.testNotification.title == "Test: doorbell")
+        }
+    }
 }

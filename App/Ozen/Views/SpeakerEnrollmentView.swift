@@ -16,8 +16,8 @@ struct SpeakerEnrollmentView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("שם") {
-                    TextField("לדוגמה: סבתא", text: $name)
+                Section(tr("שם", "Name")) {
+                    TextField(tr("לדוגמה: סבתא", "For example: Grandma"), text: $name)
                         .textInputAutocapitalization(.words)
                         .disabled(isRecording)
                 }
@@ -25,44 +25,44 @@ struct SpeakerEnrollmentView: View {
                 Section {
                     if isRecording {
                         ProgressView(value: progress) {
-                            Text("מקליט… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) שניות")
+                            Text(tr("מקליט… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) שניות", "Recording… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) seconds"))
                         }
                         LevelMeter(level: viewModel.inputLevel, isActive: true)
-                        Text("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.")
+                        Text(tr("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.", "Ask the person to speak naturally, at a normal distance from the selected microphone. If the bar doesn’t move while speaking, the microphone isn’t hearing anything. Captions are paused during recording."))
                             .font(.footnote)
                             .foregroundStyle(.secondary)
-                        Button("עצירה בלי לשמור", role: .destructive) {
+                        Button(tr("עצירה בלי לשמור", "Stop without saving"), role: .destructive) {
                             recording?.cancel()
                         }
                     } else {
                         Button {
                             record()
                         } label: {
-                            Label("הקלטה ושמירה (\(Int(targetSeconds)) שניות)", systemImage: "record.circle")
+                            Label(tr("הקלטה ושמירה (\(Int(targetSeconds)) שניות)", "Record and save (\(Int(targetSeconds)) seconds)"), systemImage: "record.circle")
                         }
                         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 } header: {
-                    Text("הקלטה")
+                    Text(tr("הקלטה", "Recording"))
                 } footer: {
-                    Text("ההקלטה עצמה לא נשמרת — רק \"טביעת קול\" מספרית קצרה שממנה אי אפשר לשחזר את הדיבור.")
+                    Text(tr("ההקלטה עצמה לא נשמרת — רק \"טביעת קול\" מספרית קצרה שממנה אי אפשר לשחזר את הדיבור.", "The recording itself isn’t saved — only a short numeric “voiceprint” that the speech can’t be reconstructed from."))
                 }
             }
-            .navigationTitle("דובר חדש")
+            .navigationTitle(tr("דובר חדש", "New speaker"))
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled(isRecording)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("ביטול") {
+                    Button(tr("ביטול", "Cancel")) {
                         recording?.cancel()
                         dismiss()
                     }
                 }
             }
-            .alert("ההקלטה קצרה או שקטה מדי", isPresented: $failed) {
-                Button("נסו שוב", role: .cancel) {}
+            .alert(tr("ההקלטה קצרה או שקטה מדי", "The recording is too short or too quiet"), isPresented: $failed) {
+                Button(tr("נסו שוב", "Try again"), role: .cancel) {}
             } message: {
-                Text("לא הצלחנו להפיק טביעת קול. ודאו שהמיקרופון הנכון נבחר ושהאדם מדבר לאורך כל ההקלטה.")
+                Text(tr("לא הצלחנו להפיק טביעת קול. ודאו שהמיקרופון הנכון נבחר ושהאדם מדבר לאורך כל ההקלטה.", "We couldn’t produce a voiceprint. Make sure the right microphone is selected and the person speaks throughout the recording."))
             }
         }
     }

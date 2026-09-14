@@ -96,12 +96,12 @@ public struct EmbeddingClusterer: Sendable {
         nextNumber = 1
     }
 
-    /// Hebrew, because this is exactly what the caption rows and the saved
-    /// history show.
-    public static let unknownSpeakerName = "דובר לא ידוע"
+    /// Exactly what the caption rows and the saved history show, in
+    /// whichever language the app is in.
+    public static var unknownSpeakerName: String { tr("דובר לא ידוע", "Unknown speaker") }
 
     public static func genericName(number: Int) -> String {
-        "דובר \(number)"
+        tr("דובר \(number)", "Speaker \(number)")
     }
 
     public func displayName(forClusterID id: Int?) -> String {

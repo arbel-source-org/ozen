@@ -38,7 +38,9 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         return AlertNotificationContent(
             identifier: key,
             title: alert.event.name,
-            body: urgent ? "שימו לב! נשמע עכשיו ליד הטלפון." : "נשמע עכשיו ליד הטלפון.",
+            body: urgent
+                ? tr("שימו לב! נשמע עכשיו ליד הטלפון.", "Attention! Heard just now near the phone.")
+                : tr("נשמע עכשיו ליד הטלפון.", "Heard just now near the phone."),
             threadIdentifier: "sounds",
             isUrgent: urgent
         )
@@ -49,7 +51,7 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         guard shouldNotify(key: key, appIsActive: appIsActive, now: now) else { return nil }
         return AlertNotificationContent(
             identifier: key,
-            title: "נאמר: \(hit.match.phrase)",
+            title: tr("נאמר: \(hit.match.phrase)", "Said: \(hit.match.phrase)"),
             // On the lock screen too, a line opening with an English word
             // would otherwise read out of order.
             body: Self.rightToLeft(Self.excerpt(lineText)),
@@ -71,13 +73,18 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
     /// from Settings: Focus modes, notification summaries and a muted app
     /// can each keep the real ones away, and the time to find that out is
     /// not when the doorbell rings.
-    public static let testNotification = AlertNotificationContent(
-        identifier: "test-alert",
-        title: "בדיקה: פעמון דלת",
-        body: "כך תיראה התראה מאוזן כשהטלפון בכיס או נעול.",
-        threadIdentifier: "sounds",
-        isUrgent: false
-    )
+    public static var testNotification: AlertNotificationContent {
+        AlertNotificationContent(
+            identifier: "test-alert",
+            title: tr("בדיקה: פעמון דלת", "Test: doorbell"),
+            body: tr(
+                "כך תיראה התראה מאוזן כשהטלפון בכיס או נעול.",
+                "This is what a notification from Ozen looks like when the phone is in a pocket or locked."
+            ),
+            threadIdentifier: "sounds",
+            isUrgent: false
+        )
+    }
 
     private static func rightToLeft(_ text: String) -> String {
         CaptionLayout.opensLeftToRight(text) ? CaptionLayout.rightToLeftMark + text : text

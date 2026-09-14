@@ -59,4 +59,16 @@ struct BatteryAdvisorTests {
         #expect(!low.isUrgent && critical.isUrgent)
         #expect(low.body != critical.body)
     }
+
+    @Test("the phone notification is in English when the app is")
+    func englishNotification() {
+        Localization.$override.withValue(.english) {
+            let low = BatteryWarning.low(percent: 20).notificationContent
+            let critical = BatteryWarning.critical(percent: 9).notificationContent
+            #expect(low.title == "Battery at 20%")
+            #expect(critical.title == "Battery at 9%")
+            #expect(low.body.contains("plugging in"))
+            #expect(critical.body.contains("Plug it in"))
+        }
+    }
 }

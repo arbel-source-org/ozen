@@ -139,6 +139,13 @@ struct AppSettingsTests {
         let decoded = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"cloudModel":""}"#.utf8))
         #expect(decoded.cloudModel == CloudSpeech.fastModel)
         #expect(decoded.display.autoHideControls)
+        #expect(decoded.appLanguage == .system)
+    }
+
+    @Test("a language name from a newer build falls back to following the phone")
+    func unknownLanguage() throws {
+        let decoded = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"appLanguage":"klingon"}"#.utf8))
+        #expect(decoded.appLanguage == .system)
     }
 
     @Test("newer settings round-trip through JSON intact")
@@ -147,6 +154,7 @@ struct AppSettingsTests {
         settings.whisperModelVariant = "large-v3_turbo"
         settings.allowServerFallbackForAppleSpeech = true
         settings.cloudModel = CloudSpeech.accurateModel
+        settings.appLanguage = .english
         settings.display = DisplayPreferences(fontSize: 44, theme: .highContrast, boldText: true, showSpeakerNames: false, keepScreenAwake: false, autoHideControls: false)
         settings.hapticOnSpeechResume = false
         settings.speakerSimilarityThreshold = 0.6

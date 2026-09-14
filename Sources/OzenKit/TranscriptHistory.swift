@@ -616,7 +616,7 @@ public struct TranscriptHistoryStore: Sendable {
         if let title = record.title, !title.isEmpty {
             heading = "\(title), \(date)"
         } else {
-            heading = "שיחה מתאריך \(date)"
+            heading = tr("שיחה מתאריך \(date)", "Conversation from \(date)")
         }
         guard !formatted.isEmpty else { return heading }
         let transcript = formatted.joined(separator: "\n")
@@ -625,7 +625,10 @@ public struct TranscriptHistoryStore: Sendable {
             .prefix(numbersBlockLimit)
             .map(\.1)
         guard !numbered.isEmpty else { return "\(heading)\n\n\(transcript)" }
-        return "\(heading)\n\nמספרים שנאמרו:\n\(numbered.joined(separator: "\n"))\n\nהשיחה:\n\(transcript)"
+        return tr(
+            "\(heading)\n\nמספרים שנאמרו:\n\(numbered.joined(separator: "\n"))\n\nהשיחה:\n\(transcript)",
+            "\(heading)\n\nNumbers mentioned:\n\(numbered.joined(separator: "\n"))\n\nThe conversation:\n\(transcript)"
+        )
     }
 
     /// A long conversation shared as text opens with the lines that had a

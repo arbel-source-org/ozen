@@ -21,16 +21,22 @@ public enum BatteryWarning: Sendable, Equatable {
         case .low(let percent):
             return AlertNotificationContent(
                 identifier: "battery",
-                title: "הסוללה ב-\(percent)%",
-                body: "הכתוביות וההתראות ממשיכות, אבל כדאי לחבר למטען.",
+                title: tr("הסוללה ב-\(percent)%", "Battery at \(percent)%"),
+                body: tr(
+                    "הכתוביות וההתראות ממשיכות, אבל כדאי לחבר למטען.",
+                    "Captions and alerts keep running, but it's worth plugging in."
+                ),
                 threadIdentifier: "status",
                 isUrgent: false
             )
         case .critical(let percent):
             return AlertNotificationContent(
                 identifier: "battery",
-                title: "הסוללה ב-\(percent)%",
-                body: "הטלפון עלול לכבות, ואיתו הכתוביות וההתראות. חברו למטען.",
+                title: tr("הסוללה ב-\(percent)%", "Battery at \(percent)%"),
+                body: tr(
+                    "הטלפון עלול לכבות, ואיתו הכתוביות וההתראות. חברו למטען.",
+                    "The phone might turn off, and captions and alerts with it. Plug it in."
+                ),
                 threadIdentifier: "status",
                 isUrgent: true
             )

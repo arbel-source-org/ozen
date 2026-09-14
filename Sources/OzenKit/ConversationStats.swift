@@ -22,7 +22,7 @@ public struct LongestTurn: Sendable, Equatable {
 /// nothing here pretends to know how long anyone actually spoke; every
 /// number is a count or a span between real timestamps.
 public struct ConversationStats: Sendable, Equatable {
-    public static let unknownSpeakerName = "דובר לא ידוע"
+    public static var unknownSpeakerName: String { tr("דובר לא ידוע", "Unknown speaker") }
 
     public let totalWords: Int
     public let totalTurns: Int
@@ -148,6 +148,7 @@ public struct ConversationStats: Sendable, Equatable {
     /// say it, "sha'a va-reva" ("an hour and a quarter"), "sha'atayim
     /// va-chetzi" ("two and a half hours").
     public static func minutesText(_ seconds: Double) -> String {
+        if Localization.language == .english { return englishMinutesText(seconds) }
         let minutes = Int((seconds / 60).rounded())
         switch minutes {
         case ..<1: return "פחות מדקה"
@@ -174,7 +175,18 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    private static func englishMinutesText(_ seconds: Double) -> String {
+        let minutes = Int((seconds / 60).rounded())
+        if minutes < 1 { return "less than a minute" }
+        if minutes < 60 { return "\(minutes) minute\(minutes == 1 ? "" : "s")" }
+        let hours = minutes / 60
+        let rest = minutes % 60
+        let hoursText = "\(hours) hour\(hours == 1 ? "" : "s")"
+        return rest == 0 ? hoursText : "\(hoursText) \(rest) minute\(rest == 1 ? "" : "s")"
+    }
+
     public static func speakersText(_ count: Int) -> String {
+        if Localization.language == .english { return englishSpeakersText(count) }
         switch count {
         case 1: return "דובר אחד"
         case 2: return "שני דוברים"
@@ -182,9 +194,20 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    private static func englishSpeakersText(_ count: Int) -> String {
+        count == 1 ? "1 speaker" : "\(count) speakers"
+    }
+
     /// "one line", "two lines" and "7 lines", with `adjective` after the
     /// noun as Hebrew puts it ("starred"), in its singular and plural.
-    public static func linesText(_ count: Int, adjective: (singular: String, plural: String)? = nil) -> String {
+    /// `englishAdjective`, when given, sits before the noun instead
+    /// ("3 starred lines"), as English puts it.
+    public static func linesText(
+        _ count: Int,
+        adjective: (singular: String, plural: String)? = nil,
+        englishAdjective: String? = nil
+    ) -> String {
+        if Localization.language == .english { return englishLinesText(count, adjective: englishAdjective) }
         let singular = adjective.map { " " + $0.singular } ?? ""
         let plural = adjective.map { " " + $0.plural } ?? ""
         switch count {
@@ -194,12 +217,26 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    private static func englishLinesText(_ count: Int, adjective: String?) -> String {
+        let prefix = adjective.map { $0 + " " } ?? ""
+        return count == 1 ? "1 \(prefix)line" : "\(count) \(prefix)lines"
+    }
+
     public static func wordsText(_ count: Int) -> String {
+        if Localization.language == .english { return englishWordsText(count) }
         switch count {
         case 0: return "אין מילים"
         case 1: return "מילה אחת"
         case 2: return "שתי מילים"
         default: return "\(count) מילים"
+        }
+    }
+
+    private static func englishWordsText(_ count: Int) -> String {
+        switch count {
+        case 0: return "no words"
+        case 1: return "1 word"
+        default: return "\(count) words"
         }
     }
 }

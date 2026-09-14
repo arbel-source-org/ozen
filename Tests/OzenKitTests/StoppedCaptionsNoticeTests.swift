@@ -120,6 +120,17 @@ struct StoppedCaptionsNoticeTests {
         #expect(offline.contains("אינטרנט"))
         #expect(Set([callEnded, permission, storage, noMic, other, cloudKey, offline]).count == 7)
     }
+
+    @Test("the message is in English when the app is")
+    func englishWording() {
+        Localization.$override.withValue(.english) {
+            let content = StoppedCaptionsNotice.content(for: .callEnded)
+            #expect(content.title == "Captions stopped")
+            #expect(content.body.contains("After the call"))
+            let permission = StoppedCaptionsNotice.content(for: .failed(PipelineFailure(kind: .microphonePermissionDenied, detail: ""))).body
+            #expect(permission.contains("permission"))
+        }
+    }
 }
 
 @Suite("CaptionPipeline phase change callback")
