@@ -49,3 +49,16 @@ Then on the phone: Settings → General → VPN & Device Management → trust th
 developer certificate; Settings → Privacy & Security → Developer Mode → on
 (the phone restarts). The app expires after 7 days on a free Apple ID; run the
 same command again to refresh it (a paid developer account removes the limit).
+
+## Refreshing
+
+Ozen warns on its own caption screen two days before it stops opening, and sends
+a reminder notification the day before; Diagnostics shows the exact moment under
+"ההתקנה תקפה עד". Settings shows the installed build as "0.2.0 (N)", N being
+the release's build number.
+
+Refresh with the **same Apple ID** as last time: AltServer then installs over
+the existing app, and her settings, enrolled voices, saved conversations and
+the downloaded speech model (hundreds of MB) all stay. A different Apple ID
+gives the app a different bundle identifier, so it installs as a second, empty
+copy.
