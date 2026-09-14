@@ -716,9 +716,12 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
 
         audio.startError = nil
+        var phases: [PipelinePhase] = []
+        pipeline.onPhaseChange = { phases.append($0) }
         await pipeline.retry()
 
         #expect(pipeline.phase == .listening)
+        #expect(!phases.contains(.idle))
     }
 
     @Test("pause stops capture and resume starts again")

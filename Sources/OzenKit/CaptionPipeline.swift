@@ -399,7 +399,9 @@ public final class CaptionPipeline {
         guard case .failed = phase, let activeSettings else { return }
         cancelScheduledRetry()
         tearDownSession()
-        phase = .idle
+        // Straight from the failure to starting, never through .idle, which
+        // means stopped on purpose (the "captions came back" announcement
+        // forgets the failure there).
         await start(settings: activeSettings)
     }
 
