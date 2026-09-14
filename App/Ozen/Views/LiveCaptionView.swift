@@ -14,6 +14,9 @@ struct LiveCaptionView: View {
     @State private var showingTypeToSpeak = false
     @State private var namingSegment: TranscriptSegment?
     @State private var isPinnedToBottom = true
+    /// How many lines there were when she scrolled up, so the way back down
+    /// can say how many came since.
+    @State private var lineCountWhenUnpinned = 0
     @State private var lastSegmentUpdate: TimeInterval = 0
     /// Advanced every half minute, so a long quiet can let the phone lock
     /// (see `ScreenAwakePolicy`) and the install-expiry warning appears on
@@ -381,7 +384,10 @@ struct LiveCaptionView: View {
                         .frame(height: 1)
                         .id("bottom-sentinel")
                         .onAppear { withAnimation { isPinnedToBottom = true } }
-                        .onDisappear { withAnimation { isPinnedToBottom = false } }
+                        .onDisappear {
+                            lineCountWhenUnpinned = viewModel.segments.count
+                            withAnimation { isPinnedToBottom = false }
+                        }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
@@ -526,6 +532,7 @@ struct LiveCaptionView: View {
         if let mark = awayMark, viewModel.awayCatchUp.offersJump(in: viewModel.segments) {
             Button {
                 viewModel.acknowledgeAwayLines()
+                lineCountWhenUnpinned = viewModel.segments.count
                 isPinnedToBottom = false
                 guard let proxy = scrollProxy else { return }
                 // The mark sits just above its first line: leave room for it.
@@ -713,7 +720,7 @@ struct LiveCaptionView: View {
             isPinnedToBottom = true
             scrollToLatest(animated: true)
         } label: {
-            Label("לשורה האחרונה", systemImage: "arrow.down.to.line")
+            Label(jumpToLatestTitle, systemImage: "arrow.down.to.line")
                 .font(.headline)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -723,6 +730,13 @@ struct LiveCaptionView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(theme.chrome)
+        .accessibilityHint("מעבר לשורה האחרונה")
+    }
+
+    private var jumpToLatestTitle: String {
+        let newLines = viewModel.segments.count - lineCountWhenUnpinned
+        guard newLines > 0 else { return "לשורה האחרונה" }
+        return ConversationStats.linesText(newLines, adjective: (singular: "חדשה", plural: "חדשות"))
     }
 
     private func scrollToLatestIfPinned() {
