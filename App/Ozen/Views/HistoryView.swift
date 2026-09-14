@@ -363,7 +363,11 @@ struct StarredLinesView: View {
                         Section {
                             ForEach(group.lines) { line in
                                 NavigationLink {
-                                    HistoryDetailView(viewModel: viewModel, sessionID: line.sessionID, initialLineID: line.id, onDelete: onDelete)
+                                    HistoryDetailView(viewModel: viewModel, sessionID: line.sessionID, initialLineID: line.id) {
+                                        // Deleted from inside: both lists drop it.
+                                        Task { await load() }
+                                        onDelete()
+                                    }
                                 } label: {
                                     VStack(alignment: .leading, spacing: 2) {
                                         if let name = line.segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
@@ -397,11 +401,13 @@ struct StarredLinesView: View {
                 }
             }
         }
-        .task {
-            let store = viewModel.historyStore
-            lines = await Task.detached(priority: .userInitiated) { store.starredLines() }.value
-            hasLoaded = true
-        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        let store = viewModel.historyStore
+        lines = await Task.detached(priority: .userInitiated) { store.starredLines() }.value
+        hasLoaded = true
     }
 
     private struct ConversationStars: Identifiable {
