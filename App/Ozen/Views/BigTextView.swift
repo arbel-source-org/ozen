@@ -1,0 +1,119 @@
+import SwiftUI
+import OzenKit
+
+/// Words in letters big enough to read across a table.
+///
+/// Where captions can't keep up (a noisy café, a name the recognizer keeps
+/// getting wrong), the other person can type on her phone and she reads it
+/// here. And what she typed can be turned around, upside down to her, so
+/// the person facing her reads it instead of hearing it.
+struct BigTextView: View {
+    @Binding var text: String
+    let display: DisplayPreferences
+    let canSpeak: Bool
+    let onSpeak: (String) -> Void
+
+    @State private var isFlipped = false
+    @FocusState private var isTyping: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    static let fontSize: CGFloat = 52
+
+    private var theme: CaptionTheme { CaptionTheme(display.theme) }
+    private var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            words
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            controls
+        }
+        .background(theme.background.ignoresSafeArea())
+        .preferredColorScheme(theme.colorScheme)
+        .onAppear { isTyping = !isFlipped }
+    }
+
+    @ViewBuilder
+    private var words: some View {
+        if isFlipped {
+            // Read-only while upside down: editing text that is drawn
+            // rotated would put the cursor where no one expects it.
+            ScrollView {
+                Text(text)
+                    .font(.system(size: Self.fontSize, weight: .bold))
+                    .foregroundStyle(theme.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(24)
+            }
+            .rotationEffect(.degrees(180))
+            .accessibilityLabel(text)
+        } else {
+            ZStack(alignment: .topLeading) {
+                if isEmpty {
+                    Text("כתבו כאן…")
+                        .font(.system(size: Self.fontSize, weight: .bold))
+                        .foregroundStyle(theme.pendingText)
+                        .padding(.horizontal, 29)
+                        .padding(.vertical, 32)
+                        .accessibilityHidden(true)
+                }
+                TextEditor(text: $text)
+                    .font(.system(size: Self.fontSize, weight: .bold))
+                    .foregroundStyle(theme.text)
+                    .scrollContentBackground(.hidden)
+                    .focused($isTyping)
+                    .padding(24)
+                    .accessibilityLabel("טקסט גדול")
+            }
+        }
+    }
+
+    private var controls: some View {
+        // Two to a row: four labelled buttons side by side don't fit at
+        // the text sizes she uses.
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            Button {
+                text = ""
+                isFlipped = false
+                isTyping = true
+            } label: {
+                Label("ניקוי", systemImage: "eraser")
+                    .frame(maxWidth: .infinity)
+            }
+            .disabled(isEmpty)
+
+            Button {
+                isFlipped.toggle()
+                isTyping = !isFlipped
+            } label: {
+                Label(isFlipped ? "חזרה" : "להפוך", systemImage: "arrow.up.arrow.down")
+                    .frame(maxWidth: .infinity)
+            }
+            .disabled(isEmpty)
+            .accessibilityHint("הופך את הטקסט כדי שמי שיושב מולך יוכל לקרוא")
+
+            if canSpeak {
+                Button {
+                    onSpeak(text)
+                } label: {
+                    Label("להשמיע", systemImage: "speaker.wave.3.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(isEmpty)
+            }
+
+            Button {
+                dismiss()
+            } label: {
+                Label("סגירה", systemImage: "xmark")
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .labelStyle(.titleAndIcon)
+        .font(.headline)
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .tint(theme.chrome)
+        .padding(16)
+    }
+}

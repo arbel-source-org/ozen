@@ -8,6 +8,7 @@ struct TypeToSpeakView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var text = ""
     @State private var editingPhrases = false
+    @State private var showingBigText = false
     @FocusState private var isTyping: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -60,6 +61,14 @@ struct TypeToSpeakView: View {
             .onAppear { isTyping = true }
         }
         .presentationDetents([.medium, .large])
+        .fullScreenCover(isPresented: $showingBigText) {
+            BigTextView(
+                text: $text,
+                display: viewModel.display,
+                canSpeak: viewModel.hasHebrewVoice,
+                onSpeak: { viewModel.speak($0) }
+            )
+        }
     }
 
     private var composer: some View {
@@ -91,6 +100,16 @@ struct TypeToSpeakView: View {
                 .controlSize(.large)
                 .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+
+            Button {
+                isTyping = false
+                showingBigText = true
+            } label: {
+                Label("מסך מלא באותיות גדולות", systemImage: "textformat.size.larger")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityHint("כדי שמישהו יכתוב לך, או כדי להראות למי שמולך מה כתבת")
 
             if !viewModel.hasHebrewVoice {
                 Label("אין קול עברי מותקן. הגדרות → נגישות → תוכן מדובר → קולות → עברית.", systemImage: "exclamationmark.triangle")

@@ -78,7 +78,10 @@ things, for Hebrew conversation, entirely on-device.
 - **Type to speak.** The other half of a conversation: type a reply, or
   tap one of the ready-made phrases ("רגע, לא הבנתי", "אפשר לחזור על
   זה?"), and the phone says it in Hebrew. Captions pause while the phone
-  talks, so it doesn't caption itself, and come back on their own.
+  talks, so it doesn't caption itself, and come back on their own. A
+  full-screen pad in huge letters lets someone type to her where captions
+  can't keep up, or turns what she typed upside down for the person facing
+  her to read.
 - **Names and words list.** Family names, the doctor, the medicines.
   Both engines are primed with the list (Apple's recognizer via
   contextual strings, Whisper via a decoder prompt), edits apply from the
