@@ -206,7 +206,12 @@ struct OnboardingView: View {
     }
 
     private func addName() {
-        viewModel.addKeywordAlert(phrase: nameDraft)
+        let name = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        viewModel.addKeywordAlert(phrase: name)
+        // A name the engine has never heard is spelled some other way, and
+        // then never matches; on the names list, both engines expect it.
+        viewModel.addVocabularyTerm(name)
         nameDraft = ""
     }
 
