@@ -60,7 +60,7 @@ public final class CAMPlusPlusSpeakerEmbedder: SpeakerEmbedding, @unchecked Send
         )
         for (t, frame) in frames.enumerated() {
             for (bin, value) in frame.enumerated() {
-                array[[0, t, bin] as [NSNumber]] = NSNumber(value: value)
+                array[[NSNumber(value: 0), NSNumber(value: t), NSNumber(value: bin)]] = NSNumber(value: value)
             }
         }
         return array
@@ -70,9 +70,14 @@ public final class CAMPlusPlusSpeakerEmbedder: SpeakerEmbedding, @unchecked Send
 /// The one input CoreML asks for: `MLDictionaryFeatureProvider` also
 /// works, but boxing a single named tensor by hand skips a dictionary and
 /// a round trip through `MLFeatureValue`'s type inference.
-private struct SingleFeatureProvider: MLFeatureProvider {
+private final class SingleFeatureProvider: MLFeatureProvider {
     let name: String
     let value: MLFeatureValue
+
+    init(name: String, value: MLFeatureValue) {
+        self.name = name
+        self.value = value
+    }
 
     var featureNames: Set<String> { [name] }
 
