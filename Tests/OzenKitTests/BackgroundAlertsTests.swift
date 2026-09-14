@@ -53,6 +53,9 @@ struct BackgroundAlertPolicyTests {
         let content = policy.notification(for: hit("סבתא"), lineText: "  סבתא, בואי לאכול ", appIsActive: false, now: 0)
         #expect(content?.title == "נאמר: סבתא")
         #expect(content?.body == "סבתא, בואי לאכול")
+        // One opening with an English word is marked to read right to left.
+        let english = policy.notification(for: hit("סבתא"), lineText: "OK סבתא, בואי", appIsActive: false, now: 100)
+        #expect(english?.body == "\u{200F}OK סבתא, בואי")
 
         let long = String(repeating: "מילה ", count: 60)
         let cut = BackgroundAlertPolicy.excerpt(long)

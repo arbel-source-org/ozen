@@ -50,7 +50,9 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         return AlertNotificationContent(
             identifier: key,
             title: "נאמר: \(hit.match.phrase)",
-            body: Self.excerpt(lineText),
+            // On the lock screen too, a line opening with an English word
+            // would otherwise read out of order.
+            body: Self.rightToLeft(Self.excerpt(lineText)),
             threadIdentifier: "keywords",
             isUrgent: false
         )
@@ -76,6 +78,10 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         threadIdentifier: "sounds",
         isUrgent: false
     )
+
+    private static func rightToLeft(_ text: String) -> String {
+        CaptionLayout.opensLeftToRight(text) ? CaptionLayout.rightToLeftMark + text : text
+    }
 
     /// Notification bodies get cut off by the system anyway; cut at a word
     /// so the reader sees whole words and an ellipsis.
