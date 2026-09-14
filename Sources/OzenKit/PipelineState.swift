@@ -48,7 +48,7 @@ public struct PipelineFailure: Sendable, Equatable, Error {
     public var suggestsOtherEngine: Bool {
         guard kind == .engineUnavailable, let why = engineUnavailability else { return false }
         switch why.kind {
-        case .languageNotSupportedOnDevice, .modelDownloadFailed, .modelLoadFailed:
+        case .languageNotSupportedOnDevice, .modelDownloadFailed, .modelLoadFailed, .notEnoughStorage:
             return true
         case .permissionDenied, .waitingForWiFi, .temporarilyUnavailable, .other:
             return false

@@ -181,6 +181,15 @@ struct PhasePresentation {
                 tint: .orange,
                 action: .confirmCellularDownload
             )
+        case .notEnoughStorage:
+            let missing = engineFailure?.missingMegabytes.flatMap { $0 > 0 ? "צריך לפנות עוד \(Self.sizeText(megabytes: $0))" : nil }
+            self.init(
+                title: "אין מספיק מקום פנוי בטלפון",
+                detail: [missing, "או הקישו לבחור מודל קטן יותר"].compactMap { $0 }.joined(separator: " · "),
+                systemImage: "externaldrive.badge.exclamationmark",
+                tint: .red,
+                action: .openEngineSettings
+            )
         case .modelLoadFailed:
             self.init(
                 title: "טעינת המודל נכשלה",
@@ -194,5 +203,14 @@ struct PhasePresentation {
         case .other, .none:
             self.init(title: "\(engineName) לא זמין", detail: "הקישו לנסות שוב", systemImage: "exclamationmark.triangle", tint: .red, action: .retry)
         }
+    }
+
+    /// "450 MB", or "1.3 GB" once it's that big, in the same decimal
+    /// units as the model list and the Settings app. Rounded up: this is
+    /// how much room to free, and freeing a little less wouldn't do.
+    static func sizeText(megabytes: Int) -> String {
+        guard megabytes >= 1_000 else { return "\(megabytes) MB" }
+        let tenths = (megabytes + 99) / 100
+        return "\(tenths / 10).\(tenths % 10) GB"
     }
 }

@@ -101,6 +101,8 @@ public final class CaptionPipeline {
     private var cellularDownloadApproved = false
     private var lastNetwork: NetworkConditions?
     private var networkRetryTask: Task<Void, Never>?
+    /// Free space on the phone in bytes, or nil when it can't be read.
+    private let availableStorageBytes: (@Sendable () -> Int64?)?
 
     private static let embeddingWindowSeconds = 1.5
     private static let sampleRate = 16_000.0
@@ -118,6 +120,7 @@ public final class CaptionPipeline {
         recovery: AutoRecoveryPolicy = AutoRecoveryPolicy(),
         audioWatchdog: AudioStallWatchdog = AudioStallWatchdog(),
         network: (any NetworkMonitoring)? = nil,
+        availableStorageBytes: (@Sendable () -> Int64?)? = nil,
         now: @escaping @Sendable () -> TimeInterval = { Date().timeIntervalSince1970 }
     ) {
         self.recovery = recovery
@@ -131,6 +134,7 @@ public final class CaptionPipeline {
         self.stabilizer = stabilizer
         self.now = now
         self.network = network
+        self.availableStorageBytes = availableStorageBytes
         lastNetwork = network?.current
         network?.onChange = { [weak self] conditions in
             self?.networkConditionsChanged(conditions)
@@ -198,6 +202,14 @@ public final class CaptionPipeline {
                     .engineUnavailable,
                     detail: "\(megabytes) MB to download, no internet connection",
                     engineUnavailability: EngineUnavailability(kind: .modelDownloadFailed, detail: "offline", downloadMegabytes: megabytes)
+                )
+                return
+            }
+            if let missing = storageShortfall(forDownloadOf: megabytes) {
+                fail(
+                    .engineUnavailable,
+                    detail: "\(megabytes) MB to download, \(missing) MB more free space needed",
+                    engineUnavailability: EngineUnavailability(kind: .notEnoughStorage, detail: "checked before download", downloadMegabytes: megabytes, missingMegabytes: missing)
                 )
                 return
             }
@@ -646,6 +658,24 @@ public final class CaptionPipeline {
         activeSettings?.allowCellularModelDownload = allowed
         guard allowed, isWaitingForWiFi else { return }
         await retry()
+    }
+
+    /// The app is back on screen. If the model was waiting for room on the
+    /// phone and there is room now (she freed some up in the Settings
+    /// app), the download starts without anyone having to tap.
+    public func appDidBecomeActive() async {
+        guard let why = phase.failure?.engineUnavailability,
+              why.kind == .notEnoughStorage,
+              !phase.isTransitioning
+        else { return }
+        if let megabytes = why.downloadMegabytes, storageShortfall(forDownloadOf: megabytes) != nil {
+            return
+        }
+        await retry()
+    }
+
+    private func storageShortfall(forDownloadOf megabytes: Int) -> Int? {
+        StorageSpaceGate.shortfallMegabytes(downloadMegabytes: megabytes, availableBytes: availableStorageBytes?())
     }
 
     private var isWaitingForWiFi: Bool {

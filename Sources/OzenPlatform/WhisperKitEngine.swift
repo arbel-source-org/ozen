@@ -74,14 +74,29 @@ public actor WhisperKitEngine: TranscriptionEngine {
         echoDetector = detector.isEmpty ? nil : detector
     }
 
-    /// The model's size when it isn't fully on the phone yet. A cut-off
-    /// download reports the whole size: how much is left isn't known
-    /// until the hub is asked, and that already needs the connection.
-    /// 0 means a model the catalog doesn't know the size of.
+    /// What is left to download when the model isn't fully on the phone
+    /// yet. The hub keeps every file a cut-off download finished and skips
+    /// those next time, so what's already on disk is subtracted (never
+    /// below 1, which would read as "size unknown"). 0 means a model the
+    /// catalog doesn't know the size of.
     public func pendingDownloadMegabytes() async -> Int? {
         if pipe != nil { return nil }
         guard store.installedFolder(for: modelVariant) == nil else { return nil }
-        return WhisperModelCatalog.option(for: modelVariant)?.sizeMB ?? 0
+        guard let total = WhisperModelCatalog.option(for: modelVariant)?.sizeMB else { return 0 }
+        let onDiskMegabytes = Int(store.sizeOnDisk(of: modelVariant) / 1_048_576)
+        return max(total - onDiskMegabytes, 1)
+    }
+
+    /// A full disk, with how much room to free when that can be worked out.
+    private static func outOfSpace(variant: String, error: any Error) -> EngineAvailability {
+        let size = WhisperModelCatalog.option(for: variant)?.sizeMB
+        let missing = size.flatMap { StorageSpaceGate.shortfallMegabytes(downloadMegabytes: $0, availableBytes: DeviceStorage.availableBytes()) }
+        return .unavailable(EngineUnavailability(
+            kind: .notEnoughStorage,
+            detail: "\(variant): disk full: \(error)",
+            downloadMegabytes: size,
+            missingMegabytes: missing
+        ))
     }
 
     public func prepare(
@@ -107,6 +122,9 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 folder = try await downloadAndReport()
                 fetchedThisTime = true
             } catch {
+                if StorageSpaceGate.isOutOfSpace(error) {
+                    return Self.outOfSpace(variant: modelVariant, error: error)
+                }
                 return .unavailable(.modelDownloadFailed, "\(modelVariant): \(error)")
             }
         }
@@ -125,6 +143,9 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 do {
                     folder = try await downloadAndReport()
                 } catch let downloadError {
+                    if StorageSpaceGate.isOutOfSpace(downloadError) {
+                        return Self.outOfSpace(variant: variant, error: downloadError)
+                    }
                     return .unavailable(.modelDownloadFailed, "\(variant): load failed (\(error)); repair download failed: \(downloadError)")
                 }
                 progress(EnginePreparationProgress(stage: .loadingModel, detail: variant))
@@ -145,6 +166,11 @@ public actor WhisperKitEngine: TranscriptionEngine {
             pipe = loaded
             return .available
         } catch {
+            // Compiling the model for this phone's chip on first load
+            // writes a cache; a full disk there is not a broken model.
+            if StorageSpaceGate.isOutOfSpace(error) {
+                return Self.outOfSpace(variant: modelVariant, error: error)
+            }
             // The tokenizer is fetched from the internet on the very first
             // load. Offline at that moment is a connection problem, and
             // saying "model broken" would send the user the wrong way.

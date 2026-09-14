@@ -89,19 +89,25 @@ public struct EngineUnavailability: Sendable, Equatable, Error {
         /// The model still has to be downloaded, the phone is on cellular
         /// data or Low Data Mode, and nobody said that's fine.
         case waitingForWiFi
+        /// The phone doesn't have room for the model (see `StorageSpaceGate`).
+        case notEnoughStorage
         case temporarilyUnavailable
         case other
     }
 
     public var kind: Kind
     public var detail: String
-    /// For `waitingForWiFi`: how big the download is, so the screen can say.
+    /// For `waitingForWiFi` and `notEnoughStorage`: how big the download
+    /// is, so the screen can say.
     public var downloadMegabytes: Int?
+    /// For `notEnoughStorage`: how much more room has to be freed, when known.
+    public var missingMegabytes: Int?
 
-    public init(kind: Kind, detail: String, downloadMegabytes: Int? = nil) {
+    public init(kind: Kind, detail: String, downloadMegabytes: Int? = nil, missingMegabytes: Int? = nil) {
         self.kind = kind
         self.detail = detail
         self.downloadMegabytes = downloadMegabytes
+        self.missingMegabytes = missingMegabytes
     }
 }
 

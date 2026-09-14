@@ -84,7 +84,8 @@ public final class LiveCaptionViewModel {
             },
             embedder: MFCCSpeakerEmbedder(),
             soundDetector: SoundAnalysisDetector(),
-            network: PathNetworkMonitor()
+            network: PathNetworkMonitor(),
+            availableStorageBytes: { DeviceStorage.availableBytes() }
         )
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         self.init(
@@ -163,6 +164,16 @@ public final class LiveCaptionViewModel {
         // the call is over, and captions (and automatic recovery) resume.
         if isActive, isInterruptedBySystem, reclaimAudioSession?() == true {
             systemInterruptionChanged(began: false)
+        }
+        // Back from freeing up room in the Settings app: the model download
+        // starts by itself if it fits now.
+        if isActive, pipeline.phase.failure?.engineUnavailability?.kind == .notEnoughStorage {
+            Task {
+                await pipeline.appDidBecomeActive()
+                if pipeline.phase.failure?.engineUnavailability?.kind != .notEnoughStorage {
+                    historySessionDidChangePhase()
+                }
+            }
         }
     }
 

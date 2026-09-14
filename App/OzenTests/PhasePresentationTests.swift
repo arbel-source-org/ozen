@@ -33,6 +33,28 @@ struct PhasePresentationTests {
         #expect(presentation.detail?.contains("MB") == false)
     }
 
+    @Test("a full phone says how much room to free, and a tap opens the model choice")
+    func notEnoughStorage() {
+        let presentation = PhasePresentation(
+            phase: failure(EngineUnavailability(kind: .notEnoughStorage, detail: "", downloadMegabytes: 626, missingMegabytes: 1_300)),
+            engine: .whisperKit,
+            interruptedBySystem: false
+        )
+        #expect(presentation.action == .openEngineSettings)
+        #expect(presentation.detail?.contains("1.3 GB") == true)
+        #expect(presentation.tint == .red)
+    }
+
+    @Test("sizes read as MB below a gigabyte and as GB with one decimal above")
+    func sizeText() {
+        #expect(PhasePresentation.sizeText(megabytes: 450) == "450 MB")
+        #expect(PhasePresentation.sizeText(megabytes: 999) == "999 MB")
+        #expect(PhasePresentation.sizeText(megabytes: 1_000) == "1.0 GB")
+        #expect(PhasePresentation.sizeText(megabytes: 1_300) == "1.3 GB")
+        // Rounded up: freeing 1.3 GB would leave it a megabyte short.
+        #expect(PhasePresentation.sizeText(megabytes: 1_301) == "1.4 GB")
+    }
+
     @Test("a phone call outranks every other state and offers no action")
     func phoneCall() {
         let presentation = PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: true)

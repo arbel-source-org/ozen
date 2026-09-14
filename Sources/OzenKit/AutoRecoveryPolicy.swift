@@ -56,6 +56,11 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
                 // the same cellular connection. The pipeline retries when
                 // the connection changes instead.
                 return .never
+            case .notEnoughStorage:
+                // Only the person can free up room; a timer would just fill
+                // the phone again. The pipeline checks again when the app
+                // comes back on screen.
+                return .never
             case .modelDownloadFailed:
                 return .download
             case .modelLoadFailed:

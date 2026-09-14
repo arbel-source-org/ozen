@@ -73,6 +73,7 @@ struct DiagnosticsView: View {
                 LabeledContent("חום", value: Self.describe(ProcessInfo.processInfo.thermalState))
                 LabeledContent("מצב חיסכון בסוללה", value: ProcessInfo.processInfo.isLowPowerModeEnabled ? "פעיל" : "כבוי")
                 LabeledContent("סוללה", value: Self.batteryText)
+                LabeledContent("מקום פנוי", value: Self.freeSpaceText)
                 LabeledContent("דגם", value: UIDevice.current.model)
                 LabeledContent("iOS", value: UIDevice.current.systemVersion)
                 LabeledContent("אפליקציה", value: SettingsView.versionString)
@@ -110,6 +111,15 @@ struct DiagnosticsView: View {
         return "\(Int((device.batteryLevel * 100).rounded()))%\(plugged ? " · בטעינה" : "")"
     }
 
+    private static func format(bytes: Int64) -> String {
+        ModelManagerView.format(bytes: bytes)
+    }
+
+    private static var freeSpaceText: String {
+        guard let bytes = DeviceStorage.availableBytes() else { return "—" }
+        return format(bytes: bytes)
+    }
+
     static func describe(_ state: ModelFolderState) -> String {
         switch state {
         case .missing: return "לא הורד"
@@ -143,7 +153,7 @@ struct DiagnosticsView: View {
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)
         settings save error: \(viewModel.settingsSaveError ?? "-") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
-        thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText)
+        thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText) free space: \(Self.freeSpaceText)
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString)
         """
     }

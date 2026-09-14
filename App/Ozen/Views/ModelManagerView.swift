@@ -12,6 +12,9 @@ struct ModelManagerView: View {
     @State private var partial: Set<String> = []
     @State private var sizesOnDisk: [String: Int64] = [:]
     @State private var totalOnDisk: Int64 = 0
+    /// Room left on the phone, so a model that won't fit says so before
+    /// it's picked.
+    @State private var freeBytes: Int64?
     @State private var pendingDelete: WhisperModelOption?
     @State private var deleteError: String?
 
@@ -26,7 +29,7 @@ struct ModelManagerView: View {
             } header: {
                 Text("מודלים")
             } footer: {
-                Text("הורדה נעשית פעם אחת ונשמרת בטלפון (לא מגובה ל‑iCloud). סה\"כ שטח: \(Self.format(bytes: totalOnDisk)).")
+                Text("הורדה נעשית פעם אחת ונשמרת בטלפון (לא מגובה ל‑iCloud). סה\"כ שטח: \(Self.format(bytes: totalOnDisk))." + (freeBytes.map { " פנוי בטלפון: \(Self.format(bytes: $0))." } ?? ""))
             }
         }
         .navigationTitle("מודל Whisper")
@@ -105,6 +108,9 @@ struct ModelManagerView: View {
                         if let size = sizesOnDisk[option.variant] {
                             Text("· \(Self.format(bytes: size)) כבר ירדו")
                         }
+                    } else if StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.sizeMB, availableBytes: freeBytes) != nil {
+                        Image(systemName: "externaldrive.badge.exclamationmark")
+                        Text("אין מספיק מקום בטלפון")
                     } else {
                         Image(systemName: "icloud.and.arrow.down")
                         Text("יורד בבחירה")
@@ -166,6 +172,7 @@ struct ModelManagerView: View {
         })
         sizesOnDisk = Dictionary(uniqueKeysWithValues: installed.union(partial).map { ($0, store.sizeOnDisk(of: $0)) })
         totalOnDisk = store.totalSizeOnDisk()
+        freeBytes = DeviceStorage.availableBytes()
     }
 
     private func delete(_ option: WhisperModelOption) {

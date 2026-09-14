@@ -1364,3 +1364,117 @@ struct CaptionPipelineNaNEmbeddingTests {
         #expect(pipeline.speakerClusters.isEmpty)
     }
 }
+
+/// Free space the test can change while the pipeline holds on to it.
+final class FakeStorage: @unchecked Sendable {
+    private let lock = NSLock()
+    private var bytes: Int64?
+
+    init(megabytes: Int64?) {
+        bytes = megabytes.map { $0 * 1_048_576 }
+    }
+
+    func set(megabytes: Int64?) {
+        lock.lock()
+        defer { lock.unlock() }
+        bytes = megabytes.map { $0 * 1_048_576 }
+    }
+
+    func available() -> Int64? {
+        lock.lock()
+        defer { lock.unlock() }
+        return bytes
+    }
+}
+
+@Suite("CaptionPipeline model download and free space")
+@MainActor
+struct CaptionPipelineStorageTests {
+    private func makePipeline(storage: FakeStorage?, pendingDownload: Int? = 626) -> (CaptionPipeline, FakeEngine, FakeAudioCapturer) {
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        engine.pendingDownload = pendingDownload
+        var freeSpace: (@Sendable () -> Int64?)?
+        if let storage {
+            freeSpace = { storage.available() }
+        }
+        let pipeline = CaptionPipeline(
+            audio: audio,
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(),
+            network: FakeNetworkMonitor(.wifi),
+            availableStorageBytes: freeSpace
+        )
+        return (pipeline, engine, audio)
+    }
+
+    @Test("a phone without room for the model says so, with how much to free, and doesn't start the download")
+    func notEnoughRoom() async {
+        let storage = FakeStorage(megabytes: 300)
+        let (pipeline, engine, _) = makePipeline(storage: storage)
+        await pipeline.start(settings: .default)
+
+        let why = pipeline.phase.failure?.engineUnavailability
+        #expect(why?.kind == .notEnoughStorage)
+        #expect(why?.downloadMegabytes == 626)
+        #expect(why?.missingMegabytes == StorageSpaceGate.requiredMegabytes(forDownloadOf: 626) - 300)
+        #expect(engine.prepareCount == 0)
+        // Retrying on a timer can't free up space.
+        #expect(pipeline.scheduledRetry == nil)
+        #expect(pipeline.phase.failure?.suggestsOtherEngine == true)
+        #expect(pipeline.phase.failure?.isRetryableInApp == true)
+    }
+
+    @Test("enough room, nothing to download, an unknown size, or no way to check: it goes ahead")
+    func proceeds() async {
+        let cases: [(FakeStorage?, Int?)] = [
+            (FakeStorage(megabytes: 20_000), 626),
+            (FakeStorage(megabytes: 10), nil),
+            (FakeStorage(megabytes: 10), 0),
+            (FakeStorage(megabytes: nil), 626),
+            (nil, 626),
+        ]
+        for (storage, pending) in cases {
+            let (pipeline, engine, _) = makePipeline(storage: storage, pendingDownload: pending)
+            await pipeline.start(settings: .default)
+            #expect(pipeline.phase.isListening)
+            #expect(engine.prepareCount == 1)
+        }
+    }
+
+    @Test("coming back to the app after freeing up room starts the download by itself")
+    func freedUpRoom() async {
+        let storage = FakeStorage(megabytes: 300)
+        let (pipeline, engine, audio) = makePipeline(storage: storage)
+        await pipeline.start(settings: .default)
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .notEnoughStorage)
+
+        // Back on screen without having freed anything: stays put, quietly,
+        // without even restarting the microphone to find out again.
+        let callsBefore = audio.calls.count
+        await pipeline.appDidBecomeActive()
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .notEnoughStorage)
+        #expect(engine.prepareCount == 0)
+        #expect(audio.calls.count == callsBefore)
+
+        storage.set(megabytes: 20_000)
+        await pipeline.appDidBecomeActive()
+        #expect(pipeline.phase.isListening)
+        #expect(engine.prepareCount == 1)
+    }
+
+    @Test("coming back to the app leaves every other state alone")
+    func otherStatesUntouched() async {
+        let (listening, engine, _) = makePipeline(storage: FakeStorage(megabytes: 20_000))
+        await listening.start(settings: .default)
+        await listening.appDidBecomeActive()
+        #expect(listening.phase.isListening)
+        #expect(engine.prepareCount == 1)
+
+        let (idle, idleEngine, _) = makePipeline(storage: FakeStorage(megabytes: 20_000))
+        await idle.appDidBecomeActive()
+        #expect(idle.phase == .idle)
+        #expect(idleEngine.prepareCount == 0)
+    }
+}

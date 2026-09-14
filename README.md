@@ -66,6 +66,11 @@ things, for Hebrew conversation, entirely on-device.
   Mode a model waits for Wi-Fi, says how big it is, and starts by itself
   when Wi-Fi arrives. "Download now" asks first; a setting allows it
   always.
+- **Downloads that fit.** Free space is checked before a model download
+  starts, with room left for the first load. A phone that's too full says
+  how much to free (or to pick a smaller model), is never retried on a
+  timer, and starts the download by itself when she comes back to the app
+  with enough room. The model list marks the models that won't fit.
 - **Type to speak.** The other half of a conversation: type a reply, or
   tap one of the ready-made phrases ("רגע, לא הבנתי", "אפשר לחזור על
   זה?"), and the phone says it in Hebrew. Captions pause while the phone
@@ -166,10 +171,10 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (314 tests). The platform layer (WhisperKit/Speech engines, real
+logic (325 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 48 tests).
+the same fakes (another 50 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
