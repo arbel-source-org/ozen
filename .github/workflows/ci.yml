@@ -5,8 +5,10 @@ on:
   # test, and the iOS job holds a macOS runner for a quarter of an hour.
   # Branches only: a release's version tag would otherwise start a run
   # for a commit that was already tested.
+  # A release's verified branch points at a commit this workflow already
+  # passed on master; testing it again spent another macOS runner.
   push:
-    branches: ['**']
+    branches: ['**', '!release/verified-**']
     paths-ignore: ['docs/**', '**/*.md', 'LICENSE']
   pull_request:
     paths-ignore: ['docs/**', '**/*.md', 'LICENSE']
