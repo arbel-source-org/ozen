@@ -22,7 +22,9 @@ things, for Hebrew conversation, entirely on-device.
   USB-C inputs, with automatic recovery when a preferred input reconnects
   mid-conversation.
 - **Speaker detection**, always on, with optional one-time voice enrollment
-  so a person's turns are labeled by name.
+  so a person's turns are labeled by name. Unnamed voices are numbered from
+  1 in each conversation, so a phone listening all week doesn't reach
+  "speaker 140".
 - **Two swappable on-device engines** — [WhisperKit](https://github.com/argmaxinc/WhisperKit)
   (Whisper via CoreML) and Apple's own on-device Speech framework — picked
   in Settings, since which one is actually better for Hebrew on a given
@@ -228,7 +230,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (438 tests). The platform layer (WhisperKit/Speech engines, real
+logic (442 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 77 tests).

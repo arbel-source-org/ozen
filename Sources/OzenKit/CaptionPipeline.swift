@@ -388,7 +388,7 @@ public final class CaptionPipeline {
     public func clearTranscript() {
         segments = []
         stabilizer = CaptionStabilizer(silenceCommitThreshold: stabilizer.silenceCommitThreshold)
-        utteranceClusterAssignments = [:]
+        startNewConversation()
         keywordHits = []
         keywordHitSegmentIDs = []
         keywordDeduplicator.forgetAll()
@@ -639,6 +639,16 @@ public final class CaptionPipeline {
 
     public func displayName(for segment: TranscriptSegment) -> String {
         clusterer.displayName(forClusterID: segment.speakerClusterID)
+    }
+
+    /// A conversation ended: the next one's unnamed voices are numbered
+    /// from 1 again (see `EmbeddingClusterer.startNewConversation`), and the
+    /// record of which finished line belongs to whom is let go.
+    public func startNewConversation() {
+        clusterer.startNewConversation()
+        speakerClusters = clusterer.clusters
+        recentSpeechCluster = nil
+        utteranceClusterAssignments = [:]
     }
 
     /// A saved speaker was renamed; lines already on screen follow.

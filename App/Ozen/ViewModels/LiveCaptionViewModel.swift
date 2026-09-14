@@ -1108,6 +1108,7 @@ public final class LiveCaptionViewModel {
         historySessionID = UUID()
         historySegmentOffset = pipeline.segments.count
         historySessionStartedAt = nil
+        pipeline.startNewConversation()
         return true
     }
 

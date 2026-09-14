@@ -2,12 +2,17 @@ import Foundation
 
 /// One inferred (or enrolled) speaker. `name` is nil until either the user
 /// enrolls a real profile ahead of time or tags this cluster after the fact
-/// — until then the UI shows "dover \(id + 1)" ("speaker N").
+/// — until then the UI shows "dover N" ("speaker N"), N being `number`.
 public struct SpeakerCluster: Sendable, Equatable, Identifiable {
     public let id: Int
     public var centroid: [Float]
     public var sampleCount: Int
     public var name: String?
+    /// Which unnamed voice of its conversation this is, from 1. Not the id:
+    /// ids never repeat, and enrolled people take ids too, so numbering by
+    /// id had the first stranger of the day show up as speaker 3, and a
+    /// week of listening reach speaker 140.
+    public var number: Int = 0
 }
 
 /// Online, embedding-agnostic speaker clustering: nearest-centroid
@@ -20,6 +25,12 @@ public struct EmbeddingClusterer: Sendable {
     public private(set) var clusters: [SpeakerCluster] = []
     public var similarityThreshold: Float
     private var nextID = 0
+    private var nextNumber = 1
+    /// Unnamed voices from conversations that have ended. New speech is no
+    /// longer matched against them, but lines still on screen keep their
+    /// labels.
+    private var retired: [SpeakerCluster] = []
+    static let retiredLimit = 200
 
     public init(similarityThreshold: Float = 0.75) {
         self.similarityThreshold = similarityThreshold
@@ -61,23 +72,43 @@ public struct EmbeddingClusterer: Sendable {
     /// Tags an existing (already-inferred) cluster with a name after the
     /// fact — the "who is this?" flow on a transcript segment.
     public mutating func nameCluster(id: Int, name: String) {
-        guard let index = clusters.firstIndex(where: { $0.id == id }) else { return }
-        clusters[index].name = name
+        if let index = clusters.firstIndex(where: { $0.id == id }) {
+            clusters[index].name = name
+        } else if let index = retired.firstIndex(where: { $0.id == id }) {
+            // Someone named from an earlier conversation's line is a known
+            // voice now, and is listened for again.
+            var cluster = retired.remove(at: index)
+            cluster.name = name
+            clusters.append(cluster)
+        }
+    }
+
+    /// A conversation ended (a long quiet stretch, or the screen cleared):
+    /// the unnamed voices of the next one are numbered from 1 again, and
+    /// aren't matched against the last one's. Named voices carry on.
+    public mutating func startNewConversation() {
+        let ended = clusters.filter { $0.name == nil }
+        retired.append(contentsOf: ended)
+        if retired.count > Self.retiredLimit {
+            retired.removeFirst(retired.count - Self.retiredLimit)
+        }
+        clusters.removeAll { $0.name == nil }
+        nextNumber = 1
     }
 
     /// Hebrew, because this is exactly what the caption rows and the saved
     /// history show.
     public static let unknownSpeakerName = "דובר לא ידוע"
 
-    public static func genericName(forClusterID id: Int) -> String {
-        "דובר \(id + 1)"
+    public static func genericName(number: Int) -> String {
+        "דובר \(number)"
     }
 
     public func displayName(forClusterID id: Int?) -> String {
-        guard let id, let cluster = clusters.first(where: { $0.id == id }) else {
+        guard let id, let cluster = clusters.first(where: { $0.id == id }) ?? retired.last(where: { $0.id == id }) else {
             return Self.unknownSpeakerName
         }
-        return cluster.name ?? Self.genericName(forClusterID: id)
+        return cluster.name ?? Self.genericName(number: cluster.number)
     }
 
     /// A saved profile was renamed: every cluster showing the old name
@@ -93,6 +124,8 @@ public struct EmbeddingClusterer: Sendable {
     public mutating func forgetName(_ name: String) {
         for index in clusters.indices where clusters[index].name == name {
             clusters[index].name = nil
+            clusters[index].number = nextNumber
+            nextNumber += 1
         }
     }
 
@@ -113,7 +146,12 @@ public struct EmbeddingClusterer: Sendable {
     private mutating func openCluster(with embedding: [Float], name: String?, sampleCount: Int = 1) -> Int {
         let id = nextID
         nextID += 1
-        clusters.append(SpeakerCluster(id: id, centroid: embedding, sampleCount: sampleCount, name: name))
+        var cluster = SpeakerCluster(id: id, centroid: embedding, sampleCount: sampleCount, name: name)
+        if name == nil {
+            cluster.number = nextNumber
+            nextNumber += 1
+        }
+        clusters.append(cluster)
         return id
     }
 

@@ -94,7 +94,7 @@ struct EmbeddingClustererTests {
         #expect(clusterer.displayName(forClusterID: ruti) == "רותי")
 
         clusterer.forgetName("אביגדור")
-        #expect(clusterer.displayName(forClusterID: avi) == EmbeddingClusterer.genericName(forClusterID: avi))
+        #expect(clusterer.displayName(forClusterID: avi) == EmbeddingClusterer.genericName(number: 1))
         #expect(clusterer.displayName(forClusterID: ruti) == "רותי")
     }
 
@@ -112,6 +112,60 @@ struct EmbeddingClustererTests {
         // A voice found live still starts at one sample.
         let live = clusterer.assign(embedding: [0, 0, 1])
         #expect(clusterer.clusters.first { $0.id == live }?.sampleCount == 1)
+    }
+}
+
+@Suite("EmbeddingClusterer numbering across conversations")
+struct EmbeddingClustererConversationTests {
+    @Test("the first stranger is speaker 1 even with enrolled people ahead of them")
+    func numberingSkipsEnrolled() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)
+        clusterer.enroll(name: "Avi", embedding: [1, 0, 0])
+        clusterer.enroll(name: "Ruti", embedding: [0, 1, 0])
+        let stranger = clusterer.assign(embedding: [0, 0, 1])
+        #expect(clusterer.displayName(forClusterID: stranger) == EmbeddingClusterer.genericName(number: 1))
+    }
+
+    @Test("a new conversation numbers voices from 1 again, old lines keep their labels, named voices carry on")
+    func newConversation() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)
+        let grandma = clusterer.enroll(name: "Savta", embedding: [1, 0, 0])
+        let first = clusterer.assign(embedding: [0, 1, 0])
+        let second = clusterer.assign(embedding: [0, 0, 1])
+        #expect(clusterer.displayName(forClusterID: second) == EmbeddingClusterer.genericName(number: 2))
+
+        clusterer.startNewConversation()
+        #expect(clusterer.displayName(forClusterID: first) == EmbeddingClusterer.genericName(number: 1))
+        #expect(clusterer.displayName(forClusterID: second) == EmbeddingClusterer.genericName(number: 2))
+
+        // The same voice as before is a new speaker 1 in the new conversation.
+        let again = clusterer.assign(embedding: [0, 0, 1])
+        #expect(again != second)
+        #expect(clusterer.displayName(forClusterID: again) == EmbeddingClusterer.genericName(number: 1))
+        #expect(clusterer.assign(embedding: [0.99, 0.01, 0]) == grandma)
+    }
+
+    @Test("naming a speaker from an ended conversation makes them a voice listened for again")
+    func nameRetired() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)
+        let dana = clusterer.assign(embedding: [0, 1, 0])
+        clusterer.startNewConversation()
+        clusterer.nameCluster(id: dana, name: "Dana")
+        #expect(clusterer.displayName(forClusterID: dana) == "Dana")
+        #expect(clusterer.assign(embedding: [0.01, 0.99, 0]) == dana)
+    }
+
+    @Test("only so many ended voices are remembered for labels")
+    func retiredLimit() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.99)
+        let oldest = clusterer.assign(embedding: [1, 0])
+        clusterer.startNewConversation()
+        for index in 0..<EmbeddingClusterer.retiredLimit {
+            clusterer.assign(embedding: [Float(index + 2), 1])
+            clusterer.startNewConversation()
+        }
+        #expect(clusterer.displayName(forClusterID: oldest) == EmbeddingClusterer.unknownSpeakerName)
+        #expect(clusterer.clusters.isEmpty)
     }
 }
 
