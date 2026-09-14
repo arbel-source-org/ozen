@@ -55,6 +55,11 @@ public final class AVAudioInputManager: AudioCapturing {
             mode: .measurement,
             options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
         )
+        // iOS silences vibration while an app records, and captions are
+        // recording whenever an alert can happen: without this the buzz for
+        // a doorbell, her name, or someone starting to talk never comes.
+        // Not fatal if refused; the banners and flashes still show.
+        try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
         try session.setActive(true)
         sessionPrepared = true
         refreshAvailableInputs()
