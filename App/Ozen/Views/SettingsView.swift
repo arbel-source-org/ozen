@@ -192,6 +192,7 @@ struct SettingsView: View {
             Toggle("טקסט מודגש", isOn: $viewModel.display.boldText)
             Toggle("להציג שמות דוברים", isOn: $viewModel.display.showSpeakerNames)
             Toggle("המסך לא נכבה בזמן האזנה", isOn: $viewModel.display.keepScreenAwake)
+            Toggle("סימן שאלה ליד שורות שהמנוע לא בטוח בהן", isOn: $viewModel.display.markUncertainLines)
         } header: {
             Text("תצוגה")
         }

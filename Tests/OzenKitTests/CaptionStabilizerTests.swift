@@ -105,3 +105,49 @@ struct CaptionStabilizerTests {
         #expect(final.isCommitted)
     }
 }
+
+@Suite("Caption confidence")
+struct CaptionConfidenceTests {
+    private func token(_ id: UUID, _ text: String, final: Bool, confidence: Float?) -> TranscriptToken {
+        TranscriptToken(utteranceID: id, text: text, isFinal: final, timestamp: 1, confidence: confidence)
+    }
+
+    @Test("a line keeps the engine's latest confidence, and an update without one doesn't erase it")
+    func carriedThrough() {
+        var stabilizer = CaptionStabilizer()
+        let id = UUID()
+        stabilizer.ingest(token(id, "שלו", final: false, confidence: 0.2))
+        stabilizer.ingest(token(id, "שלום", final: false, confidence: nil))
+        #expect(stabilizer.segments.first?.confidence == 0.2)
+        stabilizer.ingest(token(id, "שלום לכם", final: true, confidence: 0.9))
+        #expect(stabilizer.segments.first?.confidence == 0.9)
+    }
+
+    @Test("only finished lines with a real low score are marked unsure")
+    func uncertaintyRule() {
+        #expect(CaptionConfidence.isUncertain(confidence: 0.3, isCommitted: true))
+        #expect(CaptionConfidence.isUncertain(confidence: 0.3, isCommitted: false) == false)
+        #expect(CaptionConfidence.isUncertain(confidence: 0.8, isCommitted: true) == false)
+        #expect(CaptionConfidence.isUncertain(confidence: 0.4, isCommitted: true) == false)
+        #expect(CaptionConfidence.isUncertain(confidence: 0, isCommitted: true) == false)
+        #expect(CaptionConfidence.isUncertain(confidence: nil, isCommitted: true) == false)
+    }
+
+    @Test("confidence is saved with the line, and older saved lines have none")
+    func savedWithHistory() throws {
+        let live = TranscriptSegment(id: UUID(), text: "אולי", isCommitted: true, speakerClusterID: nil, startTimestamp: 0, lastUpdateTimestamp: 0, confidence: 0.25)
+        let record = TranscriptSessionRecord.make(from: [live], speakerName: { _ in nil }, id: UUID(), startedAt: 0, endedAt: nil, engine: .whisperKit, modelVariant: nil, inputName: nil)
+        let decoded = try JSONDecoder().decode(TranscriptSessionRecord.self, from: JSONEncoder().encode(record))
+        #expect(decoded.segments.first?.confidence == 0.25)
+
+        let old = #"{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","text":"ישן","startTimestamp":1,"isCommitted":true}"#
+        #expect(try JSONDecoder().decode(SavedSegment.self, from: Data(old.utf8)).confidence == nil)
+    }
+
+    @Test("marking unsure lines is on by default and survives older settings files")
+    func settingDefault() throws {
+        #expect(DisplayPreferences.default.markUncertainLines)
+        let old = try JSONDecoder().decode(DisplayPreferences.self, from: Data(#"{"fontSize":30}"#.utf8))
+        #expect(old.markUncertainLines)
+    }
+}

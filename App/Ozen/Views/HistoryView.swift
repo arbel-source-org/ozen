@@ -193,6 +193,12 @@ struct HistoryDetailView: View {
                                         Image(systemName: "star.fill")
                                             .foregroundStyle(.yellow)
                                     }
+                                    if viewModel.display.markUncertainLines,
+                                       CaptionConfidence.isUncertain(confidence: segment.confidence, isCommitted: segment.isCommitted) {
+                                        Image(systemName: "questionmark.circle")
+                                            .foregroundStyle(.secondary)
+                                            .accessibilityLabel("ייתכן שלא נשמע נכון")
+                                    }
                                     Text(CaptionLayout.readableText(segment.text))
                                         .font(.system(size: max(17, viewModel.display.fontSize * 0.7)))
                                 }

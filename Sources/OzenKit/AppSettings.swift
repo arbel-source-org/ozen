@@ -37,6 +37,8 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
     public var boldText: Bool
     public var showSpeakerNames: Bool
     public var keepScreenAwake: Bool
+    /// A small question mark on finished lines the engine was unsure of.
+    public var markUncertainLines: Bool
 
     public static let minimumFontSize: Double = 20
     public static let maximumFontSize: Double = 64
@@ -46,13 +48,15 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         theme: Theme = .dark,
         boldText: Bool = false,
         showSpeakerNames: Bool = true,
-        keepScreenAwake: Bool = true
+        keepScreenAwake: Bool = true,
+        markUncertainLines: Bool = true
     ) {
         self.fontSize = fontSize
         self.theme = theme
         self.boldText = boldText
         self.showSpeakerNames = showSpeakerNames
         self.keepScreenAwake = keepScreenAwake
+        self.markUncertainLines = markUncertainLines
     }
 
     public static let `default` = DisplayPreferences()
@@ -66,7 +70,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case fontSize, theme, boldText, showSpeakerNames, keepScreenAwake
+        case fontSize, theme, boldText, showSpeakerNames, keepScreenAwake, markUncertainLines
     }
 
     public init(from decoder: any Decoder) throws {
@@ -77,6 +81,7 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         boldText = try container.decodeIfPresent(Bool.self, forKey: .boldText) ?? defaults.boldText
         showSpeakerNames = try container.decodeIfPresent(Bool.self, forKey: .showSpeakerNames) ?? defaults.showSpeakerNames
         keepScreenAwake = try container.decodeIfPresent(Bool.self, forKey: .keepScreenAwake) ?? defaults.keepScreenAwake
+        markUncertainLines = try container.decodeIfPresent(Bool.self, forKey: .markUncertainLines) ?? defaults.markUncertainLines
         fontSize = min(max(fontSize, Self.minimumFontSize), Self.maximumFontSize)
     }
 }

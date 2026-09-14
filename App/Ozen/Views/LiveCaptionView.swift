@@ -243,7 +243,8 @@ struct LiveCaptionView: View {
                             display: liveDisplay,
                             theme: theme,
                             isKeywordHit: viewModel.keywordHitSegmentIDs.contains(segment.id),
-                            isStarred: viewModel.starredSegmentIDs.contains(segment.id)
+                            isStarred: viewModel.starredSegmentIDs.contains(segment.id),
+                            isUncertain: viewModel.display.markUncertainLines && CaptionConfidence.isUncertain(segment)
                         )
                         .id(segment.id)
                         .onTapGesture { namingSegment = segment }
@@ -494,6 +495,7 @@ private struct CaptionRow: View {
     let theme: CaptionTheme
     let isKeywordHit: Bool
     let isStarred: Bool
+    let isUncertain: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -512,6 +514,13 @@ private struct CaptionRow: View {
                     Image(systemName: "star.fill")
                         .font(.system(size: max(14, display.fontSize * 0.6)))
                         .foregroundStyle(.yellow)
+                }
+                if isUncertain {
+                    // Not a colour change: the words stay as readable as
+                    // every other line, with a mark saying they may be wrong.
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: max(14, display.fontSize * 0.6)))
+                        .foregroundStyle(theme.pendingText)
                 }
                 Text(CaptionLayout.readableText(segment.text))
                     .font(.system(size: display.fontSize, weight: weight))
@@ -540,7 +549,8 @@ private struct CaptionRow: View {
     }
 
     private var accessibilityText: String {
-        let line = speakerName.map { "\($0): \(segment.text)" } ?? segment.text
+        var line = speakerName.map { "\($0): \(segment.text)" } ?? segment.text
+        if isUncertain { line = "ייתכן שלא נשמע נכון. " + line }
         return isStarred ? "מסומן כחשוב. \(line)" : line
     }
 

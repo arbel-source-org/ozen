@@ -15,6 +15,8 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
     /// Marked as important while it was said ("what the doctor said about
     /// the pills"), so it can be found again.
     public var isStarred: Bool
+    /// The engine's confidence in the line when it was saved.
+    public var confidence: Float?
 
     public init(
         id: UUID,
@@ -23,7 +25,8 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
         speakerClusterID: Int?,
         startTimestamp: TimeInterval,
         isCommitted: Bool,
-        isStarred: Bool = false
+        isStarred: Bool = false,
+        confidence: Float? = nil
     ) {
         self.id = id
         self.text = text
@@ -32,10 +35,11 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
         self.startTimestamp = startTimestamp
         self.isCommitted = isCommitted
         self.isStarred = isStarred
+        self.confidence = confidence
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, text, speakerName, speakerClusterID, startTimestamp, isCommitted, isStarred
+        case id, text, speakerName, speakerClusterID, startTimestamp, isCommitted, isStarred, confidence
     }
 
     /// Lines saved before stars existed load as not starred.
@@ -48,6 +52,7 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
         startTimestamp = try container.decode(TimeInterval.self, forKey: .startTimestamp)
         isCommitted = try container.decode(Bool.self, forKey: .isCommitted)
         isStarred = try container.decodeIfPresent(Bool.self, forKey: .isStarred) ?? false
+        confidence = try container.decodeIfPresent(Float.self, forKey: .confidence)
     }
 }
 
@@ -110,7 +115,8 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
                 speakerClusterID: segment.speakerClusterID,
                 startTimestamp: segment.startTimestamp,
                 isCommitted: segment.isCommitted,
-                isStarred: starred.contains(segment.id)
+                isStarred: starred.contains(segment.id),
+                confidence: segment.confidence
             )
         }
         return TranscriptSessionRecord(

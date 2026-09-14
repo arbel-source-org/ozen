@@ -13,6 +13,32 @@ public struct TranscriptSegment: Identifiable, Sendable, Equatable {
     public var speakerClusterID: Int?
     public var startTimestamp: TimeInterval
     public var lastUpdateTimestamp: TimeInterval
+    /// The engine's latest confidence in this line, 0...1, when it gave one.
+    public var confidence: Float? = nil
+}
+
+/// When a caption line should say "this may not be what was said".
+///
+/// Someone who can't hear the room can't tell a misheard sentence from a
+/// strange one. A small mark on the lines the engine itself was unsure
+/// about tells her when it's worth asking again.
+public enum CaptionConfidence {
+    /// Whisper's confidence is the exponent of its average log-probability,
+    /// so 0.4 is an average log-probability of about -0.9: the range where
+    /// its output is often wrong. Apple's recognizer reports on the same
+    /// 0...1 scale.
+    public static let uncertainBelow: Float = 0.4
+
+    public static func isUncertain(_ segment: TranscriptSegment) -> Bool {
+        isUncertain(confidence: segment.confidence, isCommitted: segment.isCommitted)
+    }
+
+    /// Only finished lines: a line still being written changes its mind.
+    /// Exactly 0 means "no score" (Apple reports that on partial results).
+    public static func isUncertain(confidence: Float?, isCommitted: Bool) -> Bool {
+        guard isCommitted, let confidence, confidence > 0 else { return false }
+        return confidence < uncertainBelow
+    }
 }
 
 /// Turns a raw stream of `TranscriptToken` updates into a stable timeline of
@@ -54,6 +80,9 @@ public struct CaptionStabilizer: Sendable {
                 segments[index].text = token.text
             }
             segments[index].lastUpdateTimestamp = token.timestamp
+            if let confidence = token.confidence {
+                segments[index].confidence = confidence
+            }
             if let clusterID = token.speakerClusterID {
                 segments[index].speakerClusterID = clusterID
             }
@@ -69,7 +98,8 @@ public struct CaptionStabilizer: Sendable {
             isCommitted: token.isFinal,
             speakerClusterID: token.speakerClusterID,
             startTimestamp: token.timestamp,
-            lastUpdateTimestamp: token.timestamp
+            lastUpdateTimestamp: token.timestamp,
+            confidence: token.confidence
         )
         segments.append(segment)
         return segment
