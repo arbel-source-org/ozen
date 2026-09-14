@@ -98,6 +98,7 @@ struct DiagnosticsView: View {
                 LabeledContent("דגם", value: UIDevice.current.model)
                 LabeledContent("iOS", value: UIDevice.current.systemVersion)
                 LabeledContent("אפליקציה", value: SettingsView.versionString)
+                LabeledContent("ההתקנה תקפה עד", value: Self.installExpiryText)
             }
 
             Section {
@@ -126,6 +127,11 @@ struct DiagnosticsView: View {
         guard let retry = viewModel.pipeline.scheduledRetry else { return "—" }
         let seconds = max(0, Int((retry.at - Date().timeIntervalSince1970).rounded()))
         return "ניסיון \(retry.attempt), בעוד \(seconds) שנ׳"
+    }
+
+    private static var installExpiryText: String {
+        guard let date = InstallExpiryStatus.shared.expiresAt else { return "—" }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 
     private static var batteryText: String {
@@ -187,7 +193,7 @@ struct DiagnosticsView: View {
         settings save error: \(viewModel.settingsSaveError ?? "-") history save error: \(viewModel.historySaveFailure ?? "-") notification error: \(AlertNotifier.shared.lastFailure ?? "-") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText) free space: \(Self.freeSpaceText)
-        device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString)
+        device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString) install expires: \(InstallExpiryStatus.shared.expiresAt.map { String(describing: $0) } ?? "-")
         events (oldest first):
         \(eventLines)
         """

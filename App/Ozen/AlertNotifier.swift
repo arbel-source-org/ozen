@@ -33,6 +33,28 @@ nonisolated final class AlertNotifier: Sendable {
     }
 
     func post(_ content: AlertNotificationContent) {
+        add(UNNotificationRequest(identifier: content.identifier, content: Self.body(for: content), trigger: nil))
+    }
+
+    /// Delivers `content` at `date`, replacing anything already scheduled
+    /// under the same identifier.
+    func schedule(_ content: AlertNotificationContent, at date: Date) {
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        add(UNNotificationRequest(identifier: content.identifier, content: Self.body(for: content), trigger: trigger))
+    }
+
+    func cancelScheduled(identifier: String) {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+    }
+
+    private func add(_ request: UNNotificationRequest) {
+        UNUserNotificationCenter.current().add(request) { [lastPostError] error in
+            lastPostError.set(error.map { String(describing: $0) })
+        }
+    }
+
+    private static func body(for content: AlertNotificationContent) -> UNMutableNotificationContent {
         let body = UNMutableNotificationContent()
         body.title = content.title
         body.body = content.body
@@ -43,10 +65,7 @@ nonisolated final class AlertNotifier: Sendable {
         // works without it.
         body.interruptionLevel = .active
         body.relevanceScore = content.isUrgent ? 1 : 0.5
-        let request = UNNotificationRequest(identifier: content.identifier, content: body, trigger: nil)
-        UNUserNotificationCenter.current().add(request) { [lastPostError] error in
-            lastPostError.set(error.map { String(describing: $0) })
-        }
+        return body
     }
 
     /// Takes a notification that no longer holds off the lock screen and

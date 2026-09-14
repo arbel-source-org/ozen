@@ -109,6 +109,11 @@ things, for Hebrew conversation, entirely on-device.
 - **Battery warnings** at 20% and 10% while captions run, because hours of
   listening drain the phone and nobody following a conversation watches
   the battery icon.
+- **Warns before the install runs out.** Installed with a free Apple ID,
+  the app stops opening after seven days without a word. It reads its own
+  provisioning profile, says on the caption screen two days ahead when that
+  will happen ("אוזן תפסיק להיפתח מחר בשעה 07:24"), and sends a reminder
+  notification the day before, in daytime.
 - **Keeps its cool.** Whisper refreshes the in-progress line less often
   when the phone runs hot or Low Power Mode is on, instead of throttling
   and falling behind; the careful end-of-sentence pass is never skipped.
@@ -198,7 +203,7 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (376 tests). The platform layer (WhisperKit/Speech engines, real
+logic (383 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
 the same fakes (another 64 tests).

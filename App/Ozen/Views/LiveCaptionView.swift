@@ -24,6 +24,8 @@ struct LiveCaptionView: View {
     @State private var hasLaunched = false
     @State private var fontSizeTrigger = 0
     @State private var battery = BatteryMonitor()
+    private let installExpiry = InstallExpiryStatus.shared
+    @State private var installExpiryDismissed = false
     @State private var confirmingCellularDownload = false
     @State private var openedRecentConversation: TranscriptSessionSummary?
     /// Live scale while a pinch is in progress; 1 otherwise.
@@ -65,6 +67,14 @@ struct LiveCaptionView: View {
         )
     }
 
+    /// When the install stops opening, while the screen should say so.
+    private var installExpiryToWarn: Date? {
+        guard !installExpiryDismissed, let expiresAt = installExpiry.expiresAt,
+              InstallExpiry.shouldWarn(expiresAt: expiresAt, now: Date(timeIntervalSince1970: awakeClock))
+        else { return nil }
+        return expiresAt
+    }
+
     private var presentation: PhasePresentation {
         PhasePresentation(
             phase: viewModel.phase,
@@ -104,6 +114,12 @@ struct LiveCaptionView: View {
         }
         .overlay(alignment: .top) {
             VStack(spacing: 8) {
+                if let expiresAt = installExpiryToWarn {
+                    InstallExpiryBanner(expiresAt: expiresAt, now: Date(timeIntervalSince1970: awakeClock)) {
+                        withAnimation { installExpiryDismissed = true }
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 if let notice = battery.notice {
                     BatteryBanner(notice: notice) {
                         withAnimation { battery.dismiss() }
@@ -216,6 +232,12 @@ struct LiveCaptionView: View {
             viewModel.sceneActivityChanged(isActive: phase == .active)
         }
         .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                // The clock only ticks while listening; and a dismissed
+                // expiry warning comes back each time the app is opened.
+                awakeClock = Date().timeIntervalSince1970
+                installExpiryDismissed = false
+            }
             if phase == .active, case .failed(let failure) = viewModel.phase,
                failure.engineUnavailability?.kind != .notEnoughStorage {
                 // Coming back from the system Settings app after granting

@@ -57,5 +57,8 @@ leave the phone.
 ## Reinstalling
 
 Ozen is sideloaded with a free Apple ID, so it stops opening after seven days.
+Two days before, the caption screen says when ("אוזן תפסיק להיפתח מחר בשעה
+07:24"), and a notification repeats it the day before; Diagnostics shows the
+exact date under "ההתקנה תקפה עד".
 See [sideloading-from-linux.md](sideloading-from-linux.md) for the command that
 refreshes it.
