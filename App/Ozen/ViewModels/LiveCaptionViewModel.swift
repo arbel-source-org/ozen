@@ -502,6 +502,12 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    /// When captions last changed, or listening last began if later: what
+    /// "nothing has been said for a while" is measured from.
+    public var lastCaptionActivityAt: TimeInterval? {
+        [pipeline.segments.last?.lastUpdateTimestamp, pipeline.stats.sessionStartedAt].compactMap { $0 }.max()
+    }
+
     /// What VoiceOver should read out for lines finished since the last
     /// call, or nil. Lines that finish while VoiceOver is off, or the
     /// setting is, are skipped for good, so turning either on later

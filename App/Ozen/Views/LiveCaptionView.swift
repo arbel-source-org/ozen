@@ -16,6 +16,9 @@ struct LiveCaptionView: View {
     @State private var isPinnedToBottom = true
     @State private var hapticTrigger = 0
     @State private var lastSegmentUpdate: TimeInterval = 0
+    /// Advanced every half minute while listening, so a long quiet can let
+    /// the phone lock (see `ScreenAwakePolicy`).
+    @State private var awakeClock = Date().timeIntervalSince1970
     @State private var visibleSoundAlert: SoundAlert?
     @State private var visibleKeywordHit: KeywordHit?
     @State private var hasLaunched = false
@@ -54,7 +57,12 @@ struct LiveCaptionView: View {
     }
 
     private var keepsScreenAwake: Bool {
-        ScreenAwakePolicy.shouldKeepAwake(phase: viewModel.phase, keepAwakeWhileListening: viewModel.display.keepScreenAwake)
+        ScreenAwakePolicy.shouldKeepAwake(
+            phase: viewModel.phase,
+            keepAwakeWhileListening: viewModel.display.keepScreenAwake,
+            lastActivityAt: viewModel.lastCaptionActivityAt,
+            now: max(awakeClock, viewModel.lastCaptionActivityAt ?? 0)
+        )
     }
 
     private var presentation: PhasePresentation {
@@ -182,6 +190,12 @@ struct LiveCaptionView: View {
         }
         .onChange(of: keepsScreenAwake, initial: true) { _, keep in
             UIApplication.shared.isIdleTimerDisabled = keep
+        }
+        .task(id: viewModel.isListening) {
+            while viewModel.isListening, !Task.isCancelled {
+                awakeClock = Date().timeIntervalSince1970
+                try? await Task.sleep(for: .seconds(30))
+            }
         }
         .sensoryFeedback(.warning, trigger: battery.notice?.id)
         .sensoryFeedback(.selection, trigger: fontSizeTrigger)

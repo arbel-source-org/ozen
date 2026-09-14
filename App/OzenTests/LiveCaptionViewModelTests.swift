@@ -1076,3 +1076,32 @@ struct LiveCaptionViewModelAnnouncementTests {
         #expect(viewModel.captionAnnouncement(voiceOverRunning: true) == "ועכשיו שוב")
     }
 }
+
+@Suite("LiveCaptionViewModel caption activity")
+@MainActor
+struct LiveCaptionViewModelActivityTests {
+    @Test("the last activity is when listening began, then when captions last changed")
+    func lastActivity() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-activity-\(UUID())", isDirectory: true)
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        )
+        #expect(viewModel.lastCaptionActivityAt == nil)
+
+        await viewModel.start()
+        let started = viewModel.lastCaptionActivityAt
+        #expect(started != nil)
+
+        let spokenAt = (started ?? 0) + 120
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום", isFinal: true, timestamp: spokenAt))
+        let deadline = ContinuousClock.now + .seconds(2)
+        while viewModel.segments.isEmpty && ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(viewModel.lastCaptionActivityAt == spokenAt)
+    }
+}
