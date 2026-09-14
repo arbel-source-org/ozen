@@ -372,10 +372,7 @@ struct LiveCaptionView: View {
                     }
                     let mark = awayMark
                     ForEach(onScreenLines, id: \.segment.id) { index, segment in
-                        if let mark, index == mark.index {
-                            awayDivider(lineCount: mark.count)
-                        }
-                        captionLine(index: index, segment: segment)
+                        transcriptRow(index: index, segment: segment, awayMark: mark)
                     }
                     // A sentinel at the very end: while it's on screen the
                     // reader is at the bottom and auto-scroll stays on;
@@ -457,6 +454,43 @@ struct LiveCaptionView: View {
             firstDrawnIndex: CaptionLayout.firstOnScreenIndex(lineCount: segments.count)
         ) else { return nil }
         return (index, segments[index].id, viewModel.awayCatchUp.missedLineCount(in: segments))
+    }
+
+    /// A caption line, with what goes above it: the mark where the lines
+    /// said while she was away begin, or the time after a quiet stretch.
+    @ViewBuilder
+    private func transcriptRow(index: Int, segment: TranscriptSegment, awayMark: (index: Int, segmentID: UUID, count: Int)?) -> some View {
+        let previous = index > 0 ? viewModel.segments[index - 1] : nil
+        if let awayMark, index == awayMark.index {
+            awayDivider(lineCount: awayMark.count)
+        } else if let previous, CaptionLayout.startsAfterQuiet(segment, previous: previous) {
+            quietGapDivider(from: previous, to: segment)
+        }
+        captionLine(index: index, segment: segment)
+    }
+
+    /// The clock time the conversation picked up again, with the day when
+    /// it isn't the same one.
+    private func quietGapDivider(from previous: TranscriptSegment, to segment: TranscriptSegment) -> some View {
+        let start = Date(timeIntervalSince1970: segment.startTimestamp)
+        let sameDay = Calendar.current.isDate(start, inSameDayAs: Date(timeIntervalSince1970: previous.lastUpdateTimestamp))
+        let time = start.formatted(date: sameDay ? .omitted : .abbreviated, time: .shortened)
+        return HStack(spacing: 10) {
+            Rectangle()
+                .fill(theme.pendingText.opacity(0.5))
+                .frame(height: 1)
+            Text(time)
+                .font(.system(size: max(15, liveDisplay.fontSize * 0.45), weight: .medium))
+                .monospacedDigit()
+                .foregroundStyle(theme.pendingText)
+                .fixedSize(horizontal: true, vertical: true)
+            Rectangle()
+                .fill(theme.pendingText.opacity(0.5))
+                .frame(height: 1)
+        }
+        .padding(.top, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("אחרי הפסקה, מהשעה \(time)")
     }
 
     private func awayDivider(lineCount: Int) -> some View {

@@ -89,6 +89,20 @@ struct CaptionLayoutSpeakerLabelTests {
         #expect(shown == [true, false, true, false, true])
     }
 
+    @Test("five quiet minutes between lines puts a time between them, and the name heads the run again")
+    func quietGap() {
+        func at(_ start: TimeInterval, _ end: TimeInterval, speaker: Int? = 1) -> TranscriptSegment {
+            TranscriptSegment(id: UUID(), text: "line", isCommitted: true, speakerClusterID: speaker, startTimestamp: start, lastUpdateTimestamp: end)
+        }
+        let first = at(1000, 1010)
+        #expect(!CaptionLayout.startsAfterQuiet(first, previous: nil))
+        #expect(!CaptionLayout.startsAfterQuiet(at(1309, 1320), previous: first))
+        #expect(CaptionLayout.startsAfterQuiet(at(1310, 1320), previous: first))
+        #expect(!CaptionLayout.showsSpeakerLabel(for: at(1020, 1030), after: first))
+        #expect(CaptionLayout.showsSpeakerLabel(for: at(1400, 1410), after: first))
+        #expect(!CaptionLayout.showsSpeakerLabel(for: at(1400, 1410, speaker: nil), after: first))
+    }
+
     @Test("a line with no identified speaker has no label, and the next identified line gets one")
     func unknownSpeaker() {
         #expect(CaptionLayout.showsSpeakerLabel(for: line(nil), after: nil) == false)

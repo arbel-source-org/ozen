@@ -139,7 +139,21 @@ extension CaptionLayout {
     /// at all rather than "dover lo yadu'a" ("unknown speaker") on every row.
     public static func showsSpeakerLabel(for segment: TranscriptSegment, after previous: TranscriptSegment?) -> Bool {
         guard let cluster = segment.speakerClusterID else { return false }
-        return previous?.speakerClusterID != cluster
+        // After a quiet stretch the time is drawn between the lines, and
+        // the name heads the new run again.
+        return previous?.speakerClusterID != cluster || startsAfterQuiet(segment, previous: previous)
+    }
+
+    /// A quiet stretch this long between two lines puts the later line's
+    /// clock time between them, so a sentence from half an hour ago isn't
+    /// read as the one before the words just said.
+    public static let quietGapSeconds: TimeInterval = 5 * 60
+
+    /// Whether `segment` began `quietGapSeconds` or more after `previous`
+    /// last changed.
+    public static func startsAfterQuiet(_ segment: TranscriptSegment, previous: TranscriptSegment?) -> Bool {
+        guard let previous else { return false }
+        return segment.startTimestamp - previous.lastUpdateTimestamp >= quietGapSeconds
     }
 }
 
