@@ -35,6 +35,10 @@ public final class LiveCaptionViewModel {
     private let postNotification: ((AlertNotificationContent) -> Void)?
     private var historySessionID = UUID()
     private var historySessionStartedAt: TimeInterval?
+    /// Lines before this index in `pipeline.segments` belong to an earlier
+    /// saved conversation (see `ConversationBreak`); the screen still
+    /// shows them.
+    private var historySegmentOffset = 0
     private var autosaveTask: Task<Void, Never>?
 
     private static let autosaveIntervalSeconds: UInt64 = 20
@@ -262,6 +266,7 @@ public final class LiveCaptionViewModel {
         persistHistory(ended: true)
         pipeline.clearTranscript()
         historySessionID = UUID()
+        historySegmentOffset = 0
         historySessionStartedAt = pipeline.phase.isListening ? Date().timeIntervalSince1970 : nil
     }
 
@@ -583,14 +588,14 @@ public final class LiveCaptionViewModel {
     /// history is on). Called by the autosave loop, on every phase change,
     /// and when the app goes to the background — so a conversation is never
     /// lost to a crash or a force-quit.
-    public func persistHistory(ended: Bool) {
+    public func persistHistory(ended: Bool, endedAt: TimeInterval? = nil) {
         guard settings.saveHistory, let startedAt = historySessionStartedAt else { return }
         let record = TranscriptSessionRecord.make(
-            from: pipeline.segments,
+            from: currentHistorySegments,
             speakerName: { [pipeline] in pipeline.displayName(for: $0) },
             id: historySessionID,
             startedAt: startedAt,
-            endedAt: ended ? Date().timeIntervalSince1970 : nil,
+            endedAt: ended ? (endedAt ?? Date().timeIntervalSince1970) : nil,
             engine: settings.engine,
             modelVariant: settings.engine == .whisperKit ? settings.whisperModelVariant : nil,
             inputName: selectedInput?.portName
@@ -598,9 +603,31 @@ public final class LiveCaptionViewModel {
         try? historyStore.save(record)
     }
 
+    private var currentHistorySegments: [TranscriptSegment] {
+        let segments = pipeline.segments
+        guard historySegmentOffset > 0 else { return segments }
+        return Array(segments.dropFirst(min(historySegmentOffset, segments.count)))
+    }
+
+    /// Closes the saved conversation after a long quiet stretch, so the
+    /// next words start a new one. Returns whether it did.
+    @discardableResult
+    public func checkForConversationBreak(now: TimeInterval = Date().timeIntervalSince1970) -> Bool {
+        let lastCaptionAt = currentHistorySegments.map(\.lastUpdateTimestamp).max()
+        guard historySessionStartedAt != nil,
+              ConversationBreak.shouldStartNew(lastCaptionAt: lastCaptionAt, now: now)
+        else { return false }
+        persistHistory(ended: true, endedAt: lastCaptionAt)
+        historySessionID = UUID()
+        historySegmentOffset = pipeline.segments.count
+        historySessionStartedAt = now
+        return true
+    }
+
     /// Keeps the autosave loop matched to whether we're listening.
     public func historySessionDidChangePhase() {
         if pipeline.phase.isListening {
+            checkForConversationBreak()
             if historySessionStartedAt == nil {
                 historySessionStartedAt = Date().timeIntervalSince1970
             }
@@ -609,7 +636,9 @@ public final class LiveCaptionViewModel {
                     while !Task.isCancelled {
                         try? await Task.sleep(nanoseconds: Self.autosaveIntervalSeconds * 1_000_000_000)
                         guard let self, !Task.isCancelled else { return }
-                        self.persistHistory(ended: false)
+                        if !self.checkForConversationBreak() {
+                            self.persistHistory(ended: false)
+                        }
                     }
                 }
             }

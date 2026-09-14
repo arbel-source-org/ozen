@@ -529,3 +529,44 @@ struct LiveCaptionViewModelBackgroundAlertTests {
         #expect(store.load().notifyWhenInBackground == false)
     }
 }
+
+@Suite("LiveCaptionViewModel conversation breaks")
+@MainActor
+struct LiveCaptionViewModelConversationBreakTests {
+    @Test("after twenty quiet minutes the saved conversation closes and new lines save separately, screen untouched")
+    func splitsAfterLongQuiet() async throws {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-break-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory)
+        let store = SettingsStore(fileURL: directory.appendingPathExtension("json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+
+        let longAgo = Date().timeIntervalSince1970 - 30 * 60
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: longAgo))
+        let deadline = Date().addingTimeInterval(2)
+        while viewModel.segments.isEmpty, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        #expect(viewModel.checkForConversationBreak())
+        #expect(history.listSummaries().count == 1)
+        #expect(history.listSummaries().first?.durationSeconds != nil)
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        let deadline2 = Date().addingTimeInterval(2)
+        while viewModel.segments.count < 2, Date() < deadline2 {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        viewModel.persistHistory(ended: false)
+
+        let summaries = history.listSummaries()
+        #expect(summaries.count == 2)
+        #expect(Set(summaries.map(\.preview)) == ["בוקר טוב", "ערב טוב"])
+        // The screen still shows both lines.
+        #expect(viewModel.segments.count == 2)
+        // And a second check right away doesn't split again.
+        #expect(viewModel.checkForConversationBreak() == false)
+    }
+}
