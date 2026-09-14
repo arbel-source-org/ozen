@@ -141,7 +141,8 @@ things, for Hebrew conversation, entirely on-device.
   harofe)), list who took part, and open with a summary: length, how much
   each person said, speaking pace, longest turn, and every line with a
   time, an amount or a phone number in it, each a tap from where it was
-  said.
+  said. Holding a line copies just that line, to paste a phone number or
+  an address somewhere else.
   The list reads a small summary per conversation, so it opens quickly
   even after months of daily use, and autosaving never stutters the
   captions. Old conversations can delete themselves after a week, a
