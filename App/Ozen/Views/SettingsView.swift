@@ -195,6 +195,8 @@ struct SettingsView: View {
             Toggle("סימן שאלה ליד שורות שהמנוע לא בטוח בהן", isOn: $viewModel.display.markUncertainLines)
         } header: {
             Text("תצוגה")
+        } footer: {
+            Text("סימן שאלה ליד שורה אומר שייתכן שהיא לא נשמעה נכון. לחיצה ארוכה על השורה מאפשרת לבקש שיחזרו עליה.")
         }
     }
 
