@@ -38,10 +38,12 @@ things, for Hebrew conversation, entirely on-device.
 - **Whisper model manager**: nine model sizes from 76 MB to 3 GB with
   honest Hebrew-quality and speed ratings, download progress, disk usage,
   and delete. "Turbo (compressed)" (626 MB) is the recommended pick.
-- **Display built for reading all evening**: text size 20–64 pt, white-on-
-  black / yellow-on-black / black-on-white, bold, speaker names on/off,
-  screen stays awake while listening, auto-scroll that stops when you
-  scroll up to re-read (with a "back to latest" pill).
+- **Display built for reading all evening**: text size 20–64 pt (pinch
+  the captions to change it), white-on-black / yellow-on-black /
+  black-on-white, bold, speaker names on/off, long stretches of speech
+  broken into short paragraphs at sentence ends, screen stays awake while
+  listening, auto-scroll that stops when you scroll up to re-read (with a
+  "back to latest" pill).
 - **Robust audio**: a live level meter per microphone, automatic recovery
   from phone-call interruptions and route changes (AirPods in/out, USB mic
   unplugged), Whisper-hallucination filtering on silence, no model runs on
@@ -69,9 +71,21 @@ things, for Hebrew conversation, entirely on-device.
 - **Sound alerts.** Doorbell, knocking, a baby crying, a smoke alarm, a
   civil-defence siren and about 45 more, recognized on the phone by
   Apple's sound classifier and shown as a banner, with per-sound muting.
+- **Alerts reach her with the screen off.** With the phone in a pocket or
+  locked, a sound alert or her name becomes a phone notification (once per
+  30 seconds per sound or word), so the doorbell isn't missed just because
+  nobody was looking at the app.
+- **Battery warnings** at 20% and 10% while captions run, because hours of
+  listening drain the phone and nobody following a conversation watches
+  the battery icon.
+- **Keeps its cool.** Whisper refreshes the in-progress line less often
+  when the phone runs hot or Low Power Mode is on, instead of throttling
+  and falling behind; the careful end-of-sentence pass is never skipped.
 - **Conversation history.** Conversations are saved as they happen,
-  searchable, shareable as text, with a summary at the top: length, how
-  much each person said, speaking pace, longest turn.
+  searchable, shareable as text, list who took part, and open with a
+  summary: length, how much each person said, speaking pace, longest turn.
+- **Saved speakers can be renamed**, and the new name follows onto lines
+  already on screen and into the names list.
 - **First-launch walkthrough** in large type that explains the engines and
   the one-time model download before it happens, and asks for the
   microphone with a reason.
@@ -130,10 +144,11 @@ preparation with progress, capture, tokens → segments, speaker clustering,
 engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
-vocabulary and model-download logic (188 tests). The platform layer
-(WhisperKit/Speech engines, real audio capture, the speaker embedder) and
-the app's view model are built and tested on CI's iOS Simulator, with the
-view model driven end to end by the same fakes (another 28 tests).
+vocabulary, model-download, recovery, battery, notification and layout
+logic (226 tests). The platform layer (WhisperKit/Speech engines, real
+audio capture, the speaker embedder) and the app's view model are built
+and tested on CI's iOS Simulator, with the view model driven end to end by
+the same fakes (another 36 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
