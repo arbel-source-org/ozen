@@ -723,6 +723,38 @@ struct LiveCaptionViewModelConversationBreakTests {
         // And a second check right away doesn't split again.
         #expect(viewModel.checkForConversationBreak() == false)
     }
+
+    @Test("each line on screen leads to the saved conversation it belongs to, and to none once that is deleted or saving is off")
+    func lineLeadsToItsConversation() async throws {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-line-owner-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory)
+        let store = SettingsStore(fileURL: directory.appendingPathExtension("json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: Date().timeIntervalSince1970 - 30 * 60))
+        await eventually { !viewModel.segments.isEmpty }
+        #expect(viewModel.checkForConversationBreak())
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        await eventually { viewModel.segments.count >= 2 }
+        viewModel.persistHistory(ended: false)
+
+        let summaries = history.listSummaries()
+        let morning = try #require(summaries.first { $0.preview == "בוקר טוב" }?.id)
+        let evening = try #require(summaries.first { $0.preview == "ערב טוב" }?.id)
+        #expect(viewModel.savedConversationID(holdingLineAt: 0) == morning)
+        #expect(viewModel.savedConversationID(holdingLineAt: 1) == evening)
+        #expect(viewModel.savedConversationID(holdingLineAt: 2) == nil)
+
+        try viewModel.deleteConversation(id: morning)
+        #expect(viewModel.savedConversationID(holdingLineAt: 0) == nil)
+        #expect(viewModel.savedConversationID(holdingLineAt: 1) == evening)
+
+        viewModel.saveHistory = false
+        #expect(viewModel.savedConversationID(holdingLineAt: 1) == nil)
+    }
 }
 
 @Suite("LiveCaptionViewModel interruption whose end was never announced")

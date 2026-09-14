@@ -33,7 +33,9 @@ struct LiveCaptionView: View {
     @State private var bigText = ""
     @State private var showingBigText = false
     @State private var confirmingCellularDownload = false
-    @State private var openedRecentConversation: TranscriptSessionSummary?
+    /// A saved conversation opened from this screen, and the line to open
+    /// it at.
+    @State private var openedConversation: OpenedConversation?
     @State private var showingNameAlertForm = false
     @State private var stopAnnouncer = CaptionsStopAnnouncer()
     /// Live scale while a pinch is in progress; 1 otherwise.
@@ -293,15 +295,15 @@ struct LiveCaptionView: View {
 
     var body: some View {
         reactingScreen
-        .sheet(item: $openedRecentConversation) { recent in
+        .sheet(item: $openedConversation) { opened in
             NavigationStack {
-                HistoryDetailView(viewModel: viewModel, sessionID: recent.id) {
+                HistoryDetailView(viewModel: viewModel, sessionID: opened.id, initialLineID: opened.lineID) {
                     // Renamed or deleted from inside: the card follows.
                     Task { await viewModel.loadRecentConversation() }
                 }
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("סגירה") { openedRecentConversation = nil }
+                        Button("סגירה") { openedConversation = nil }
                     }
                 }
             }
@@ -568,12 +570,30 @@ struct LiveCaptionView: View {
         return segments.indices.dropFirst(start).map { ($0, segments[$0]) }
     }
 
-    /// Above the first line drawn, once the oldest ones are no longer.
+    /// Above the first line drawn, once the oldest ones are no longer:
+    /// one tap opens the saved conversation at the last line that went.
+    @ViewBuilder
     private var earlierLinesNote: some View {
-        Text(viewModel.settings.saveHistory ? "שורות מוקדמות יותר נמצאות בשיחות השמורות" : "שורות מוקדמות יותר כבר לא מוצגות")
-            .font(.system(size: max(15, liveDisplay.fontSize * 0.5)))
-            .foregroundStyle(theme.pendingText)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        let lastHidden = CaptionLayout.firstOnScreenIndex(lineCount: viewModel.segments.count) - 1
+        if let saved = viewModel.savedConversationID(holdingLineAt: lastHidden) {
+            let lineID = viewModel.segments[lastHidden].id
+            Button {
+                viewModel.persistHistory(ended: false)
+                openedConversation = OpenedConversation(id: saved, lineID: lineID)
+            } label: {
+                Label("שורות מוקדמות יותר נשמרו. הקישו כדי לקרוא אותן", systemImage: "text.bubble")
+                    .font(.system(size: max(15, liveDisplay.fontSize * 0.5), weight: .semibold))
+                    .foregroundStyle(theme.chrome)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            Text("שורות מוקדמות יותר כבר לא מוצגות")
+                .font(.system(size: max(15, liveDisplay.fontSize * 0.5)))
+                .foregroundStyle(theme.pendingText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 
     private var emptyState: some View {
@@ -642,7 +662,7 @@ struct LiveCaptionView: View {
         let minutes = RecentConversation.minutesAgo(recent, now: Date().timeIntervalSince1970)
         return HStack(alignment: .top, spacing: 12) {
             Button {
-                openedRecentConversation = recent
+                openedConversation = OpenedConversation(id: recent.id)
             } label: {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "text.bubble")
@@ -899,12 +919,12 @@ struct LiveCaptionView: View {
     private func presentBigText() {
         viewModel.isShowingBigText = false
         let somethingOpen = showingMicPicker || showingSettings || showingTypeToSpeak
-            || namingSegment != nil || openedRecentConversation != nil
+            || namingSegment != nil || openedConversation != nil
         showingMicPicker = false
         showingSettings = false
         showingTypeToSpeak = false
         namingSegment = nil
-        openedRecentConversation = nil
+        openedConversation = nil
         Task {
             // Give the closing sheet its animation before the next one.
             if somethingOpen { try? await Task.sleep(for: .milliseconds(700)) }
@@ -938,4 +958,9 @@ struct LiveCaptionView: View {
             confirmingCellularDownload = true
         }
     }
+}
+
+private struct OpenedConversation: Identifiable {
+    let id: UUID
+    var lineID: UUID? = nil
 }
