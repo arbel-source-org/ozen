@@ -121,6 +121,11 @@ struct ModelManagerView: View {
 
                 if let progress = downloadProgress {
                     ProgressView(value: progress)
+                    if let seconds = viewModel.pipeline.downloadSecondsRemaining {
+                        Text(PhasePresentation.remainingText(seconds: seconds))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .contentShape(Rectangle())
