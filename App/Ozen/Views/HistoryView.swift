@@ -13,6 +13,9 @@ struct HistoryView: View {
     /// saved, waiting for a yes.
     @State private var pendingRetention: HistoryRetention?
     @State private var deleteError: String?
+    /// A conversation swiped away, waiting for a yes: a slip while
+    /// scrolling shouldn't delete a named or starred one for good.
+    @State private var pendingDeletion: TranscriptSessionSummary?
 
     private var savingSection: some View {
         Section {
@@ -61,18 +64,25 @@ struct HistoryView: View {
                 } label: {
                     SessionRow(session: session)
                 }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    // No destructive role: that role animates the row away
+                    // before the question is even answered.
+                    Button {
+                        pendingDeletion = session
+                    } label: {
+                        Label("מחיקה", systemImage: "trash")
+                    }
+                    .tint(.red)
+                }
             }
-            .onDelete(perform: delete(at:))
         } header: {
             Text("שיחות")
         }
     }
 
-    private func delete(at offsets: IndexSet) {
+    private func delete(_ session: TranscriptSessionSummary) {
         do {
-            for offset in offsets {
-                try viewModel.deleteConversation(id: sessions[offset].id)
-            }
+            try viewModel.deleteConversation(id: session.id)
         } catch {
             deleteError = error.localizedDescription
         }
@@ -130,6 +140,19 @@ struct HistoryView: View {
             Button("סגור", role: .cancel) {}
         } message: {
             Text("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")")
+        }
+        .confirmationDialog(
+            "למחוק את השיחה הזו?",
+            isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }),
+            titleVisibility: .visible,
+            presenting: pendingDeletion
+        ) { session in
+            Button("מחיקה", role: .destructive) {
+                delete(session)
+            }
+            Button("ביטול", role: .cancel) {}
+        } message: { session in
+            Text(session.title ?? CaptionLayout.directed(session.preview))
         }
         .confirmationDialog("למחוק את כל השיחות השמורות?", isPresented: $confirmingDeleteAll, titleVisibility: .visible) {
             Button("מחיקת הכול", role: .destructive) {
