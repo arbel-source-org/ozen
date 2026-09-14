@@ -250,6 +250,14 @@ public struct TranscriptHistoryStore: Sendable {
         summariesURL.appendingPathComponent(url.lastPathComponent)
     }
 
+    /// The searchable words of one conversation, already lowercased and
+    /// stripped of niqqud, one caption line or speaker name per line. The
+    /// format is in the file name, so a future change simply stops
+    /// finding the old files and rebuilds them.
+    private func searchTextURL(forRecordFile url: URL) -> URL {
+        summariesURL.appendingPathComponent(url.deletingPathExtension().lastPathComponent + ".search-v1.txt")
+    }
+
     /// Saves a session, overwriting any earlier save with the same id —
     /// that's what lets a caller autosave periodically during a live
     /// session and again when it ends, without creating duplicates. A
@@ -267,6 +275,7 @@ public struct TranscriptHistoryStore: Sendable {
         // its conversation. If this write fails the conversation is still
         // saved; the list just rebuilds the summary next time.
         writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
+        writeSearchText(Self.searchableText(of: record), forRecordFile: url)
         return true
     }
 
@@ -286,18 +295,12 @@ public struct TranscriptHistoryStore: Sendable {
         return urls.filter { $0.pathExtension == "json" }
     }
 
+    /// A file that fails to decode (truncated write, a future format the
+    /// current build doesn't understand) comes back nil and is skipped by
+    /// the list and search — one bad session must never hide every other.
     private static func decodeRecord(at url: URL) -> TranscriptSessionRecord? {
         guard let data = try? Data(contentsOf: url) else { return nil }
         return try? JSONDecoder().decode(TranscriptSessionRecord.self, from: data)
-    }
-
-    /// Every readable, decodable record in the directory. A file that
-    /// fails to decode (truncated write, a future format the current
-    /// build doesn't understand) is silently skipped rather than failing
-    /// the whole listing — one bad session must never hide every other
-    /// one.
-    private func allRecords() -> [TranscriptSessionRecord] {
-        recordFiles().compactMap(Self.decodeRecord(at:))
     }
 
     private static func modificationDate(of url: URL) -> Date? {
@@ -306,11 +309,17 @@ public struct TranscriptHistoryStore: Sendable {
         return (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
     }
 
+    /// A cache file is trusted only if it was written after its conversation.
+    private static func isFresh(_ cacheURL: URL, forRecordFile url: URL) -> Bool {
+        guard let cacheDate = modificationDate(of: cacheURL),
+              let recordDate = modificationDate(of: url)
+        else { return false }
+        return cacheDate >= recordDate
+    }
+
     private func cachedSummary(forRecordFile url: URL) -> TranscriptSessionSummary? {
         let cacheURL = summaryURL(forRecordFile: url)
-        guard let cacheDate = Self.modificationDate(of: cacheURL),
-              let recordDate = Self.modificationDate(of: url),
-              cacheDate >= recordDate,
+        guard Self.isFresh(cacheURL, forRecordFile: url),
               let data = try? Data(contentsOf: cacheURL),
               let cached = try? JSONDecoder().decode(CachedSummary.self, from: data),
               cached.format == Self.summaryFormat
@@ -322,6 +331,44 @@ public struct TranscriptHistoryStore: Sendable {
         guard let data = try? JSONEncoder().encode(CachedSummary(format: Self.summaryFormat, summary: summary)) else { return }
         try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
         try? data.write(to: summaryURL(forRecordFile: url), options: .atomic)
+    }
+
+    private func cachedSearchText(forRecordFile url: URL) -> String? {
+        let cacheURL = searchTextURL(forRecordFile: url)
+        guard Self.isFresh(cacheURL, forRecordFile: url),
+              let data = try? Data(contentsOf: cacheURL)
+        else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func writeSearchText(_ text: String, forRecordFile url: URL) {
+        try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
+        try? Data(text.utf8).write(to: searchTextURL(forRecordFile: url), options: .atomic)
+    }
+
+    static func searchableText(of record: TranscriptSessionRecord) -> String {
+        var lines: [String] = []
+        for segment in record.segments {
+            lines.append(normalizedForSearch(segment.text))
+            if let name = segment.speakerName {
+                lines.append(normalizedForSearch(name))
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func normalizedForSearch(_ text: String) -> String {
+        strippingNiqqud(text.replacingOccurrences(of: "\n", with: " ")).lowercased()
+    }
+
+    private static func record(_ record: TranscriptSessionRecord, matches needle: String) -> Bool {
+        record.segments.contains { segment in
+            if strippingNiqqud(segment.text).lowercased().contains(needle) {
+                return true
+            }
+            guard let name = segment.speakerName else { return false }
+            return strippingNiqqud(name).lowercased().contains(needle)
+        }
     }
 
     public func listSummaries() -> [TranscriptSessionSummary] {
@@ -348,23 +395,30 @@ public struct TranscriptHistoryStore: Sendable {
         guard !trimmed.isEmpty else { return listSummaries() }
         let needle = Self.strippingNiqqud(trimmed).lowercased()
 
-        return allRecords()
-            .filter { record in
-                record.segments.contains { segment in
-                    if Self.strippingNiqqud(segment.text).lowercased().contains(needle) {
-                        return true
-                    }
-                    guard let name = segment.speakerName else { return false }
-                    return Self.strippingNiqqud(name).lowercased().contains(needle)
+        return recordFiles()
+            .compactMap { url -> TranscriptSessionSummary? in
+                // Fast path: the conversation's prepared search text says
+                // no, or says yes and its summary is ready.
+                if let text = cachedSearchText(forRecordFile: url) {
+                    let found = text.split(separator: "\n", omittingEmptySubsequences: false).contains { $0.contains(needle) }
+                    guard found else { return nil }
+                    if let summary = cachedSummary(forRecordFile: url) { return summary }
                 }
+                // Slow path, once per conversation: read it whole and write
+                // the files that make the next search fast.
+                guard let record = Self.decodeRecord(at: url) else { return nil }
+                let summary = TranscriptSessionSummary(summarizing: record)
+                writeSummary(summary, forRecordFile: url)
+                writeSearchText(Self.searchableText(of: record), forRecordFile: url)
+                return Self.record(record, matches: needle) ? summary : nil
             }
-            .map { TranscriptSessionSummary(summarizing: $0) }
             .sorted { $0.startedAt > $1.startedAt }
     }
 
     public func delete(id: UUID) throws {
         let url = fileURL(for: id)
         try? FileManager.default.removeItem(at: summaryURL(forRecordFile: url))
+        try? FileManager.default.removeItem(at: searchTextURL(forRecordFile: url))
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try FileManager.default.removeItem(at: url)
     }

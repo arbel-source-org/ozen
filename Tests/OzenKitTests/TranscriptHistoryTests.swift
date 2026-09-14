@@ -451,3 +451,106 @@ struct TranscriptHistorySummaryCacheTests {
         #expect(store.totalSizeOnDisk() == 0)
     }
 }
+
+@Suite("Transcript history search files")
+struct TranscriptHistorySearchCacheTests {
+    private func makeTempDirectory() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("ozen-history-search-\(UUID())")
+    }
+
+    private func record(id: UUID = UUID(), startedAt: TimeInterval = 10, lines: [(String, String?)]) -> TranscriptSessionRecord {
+        TranscriptSessionRecord(
+            id: id,
+            startedAt: startedAt,
+            endedAt: nil,
+            engine: .whisperKit,
+            modelVariant: nil,
+            inputName: nil,
+            segments: lines.map {
+                SavedSegment(id: UUID(), text: $0.0, speakerName: $0.1, speakerClusterID: nil, startTimestamp: startedAt, isCommitted: true)
+            }
+        )
+    }
+
+    private func recordFile(_ dir: URL, _ id: UUID) -> URL {
+        dir.appendingPathComponent("\(id.uuidString).json")
+    }
+
+    private func searchFile(_ dir: URL, _ id: UUID) -> URL {
+        dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName).appendingPathComponent("\(id.uuidString).search-v1.txt")
+    }
+
+    private func setModified(_ url: URL, _ date: Date) throws {
+        try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: url.path)
+    }
+
+    @Test("search answers from the prepared text, without reading the conversation")
+    func searchUsesPreparedText() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let saved = record(lines: [("הלכנו לשוק", "שרה")])
+        try store.save(saved)
+        #expect(FileManager.default.fileExists(atPath: searchFile(dir, saved.id).path))
+
+        try Data("not json".utf8).write(to: recordFile(dir, saved.id))
+        try setModified(recordFile(dir, saved.id), Date(timeIntervalSince1970: 1_000))
+
+        #expect(store.search("שוק").map(\.id) == [saved.id])
+        #expect(store.search("שרה").map(\.id) == [saved.id])
+        #expect(store.search("ים").isEmpty)
+    }
+
+    @Test("a conversation saved by an older build is searched in full and gets its text file")
+    func olderConversationIsSearched() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let old = record(lines: [("שָׁלוֹם לכולם", nil)])
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try JSONEncoder().encode(old).write(to: recordFile(dir, old.id))
+
+        #expect(store.search("שלום").map(\.id) == [old.id])
+        #expect(FileManager.default.fileExists(atPath: searchFile(dir, old.id).path))
+        // And the file it wrote answers the next search the same way.
+        #expect(store.search("שלום").map(\.id) == [old.id])
+        #expect(store.search("להתראות").isEmpty)
+    }
+
+    @Test("a text file older than its conversation is not trusted")
+    func staleTextIsRebuilt() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let id = UUID()
+        try store.save(record(id: id, lines: [("בוקר", nil)]))
+
+        try JSONEncoder().encode(record(id: id, lines: [("בוקר", nil), ("ערב", nil)])).write(to: recordFile(dir, id))
+        try setModified(searchFile(dir, id), Date(timeIntervalSince1970: 1_000))
+        try setModified(recordFile(dir, id), Date(timeIntervalSince1970: 2_000))
+
+        #expect(store.search("ערב").map(\.id) == [id])
+    }
+
+    @Test("a word split across two caption lines does not count as found")
+    func noMatchAcrossLines() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        try store.save(record(lines: [("אבא", nil), ("בית", nil)]))
+
+        #expect(store.search("אבא\nבית").isEmpty)
+        #expect(store.search("אבית").isEmpty)
+    }
+
+    @Test("deleting a conversation removes its text file")
+    func deleteRemovesText() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let saved = record(lines: [("משהו", nil)])
+        try store.save(saved)
+        try store.delete(id: saved.id)
+        #expect(!FileManager.default.fileExists(atPath: searchFile(dir, saved.id).path))
+    }
+}
