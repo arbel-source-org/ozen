@@ -212,6 +212,12 @@ input source).
   switched off in iOS Settings, Ozen's Settings shows the red note; and
   with VoiceOver on, whenever the status turns red by itself VoiceOver
   says captions stopped and why, and says so again when they come back.
+  Added with build 19: "Stop without saving" (atzira bli lishmor) during a
+  new speaker's recording ends it at once, captions come back and no
+  speaker is added; a doorbell rung while a smoke alarm's banner is up
+  buzzes but leaves the alarm's banner and flash; with VoiceOver, a caption
+  line's actions include asking to repeat and naming the speaker; and a
+  line copied from History pastes into Messages whole.
 
 ## Explicit non-goals for v1
 
