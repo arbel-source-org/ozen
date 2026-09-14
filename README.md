@@ -40,7 +40,8 @@ things, for Hebrew conversation, entirely on-device.
   and delete. "Turbo (compressed)" (626 MB) is the recommended pick.
 - **Display built for reading all evening**: text size 20–64 pt (pinch
   the captions to change it), white-on-black / yellow-on-black /
-  black-on-white, bold, speaker names on/off, long stretches of speech
+  black-on-white, bold, speaker names on/off (shown once at the start of
+  each person's turn, like a chat), long stretches of speech
   broken into short paragraphs at sentence ends, screen stays awake while
   listening, auto-scroll that stops when you scroll up to re-read (with a
   "back to latest" pill).
@@ -53,6 +54,9 @@ things, for Hebrew conversation, entirely on-device.
   is retried automatically with growing delays, and the status line says
   so. Failures only a person can fix (a denied permission) never are.
   Retries wait out a phone call instead of burning attempts during it.
+  A microphone that silently stops delivering audio (a Bluetooth hearing
+  aid reconnecting, say) is noticed within seconds and restarted, instead
+  of the screen saying "listening" over captions that never come.
 - **Downloads that can't get stuck.** A cut-off model download is told
   apart from a whole model and simply continues from where it stopped,
   instead of failing to load on every launch.
@@ -84,6 +88,9 @@ things, for Hebrew conversation, entirely on-device.
 - **Conversation history.** Conversations are saved as they happen,
   searchable, shareable as text, list who took part, and open with a
   summary: length, how much each person said, speaking pace, longest turn.
+  The list reads a small summary per conversation, so it opens quickly
+  even after months of daily use, and autosaving never stutters the
+  captions.
 - **Saved speakers can be renamed**, and the new name follows onto lines
   already on screen and into the names list.
 - **First-launch walkthrough** in large type that explains the engines and
@@ -145,10 +152,10 @@ engine hot-swap, pause/resume, automatic recovery, every failure path —
 lives in `OzenKit` as `CaptionPipeline` and is unit tested on Linux
 against fakes, along with the alert matching, history, statistics,
 vocabulary, model-download, recovery, battery, notification and layout
-logic (226 tests). The platform layer (WhisperKit/Speech engines, real
+logic (260 tests). The platform layer (WhisperKit/Speech engines, real
 audio capture, the speaker embedder) and the app's view model are built
 and tested on CI's iOS Simulator, with the view model driven end to end by
-the same fakes (another 33 tests).
+the same fakes (another 35 tests).
 The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
