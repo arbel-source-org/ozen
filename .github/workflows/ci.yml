@@ -34,7 +34,7 @@ jobs:
   app:
     name: Ozen app (iOS Simulator)
     runs-on: macos-15
-    # Normally about eight minutes; a hung test fails the run instead.
+    # Normally about seven minutes; a hung test fails the run instead.
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -60,12 +60,30 @@ jobs:
           fi
           echo "Using simulator: $DEVICE"
           echo "device=$DEVICE" >> "$GITHUB_OUTPUT"
+      - name: Name this week
+        id: week
+        run: echo "week=$(date +%G-%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore the previous build
+        # Most of the build is WhisperKit and the packages under it, which
+        # don't change between commits. Restored with their timestamps,
+        # Xcode reuses them and compiles only this repo's code; macOS minutes
+        # are scarce on a private repository. A new cache each week picks up
+        # package updates the manifest allows.
+        uses: actions/cache@v6
+        with:
+          path: |
+            DerivedData
+            !DerivedData/Logs
+          key: deriveddata-${{ hashFiles('Package.swift', 'project.yml') }}-${{ steps.week.outputs.week }}
+          restore-keys: |
+            deriveddata-${{ hashFiles('Package.swift', 'project.yml') }}-
       - name: Build and test
         run: |
           set -o pipefail
           xcodebuild test \
             -project Ozen.xcodeproj \
             -scheme Ozen \
+            -derivedDataPath DerivedData \
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.device }}" \
             2>&1 | tee xcodebuild-raw.log | xcpretty
       - name: Show why it failed
