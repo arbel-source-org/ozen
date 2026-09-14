@@ -1,9 +1,6 @@
 import SwiftUI
 import OzenKit
 
-/// The names list: family, neighbours, the doctor, the pharmacy, the
-/// medicines. Both engines are told to expect these words, which is the
-/// difference between "Avi" (a name) and "aval" ("but") in the captions.
 struct VocabularyView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var newTerm = ""
@@ -31,7 +28,7 @@ struct VocabularyView: View {
                 Text("שמות של בני משפחה, שכנים, רופאים, תרופות, מקומות — כל מילה שהכתוביות מתקשות איתה. הראשונים ברשימה חשובים ביותר.")
             }
 
-            if !viewModel.settings.speakerProfiles.isEmpty {
+            if speakerNamesMissing {
                 Section {
                     Button {
                         viewModel.addSpeakerNamesToVocabulary()
@@ -79,6 +76,12 @@ struct VocabularyView: View {
             }
         }
         .onAppear { editing = viewModel.vocabulary.isEmpty }
+    }
+
+    private var speakerNamesMissing: Bool {
+        let vocabulary = viewModel.vocabulary
+        let names = viewModel.settings.speakerProfiles.map(\.name)
+        return VocabularyHints.normalized(vocabulary + names) != vocabulary
     }
 
     private func add() {
