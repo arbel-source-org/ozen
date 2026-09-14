@@ -15,7 +15,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # The whole history and its tags, so the release notes can list
           # what changed since the previous build.
