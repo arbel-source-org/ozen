@@ -69,6 +69,8 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
     public var modelVariant: String?
     public var inputName: String?
     public var segments: [SavedSegment]
+    /// A name the reader gave the conversation ("ביקור אצל הרופא").
+    public var title: String?
 
     public init(
         id: UUID = UUID(),
@@ -77,7 +79,8 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
         engine: TranscriptionEngineKind,
         modelVariant: String?,
         inputName: String?,
-        segments: [SavedSegment]
+        segments: [SavedSegment],
+        title: String? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -86,6 +89,7 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
         self.modelVariant = modelVariant
         self.inputName = inputName
         self.segments = segments
+        self.title = title
     }
 
     /// Converts a live in-memory transcript into a saveable record. A
@@ -131,7 +135,7 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, startedAt, endedAt, engine, modelVariant, inputName, segments
+        case id, startedAt, endedAt, engine, modelVariant, inputName, segments, title
     }
 
     // Decoding is tolerant of missing keys on the fields a later build
@@ -147,6 +151,7 @@ public struct TranscriptSessionRecord: Codable, Sendable, Equatable, Identifiabl
         modelVariant = try container.decodeIfPresent(String.self, forKey: .modelVariant)
         inputName = try container.decodeIfPresent(String.self, forKey: .inputName)
         segments = try container.decodeIfPresent([SavedSegment].self, forKey: .segments) ?? []
+        title = try container.decodeIfPresent(String.self, forKey: .title)
     }
 }
 
@@ -180,6 +185,7 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
     public var speakerNames: [String]
     /// Lines marked as important.
     public var starredCount: Int
+    public var title: String?
 
     public init(
         id: UUID,
@@ -189,7 +195,8 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
         preview: String,
         engine: TranscriptionEngineKind,
         speakerNames: [String] = [],
-        starredCount: Int = 0
+        starredCount: Int = 0,
+        title: String? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -199,6 +206,7 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
         self.engine = engine
         self.speakerNames = speakerNames
         self.starredCount = starredCount
+        self.title = title
     }
 
     public var durationSeconds: TimeInterval? {
@@ -225,7 +233,8 @@ extension TranscriptSessionSummary {
             preview: Self.truncated(firstNonEmpty?.text ?? ""),
             engine: record.engine,
             speakerNames: Self.realNames(in: record.segments),
-            starredCount: record.segments.filter(\.isStarred).count
+            starredCount: record.segments.filter(\.isStarred).count,
+            title: record.title
         )
     }
 
@@ -274,7 +283,7 @@ public struct TranscriptHistoryStore: Sendable {
 
     /// Bumped whenever `TranscriptSessionSummary` changes meaning, so
     /// summaries written by an older build are rebuilt instead of trusted.
-    static let summaryFormat = 2
+    static let summaryFormat = 3
     static let summariesFolderName = "summaries"
 
     private struct CachedSummary: Codable {
@@ -312,11 +321,21 @@ public struct TranscriptHistoryStore: Sendable {
     /// session with no segments is noise rather than history (the user
     /// opened the app and closed it again) so it's deliberately not
     /// written at all.
+    ///
+    /// A conversation still being captioned is autosaved from the live
+    /// transcript, which knows nothing of a name given to it meanwhile on
+    /// the history screen. A save without a title therefore keeps the one
+    /// already on disk (read from the small summary file, not the whole
+    /// conversation); `rename` is how a title is changed or removed.
     @discardableResult
     public func save(_ record: TranscriptSessionRecord) throws -> Bool {
         guard !record.segments.isEmpty else { return false }
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         let url = fileURL(for: record.id)
+        var record = record
+        if record.title == nil {
+            record.title = cachedSummary(forRecordFile: url)?.title
+        }
         let data = try JSONEncoder().encode(record)
         try data.write(to: url, options: .atomic)
         // Written after the record, so a fresh summary is never older than
@@ -395,7 +414,7 @@ public struct TranscriptHistoryStore: Sendable {
     }
 
     static func searchableText(of record: TranscriptSessionRecord) -> String {
-        var lines: [String] = []
+        var lines: [String] = record.title.map { [normalizedForSearch($0)] } ?? []
         for segment in record.segments {
             lines.append(normalizedForSearch(segment.text))
             if let name = segment.speakerName {
@@ -410,7 +429,10 @@ public struct TranscriptHistoryStore: Sendable {
     }
 
     private static func record(_ record: TranscriptSessionRecord, matches needle: String) -> Bool {
-        record.segments.contains { segment($0, matches: needle) }
+        if let title = record.title, strippingNiqqud(title).lowercased().contains(needle) {
+            return true
+        }
+        return record.segments.contains { segment($0, matches: needle) }
     }
 
     private static func segment(_ segment: SavedSegment, matches needle: String) -> Bool {
@@ -487,6 +509,18 @@ public struct TranscriptHistoryStore: Sendable {
                     .filter(\.isStarred)
                     .map { StarredLine(sessionID: record.id, sessionStartedAt: record.startedAt, segment: $0) }
             }
+    }
+
+    /// Names a saved conversation, or removes its name with an empty one.
+    public func rename(id: UUID, title: String) throws {
+        guard var record = load(id: id) else { return }
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        record.title = trimmed.isEmpty ? nil : trimmed
+        let url = fileURL(for: id)
+        let data = try JSONEncoder().encode(record)
+        try data.write(to: url, options: .atomic)
+        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
+        writeSearchText(Self.searchableText(of: record), forRecordFile: url)
     }
 
     public func delete(id: UUID) throws {

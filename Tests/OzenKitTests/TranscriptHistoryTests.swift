@@ -711,3 +711,69 @@ struct TranscriptHistoryStarredExportTests {
         #expect(TranscriptHistoryStore.exportStarredText([leap]) == "29.02.2024\n[12:00:00] y")
     }
 }
+
+@Suite("Transcript history conversation names")
+struct TranscriptHistoryTitleTests {
+    private func makeStore() -> (TranscriptHistoryStore, URL) {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-titles-\(UUID())")
+        return (TranscriptHistoryStore(directoryURL: dir), dir)
+    }
+
+    private func record(id: UUID, lines: [String]) -> TranscriptSessionRecord {
+        TranscriptSessionRecord(
+            id: id, startedAt: 10, engine: .whisperKit, modelVariant: nil, inputName: nil,
+            segments: lines.map { SavedSegment(id: UUID(), text: $0, speakerName: nil, speakerClusterID: nil, startTimestamp: 10, isCommitted: true) }
+        )
+    }
+
+    @Test("a named conversation shows its name in the list and is found by it")
+    func renameAndSearch() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let id = UUID()
+        try store.save(record(id: id, lines: ["שלום"]))
+
+        try store.rename(id: id, title: "  ביקור אצל הרופא ")
+        #expect(store.load(id: id)?.title == "ביקור אצל הרופא")
+        #expect(store.listSummaries().first?.title == "ביקור אצל הרופא")
+        #expect(store.search("רופא").map(\.id) == [id])
+    }
+
+    @Test("autosaving a live conversation keeps the name given to it meanwhile")
+    func autosaveKeepsName() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let id = UUID()
+        try store.save(record(id: id, lines: ["שלום"]))
+        try store.rename(id: id, title: "ארוחת שישי")
+
+        // The live transcript has grown and knows nothing about the name.
+        try store.save(record(id: id, lines: ["שלום", "מה נשמע"]))
+
+        #expect(store.load(id: id)?.title == "ארוחת שישי")
+        #expect(store.load(id: id)?.segments.count == 2)
+        #expect(store.listSummaries().first?.title == "ארוחת שישי")
+        #expect(store.search("שישי").map(\.id) == [id])
+    }
+
+    @Test("an empty name removes it, and a later autosave doesn't bring it back")
+    func clearName() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let id = UUID()
+        try store.save(record(id: id, lines: ["שלום"]))
+        try store.rename(id: id, title: "זמני")
+        try store.rename(id: id, title: "   ")
+        try store.save(record(id: id, lines: ["שלום", "עוד"]))
+
+        #expect(store.load(id: id)?.title == nil)
+        #expect(store.listSummaries().first?.title == nil)
+        #expect(store.search("זמני").isEmpty)
+    }
+
+    @Test("a conversation saved before names existed loads without one")
+    func olderRecord() throws {
+        let json = #"{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","startedAt":1,"engine":"whisperKit","segments":[]}"#
+        #expect(try JSONDecoder().decode(TranscriptSessionRecord.self, from: Data(json.utf8)).title == nil)
+    }
+}
