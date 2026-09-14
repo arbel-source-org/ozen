@@ -80,7 +80,10 @@ things, for Hebrew conversation, entirely on-device.
   starts, with room left for the first load. A phone that's too full says
   how much to free (or to pick a smaller model), is never retried on a
   timer, and starts the download by itself when she comes back to the app
-  with enough room. The model list marks the models that won't fit.
+  with enough room. The model list marks the models that won't fit, and
+  they can't be picked over the one that works. Switching to a model that
+  still has to download while captions run asks first, since captions
+  stop until it arrives.
 - **Type to speak.** The other half of a conversation: type a reply, or
   tap one of the ready-made phrases ("Wait, I didn't understand" (rega, lo
   hevanti), "Can you repeat that?" (efshar lachzor al ze?)), and the phone
