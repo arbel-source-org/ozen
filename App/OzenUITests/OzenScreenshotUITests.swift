@@ -12,10 +12,14 @@ import XCTest
 /// launch (the bottom buttons visible) and a few seconds later (the
 /// buttons auto-hidden) — the exact area a real bug once hid captions
 /// under the buttons.
+@MainActor
 final class OzenScreenshotUITests: XCTestCase {
     private static let outputDirectory = URL(fileURLWithPath: "/tmp/ozen-screenshots", isDirectory: true)
 
-    override class func setUp() {
+    // XCTestCase's class-level setUp isn't main-actor isolated, and this
+    // one touches nothing UI-related, so it stays outside the class's own
+    // @MainActor default rather than fighting the override's isolation.
+    nonisolated override class func setUp() {
         try? FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
     }
 

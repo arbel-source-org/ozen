@@ -107,6 +107,17 @@ struct LiveCaptionView: View {
         )
     }
 
+    /// How far the bottom of the transcript, and the "jump to latest"
+    /// pill when it's showing, sit above the screen's bottom edge: the
+    /// measured control bar's height while it's visible, or just enough
+    /// for the small reveal handle once it's hidden. The two used to
+    /// disagree — the pill kept the full control-bar gap even once the
+    /// bar itself had slid away, leaving it floating with an empty stretch
+    /// of screen under it instead of sitting near the handle.
+    private var reservedBottomSpace: CGFloat {
+        controlsHidden ? 56 : controlBarHeight + 16
+    }
+
     /// The screen itself: captions, banners and the control bar.
     private var screen: some View {
         ZStack(alignment: .bottom) {
@@ -129,7 +140,7 @@ struct LiveCaptionView: View {
 
             if !isPinnedToBottom && !viewModel.segments.isEmpty {
                 jumpToLatestPill
-                    .padding(.bottom, controlBarHeight)
+                    .padding(.bottom, reservedBottomSpace)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
@@ -412,7 +423,7 @@ struct LiveCaptionView: View {
                     // Room for the buttons above it, so following the
                     // newest line keeps that line clear of them.
                     Color.clear
-                        .frame(height: controlsHidden ? 56 : controlBarHeight + 16)
+                        .frame(height: reservedBottomSpace)
                     Color.clear
                         .frame(height: 1)
                         .id("bottom-sentinel")
