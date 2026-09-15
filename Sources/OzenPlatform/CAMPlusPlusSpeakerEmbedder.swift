@@ -44,11 +44,28 @@ public final class CAMPlusPlusSpeakerEmbedder: SpeakerEmbedding, @unchecked Send
     }
 
     public func embed(samples: [Float], sampleRate: Double) -> [Float]? {
-        guard let frames = fbank.frames(samples: samples, sampleRate: sampleRate),
-              let input = try? featureArray(from: frames),
-              let output = try? model.prediction(from: SingleFeatureProvider(name: "feats", value: MLFeatureValue(multiArray: input))),
-              let embedding = output.featureValue(for: "embs")?.multiArrayValue
-        else { return nil }
+        guard let frames = fbank.frames(samples: samples, sampleRate: sampleRate) else {
+            FileHandle.standardError.write("DEBUG_CAMPP: fbank.frames returned nil\n".data(using: .utf8)!)
+            return nil
+        }
+        let input: MLMultiArray
+        do {
+            input = try featureArray(from: frames)
+        } catch {
+            FileHandle.standardError.write("DEBUG_CAMPP: featureArray threw \(error)\n".data(using: .utf8)!)
+            return nil
+        }
+        let output: MLFeatureProvider
+        do {
+            output = try model.prediction(from: SingleFeatureProvider(name: "feats", value: MLFeatureValue(multiArray: input)))
+        } catch {
+            FileHandle.standardError.write("DEBUG_CAMPP: model.prediction threw \(error)\n".data(using: .utf8)!)
+            return nil
+        }
+        guard let embedding = output.featureValue(for: "embs")?.multiArrayValue else {
+            FileHandle.standardError.write("DEBUG_CAMPP: output featureValue(for: embs) was nil; featureNames=\(output.featureNames)\n".data(using: .utf8)!)
+            return nil
+        }
 
         var result = [Float](repeating: 0, count: embedding.count)
         for i in 0..<embedding.count {
