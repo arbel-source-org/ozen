@@ -39,7 +39,8 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(transcript.waitForExistence(timeout: 10), "\(name): the transcript never appeared")
         capture(app, name: "\(name)-controls-visible")
 
-        Thread.sleep(forTimeInterval: 6)
+        let revealChevron = app.descendants(matching: .any)["showControlsButton"]
+        XCTAssertTrue(revealChevron.waitForExistence(timeout: 15), "\(name): the control bar never auto-hid")
         capture(app, name: "\(name)-controls-hidden")
     }
 

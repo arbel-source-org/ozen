@@ -904,6 +904,7 @@ struct LiveCaptionView: View {
         .foregroundStyle(theme.chrome)
         .padding(.bottom, 8)
         .accessibilityLabel(tr("הצגת הכפתורים", "Show the buttons"))
+        .accessibilityIdentifier("showControlsButton")
     }
 
     private func revealControls() {
