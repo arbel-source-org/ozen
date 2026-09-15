@@ -51,6 +51,10 @@ final class OzenScreenshotUITests: XCTestCase {
         try run(variant: "hebrewLargeText", name: "hebrew-large-text")
     }
 
+    func testHebrewLightTheme() throws {
+        try run(variant: "hebrewLightTheme", name: "hebrew-light-theme")
+    }
+
     func testEnglish() throws {
         try run(variant: "english", name: "english")
     }

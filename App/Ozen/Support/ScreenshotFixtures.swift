@@ -15,6 +15,7 @@ enum ScreenshotFixtures {
     enum Variant: String {
         case hebrewDefault
         case hebrewLargeText
+        case hebrewLightTheme
         case english
     }
 
@@ -36,6 +37,10 @@ enum ScreenshotFixtures {
         case .hebrewLargeText:
             viewModel.setAppLanguage(.hebrew)
             viewModel.display.fontSize = 50
+        case .hebrewLightTheme:
+            viewModel.setAppLanguage(.hebrew)
+            viewModel.display.fontSize = 50
+            viewModel.display.theme = .light
         case .english:
             viewModel.setAppLanguage(.english)
         }
