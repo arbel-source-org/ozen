@@ -189,7 +189,7 @@ struct ModelManagerView: View {
         case "tiny": return tr("הכי מהיר. העברית שלו בעיקר שגויה — רק לבדיקת המיקרופון.", "The fastest. Its Hebrew is mostly wrong — for testing the microphone only.")
         case "base": return tr("מהיר מאוד, עדיין חלש בעברית.", "Very fast, still weak at Hebrew.")
         case "small_216MB": return tr("חצי מההורדה של Small עם כמעט אותן תוצאות.", "Half the download of Small with nearly the same results.")
-        case "small": return tr("ברירת המחדל: הורדה קצרה ותגובה מהירה. עברית מובנת, עם טעויות.", "The default: a short download and a quick response. Hebrew is understandable, with mistakes.")
+        case "small": return tr("הורדה קצרה ותגובה מהירה. עברית מובנת, עם טעויות.", "A short download and a quick response. Hebrew is understandable, with mistakes.")
         case "large-v3-v20240930_626MB": return tr("עברית טובה בהרבה מ‑Small באותו גודל הורדה בערך. קצת יותר איטי בכל עדכון.", "Much better Hebrew than Small at roughly the same download size. A bit slower on each update.")
         case "large-v3-v20240930": return tr("Turbo בדיוק מלא. אותה רמת דיוק, הורדה גדולה יותר.", "Turbo at full precision. Same accuracy, a larger download.")
         case "medium": return tr("מודל ביניים ישן יותר; Turbo גם מדויק יותר וגם מהיר יותר.", "An older mid-size model; Turbo is both more accurate and faster.")
