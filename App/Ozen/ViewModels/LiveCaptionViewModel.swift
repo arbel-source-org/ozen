@@ -900,6 +900,19 @@ public final class LiveCaptionViewModel {
         persist()
     }
 
+    /// The caption screen's offer of the recommended Whisper model, taken:
+    /// the model switches (and downloads, on Wi-Fi) like a pick in Settings.
+    public func acceptBetterModelOffer() async {
+        settings.betterModelOfferDismissed = true
+        await setWhisperModel(WhisperModelCatalog.recommendedVariant)
+    }
+
+    /// "Not now" on that offer.
+    public func dismissBetterModelOffer() {
+        settings.betterModelOfferDismissed = true
+        persist()
+    }
+
     public func setKeywordAlert(id: UUID, enabled: Bool) {
         guard let index = settings.keywordAlerts.firstIndex(where: { $0.id == id }) else { return }
         settings.keywordAlerts[index].isEnabled = enabled

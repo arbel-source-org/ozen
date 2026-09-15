@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import OzenKit
+import OzenPlatform
 
 /// The whole point of the app: a full-screen, large-type, high-contrast
 /// scrolling transcript. One persistent control row, no modals
@@ -651,6 +652,9 @@ struct LiveCaptionView: View {
             if let recent = viewModel.recentConversation {
                 recentConversationCard(recent)
                     .padding(.top, 8)
+            } else if viewModel.settings.offersBetterModel, let better = betterModelOption {
+                betterModelOfferCard(better)
+                    .padding(.top, 8)
             } else if viewModel.settings.offersNameAlert {
                 nameAlertOfferCard
                     .padding(.top, 8)
@@ -658,6 +662,52 @@ struct LiveCaptionView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 40)
+    }
+
+    /// The recommended model, when it is worth offering here: a phone too
+    /// full for the download would only be sent to a status line saying so,
+    /// and the model list already says how much room it needs.
+    private var betterModelOption: WhisperModelOption? {
+        guard let option = WhisperModelCatalog.option(for: WhisperModelCatalog.recommendedVariant) else { return nil }
+        let fits = StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.sizeMB, availableBytes: DeviceStorage.availableBytes()) == nil
+        return fits ? option : nil
+    }
+
+    /// For a phone set up when Small was the default model: most Hebrew
+    /// words came out wrong, and the fix is one download away.
+    private func betterModelOfferCard(_ option: WhisperModelOption) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                Task { await viewModel.acceptBetterModelOffer() }
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.title2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(tr("עברית מדויקת בהרבה עם מודל אחר", "Much more accurate Hebrew with a different model"))
+                            .font(.headline)
+                        Text(tr("הקישו כדי להוריד \(option.displayName), \(option.sizeLabel), פעם אחת ב-Wi-Fi", "Tap to download \(option.displayName), \(option.sizeLabel), once over Wi-Fi"))
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .multilineTextAlignment(.leading)
+                    Spacer(minLength: 0)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Button {
+                withAnimation { viewModel.dismissBetterModelOffer() }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.semibold))
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(tr("לא עכשיו", "Not now"))
+        }
+        .foregroundStyle(theme.chrome)
+        .padding(14)
+        .background(theme.chrome.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
     }
 
     /// For a phone set up before the walkthrough asked for her name: the

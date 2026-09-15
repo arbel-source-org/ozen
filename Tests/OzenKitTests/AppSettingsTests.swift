@@ -250,6 +250,41 @@ struct AppSettingsFreshInstallTests {
     }
 }
 
+@Suite("AppSettings offer of the recommended model")
+struct BetterModelOfferTests {
+    @Test("offered to a phone still on Small from before it stopped being the default, until taken or turned down")
+    func offer() throws {
+        let onSmall = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedOnboarding":true,"whisperModelVariant":"small"}"#.utf8))
+        #expect(onSmall.betterModelOfferDismissed == false)
+        #expect(onSmall.offersBetterModel)
+
+        var turnedDown = onSmall
+        turnedDown.betterModelOfferDismissed = true
+        let roundTripped = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(turnedDown))
+        #expect(roundTripped.offersBetterModel == false)
+
+        var switched = onSmall
+        switched.whisperModelVariant = WhisperModelCatalog.recommendedVariant
+        #expect(switched.offersBetterModel == false)
+    }
+
+    @Test("not offered to a fresh install, to a phone still in the walkthrough, or to one on another engine")
+    func notOffered() throws {
+        #expect(AppSettings.default.offersBetterModel == false)
+
+        let inWalkthrough = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"whisperModelVariant":"small"}"#.utf8))
+        #expect(inWalkthrough.offersBetterModel == false)
+
+        var onApple = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedOnboarding":true,"whisperModelVariant":"small"}"#.utf8))
+        onApple.engine = .appleSpeech
+        #expect(onApple.offersBetterModel == false)
+
+        var onCloud = onApple
+        onCloud.engine = .cloud
+        #expect(onCloud.offersBetterModel == false)
+    }
+}
+
 @Suite("AppSettings offer to set up the name alert")
 struct NameAlertOfferTests {
     @Test("offered to a phone set up before the walkthrough asked, until a word is added or it's turned down")

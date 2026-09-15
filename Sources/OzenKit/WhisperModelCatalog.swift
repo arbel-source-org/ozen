@@ -54,7 +54,7 @@ public enum WhisperModelCatalog {
         WhisperModelOption(
             variant: "small", displayName: "Small", sizeMB: 486,
             hebrewQuality: 2, speed: 4,
-            note: "The default: quick to download and responsive. Understandable Hebrew, with mistakes.",
+            note: "Quick to download and responsive. Understandable Hebrew, with mistakes.",
             isRecommended: false
         ),
         WhisperModelOption(
@@ -89,11 +89,23 @@ public enum WhisperModelCatalog {
         ),
     ]
 
-    public static let defaultVariant = "small"
+    /// What a fresh install gets. The recommended model: on Hebrew test
+    /// recordings Small got 60% of words wrong against 39% for Turbo, for
+    /// only a slightly bigger download, so nobody should end up on Small
+    /// without choosing it.
+    public static let defaultVariant = recommendedVariant
     public static let recommendedVariant = "large-v3-v20240930_626MB"
 
     public static func option(for variant: String) -> WhisperModelOption? {
         options.first { $0.variant == variant }
+    }
+
+    /// Whether the recommended model is clearly better in Hebrew than
+    /// `variant`: the case for a phone set up when Small was the default.
+    /// A variant the catalog doesn't know can't be judged, so it isn't.
+    public static func recommendedImproves(on variant: String) -> Bool {
+        guard let current = option(for: variant), let recommended = option(for: recommendedVariant) else { return false }
+        return recommended.hebrewQuality > current.hebrewQuality
     }
 
     /// The on-disk folder name WhisperKit's model repository uses for a

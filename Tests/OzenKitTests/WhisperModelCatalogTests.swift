@@ -10,6 +10,23 @@ struct WhisperModelCatalogTests {
         #expect(AppSettings.default.whisperModelVariant == WhisperModelCatalog.defaultVariant)
     }
 
+    @Test("a fresh install gets the recommended model, not Small")
+    func freshInstallGetsRecommended() {
+        #expect(WhisperModelCatalog.defaultVariant == WhisperModelCatalog.recommendedVariant)
+        #expect(AppSettings.default.whisperModelVariant == "large-v3-v20240930_626MB")
+    }
+
+    @Test("the recommended model improves on the small ones, not on its equals or betters or on strangers")
+    func recommendedImproves() {
+        for weaker in ["tiny", "base", "small_216MB", "small"] {
+            #expect(WhisperModelCatalog.recommendedImproves(on: weaker), "\(weaker)")
+        }
+        for asGood in [WhisperModelCatalog.recommendedVariant, "large-v3-v20240930", "large-v3_947MB", "large-v3"] {
+            #expect(!WhisperModelCatalog.recommendedImproves(on: asGood), "\(asGood)")
+        }
+        #expect(!WhisperModelCatalog.recommendedImproves(on: "no-such-model"))
+    }
+
     @Test("exactly one option is recommended and variants are unique")
     func oneRecommendation() {
         #expect(WhisperModelCatalog.options.filter(\.isRecommended).count == 1)

@@ -212,13 +212,27 @@ public struct AppSettings: Codable, Sendable, Equatable {
         hasCompletedOnboarding && keywordAlerts.isEmpty && !nameAlertOfferDismissed
     }
 
+    /// "Not now" was tapped on the caption screen's offer of the recommended
+    /// Whisper model, or the offer was taken; see `offersBetterModel`.
+    public var betterModelOfferDismissed: Bool
+
+    /// Whether the caption screen should offer the recommended Whisper
+    /// model. Phones set up when Small was the default still run it, and
+    /// Small gets most Hebrew words wrong; the walkthrough now preselects
+    /// the recommended model, so a fresh install is never asked.
+    public var offersBetterModel: Bool {
+        hasCompletedOnboarding && engine == .whisperKit
+            && WhisperModelCatalog.recommendedImproves(on: whisperModelVariant)
+            && !betterModelOfferDismissed
+    }
+
     public init(
         engine: TranscriptionEngineKind,
         languageCode: String,
         preferredInputUID: String?,
         speakerProfiles: [SpeakerProfile],
         creditLine: String,
-        whisperModelVariant: String = "small",
+        whisperModelVariant: String = WhisperModelCatalog.defaultVariant,
         allowServerFallbackForAppleSpeech: Bool = false,
         cloudModel: String = CloudSpeech.fastModel,
         display: DisplayPreferences = .default,
@@ -235,7 +249,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         notifyWhenInBackground: Bool = true,
         allowCellularModelDownload: Bool = false,
         historyRetention: HistoryRetention = .forever,
-        nameAlertOfferDismissed: Bool = false
+        nameAlertOfferDismissed: Bool = false,
+        betterModelOfferDismissed: Bool = false
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -260,6 +275,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.allowCellularModelDownload = allowCellularModelDownload
         self.historyRetention = historyRetention
         self.nameAlertOfferDismissed = nameAlertOfferDismissed
+        self.betterModelOfferDismissed = betterModelOfferDismissed
     }
 
     /// The phrases a hard-of-hearing person needs most often in
@@ -291,7 +307,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding, appLanguage
         case notifyWhenInBackground, allowCellularModelDownload, historyRetention
-        case nameAlertOfferDismissed
+        case nameAlertOfferDismissed, betterModelOfferDismissed
     }
 
     public init(from decoder: any Decoder) throws {
@@ -329,6 +345,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         allowCellularModelDownload = container.lenient(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
         historyRetention = container.lenient(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
         nameAlertOfferDismissed = container.lenient(Bool.self, forKey: .nameAlertOfferDismissed) ?? defaults.nameAlertOfferDismissed
+        betterModelOfferDismissed = container.lenient(Bool.self, forKey: .betterModelOfferDismissed) ?? defaults.betterModelOfferDismissed
     }
 
     /// The model behind the engine in use, for saved conversations and

@@ -59,7 +59,10 @@ things, for Hebrew conversation, entirely on-device.
   slowest thing the app ever does and is never silent.
 - **Whisper model manager**: nine model sizes from 76 MB to 3 GB with
   honest Hebrew-quality and speed ratings, download progress, disk usage,
-  and delete. "Turbo (compressed)" (626 MB) is the recommended pick.
+  and delete. "Turbo (compressed)" (626 MB) is the recommended pick and
+  what a fresh install gets; a phone set up when Small was the default
+  (60% of Hebrew words wrong on test recordings, against 39% for Turbo) is
+  offered the switch on the caption screen, one tap and one download.
 - **Display built for reading all evening**: text size 20–64 pt (pinch
   the captions to change it), white-on-black / yellow-on-black /
   black-on-white, bold, speaker names on/off (shown once at the start of
