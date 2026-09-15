@@ -684,6 +684,53 @@ public final class CaptionPipeline {
         utteranceClusterAssignments = [:]
     }
 
+    #if DEBUG
+    /// A canned conversation for UI screenshot tests: one named speaker,
+    /// one not yet named, a starred line, a number-emphasis line and a
+    /// still-pending one — bypassing audio, the engine and the embedder
+    /// entirely. Debug builds only; never reachable from a release build.
+    /// Returns the segments, so a caller can star one by id.
+    @discardableResult
+    public func seedForScreenshots() -> [TranscriptSegment] {
+        let namedID = clusterer.enroll(name: tr("דנה", "Dana"), embedding: [1, 0, 0])
+        let strangerID = clusterer.assign(embedding: [0, 1, 0])
+        speakerClusters = clusterer.clusters
+
+        let now = Date().timeIntervalSince1970
+        segments = [
+            TranscriptSegment(
+                id: UUID(), text: tr("בוקר טוב, איך ישנת הלילה?", "Good morning, how did you sleep?"),
+                isCommitted: true, speakerClusterID: namedID,
+                startTimestamp: now, lastUpdateTimestamp: now, confidence: 0.95
+            ),
+            TranscriptSegment(
+                id: UUID(),
+                text: tr(
+                    "די טוב, תודה. יש לי תור לרופא ב-10:30 ואני צריכה לקחת שני כדורים לפני.",
+                    "Pretty good, thanks. I have a doctor's appointment at 10:30 and I need to take two pills before."
+                ),
+                isCommitted: true, speakerClusterID: strangerID,
+                startTimestamp: now + 4, lastUpdateTimestamp: now + 4, confidence: 0.3
+            ),
+            TranscriptSegment(
+                id: UUID(), text: tr("אני יכולה לקחת אותך, אין בעיה.", "I can take you, no problem."),
+                isCommitted: true, speakerClusterID: namedID,
+                startTimestamp: now + 9, lastUpdateTimestamp: now + 9, confidence: 0.9
+            ),
+            TranscriptSegment(
+                id: UUID(), text: tr("עוד לא ברור לי אם", "I'm still not sure if"),
+                isCommitted: false, speakerClusterID: strangerID,
+                startTimestamp: now + 13, lastUpdateTimestamp: now + 13, confidence: nil
+            ),
+        ]
+        committedLineCount = 3
+        activeEngineKind = .whisperKit
+        listeningStartedAt = now
+        phase = .listening
+        return segments
+    }
+    #endif
+
     /// A saved speaker was renamed; lines already on screen follow.
     public func renameSpeakers(named oldName: String, to newName: String) {
         clusterer.renameClusters(named: oldName, to: newName)

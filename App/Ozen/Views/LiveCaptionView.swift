@@ -428,6 +428,7 @@ struct LiveCaptionView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
+                .accessibilityIdentifier("transcriptScroll")
             }
             .scrollIndicators(.hidden)
             .onUserScroll { scrolling in

@@ -1,0 +1,71 @@
+name: UI screenshots
+
+# Screenshots of the caption screen (see OzenUITests/ScreenshotFixtures),
+# run by hand rather than on every push: a Mac runner slot and a couple of
+# minutes, for something worth spending on only when a UI change is
+# actually being checked, not on every commit.
+on:
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Find an available iOS Simulator
+        id: sim
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j \
+            | jq -r '.devices | to_entries[] | .value[] | select(.name | test("iPhone")) | "\(.udid) \(.name)"' \
+            | head -n1)
+          if [ -z "$DEVICE" ]; then
+            echo "No available iPhone simulator found" >&2
+            xcrun simctl list devices available
+            exit 1
+          fi
+          UDID=${DEVICE%% *}
+          echo "Using simulator: ${DEVICE#* } ($UDID)"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Run the screenshot UI tests
+        run: |
+          set -o pipefail
+          mkdir -p /tmp/ozen-screenshots
+          xcodebuild test \
+            -project Ozen.xcodeproj \
+            -scheme OzenUITests \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            2>&1 | tee xcodebuild-raw.log | xcpretty
+
+      - name: Show why it failed
+        if: failure()
+        run: |
+          grep -nE "error:|failed|✘|recorded an issue|Fatal error|crashed|Terminating app|Restarting after unexpected exit|Test session results" xcodebuild-raw.log | head -80 || true
+          echo "----- last 80 lines -----"
+          tail -n 80 xcodebuild-raw.log
+
+      - name: List what was captured
+        if: always()
+        run: ls -la /tmp/ozen-screenshots || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-screenshots
+          path: /tmp/ozen-screenshots
+          if-no-files-found: warn
+
+      - name: Keep the raw test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots-xcodebuild-log
+          path: xcodebuild-raw.log

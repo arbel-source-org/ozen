@@ -114,6 +114,25 @@ targets:
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: YES
 
+  OzenUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    # Screenshots of the caption screen for a human (or an agent) to look
+    # at, since nothing in OzenTests actually renders a screen. Launches
+    # the real app with `-uiTestScreenshots <variant>`, which OzenApp reads
+    # in DEBUG builds only to seed a canned conversation
+    # (`ScreenshotFixtures`) instead of starting real capture. Not part of
+    # the `Ozen` scheme's own test run — routine pushes don't pay for this;
+    # it runs from `.github/workflows/ui-screenshots.yml`, by hand.
+    sources:
+      - path: App/OzenUITests
+    dependencies:
+      - target: Ozen
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   Ozen:
     build:
@@ -123,3 +142,12 @@ schemes:
     test:
       targets:
         - OzenTests
+
+  OzenUITests:
+    build:
+      targets:
+        Ozen: all
+        OzenUITests: [test]
+    test:
+      targets:
+        - OzenUITests

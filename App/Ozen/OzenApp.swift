@@ -11,6 +11,12 @@ struct OzenApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        #if DEBUG
+        if let variant = Self.screenshotVariant {
+            _viewModel = State(initialValue: ScreenshotFixtures.viewModel(variant: variant))
+            return
+        }
+        #endif
         let url = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ozen-settings.json")
@@ -26,6 +32,20 @@ struct OzenApp: App {
     private static var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
+
+    #if DEBUG
+    /// `-uiTestScreenshots <variant>`: the UI test target launches with
+    /// this to get a canned conversation instead of the real pipeline. See
+    /// `ScreenshotFixtures`. Debug builds only — a release build never
+    /// reads this argument at all, so it can't be triggered by mistake.
+    private static var screenshotVariant: ScreenshotFixtures.Variant? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let flagIndex = arguments.firstIndex(of: "-uiTestScreenshots"),
+              flagIndex + 1 < arguments.count
+        else { return nil }
+        return ScreenshotFixtures.Variant(rawValue: arguments[flagIndex + 1])
+    }
+    #endif
 
     var body: some Scene {
         WindowGroup {
