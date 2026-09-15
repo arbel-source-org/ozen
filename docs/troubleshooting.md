@@ -40,6 +40,13 @@ leave the phone.
 
 ## Things that are working as intended
 
+- **A card on the empty caption screen offers "much more accurate Hebrew
+  with a different model".** The phone was set up when the small, fast
+  model was the default, and that one gets most Hebrew words wrong. Tapping
+  the card switches to the recommended model and downloads it once, over
+  Wi-Fi (the status button shows the download); captions come back by
+  themselves when it has arrived. "Not now" (the x) puts the card away for
+  good; the model can still be picked later in Settings → Whisper model.
 - **The buttons at the bottom disappeared.** While captions run and follow
   the newest line, they slide away after a few seconds so they don't cover
   it. Touch the screen, or the small arrow at the bottom, to bring them back.
