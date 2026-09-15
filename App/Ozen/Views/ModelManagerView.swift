@@ -86,7 +86,7 @@ struct ModelManagerView: View {
         // Picking it would stop captions that work for a download with no
         // room to land; the row says why instead.
         let wontFit = !isInstalled && !isPartial && !isSelected
-            && StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.sizeMB, availableBytes: freeBytes) != nil
+            && StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.installMegabytes, availableBytes: freeBytes) != nil
 
         return Button {
             if !isInstalled, !isSelected, viewModel.isListening {
@@ -139,7 +139,7 @@ struct ModelManagerView: View {
                         if let size = sizesOnDisk[option.variant] {
                             Text(tr("· \(Self.format(bytes: size)) כבר ירדו", "· \(Self.format(bytes: size)) already downloaded"))
                         }
-                    } else if StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.sizeMB, availableBytes: freeBytes) != nil {
+                    } else if StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.installMegabytes, availableBytes: freeBytes) != nil {
                         Image(systemName: "externaldrive.badge.exclamationmark")
                         Text(tr("אין מספיק מקום בטלפון", "Not enough room on the phone"))
                     } else {

@@ -94,8 +94,9 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
     /// A full disk, with how much room to free when that can be worked out.
     private static func outOfSpace(variant: String, error: any Error) -> EngineAvailability {
-        let size = WhisperModelCatalog.option(for: variant)?.sizeMB
-        let missing = size.flatMap { StorageSpaceGate.shortfallMegabytes(downloadMegabytes: $0, availableBytes: DeviceStorage.availableBytes()) }
+        let option = WhisperModelCatalog.option(for: variant)
+        let size = option?.sizeMB
+        let missing = option.flatMap { StorageSpaceGate.shortfallMegabytes(downloadMegabytes: $0.installMegabytes, availableBytes: DeviceStorage.availableBytes()) }
         return .unavailable(EngineUnavailability(
             kind: .notEnoughStorage,
             detail: "\(variant): disk full: \(error)",

@@ -47,6 +47,16 @@ public struct WhisperModelOption: Sendable, Equatable, Identifiable {
 
     public var id: String { variant }
 
+    /// Room the install takes at its peak. A model from WhisperKit's hub
+    /// is its download; one from a release is compiled on the phone, and
+    /// the compiled bundles sit beside the packages until those are removed.
+    public var installMegabytes: Int {
+        switch source {
+        case .whisperKitHub: return sizeMB
+        case .ozenRelease: return sizeMB * 2
+        }
+    }
+
     /// Not an exact byte count — a human-scale label for the picker.
     public var sizeLabel: String {
         sizeMB >= 1000

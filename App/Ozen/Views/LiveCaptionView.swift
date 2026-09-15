@@ -669,7 +669,7 @@ struct LiveCaptionView: View {
     /// and the model list already says how much room it needs.
     private var betterModelOption: WhisperModelOption? {
         guard let option = WhisperModelCatalog.option(for: WhisperModelCatalog.recommendedVariant) else { return nil }
-        let fits = StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.sizeMB, availableBytes: DeviceStorage.availableBytes()) == nil
+        let fits = StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.installMegabytes, availableBytes: DeviceStorage.availableBytes()) == nil
         return fits ? option : nil
     }
 

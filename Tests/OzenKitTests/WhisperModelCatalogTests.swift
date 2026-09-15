@@ -55,6 +55,12 @@ struct WhisperModelCatalogTests {
         #expect(WhisperModelCatalog.variant(fromFolderName: "distil-whisper_distil-large-v3") == nil)
     }
 
+    @Test("a model compiled on the phone needs room for the packages and the compiled bundles together")
+    func installRoom() {
+        #expect(WhisperModelCatalog.option(for: "small")?.installMegabytes == 486)
+        #expect(WhisperModelCatalog.option(for: "ivrit-large-v3-turbo-8bit")?.installMegabytes == 819 * 2)
+    }
+
     @Test("size labels switch to GB at a thousand megabytes")
     func sizeLabels() {
         #expect(WhisperModelCatalog.option(for: "small")?.sizeLabel == "486 MB")

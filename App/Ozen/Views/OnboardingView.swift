@@ -223,7 +223,7 @@ struct OnboardingView: View {
     /// How much room to free before the chosen model fits, said up front
     /// rather than after the download has been started.
     private var modelStorageShortfall: Int? {
-        guard let size = WhisperModelCatalog.option(for: viewModel.settings.whisperModelVariant)?.sizeMB,
+        guard let size = WhisperModelCatalog.option(for: viewModel.settings.whisperModelVariant)?.installMegabytes,
               !WhisperModelStore().isInstalled(viewModel.settings.whisperModelVariant)
         else { return nil }
         return StorageSpaceGate.shortfallMegabytes(downloadMegabytes: size, availableBytes: DeviceStorage.availableBytes())
