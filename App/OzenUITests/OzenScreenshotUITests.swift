@@ -14,7 +14,8 @@ import XCTest
 /// under the buttons.
 @MainActor
 final class OzenScreenshotUITests: XCTestCase {
-    private static let outputDirectory = URL(fileURLWithPath: "/tmp/ozen-screenshots", isDirectory: true)
+    // Also opted out of @MainActor: the nonisolated setUp() below reads it.
+    private nonisolated static let outputDirectory = URL(fileURLWithPath: "/tmp/ozen-screenshots", isDirectory: true)
 
     // XCTestCase's class-level setUp isn't main-actor isolated, and this
     // one touches nothing UI-related, so it stays outside the class's own
