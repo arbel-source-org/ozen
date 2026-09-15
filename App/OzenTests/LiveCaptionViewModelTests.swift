@@ -64,12 +64,12 @@ struct LiveCaptionViewModelTests {
         let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: fakePipeline())
         await viewModel.start()
 
-        await viewModel.setWhisperModel(WhisperModelCatalog.recommendedVariant)
-        #expect(store.load().whisperModelVariant == WhisperModelCatalog.recommendedVariant)
+        await viewModel.setWhisperModel("small")
+        #expect(store.load().whisperModelVariant == "small")
         #expect(viewModel.stats.engineRestarts == 1)
 
         await viewModel.setEngine(.appleSpeech)
-        await viewModel.setWhisperModel("small")
+        await viewModel.setWhisperModel(WhisperModelCatalog.recommendedVariant)
         #expect(viewModel.stats.engineRestarts == 2)
     }
 
