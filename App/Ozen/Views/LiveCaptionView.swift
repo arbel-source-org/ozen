@@ -171,6 +171,13 @@ struct LiveCaptionView: View {
         // other child too. `.background()` sizes itself to the real
         // content instead, so only this one layer spills past it.
         .background(theme.background.ignoresSafeArea())
+        // Without this, the idle clock starts at this view's own init,
+        // which can run measurably before she can actually see the
+        // screen (permission prompts, a model still loading). If the
+        // first caption line only lands after that head start already
+        // used up the idle window, the bar could vanish the instant it
+        // appears, before she's had any chance to see or use it.
+        .onAppear { revealControls() }
         .simultaneousGesture(TapGesture().onEnded { revealControls() })
         .task(id: viewModel.isListening) {
             while !Task.isCancelled {
