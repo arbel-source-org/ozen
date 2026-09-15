@@ -1,0 +1,69 @@
+name: Verify model release
+
+# A model published as release assets (see scripts/model-release) is
+# rebuilt on a Mac the way the phone rebuilds it, compiled, and made to
+# transcribe five Hebrew clips. Run it by hand with the release's tag
+# before the catalog points a phone at that release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag holding the model's assets"
+        required: true
+      max_percent:
+        description: "Fail above this share of words wrong"
+        required: false
+        default: "60"
+
+jobs:
+  verify:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the release's assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: gh release download "$TAG" --dir assets
+
+      - name: Rebuild the model folder from the manifest
+        run: python3 scripts/model-release/manifest.py unpack assets model
+
+      - name: Compile the Core ML packages
+        run: |
+          for package in model/*.mlpackage; do
+            xcrun coremlcompiler compile "$package" model
+            rm -r "$package"
+          done
+          ls -la model
+
+      - name: Build WhisperKit's command line
+        run: |
+          git clone --depth 1 https://github.com/argmaxinc/WhisperKit.git /tmp/WhisperKit
+          cd /tmp/WhisperKit
+          swift build -c release --product whisperkit-cli
+
+      - name: Transcribe the Hebrew check clips
+        run: |
+          /tmp/WhisperKit/.build/release/whisperkit-cli transcribe \
+            --model-path "$PWD/model" \
+            --audio-folder scripts/model-release/clips \
+            --language he \
+            --skip-special-tokens \
+            --without-timestamps \
+            --chunking-strategy none \
+            --report --report-path report
+          ls report
+
+      - name: Score them
+        env:
+          MAX_PERCENT: ${{ inputs.max_percent }}
+        run: python3 scripts/model-release/wer.py report "$MAX_PERCENT"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: model-check-report
+          path: report
