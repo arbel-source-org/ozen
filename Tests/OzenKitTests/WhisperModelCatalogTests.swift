@@ -13,15 +13,15 @@ struct WhisperModelCatalogTests {
     @Test("a fresh install gets the recommended model, not Small")
     func freshInstallGetsRecommended() {
         #expect(WhisperModelCatalog.defaultVariant == WhisperModelCatalog.recommendedVariant)
-        #expect(AppSettings.default.whisperModelVariant == "large-v3-v20240930_626MB")
+        #expect(AppSettings.default.whisperModelVariant == "ivrit-large-v3-turbo-8bit")
     }
 
     @Test("the recommended model improves on the small ones, not on its equals or betters or on strangers")
     func recommendedImproves() {
-        for weaker in ["tiny", "base", "small_216MB", "small"] {
+        for weaker in ["tiny", "base", "small_216MB", "small", "medium", "large-v3-v20240930_626MB", "large-v3-v20240930"] {
             #expect(WhisperModelCatalog.recommendedImproves(on: weaker), "\(weaker)")
         }
-        for asGood in [WhisperModelCatalog.recommendedVariant, "large-v3-v20240930", "large-v3_947MB", "large-v3"] {
+        for asGood in [WhisperModelCatalog.recommendedVariant, "large-v3_947MB", "large-v3"] {
             #expect(!WhisperModelCatalog.recommendedImproves(on: asGood), "\(asGood)")
         }
         #expect(!WhisperModelCatalog.recommendedImproves(on: "no-such-model"))
@@ -48,6 +48,9 @@ struct WhisperModelCatalogTests {
     @Test("folder names round-trip")
     func folderNames() {
         #expect(WhisperModelCatalog.folderName(for: "small") == "openai_whisper-small")
+        #expect(WhisperModelCatalog.folderName(for: "ivrit-large-v3-turbo-8bit") == "ivrit-ai_whisper-large-v3-turbo_8bit")
+        #expect(WhisperModelCatalog.variant(fromFolderName: "ivrit-ai_whisper-large-v3-turbo_8bit") == "ivrit-large-v3-turbo-8bit")
+        #expect(WhisperModelCatalog.option(for: WhisperModelCatalog.recommendedVariant)?.source == .ozenRelease(tag: "model-ivrit-large-v3-turbo-8bit-1"))
         #expect(WhisperModelCatalog.variant(fromFolderName: "openai_whisper-large-v3-v20240930_626MB") == "large-v3-v20240930_626MB")
         #expect(WhisperModelCatalog.variant(fromFolderName: "distil-whisper_distil-large-v3") == nil)
     }

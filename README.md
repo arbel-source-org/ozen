@@ -33,6 +33,15 @@ things, for Hebrew conversation, entirely on-device.
   (Whisper via CoreML) and Apple's own on-device Speech framework — picked
   in Settings, since which one is actually better for Hebrew on a given
   device is an open, testable question rather than an assumption.
+- **A Whisper trained on Hebrew.** The recommended model is
+  [ivrit.ai's](https://huggingface.co/ivrit-ai/whisper-large-v3-turbo)
+  continued training of Whisper large-v3-turbo on about 5,000 hours of
+  Hebrew (Apache-2.0), converted to WhisperKit's format and compressed to
+  8 bits (819 MB). On 90 Hebrew test clips it got 6.6% of words wrong on
+  lecture speech and 21% on read sentences, against 9.7% and 31% for
+  OpenAI's Turbo and 27% and 48% for Small. Nobody publishes it in
+  WhisperKit's format, so it is downloaded from this repository's own
+  releases (`scripts/model-release/`) and compiled on the phone.
 - **Optional cloud captions** for when the phone's models are too slow or
   lose track of several people talking: each sentence goes to a speech
   model through [OpenRouter](https://openrouter.ai) with a key pasted into
@@ -57,12 +66,12 @@ things, for Hebrew conversation, entirely on-device.
   listening, paused, or exactly what failed and what to do about it
   (retry, open Settings, switch engine). First-launch model download is the
   slowest thing the app ever does and is never silent.
-- **Whisper model manager**: nine model sizes from 76 MB to 3 GB with
-  honest Hebrew-quality and speed ratings, download progress, disk usage,
-  and delete. "Turbo (compressed)" (626 MB) is the recommended pick and
-  what a fresh install gets; a phone set up when Small was the default
-  (60% of Hebrew words wrong on test recordings, against 39% for Turbo) is
-  offered the switch on the caption screen, one tap and one download.
+- **Whisper model manager**: ten models from 76 MB to 3 GB with honest
+  Hebrew-quality and speed ratings, download progress, disk usage, and
+  delete. "Turbo Hebrew (ivrit.ai)" is the recommended pick and what a
+  fresh install gets; a phone set up when Small or OpenAI's Turbo was the
+  default is offered the switch on the caption screen, one tap and one
+  download.
 - **Display built for reading all evening**: text size 20–64 pt (pinch
   the captions to change it), white-on-black / yellow-on-black /
   black-on-white, bold, speaker names on/off (shown once at the start of

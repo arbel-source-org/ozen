@@ -4,7 +4,7 @@
   wer.py <report-dir> [max-percent]
 
 <report-dir> holds one <clip>.json per clip, as `whisperkit-cli transcribe
---report` writes them. Prints each clip's words and the total, and exits
+--report` writes them, or one <clip>.txt holding what the command printed. Prints each clip's words and the total, and exits
 non-zero when the total is above max-percent (default 60): a model that
 loads but talks nonsense must not reach a phone.
 """
@@ -35,13 +35,23 @@ def edit_distance(a: list[str], b: list[str]) -> int:
     return previous[-1]
 
 
+HEBREW = re.compile(r"[\u05d0-\u05ea]")
+
+
 def report_text(report_dir: Path, clip: str) -> str:
-    for candidate in (report_dir / f"{clip}.json", report_dir / f"{Path(clip).stem}.json"):
+    """The clip's transcript: WhisperKit's JSON report if there is one, else
+    the last Hebrew line the command line printed for it."""
+    stem = Path(clip).stem
+    for candidate in (report_dir / f"{clip}.json", report_dir / f"{stem}.json"):
         if candidate.exists():
             data = json.loads(candidate.read_text())
             if isinstance(data, list):
                 return " ".join(d.get("text", "") for d in data)
             return data.get("text", "")
+    printed = report_dir / f"{stem}.txt"
+    if printed.exists():
+        lines = [l.strip() for l in printed.read_text().splitlines() if HEBREW.search(l)]
+        return lines[-1] if lines else ""
     raise SystemExit(f"no report for {clip} in {report_dir}")
 
 

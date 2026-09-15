@@ -47,15 +47,17 @@ jobs:
 
       - name: Transcribe the Hebrew check clips
         run: |
-          /tmp/WhisperKit/.build/release/whisperkit-cli transcribe \
-            --model-path "$PWD/model" \
-            --audio-folder scripts/model-release/clips \
-            --language he \
-            --skip-special-tokens \
-            --without-timestamps \
-            --chunking-strategy none \
-            --report --report-path report
-          ls report
+          mkdir -p report
+          for clip in scripts/model-release/clips/*.wav; do
+            /tmp/WhisperKit/.build/release/whisperkit-cli transcribe \
+              --model-path "$PWD/model" \
+              --audio-path "$clip" \
+              --language he \
+              --skip-special-tokens \
+              --without-timestamps \
+              --chunking-strategy none \
+              | tee "report/$(basename "$clip" .wav).txt"
+          done
 
       - name: Score them
         env:

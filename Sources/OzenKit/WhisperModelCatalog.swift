@@ -1,11 +1,12 @@
 import Foundation
 
 /// One Whisper model the app offers. Sizes were measured from the actual
-/// `argmaxinc/whisperkit-coreml` repository listing on 2026-09-13; Hebrew
-/// quality and speed are 1–5 ratings from Whisper's published per-language
-/// error rates and WhisperKit's iPhone benchmarks — a guide for choosing,
-/// not a promise. The variant string is what `WhisperKit.download` matches
-/// against folder names (`openai_whisper-<variant>`).
+/// `argmaxinc/whisperkit-coreml` repository listing on 2026-09-13 (and
+/// the Hebrew model's release assets); Hebrew quality and speed are 1–5
+/// ratings from measured Hebrew error rates and WhisperKit's iPhone
+/// benchmarks — a guide for choosing, not a promise. For a hub model the
+/// variant string is what `WhisperKit.download` matches against folder
+/// names (`openai_whisper-<variant>`).
 public struct WhisperModelOption: Sendable, Equatable, Identifiable {
     public let variant: String
     public let displayName: String
@@ -85,10 +86,18 @@ public enum WhisperModelCatalog {
             isRecommended: false
         ),
         WhisperModelOption(
+            variant: "ivrit-large-v3-turbo-8bit", displayName: "Turbo Hebrew (ivrit.ai)", sizeMB: 819,
+            hebrewQuality: 5, speed: 3,
+            note: "Turbo trained on 5,000 hours of Hebrew by ivrit.ai: a third fewer wrong words than Turbo on test recordings. As quick, a bigger download.",
+            isRecommended: true,
+            source: .ozenRelease(tag: "model-ivrit-large-v3-turbo-8bit-1"),
+            folderName: "ivrit-ai_whisper-large-v3-turbo_8bit"
+        ),
+        WhisperModelOption(
             variant: "large-v3-v20240930_626MB", displayName: "Turbo (compressed)", sizeMB: 626,
             hebrewQuality: 4, speed: 3,
             note: "Much better Hebrew than Small for about the same download. Slightly slower per update.",
-            isRecommended: true
+            isRecommended: false
         ),
         WhisperModelOption(
             variant: "large-v3-v20240930", displayName: "Turbo", sizeMB: 1619,
@@ -116,12 +125,13 @@ public enum WhisperModelCatalog {
         ),
     ]
 
-    /// What a fresh install gets. The recommended model: on Hebrew test
-    /// recordings Small got 60% of words wrong against 39% for Turbo, for
-    /// only a slightly bigger download, so nobody should end up on Small
-    /// without choosing it.
+    /// What a fresh install gets. The recommended model: on 90 Hebrew test
+    /// clips (September 2026) Small got 27% of words wrong on lecture
+    /// speech and 48% on read sentences, OpenAI's Turbo 10% and 31%, and
+    /// ivrit.ai's Hebrew-trained Turbo 7% and 21%, so nobody should end up
+    /// on a weaker one without choosing it.
     public static let defaultVariant = recommendedVariant
-    public static let recommendedVariant = "large-v3-v20240930_626MB"
+    public static let recommendedVariant = "ivrit-large-v3-turbo-8bit"
 
     public static func option(for variant: String) -> WhisperModelOption? {
         options.first { $0.variant == variant }
