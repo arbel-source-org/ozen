@@ -17,6 +17,9 @@ enum ScreenshotFixtures {
         case hebrewLargeText
         case hebrewLightTheme
         case english
+        /// Onboarding itself, never completed: the one screen every
+        /// install passes through before any of the others exist.
+        case onboarding
     }
 
     @MainActor
@@ -24,8 +27,13 @@ enum ScreenshotFixtures {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ozen-screenshot-\(UUID().uuidString).json")
         let viewModel = LiveCaptionViewModel(settingsStore: SettingsStore(fileURL: url))
-        viewModel.completeOnboarding()
 
+        guard variant != .onboarding else {
+            viewModel.setAppLanguage(.hebrew)
+            return viewModel
+        }
+
+        viewModel.completeOnboarding()
         let segments = viewModel.pipeline.seedForScreenshots()
         if let starred = segments.first {
             viewModel.toggleStar(starred)
@@ -43,6 +51,8 @@ enum ScreenshotFixtures {
             viewModel.display.theme = .light
         case .english:
             viewModel.setAppLanguage(.english)
+        case .onboarding:
+            break
         }
 
         return viewModel

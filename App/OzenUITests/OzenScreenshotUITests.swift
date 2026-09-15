@@ -59,4 +59,24 @@ final class OzenScreenshotUITests: XCTestCase {
     func testEnglish() throws {
         try run(variant: "english", name: "english")
     }
+
+    /// Onboarding at the largest accessibility text size iOS offers: a
+    /// real setting for exactly the low-vision reader this app is built
+    /// for, and a screen no earlier screenshot pass has ever looked at.
+    func testOnboardingAccessibilityText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "onboarding", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let screen = app.descendants(matching: .any)["onboardingScreen"]
+        XCTAssertTrue(screen.waitForExistence(timeout: 10), "onboarding: the first page never appeared")
+        capture(app, name: "onboarding-accessibility-text-page1-welcome")
+
+        let next = app.descendants(matching: .any)["onboardingNextButton"]
+        for (index, name) in ["page2-how-it-works", "page3-engine", "page4-microphone"].enumerated() {
+            XCTAssertTrue(next.waitForExistence(timeout: 10), "onboarding: no Next button on page \(index + 1)")
+            next.tap()
+            capture(app, name: "onboarding-accessibility-text-\(name)")
+        }
+    }
 }

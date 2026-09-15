@@ -35,6 +35,7 @@ struct OnboardingView: View {
                 .padding(.bottom, 16)
         }
         .background(Color(.systemBackground))
+        .accessibilityIdentifier("onboardingScreen")
     }
 
     // MARK: - Pages
@@ -198,6 +199,7 @@ struct OnboardingView: View {
                 }
                 .ozenGlassButton(prominent: true)
                 .controlSize(.large)
+                .accessibilityIdentifier("onboardingNextButton")
             } else {
                 Button {
                     finish()
