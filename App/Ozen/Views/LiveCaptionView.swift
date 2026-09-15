@@ -446,6 +446,14 @@ struct LiveCaptionView: View {
                 .padding(.top, 24)
                 .accessibilityIdentifier("transcriptScroll")
             }
+            // The 24pt above is just breathing room below the notch; on
+            // its own it only helps while resting at the top. Once there
+            // are more lines than fit on screen and the view is pinned to
+            // the newest one, the top line scrolls past that padding with
+            // nothing stopping it from landing under the status bar. This
+            // keeps the scrollable area itself clear of the safe area, at
+            // any scroll position.
+            .safeAreaPadding(.top)
             .scrollIndicators(.hidden)
             .onUserScroll { scrolling in
                 if scrolling {
