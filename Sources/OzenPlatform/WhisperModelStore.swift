@@ -1,3 +1,4 @@
+import CoreML
 import Foundation
 @preconcurrency import WhisperKit
 import OzenKit
@@ -105,19 +106,50 @@ public struct WhisperModelStore: Sendable {
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> URL {
         try prepareDownloadBase()
-        let folder = try await WhisperKit.download(
-            variant: variant,
-            downloadBase: downloadBase,
-            useBackgroundSession: false,
-            from: Self.repository,
-            progressCallback: { downloadProgress in
-                progress(downloadProgress.fractionCompleted)
-            }
-        )
+        let folder: URL
+        switch WhisperModelCatalog.option(for: variant)?.source ?? .whisperKitHub {
+        case .whisperKitHub:
+            folder = try await WhisperKit.download(
+                variant: variant,
+                downloadBase: downloadBase,
+                useBackgroundSession: false,
+                from: Self.repository,
+                progressCallback: { downloadProgress in
+                    progress(downloadProgress.fractionCompleted)
+                }
+            )
+        case .ozenRelease(let tag):
+            folder = self.folder(for: variant)
+            // Compiling at the end takes a moment of its own, so the
+            // download's share of the bar stops just short of full.
+            _ = try await ReleaseModelDownloader(fetcher: URLSessionReleaseFileFetcher())
+                .download(tag: tag, into: folder) { progress($0 * 0.95) }
+            try await Self.compilePackages(in: folder)
+            progress(1)
+        }
         // Only reached when every file arrived: this is the one moment the
         // folder is known to be whole.
         try? ModelFolderInspector.markComplete(folder)
         return folder
+    }
+
+    /// Turns each Core ML package a release download left into the
+    /// compiled bundle WhisperKit loads, and removes the package. Models
+    /// from WhisperKit's hub arrive compiled already; a release built on a
+    /// machine without Apple's compiler can't.
+    static func compilePackages(in folder: URL) async throws {
+        let fileManager = FileManager.default
+        let packages = try fileManager.contentsOfDirectory(atPath: folder.path)
+            .filter { $0.hasSuffix(".mlpackage") }
+            .sorted()
+        for name in packages {
+            let package = folder.appendingPathComponent(name, isDirectory: true)
+            let compiled = try await MLModel.compileModel(at: package)
+            let target = folder.appendingPathComponent(String(name.dropLast(".mlpackage".count)) + ".mlmodelc", isDirectory: true)
+            try? fileManager.removeItem(at: target)
+            try fileManager.moveItem(at: compiled, to: target)
+            try fileManager.removeItem(at: package)
+        }
     }
 
     private func prepareDownloadBase() throws {

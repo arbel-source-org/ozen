@@ -16,6 +16,33 @@ public struct WhisperModelOption: Sendable, Equatable, Identifiable {
     public let speed: Int
     public let note: String
     public let isRecommended: Bool
+    /// Where the files come from; see `WhisperModelSource`.
+    public let source: WhisperModelSource
+    /// The model's folder name on disk. WhisperKit's hub names folders
+    /// `openai_whisper-<variant>`; a model from elsewhere says its own.
+    public let folderName: String
+
+    public init(
+        variant: String,
+        displayName: String,
+        sizeMB: Int,
+        hebrewQuality: Int,
+        speed: Int,
+        note: String,
+        isRecommended: Bool,
+        source: WhisperModelSource = .whisperKitHub,
+        folderName: String? = nil
+    ) {
+        self.variant = variant
+        self.displayName = displayName
+        self.sizeMB = sizeMB
+        self.hebrewQuality = hebrewQuality
+        self.speed = speed
+        self.note = note
+        self.isRecommended = isRecommended
+        self.source = source
+        self.folderName = folderName ?? "openai_whisper-\(variant)"
+    }
 
     public var id: String { variant }
 
@@ -108,14 +135,16 @@ public enum WhisperModelCatalog {
         return recommended.hebrewQuality > current.hebrewQuality
     }
 
-    /// The on-disk folder name WhisperKit's model repository uses for a
-    /// variant. Kept here (next to the variant list) so the model store
-    /// and the download code can't drift apart on naming.
+    /// The on-disk folder name of a variant: the option's own, or the name
+    /// WhisperKit's model repository uses for one the catalog doesn't
+    /// list. Kept here (next to the variant list) so the model store and
+    /// the download code can't drift apart on naming.
     public static func folderName(for variant: String) -> String {
-        "openai_whisper-\(variant)"
+        option(for: variant)?.folderName ?? "openai_whisper-\(variant)"
     }
 
     public static func variant(fromFolderName name: String) -> String? {
+        if let listed = options.first(where: { $0.folderName == name }) { return listed.variant }
         let prefix = "openai_whisper-"
         guard name.hasPrefix(prefix) else { return nil }
         return String(name.dropFirst(prefix.count))
