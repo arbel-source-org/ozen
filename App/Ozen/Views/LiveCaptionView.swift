@@ -118,6 +118,21 @@ struct LiveCaptionView: View {
         controlsHidden ? 56 : controlBarHeight + 16
     }
 
+    /// A conversation with more lines than fit on screen, pinned to the
+    /// newest one, always has an oldest visible line scrolling out past
+    /// the top edge — the same as any chat app with no separate top bar.
+    /// At the largest text size that line can reach the status bar before
+    /// it's gone, so this fades it to the background colour first rather
+    /// than letting it collide with the clock and battery icons.
+    private var topScrollFade: some View {
+        LinearGradient(colors: [theme.background, theme.background.opacity(0)], startPoint: .top, endPoint: .bottom)
+            .frame(height: 90)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
     /// The screen itself: captions, banners and the control bar.
     private var screen: some View {
         ZStack(alignment: .bottom) {
@@ -148,13 +163,13 @@ struct LiveCaptionView: View {
                 showControlsButton
                     .transition(.opacity)
             }
+
+            topScrollFade
         }
         // A modifier, not a ZStack layer: a plain sibling that ignores the
         // safe area expands the whole ZStack's proposed size for every
-        // other child too, which let the transcript scroll its top line up
-        // behind the status bar at large text sizes. `.background()` sizes
-        // itself to the real content instead, so only this layer spills
-        // past the safe area.
+        // other child too. `.background()` sizes itself to the real
+        // content instead, so only this one layer spills past it.
         .background(theme.background.ignoresSafeArea())
         .simultaneousGesture(TapGesture().onEnded { revealControls() })
         .task(id: viewModel.isListening) {
@@ -446,14 +461,6 @@ struct LiveCaptionView: View {
                 .padding(.top, 24)
                 .accessibilityIdentifier("transcriptScroll")
             }
-            // The 24pt above is just breathing room below the notch; on
-            // its own it only helps while resting at the top. Once there
-            // are more lines than fit on screen and the view is pinned to
-            // the newest one, the top line scrolls past that padding with
-            // nothing stopping it from landing under the status bar. This
-            // keeps the scrollable area itself clear of the safe area, at
-            // any scroll position.
-            .safeAreaPadding(.top)
             .scrollIndicators(.hidden)
             .onUserScroll { scrolling in
                 if scrolling {
