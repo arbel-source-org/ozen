@@ -121,8 +121,6 @@ struct LiveCaptionView: View {
     /// The screen itself: captions, banners and the control bar.
     private var screen: some View {
         ZStack(alignment: .bottom) {
-            theme.background.ignoresSafeArea()
-
             transcript
                 .simultaneousGesture(pinchToResize)
 
@@ -151,6 +149,13 @@ struct LiveCaptionView: View {
                     .transition(.opacity)
             }
         }
+        // A modifier, not a ZStack layer: a plain sibling that ignores the
+        // safe area expands the whole ZStack's proposed size for every
+        // other child too, which let the transcript scroll its top line up
+        // behind the status bar at large text sizes. `.background()` sizes
+        // itself to the real content instead, so only this layer spills
+        // past the safe area.
+        .background(theme.background.ignoresSafeArea())
         .simultaneousGesture(TapGesture().onEnded { revealControls() })
         .task(id: viewModel.isListening) {
             while !Task.isCancelled {
