@@ -90,6 +90,16 @@ struct ModelManagerView: View {
             : AnyLayout(HStackLayout(spacing: 16))
     }
 
+    // Same shape of overlap as the ratings above: at the largest
+    // accessibility text size, the size label, icon and status text each
+    // need more width than a plain HStack has to give them, so their
+    // wrapped lines interleaved instead of stacking cleanly.
+    private var statusLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 6))
+    }
+
     private func row(for option: WhisperModelOption) -> some View {
         let isSelected = option.variant == viewModel.settings.whisperModelVariant
         let isInstalled = installed.contains(option.variant)
@@ -135,7 +145,7 @@ struct ModelManagerView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                HStack(spacing: 6) {
+                statusLayout {
                     Text(option.sizeLabel)
                     if let progress = downloadProgress {
                         Text(tr("· מוריד \(Int((progress * 100).rounded()))%", "· downloading \(Int((progress * 100).rounded()))%"))
