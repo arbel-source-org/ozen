@@ -183,19 +183,33 @@ final class OzenScreenshotUITests: XCTestCase {
         let settingsScreen = app.descendants(matching: .any)["settingsScreen"]
         XCTAssertTrue(settingsScreen.waitForExistence(timeout: 10), "secondary screens: settings never appeared")
 
+        // Checked in the same top-to-bottom order the Form declares its
+        // sections, and never re-fetched from the top in between: at this
+        // text size a single Form row can be most of a screen tall, so a
+        // row several sections down doesn't exist in the accessibility
+        // tree at all -- not merely off-screen -- until scrolled near it
+        // (see scrollDownUntilVisible). Going in declaration order means
+        // every scroll only ever needs to move forward.
         openSettingsRow(app, rowIdentifier: "modelManagerRow", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
         openSettingsRow(app, rowIdentifier: "keywordAlertsRow", screenIdentifier: "keywordAlertsScreen", captureName: "keyword-alerts-accessibility-text")
         openSettingsRow(app, rowIdentifier: "soundAlertsRow", screenIdentifier: "soundAlertsScreen", captureName: "sound-alerts-accessibility-text")
         openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
-        openSettingsRow(app, rowIdentifier: "diagnosticsRow", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
 
-        let historyRow = app.descendants(matching: .any)["historyRow"]
-        XCTAssertTrue(historyRow.waitForExistence(timeout: 10), "secondary screens: the history row never appeared")
+        let addSpeaker = scrollDownUntilVisible(app, identifier: "addSpeakerButton")
+        XCTAssertTrue(addSpeaker.exists, "secondary screens: the add-speaker button never appeared")
+        addSpeaker.tap()
+        let enrollmentScreen = app.descendants(matching: .any)["speakerEnrollmentScreen"]
+        XCTAssertTrue(enrollmentScreen.waitForExistence(timeout: 10), "secondary screens: speaker enrollment never appeared")
+        capture(app, name: "speaker-enrollment-accessibility-text")
+        app.buttons["ביטול"].tap()
+
+        let historyRow = scrollDownUntilVisible(app, identifier: "historyRow")
+        XCTAssertTrue(historyRow.exists, "secondary screens: the history row never appeared")
         historyRow.tap()
         let historyScreen = app.descendants(matching: .any)["historyScreen"]
         XCTAssertTrue(historyScreen.waitForExistence(timeout: 10), "secondary screens: history never appeared")
-        let starredRow = app.descendants(matching: .any)["starredLinesRow"]
-        XCTAssertTrue(starredRow.waitForExistence(timeout: 10), "secondary screens: the seeded conversation never reached history")
+        let starredRow = scrollDownUntilVisible(app, identifier: "starredLinesRow")
+        XCTAssertTrue(starredRow.exists, "secondary screens: the seeded conversation never reached history")
         capture(app, name: "history-accessibility-text")
         starredRow.tap()
         let starredScreen = app.descendants(matching: .any)["starredLinesScreen"]
@@ -208,13 +222,7 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(backToSettingsFromHistory.waitForExistence(timeout: 10), "secondary screens: no way back from history")
         backToSettingsFromHistory.tap()
 
-        let addSpeaker = app.descendants(matching: .any)["addSpeakerButton"]
-        XCTAssertTrue(addSpeaker.waitForExistence(timeout: 10), "secondary screens: the add-speaker button never appeared")
-        addSpeaker.tap()
-        let enrollmentScreen = app.descendants(matching: .any)["speakerEnrollmentScreen"]
-        XCTAssertTrue(enrollmentScreen.waitForExistence(timeout: 10), "secondary screens: speaker enrollment never appeared")
-        capture(app, name: "speaker-enrollment-accessibility-text")
-        app.buttons["ביטול"].tap()
+        openSettingsRow(app, rowIdentifier: "diagnosticsRow", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
 
         app.buttons["סגור"].firstMatch.tap()
 
@@ -226,16 +234,29 @@ final class OzenScreenshotUITests: XCTestCase {
         capture(app, name: "mic-picker-accessibility-text")
     }
 
-    /// Taps a Settings row by its own accessibility identifier. Two earlier
-    /// attempts matched by visible label text instead ("CONTAINS" grabbed
-    /// the Whisper engine picker's option summary, which also starts with
-    /// the Hebrew word for "model"; "BEGINSWITH" then still didn't match
-    /// the row's own composed label, which reads the value before the
-    /// title) -- an explicit identifier on the row itself sidesteps both
-    /// the ambiguity and Hebrew text-matching fragility in general.
+    /// Settings' Form renders lazily like any List: a row several sections
+    /// below the current scroll position isn't merely off-screen, it
+    /// doesn't exist in the accessibility tree at all until scrolled near
+    /// it. Three earlier fixes chased text-matching and element-merging
+    /// red herrings on the very first row checked here before a look at
+    /// `settings-accessibility-text-page1.png` showed the real cause: at
+    /// this text size, a single picker option already fills most of the
+    /// screen, so the actual row is nowhere close to visible yet.
+    private func scrollDownUntilVisible(_ app: XCUIApplication, identifier: String, maxSwipes: Int = 15) -> XCUIElement {
+        let element = app.descendants(matching: .any)[identifier]
+        var attempts = 0
+        while !(element.exists && element.isHittable), attempts < maxSwipes {
+            app.swipeUp()
+            attempts += 1
+        }
+        return element
+    }
+
+    /// Taps a Settings row by its own accessibility identifier, scrolling
+    /// down until it exists first (see `scrollDownUntilVisible`).
     private func openSettingsRow(_ app: XCUIApplication, rowIdentifier: String, screenIdentifier: String, captureName: String) {
-        let row = app.descendants(matching: .any)[rowIdentifier]
-        XCTAssertTrue(row.waitForExistence(timeout: 10), "secondary screens: \(rowIdentifier) never appeared")
+        let row = scrollDownUntilVisible(app, identifier: rowIdentifier)
+        XCTAssertTrue(row.exists, "secondary screens: \(rowIdentifier) never appeared")
         row.tap()
         let screen = app.descendants(matching: .any)[screenIdentifier]
         XCTAssertTrue(screen.waitForExistence(timeout: 10), "secondary screens: \(screenIdentifier) never appeared")
