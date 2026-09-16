@@ -27,6 +27,17 @@ struct SettingsView: View {
     @State private var cloudKeySaveFailed = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    // A slider's own label ("רגישות הפרדת דוברים" — "Speaker separation
+    // sensitivity" is three words) can wrap at the largest accessibility
+    // text size; a plain HStack then let its trailing value or extreme
+    // label interleave with the wrapped line instead of sitting below it.
+    private var sliderLabelLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout())
+    }
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -270,9 +281,9 @@ struct SettingsView: View {
     private var displaySection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
+                sliderLabelLayout {
                     Text(tr("גודל טקסט", "Text size"))
-                    Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text("\(Int(viewModel.display.fontSize))")
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
@@ -440,9 +451,9 @@ struct SettingsView: View {
     private var speechSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
+                sliderLabelLayout {
                     Text(tr("מהירות דיבור", "Speech rate"))
-                    Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(String(format: "%.2f", viewModel.speechRate))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
@@ -450,9 +461,9 @@ struct SettingsView: View {
                 Slider(value: $viewModel.speechRate, in: 0.2...0.7, step: 0.05)
                     .accessibilityLabel(tr("מהירות דיבור", "Speech rate"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speechRate))
-                HStack {
+                sliderLabelLayout {
                     Text(tr("לאט", "Slow"))
-                    Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(tr("מהר", "Fast"))
                 }
                 .font(.caption)
@@ -562,9 +573,9 @@ struct SettingsView: View {
             Toggle(tr("רטט כשמישהו מתחיל לדבר אחרי שקט", "Vibrate when someone starts talking after silence"), isOn: $viewModel.hapticOnSpeechResume)
 
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
+                sliderLabelLayout {
                     Text(tr("רגישות הפרדת דוברים", "Speaker separation sensitivity"))
-                    Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
@@ -572,9 +583,9 @@ struct SettingsView: View {
                 Slider(value: $viewModel.speakerSimilarityThreshold, in: 0.2...0.95, step: 0.01)
                     .accessibilityLabel(tr("רגישות הפרדת דוברים", "Speaker separation sensitivity"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
-                HStack {
+                sliderLabelLayout {
                     Text(tr("מאחד יותר", "More merging"))
-                    Spacer()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(tr("מפריד יותר", "More separating"))
                 }
                 .font(.caption)
