@@ -18,21 +18,32 @@ struct OnboardingView: View {
     private static let pageCount = 6
 
     var body: some View {
-        VStack(spacing: 0) {
-            TabView(selection: $page) {
-                welcomePage.tag(0)
-                howItWorksPage.tag(1)
-                enginePage.tag(2)
-                microphonePage.tag(3)
-                namePage.tag(4)
-                readyPage.tag(5)
+        TabView(selection: $page) {
+            welcomePage.tag(0)
+            howItWorksPage.tag(1)
+            enginePage.tag(2)
+            microphonePage.tag(3)
+            namePage.tag(4)
+            readyPage.tag(5)
+        }
+        .tabViewStyle(.page(indexDisplayMode: .always))
+        .indexViewStyle(.page(backgroundDisplayMode: .always))
+        // A plain VStack sibling let the footer's own height compete with
+        // the TabView for room at the largest accessibility text sizes:
+        // the page dots (drawn inside the TabView's own bounds, not
+        // reserved space) ended up overlapping page text, and on some
+        // pages the footer was pushed out of the accessible hierarchy
+        // entirely. A safe-area inset instead reserves real space for
+        // both, unconditionally, and every page's own ScrollView already
+        // respects that safe area on its own.
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                Color.clear.frame(height: 24)
+                footer
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 16)
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .indexViewStyle(.page(backgroundDisplayMode: .always))
-
-            footer
-                .padding(.horizontal, 24)
-                .padding(.bottom, 16)
+            .background(Color(.systemBackground))
         }
         .background(Color(.systemBackground))
         .accessibilityIdentifier("onboardingScreen")
