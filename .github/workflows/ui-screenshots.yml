@@ -6,6 +6,14 @@ name: UI screenshots
 # actually being checked, not on every commit.
 on:
   workflow_dispatch:
+    inputs:
+      device_family:
+        description: Simulator device family to run against
+        type: choice
+        default: iPhone
+        options:
+          - iPhone
+          - iPad
 
 jobs:
   screenshots:
@@ -23,11 +31,12 @@ jobs:
       - name: Find an available iOS Simulator
         id: sim
         run: |
+          FAMILY="${{ inputs.device_family || 'iPhone' }}"
           DEVICE=$(xcrun simctl list devices available -j \
-            | jq -r '.devices | to_entries[] | .value[] | select(.name | test("iPhone")) | "\(.udid) \(.name)"' \
+            | jq -r --arg family "$FAMILY" '.devices | to_entries[] | .value[] | select(.name | test($family)) | "\(.udid) \(.name)"' \
             | head -n1)
           if [ -z "$DEVICE" ]; then
-            echo "No available iPhone simulator found" >&2
+            echo "No available $FAMILY simulator found" >&2
             xcrun simctl list devices available
             exit 1
           fi
