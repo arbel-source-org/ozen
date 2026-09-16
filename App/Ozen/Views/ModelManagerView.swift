@@ -7,6 +7,7 @@ import OzenPlatform
 /// screen's status control, so leaving this screen doesn't hide it.
 struct ModelManagerView: View {
     @Bindable var viewModel: LiveCaptionViewModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var installed: Set<String> = []
     /// Downloads that were cut off: files on disk, not yet a model.
     @State private var partial: Set<String> = []
@@ -79,6 +80,16 @@ struct ModelManagerView: View {
         }
     }
 
+    // The Hebrew rating's own label wraps onto two lines at the largest
+    // accessibility text size, and a plain HStack let the speed rating's
+    // dots and label render into that same vertical space, overlapping
+    // the wrapped word instead of sitting below it.
+    private var ratingsLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(spacing: 16))
+    }
+
     private func row(for option: WhisperModelOption) -> some View {
         let isSelected = option.variant == viewModel.settings.whisperModelVariant
         let isInstalled = installed.contains(option.variant)
@@ -114,7 +125,7 @@ struct ModelManagerView: View {
                     }
                 }
 
-                HStack(spacing: 16) {
+                ratingsLayout {
                     RatingDots(label: tr("עברית", "Hebrew"), value: option.hebrewQuality)
                     RatingDots(label: tr("מהירות", "Speed"), value: option.speed)
                 }
