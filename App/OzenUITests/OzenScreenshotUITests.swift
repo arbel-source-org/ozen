@@ -194,7 +194,7 @@ final class OzenScreenshotUITests: XCTestCase {
         historyRow.tap()
         let historyScreen = app.descendants(matching: .any)["historyScreen"]
         XCTAssertTrue(historyScreen.waitForExistence(timeout: 10), "secondary screens: history never appeared")
-        let starredRow = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "השורות המסומנות")).firstMatch
+        let starredRow = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "השורות המסומנות")).firstMatch
         XCTAssertTrue(starredRow.waitForExistence(timeout: 10), "secondary screens: the seeded conversation never reached history")
         capture(app, name: "history-accessibility-text")
         starredRow.tap()
@@ -234,7 +234,12 @@ final class OzenScreenshotUITests: XCTestCase {
     /// for the same reason) -- an unproven assumption here isn't worth an
     /// extra CI round trip to find out the hard way.
     private func openSettingsRow(_ app: XCUIApplication, labelContains: String, screenIdentifier: String, captureName: String) {
-        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", labelContains)).firstMatch
+        // BEGINSWITH, not CONTAINS: the engine picker's Whisper option
+        // summary starts with the Hebrew word for "model" too ("מודל קוד
+        // פתוח..."), and a CONTAINS match grabbed that row instead of the
+        // actual "מודל" navigation link -- a composed row's own label
+        // always leads with its own title, so anchoring there is unique.
+        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", labelContains)).firstMatch
         XCTAssertTrue(row.waitForExistence(timeout: 10), "secondary screens: the \(labelContains) row never appeared")
         row.tap()
         let screen = app.descendants(matching: .any)[screenIdentifier]
