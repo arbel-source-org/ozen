@@ -28,6 +28,12 @@ struct OnboardingView: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
         .indexViewStyle(.page(backgroundDisplayMode: .always))
+        // Set here, before the safe-area inset composes in the footer:
+        // applied after that instead, this same identifier turned up on
+        // every descendant it touched (the page indicator, Skip, Next),
+        // silently overwriting each one's own -- "onboardingNextButton"
+        // was never missing, it just read back as "onboardingScreen".
+        .accessibilityIdentifier("onboardingScreen")
         // A plain VStack sibling let the footer's own height compete with
         // the TabView for room at the largest accessibility text sizes:
         // the page dots (drawn inside the TabView's own bounds, not
@@ -46,7 +52,6 @@ struct OnboardingView: View {
             .background(Color(.systemBackground))
         }
         .background(Color(.systemBackground))
-        .accessibilityIdentifier("onboardingScreen")
     }
 
     // MARK: - Pages

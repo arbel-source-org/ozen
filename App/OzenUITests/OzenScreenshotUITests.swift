@@ -73,20 +73,8 @@ final class OzenScreenshotUITests: XCTestCase {
         capture(app, name: "onboarding-accessibility-text-page1-welcome")
 
         let next = app.descendants(matching: .any)["onboardingNextButton"]
-        if !next.waitForExistence(timeout: 10) {
-            // Two fixes in a row for this didn't change the outcome at
-            // all, which means the actual cause is still unknown: dump
-            // the real accessibility tree once instead of guessing again.
-            print("=== OZEN DEBUG: onboardingNextButton not found ===")
-            print(app.debugDescription)
-            print("=== END OZEN DEBUG ===")
-        }
-        XCTAssertTrue(next.exists, "onboarding: no Next button on page 1")
-
         for (index, name) in ["page2-how-it-works", "page3-engine", "page4-microphone"].enumerated() {
-            if index > 0 {
-                XCTAssertTrue(next.waitForExistence(timeout: 10), "onboarding: no Next button on page \(index + 1)")
-            }
+            XCTAssertTrue(next.waitForExistence(timeout: 10), "onboarding: no Next button on page \(index + 1)")
             next.tap()
             capture(app, name: "onboarding-accessibility-text-\(name)")
         }
