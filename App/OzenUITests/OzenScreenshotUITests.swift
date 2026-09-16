@@ -225,11 +225,23 @@ final class OzenScreenshotUITests: XCTestCase {
         openSettingsRow(app, rowIdentifier: "diagnosticsRow", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
 
         app.buttons["סגור"].firstMatch.tap()
-        // Settings' dismiss animation can still be finishing when the next
-        // element is already found by identifier -- tapping mid-animation
-        // is what produced an intermittent "kAXErrorCannotComplete
-        // performing AXAction kAXScrollToVisibleAction" here.
-        Thread.sleep(forTimeInterval: 0.5)
+
+        // A settle delay here didn't help, and the failure this produced
+        // was deterministic, not flaky: the same "kAXErrorCannotComplete
+        // performing AXAction kAXScrollToVisibleAction" at the same
+        // coordinates every run. By now this test has spent minutes
+        // navigating eight screens, well past ControlBarAutoHide's own
+        // timeout -- the control bar has almost certainly slid off-screen
+        // by then (see LiveCaptionView's `hidingControlBar`, which moves
+        // it with a plain offset, not a real scroll), so there is nothing
+        // for the system's own "scroll to visible" to scroll. Revealing
+        // the bar first, the same way `run(variant:name:)` above waits
+        // for it to auto-hide in the first place, avoids tapping an
+        // element that still exists but has been offset out of view.
+        let revealControls = app.descendants(matching: .any)["showControlsButton"]
+        if revealControls.waitForExistence(timeout: 2) {
+            revealControls.tap()
+        }
 
         let micPickerButton = app.descendants(matching: .any)["micPickerButton"]
         XCTAssertTrue(micPickerButton.waitForExistence(timeout: 10), "secondary screens: the mic picker button never appeared")
