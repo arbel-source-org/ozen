@@ -117,6 +117,8 @@ struct TypeToSpeakView: View {
                 showingBigText = true
             } label: {
                 Label(tr("מסך מלא באותיות גדולות", "Full screen, big letters"), systemImage: "textformat.size.larger")
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
                     .frame(maxWidth: .infinity)
             }
             .ozenGlassButton()
