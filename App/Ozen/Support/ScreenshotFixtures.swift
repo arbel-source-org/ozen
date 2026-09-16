@@ -52,6 +52,8 @@ enum ScreenshotFixtures {
             )
             _ = try? viewModel.historyStore.save(record)
         }
+        viewModel.addKeywordAlert(phrase: tr("שני כדורים", "two pills"))
+        viewModel.addVocabularyTerm(tr("דנה אברהמי", "Dana Abrahami"))
 
         switch variant {
         case .hebrewDefault:

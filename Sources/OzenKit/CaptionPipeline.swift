@@ -727,6 +727,13 @@ public final class CaptionPipeline {
         activeEngineKind = .whisperKit
         listeningStartedAt = now
         phase = .listening
+        keywordHits = [
+            KeywordHit(
+                segmentID: segments[1].id,
+                match: KeywordMatch(alertID: UUID(), phrase: tr("תרופות", "medications"), matchedText: tr("שני כדורים", "two pills"), wordIndex: 0),
+                timestamp: now + 4
+            )
+        ]
         return segments
     }
     #endif
