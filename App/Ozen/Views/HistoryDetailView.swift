@@ -315,7 +315,18 @@ private struct NumberLineLabel: View {
 /// Who said how much, at the top of a saved conversation.
 private struct ConversationSummarySection: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let stats: ConversationStats
+
+    // A speaker's name is free text from enrollment, with no length limit,
+    // so at the largest accessibility text size it can wrap; a plain
+    // HStack then let the word-count/percentage text interleave with the
+    // wrapped name instead of sitting below it.
+    private var speakerStatLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout())
+    }
 
     var body: some View {
         Section {
@@ -324,10 +335,10 @@ private struct ConversationSummarySection: View {
 
             ForEach(stats.speakers) { speaker in
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack {
+                    speakerStatLayout {
                         Text(speaker.name)
                             .fontWeight(.semibold)
-                        Spacer()
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         Text("\(ConversationStats.wordsText(speaker.words)) · \(Int((stats.wordFraction(of: speaker) * 100).rounded()))%")
                             .font(.caption)
                             .foregroundStyle(.secondary)
