@@ -129,7 +129,7 @@ private struct InputRow: View {
     let isSelected: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             Image(systemName: MicPickerView.icon(for: input.portType))
                 .font(.title3)
                 .frame(width: 28)
