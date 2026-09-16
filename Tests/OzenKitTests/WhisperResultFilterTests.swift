@@ -35,6 +35,21 @@ struct WhisperResultFilterTests {
         #expect(filter.accepts(segment("תודה רבה על העזרה עם הקניות")))
     }
 
+    @Test("YouTube-inherited outro lines and the model's own uncertainty tag are dropped")
+    func outroAndForeignLanguageTagDropped() {
+        #expect(!filter.accepts(segment("(speaking in a foreign language)")))
+        #expect(!filter.accepts(segment("[Speaking in a foreign language]")))
+        #expect(!filter.accepts(segment("Please subscribe")))
+        #expect(!filter.accepts(segment("Don't forget to subscribe")))
+        #expect(!filter.accepts(segment("Like and subscribe")))
+    }
+
+    @Test("a clearly heard farewell is kept; one the model barely heard is dropped as invented")
+    func farewellAmbiguousLikeThanks() {
+        #expect(filter.accepts(segment("see you next time", noSpeech: 0.1)))
+        #expect(!filter.accepts(segment("see you next time", noSpeech: 0.5, logprob: -0.95)))
+    }
+
     @Test("high no-speech probability only rejects when the model was also unsure of its tokens")
     func noSpeechNeedsLowLogprobToo() {
         #expect(!filter.accepts(segment("משהו", noSpeech: 0.9, logprob: -1.5)))

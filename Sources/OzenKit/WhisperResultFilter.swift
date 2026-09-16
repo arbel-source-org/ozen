@@ -84,10 +84,20 @@ public struct WhisperResultFilter: Sendable, Equatable {
         "thanks for watching", "thank you for watching",
         "subtitles by the amara.org community", "subtitles by", "you",
         "music", "applause", "laughter",
+        // Inherited from Whisper's YouTube-heavy training data: an outro
+        // nobody in a real conversation says, and the model's own
+        // uncertainty tag for audio it can't place (brackets and
+        // parentheses are already gone by the time this is compared).
+        "speaking in a foreign language", "please subscribe",
+        "don't forget to subscribe", "like and subscribe",
     ]
 
     public static let defaultAmbiguousHallucinations: Set<String> = [
         "תודה", "תודה רבה", "תודה לכם", "thank you",
+        // Unlike the subscribe lines above, a real farewell could
+        // plausibly sound like this, so it only drops when the model was
+        // also unsure of itself.
+        "see you next time", "see you in the next video",
     ]
 
     public init(
