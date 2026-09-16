@@ -269,6 +269,14 @@ private struct OnboardingPage<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 
+    // A fixed height only ever hid one line of the largest accessibility
+    // text sizes; a longer page (namePage, with its extra sentence and
+    // NameAlertForm) still had its last line's ascenders poke out above
+    // the fade, straight into the dots. Tying both to the same text style
+    // as the body content keeps the fade a full line tall at every size.
+    @ScaledMetric(relativeTo: .title3) private var bottomFade: CGFloat = 40
+    @ScaledMetric(relativeTo: .title3) private var bottomPadding: CGFloat = 48
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
@@ -282,7 +290,7 @@ private struct OnboardingPage<Content: View>: View {
             // the same fix that worked for the caption screen's status
             // bar collision.
             LinearGradient(colors: [Color(.systemBackground).opacity(0), Color(.systemBackground)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 40)
+                .frame(height: bottomFade)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         }
@@ -309,7 +317,7 @@ private struct OnboardingPage<Content: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 28)
-        .padding(.bottom, 48)
+        .padding(.bottom, bottomPadding)
     }
 }
 
