@@ -67,7 +67,6 @@ final class OzenScreenshotUITests: XCTestCase {
     /// accessibility text on top of that, this is exactly where the
     /// control bar or a caption row would clip or overlap first.
     func testHebrewLandscapeAccessibilityText() throws {
-        XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
 
         let app = XCUIApplication()
@@ -76,6 +75,19 @@ final class OzenScreenshotUITests: XCTestCase {
 
         let transcript = app.descendants(matching: .any)["transcriptScroll"]
         XCTAssertTrue(transcript.waitForExistence(timeout: 10), "landscape: the transcript never appeared")
+
+        // Rotating before launch doesn't reliably apply -- the simulator
+        // can still hand the freshly-launched app a portrait window,
+        // stretched and rotated to fill a landscape-shaped screenshot
+        // rather than actually laid out for it. Rotating a running app and
+        // waiting for its window to actually resize is what makes the
+        // orientation change real before capturing it.
+        let window = app.windows.firstMatch
+        let portraitWidth = window.frame.width
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let rotated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "frame.size.width > %f", portraitWidth), object: window)
+        XCTAssertEqual(XCTWaiter().wait(for: [rotated], timeout: 10), .completed, "landscape: the window never actually rotated")
+
         capture(app, name: "hebrew-landscape-accessibility-text-controls-visible")
 
         let revealChevron = app.descendants(matching: .any)["showControlsButton"]
