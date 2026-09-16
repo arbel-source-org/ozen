@@ -79,14 +79,17 @@ final class OzenScreenshotUITests: XCTestCase {
         // Rotating before launch doesn't reliably apply -- the simulator
         // can still hand the freshly-launched app a portrait window,
         // stretched and rotated to fill a landscape-shaped screenshot
-        // rather than actually laid out for it. Rotating a running app and
-        // waiting for its window to actually resize is what makes the
-        // orientation change real before capturing it.
-        let window = app.windows.firstMatch
-        let portraitWidth = window.frame.width
+        // rather than actually laid out for it. A live XCUIElement's
+        // `.frame` turned out to be a poor way to detect the resize: a
+        // predicate expectation polling it against the pre-rotation width
+        // never once saw it change, timing out at 10 seconds even though
+        // the rotation itself is normally much faster than that -- reading
+        // a stale cached snapshot rather than re-querying, not a rotation
+        // that never happened. A fixed settle delay, the same kind the
+        // onboarding test above already relies on for its own page-change
+        // animation, sidesteps that rather than trusting the query.
         XCUIDevice.shared.orientation = .landscapeLeft
-        let rotated = XCTNSPredicateExpectation(predicate: NSPredicate(format: "frame.size.width > %f", portraitWidth), object: window)
-        XCTAssertEqual(XCTWaiter().wait(for: [rotated], timeout: 10), .completed, "landscape: the window never actually rotated")
+        Thread.sleep(forTimeInterval: 2)
 
         capture(app, name: "hebrew-landscape-accessibility-text-controls-visible")
 
