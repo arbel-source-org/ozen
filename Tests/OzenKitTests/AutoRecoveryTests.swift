@@ -48,6 +48,23 @@ struct AutoRecoveryPolicyTests {
         #expect(delays == [1, 3, nil])
     }
 
+    @Test("a new kind of trouble gets its own fresh tries, not runoff from an unrelated one")
+    func differentKindGetsFreshBudget() {
+        var policy = AutoRecoveryPolicy(glitchDelays: [1, 3, 8, 20], downloadDelays: [15])
+        let glitch = failure(.transcriptionStopped)
+        let loadFailure = failure(.engineUnavailable, engine: .modelLoadFailed)
+
+        // Exhaust the glitch schedule entirely.
+        _ = (0..<4).map { _ in policy.nextDelay(for: glitch) }
+        #expect(policy.nextDelay(for: glitch) == nil)
+
+        // An unrelated model-load failure right after still gets its own
+        // first try, not zero because the glitch budget ran out.
+        #expect(policy.nextDelay(for: loadFailure) == 1)
+        #expect(policy.nextDelay(for: loadFailure) == 3)
+        #expect(policy.nextDelay(for: loadFailure) == nil)
+    }
+
     @Test("reset starts the count over, and the disabled policy never retries")
     func resetAndDisabled() {
         var policy = AutoRecoveryPolicy(glitchDelays: [1], downloadDelays: [])

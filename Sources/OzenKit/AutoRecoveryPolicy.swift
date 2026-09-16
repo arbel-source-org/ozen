@@ -27,6 +27,11 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
     /// problem, not the same one again, so the attempt count starts over.
     public var healthyListeningSeconds: Double
     public private(set) var attempts = 0
+    /// The schedule `attempts` counts against. A retry for a glitch that
+    /// turns out to actually be, say, a model failing to load is a new
+    /// problem with its own two tries, not a continuation of the glitch's
+    /// unrelated backoff.
+    private var lastSchedule: Schedule?
 
     public init(
         glitchDelays: [Double] = [1, 3, 8, 20],
@@ -74,8 +79,13 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
     /// Seconds to wait before retrying `failure`, or nil when it's time to
     /// stop and let the person decide. Each call counts as one attempt.
     public mutating func nextDelay(for failure: PipelineFailure) -> Double? {
+        let schedule = Self.schedule(for: failure)
+        if schedule != lastSchedule {
+            attempts = 0
+            lastSchedule = schedule
+        }
         let delays: [Double]
-        switch Self.schedule(for: failure) {
+        switch schedule {
         case .never: return nil
         case .glitch: delays = glitchDelays
         case .download: delays = downloadDelays
@@ -89,6 +99,7 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
 
     public mutating func reset() {
         attempts = 0
+        lastSchedule = nil
     }
 }
 
