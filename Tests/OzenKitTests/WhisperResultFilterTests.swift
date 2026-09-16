@@ -138,6 +138,20 @@ struct WhisperResultFilterTests {
         #expect(filter.isKnownHallucination("סנכרון של הטלפון לקח המון זמן") == false)
     }
 
+    @Test("a bare credit label followed by a dash, not just a colon, is dropped when it's short")
+    func dashCreditLinesDropped() {
+        let filter = WhisperResultFilter()
+        #expect(filter.isKnownHallucination("כתוביות - ישראל ישראלי"))
+        #expect(filter.isKnownHallucination("Translation - John Doe"))
+        #expect(filter.isKnownHallucination("עריכה — דנה"))
+    }
+
+    @Test("a real sentence that happens to pause on a dash after a credit word stays past the tighter dash cap")
+    func longSentenceWithDashKept() {
+        let filter = WhisperResultFilter()
+        #expect(filter.isKnownHallucination("עריכה - זה היה ממש נחמד היום") == false)
+    }
+
     @Test("real speech that merely starts with a credit word passes")
     func creditWordsInRealSpeech() {
         let filter = WhisperResultFilter()

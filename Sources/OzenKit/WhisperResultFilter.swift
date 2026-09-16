@@ -54,6 +54,11 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// A credit prefix only condemns a short segment; a long one that
     /// happens to start the same way is someone actually talking.
     public var maximumCreditLineWords: Int
+    /// A bare label followed by a dash ("עריכה - ישראל") is a real, common
+    /// subtitle-community sign-off, but a dash is also just how someone
+    /// pauses mid-sentence after saying that same word. Tighter than
+    /// `maximumCreditLineWords` since a genuine credit line is short.
+    public var maximumDashCreditLineWords: Int
 
     /// Bare labels ("ktuviot" / "captions", "targum" / "translation") are
     /// ordinary words too, so they only count as a credit when a colon follows,
@@ -110,7 +115,8 @@ public struct WhisperResultFilter: Sendable, Equatable {
         ambiguousLogprobThreshold: Float = -0.9,
         hallucinatedCreditPrefixes: [String] = WhisperResultFilter.defaultCreditPrefixes,
         hallucinatedCreditLabels: [String] = WhisperResultFilter.defaultCreditLabels,
-        maximumCreditLineWords: Int = 7
+        maximumCreditLineWords: Int = 7,
+        maximumDashCreditLineWords: Int = 4
     ) {
         self.hallucinatedCreditLabels = hallucinatedCreditLabels.map { $0.lowercased() }
         self.ambiguousHallucinations = Set(ambiguousHallucinations.map(Self.normalize))
@@ -118,6 +124,7 @@ public struct WhisperResultFilter: Sendable, Equatable {
         self.ambiguousLogprobThreshold = ambiguousLogprobThreshold
         self.hallucinatedCreditPrefixes = hallucinatedCreditPrefixes.map(Self.normalize)
         self.maximumCreditLineWords = maximumCreditLineWords
+        self.maximumDashCreditLineWords = maximumDashCreditLineWords
         self.noSpeechThreshold = noSpeechThreshold
         self.logprobThreshold = logprobThreshold
         self.compressionRatioThreshold = compressionRatioThreshold
@@ -236,9 +243,17 @@ public struct WhisperResultFilter: Sendable, Equatable {
             .lowercased()
         return hallucinatedCreditLabels.contains { label in
             guard opening.hasPrefix(label) else { return false }
-            return opening.dropFirst(label.count).drop(while: \.isWhitespace).first == ":"
+            let afterLabel = opening.dropFirst(label.count).drop(while: \.isWhitespace)
+            if afterLabel.first == ":" { return true }
+            guard let separator = afterLabel.first, Self.creditLabelDashes.contains(separator) else { return false }
+            return words.count <= maximumDashCreditLineWords
         }
     }
+
+    /// A dash reads as a separator only for the tighter, dash-specific word
+    /// cap above -- a colon needs no such caution since real speech almost
+    /// never opens with "word:".
+    static let creditLabelDashes: Set<Character> = ["-", "\u{2013}", "\u{2014}"]
 
     /// Removes Whisper's control tokens (`<|startoftranscript|>`,
     /// `<|he|>`, `<|0.00|>` timestamps, ...) that leak into segment text
