@@ -73,7 +73,7 @@ final class OzenScreenshotUITests: XCTestCase {
         capture(app, name: "onboarding-accessibility-text-page1-welcome")
 
         let next = app.descendants(matching: .any)["onboardingNextButton"]
-        for (index, name) in ["page2-how-it-works", "page3-engine", "page4-microphone"].enumerated() {
+        for (index, name) in ["page2-how-it-works", "page3-engine", "page4-microphone", "page5-name"].enumerated() {
             XCTAssertTrue(next.waitForExistence(timeout: 10), "onboarding: no Next button on page \(index + 1)")
             next.tap()
             capture(app, name: "onboarding-accessibility-text-\(name)")
