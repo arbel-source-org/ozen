@@ -110,7 +110,7 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(screen.waitForExistence(timeout: 10), "settings: the screen never appeared")
         capture(app, name: "settings-accessibility-text-page1")
 
-        for index in 2...5 {
+        for index in 2...11 {
             app.swipeUp()
             capture(app, name: "settings-accessibility-text-page\(index)")
         }
