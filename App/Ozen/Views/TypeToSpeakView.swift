@@ -21,7 +21,13 @@ struct TypeToSpeakView: View {
                 composer
                     .padding(16)
 
+                // On this leaf view, not the VStack that wraps the whole
+                // screen: putting it there made the VStack swallow the
+                // accessibility identifier of everything nested inside it,
+                // including "bigTextButton" -- XCUITest could no longer
+                // find it at all, even though it rendered fine.
                 Divider()
+                    .accessibilityIdentifier("typeToSpeakScreen")
 
                 List {
                     Section {
@@ -56,7 +62,6 @@ struct TypeToSpeakView: View {
                     }
                 }
             }
-            .accessibilityIdentifier("typeToSpeakScreen")
             .navigationTitle(tr("להגיד משהו", "Say something"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
