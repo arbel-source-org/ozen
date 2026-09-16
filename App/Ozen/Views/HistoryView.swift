@@ -252,7 +252,19 @@ struct HistoryView: View {
 
 private struct SessionRow: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let session: TranscriptSessionSummary
+
+    // A long conversation's duration reads as a phrase ("3 שעות ו-27
+    // דקות" — "3 hours and 27 minutes"), not just a number, so at the
+    // largest accessibility text size it can wrap; a plain HStack then let
+    // it interleave with the time on the opposite side instead of sitting
+    // below it.
+    private var timeLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout())
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -260,10 +272,10 @@ private struct SessionRow: View {
                 Text(title)
                     .font(.headline)
             }
-            HStack {
+            timeLayout {
                 Text(Date(timeIntervalSince1970: session.startedAt).formatted(date: .omitted, time: .shortened))
                     .font(session.title == nil ? .subheadline.weight(.semibold) : .subheadline)
-                Spacer()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 if let duration = session.durationSeconds {
                     Text(ConversationStats.minutesText(duration))
                         .font(.caption)
