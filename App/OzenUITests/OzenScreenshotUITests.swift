@@ -60,6 +60,29 @@ final class OzenScreenshotUITests: XCTestCase {
         try run(variant: "english", name: "english")
     }
 
+    /// Landscape has been declared a supported orientation in every build
+    /// (see project.yml's UISupportedInterfaceOrientations), but no
+    /// screenshot before this one has ever rendered the app in it. With
+    /// less than half the vertical space of portrait, and the largest
+    /// accessibility text on top of that, this is exactly where the
+    /// control bar or a caption row would clip or overlap first.
+    func testHebrewLandscapeAccessibilityText() throws {
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "hebrewDefault", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let transcript = app.descendants(matching: .any)["transcriptScroll"]
+        XCTAssertTrue(transcript.waitForExistence(timeout: 10), "landscape: the transcript never appeared")
+        capture(app, name: "hebrew-landscape-accessibility-text-controls-visible")
+
+        let revealChevron = app.descendants(matching: .any)["showControlsButton"]
+        XCTAssertTrue(revealChevron.waitForExistence(timeout: 15), "landscape: the control bar never auto-hid")
+        capture(app, name: "hebrew-landscape-accessibility-text-controls-hidden")
+    }
+
     /// Onboarding at the largest accessibility text size iOS offers: a
     /// real setting for exactly the low-vision reader this app is built
     /// for, and a screen no earlier screenshot pass has ever looked at.
