@@ -177,10 +177,17 @@ public struct EnergyVoiceDetector: Sendable {
     public static func rms(_ samples: [Float]) -> Float {
         guard !samples.isEmpty else { return 0 }
         var sum: Float = 0
-        for sample in samples {
+        var validCount = 0
+        for sample in samples where sample.isFinite {
             sum += sample * sample
+            validCount += 1
         }
-        return (sum / Float(samples.count)).squareRoot()
+        // A single corrupted sample (a known Core Audio glitch class)
+        // shouldn't discard an otherwise-real chunk of speech; but a
+        // majority-corrupted buffer is still reported as non-finite so
+        // isSpeech's existing guard catches it as before.
+        guard validCount * 2 >= samples.count else { return .nan }
+        return (sum / Float(validCount)).squareRoot()
     }
 
     /// Maps an RMS level to 0...1 for a meter, on a decibel scale from

@@ -54,6 +54,16 @@ struct WhisperResultFilterTests {
         #expect(filter.acceptedText(from: [segment("  ")]) == "")
     }
 
+    @Test("a segment that is only punctuation or symbols carries no real word")
+    func punctuationOnlyRejected() {
+        #expect(!filter.accepts(segment("...")))
+        #expect(!filter.accepts(segment("-")))
+        #expect(!filter.accepts(segment("—")))
+        #expect(!filter.accepts(segment("♪♪")))
+        // Digits survive normalize(), so a lone number is still real content.
+        #expect(filter.accepts(segment("3.")))
+    }
+
     @Test("accepted text joins surviving segments and skips the junk between them")
     func joinsSurvivors() {
         let text = filter.acceptedText(from: [
@@ -61,6 +71,16 @@ struct WhisperResultFilterTests {
             // Invented on a noisy stretch: the model barely heard it.
             segment("תודה רבה", noSpeech: 0.5, logprob: -0.4),
             segment("איך ישנת", noSpeech: 0.2),
+        ])
+        #expect(text == "בוקר טוב איך ישנת")
+    }
+
+    @Test("a punctuation-only segment between two real ones is dropped, not joined as a word")
+    func punctuationOnlyJoinDropped() {
+        let text = filter.acceptedText(from: [
+            segment("בוקר טוב"),
+            segment("..."),
+            segment("איך ישנת"),
         ])
         #expect(text == "בוקר טוב איך ישנת")
     }

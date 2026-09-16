@@ -179,6 +179,12 @@ public struct WhisperResultFilter: Sendable, Equatable {
     public func accepts(_ segment: WhisperSegmentSummary) -> Bool {
         let text = Self.stripSpecialTokens(segment.text).trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return false }
+        // A lone "...", "-" or "♪" is a well-known Whisper hallucination on a
+        // quiet or noisy window that doesn't trip the noSpeech/logprob
+        // thresholds together; normalize() already strips exactly
+        // punctuation and symbols, so an empty result means no real word
+        // survived.
+        if Self.normalize(text).isEmpty { return false }
         if isKnownHallucination(text) { return false }
         if ambiguousHallucinations.contains(Self.normalize(text)),
            segment.noSpeechProb > ambiguousNoSpeechThreshold || segment.avgLogprob < ambiguousLogprobThreshold {

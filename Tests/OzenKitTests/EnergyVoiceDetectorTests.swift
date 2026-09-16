@@ -107,10 +107,11 @@ struct EnergyVoiceDetectorTests {
     func glitchedChunksAreIgnored() {
         var detector = EnergyVoiceDetector()
         let hum = tone(amplitude: 0.009)
-        var notANumber = hum
-        notANumber[10] = .nan
-        var infinite = hum
-        infinite[10] = .infinity
+        // Wholly corrupted, not just a single bad sample among mostly-good
+        // ones (a single stray sample is now tolerated; see
+        // oneBadSampleDoesNotHideSpeech).
+        let notANumber = [Float](repeating: .nan, count: hum.count)
+        let infinite = [Float](repeating: .infinity, count: hum.count)
         let notANumberAtFirst = detector.isSpeech(notANumber)
         for index in 0..<156 {
             detector.isSpeech(index == 80 ? infinite : hum)
@@ -122,6 +123,21 @@ struct EnergyVoiceDetectorTests {
         #expect(detector.noiseFloor.isFinite && detector.noiseSwingDecibels.isFinite)
         #expect(!humLater)
         #expect(speechOverIt)
+    }
+
+    @Test("a single corrupted sample doesn't discard an otherwise loud, real chunk")
+    func oneBadSampleDoesNotHideSpeech() {
+        var detector = EnergyVoiceDetector()
+        var speech = tone(amplitude: 0.05)
+        speech[10] = .nan
+        let stillSpeech = detector.isSpeech(speech)
+        #expect(stillSpeech)
+
+        var mostlyGlitched = [Float](repeating: 0, count: 1_024)
+        for i in 0..<600 { mostlyGlitched[i] = .nan }
+        for i in 600..<1_024 { mostlyGlitched[i] = 0.05 * sin(Float(i) * 0.3) }
+        let notSpeech = detector.isSpeech(mostlyGlitched)
+        #expect(!notSpeech)
     }
 
     @Test("the floor is capped so a loud fan can't disable detection")
