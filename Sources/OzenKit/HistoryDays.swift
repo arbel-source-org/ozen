@@ -69,3 +69,18 @@ public enum HistoryDays {
         "July", "August", "September", "October", "November", "December",
     ]
 }
+
+/// Past conversations that fell on today's month and day in an earlier
+/// year -- a year-old conversation with the same person resurfacing at
+/// the top of History is worth the reminder, and costs no new data.
+public enum OnThisDay {
+    public static func matches(in summaries: [TranscriptSessionSummary], now: TimeInterval, utcOffsetSeconds: Int) -> [TranscriptSessionSummary] {
+        let today = CivilDate(daysSinceEpoch: CivilDate.localDay(of: now, utcOffsetSeconds: utcOffsetSeconds))
+        return summaries
+            .filter { summary in
+                let day = CivilDate(daysSinceEpoch: CivilDate.localDay(of: summary.startedAt, utcOffsetSeconds: utcOffsetSeconds))
+                return day.month == today.month && day.day == today.day && day.year < today.year
+            }
+            .sorted { $0.startedAt > $1.startedAt }
+    }
+}

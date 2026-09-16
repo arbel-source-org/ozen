@@ -16,6 +16,10 @@ struct HistoryView: View {
     /// A conversation swiped away, waiting for a yes: a slip while
     /// scrolling shouldn't delete a named or starred one for good.
     @State private var pendingDeletion: TranscriptSessionSummary?
+    /// "What did I talk about with Ronit": a name that was never said aloud
+    /// can't be found by the free-text search, so filtering by who was
+    /// there is a separate, composable way in.
+    @State private var speakerFilter: String?
 
     private var savingSection: some View {
         Section {
@@ -41,6 +45,25 @@ struct HistoryView: View {
         return base + tr(" שיחות עם שורה מסומנת או עם שם נשמרות תמיד.", " Conversations with a starred line or a name are always kept.")
     }
 
+    /// A conversation that fell on today's date a year or more ago,
+    /// surfaced without her having to remember it happened or scroll back
+    /// to find it.
+    private var onThisDaySection: some View {
+        let now = Date().timeIntervalSince1970
+        let matches = Array(OnThisDay.matches(in: sessions, now: now, utcOffsetSeconds: HistoryDays.localOffset(at: now)).prefix(3))
+        return Group {
+            if !matches.isEmpty {
+                Section {
+                    ForEach(matches) { session in
+                        sessionLink(session)
+                    }
+                } header: {
+                    Text(tr("לפני שנה בתאריך הזה", "On this day"))
+                }
+            }
+        }
+    }
+
     private var starredSection: some View {
         Section {
             NavigationLink {
@@ -58,9 +81,9 @@ struct HistoryView: View {
     /// said on Tuesday" is found by the day, not by reading every date.
     @ViewBuilder
     private var conversationsSection: some View {
-        if sessions.isEmpty {
+        if filteredSessions.isEmpty {
             Section {
-                Text(query.isEmpty ? tr("עדיין אין שיחות שמורות.", "No saved conversations yet.") : tr("לא נמצא כלום עבור \"\(query)\".", "Nothing found for “\(query)”."))
+                Text(emptyConversationsMessage)
                     .foregroundStyle(.secondary)
             } header: {
                 Text(tr("שיחות", "Conversations"))
@@ -77,8 +100,60 @@ struct HistoryView: View {
         }
     }
 
+    private var emptyConversationsMessage: String {
+        if !query.isEmpty { return tr("לא נמצא כלום עבור \"\(query)\".", "Nothing found for “\(query)”.") }
+        if let speakerFilter { return tr("אין שיחות עם \(speakerFilter).", "No conversations with \(speakerFilter).") }
+        return tr("עדיין אין שיחות שמורות.", "No saved conversations yet.")
+    }
+
+    /// Tapping a name above filters to conversations with that person in
+    /// them, composing with a text search already in progress.
+    private var filteredSessions: [TranscriptSessionSummary] {
+        guard let speakerFilter else { return sessions }
+        return sessions.filter { $0.speakerNames.contains(speakerFilter) }
+    }
+
+    private var topSpeakers: [String] {
+        TranscriptSessionSummary.topSpeakerNames(in: sessions)
+    }
+
+    @ViewBuilder
+    private var speakerFilterSection: some View {
+        if !topSpeakers.isEmpty {
+            Section {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(topSpeakers, id: \.self) { name in
+                            speakerChip(name)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 2)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    private func speakerChip(_ name: String) -> some View {
+        let isSelected = speakerFilter == name
+        return Button {
+            speakerFilter = isSelected ? nil : name
+        } label: {
+            Text(name)
+                .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.accentColor : Color(.secondarySystemBackground), in: Capsule())
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
     private var sessionDays: [HistoryDay] {
-        HistoryDays.grouped(sessions, now: Date().timeIntervalSince1970, utcOffsetSeconds: HistoryDays.localOffset)
+        HistoryDays.grouped(filteredSessions, now: Date().timeIntervalSince1970, utcOffsetSeconds: HistoryDays.localOffset)
     }
 
     private func sessionLink(_ session: TranscriptSessionSummary) -> some View {
@@ -115,6 +190,10 @@ struct HistoryView: View {
             }
             if query.isEmpty, sessions.contains(where: { $0.starredCount > 0 }) {
                 starredSection
+            }
+            if query.isEmpty {
+                onThisDaySection
+                speakerFilterSection
             }
             conversationsSection
         }

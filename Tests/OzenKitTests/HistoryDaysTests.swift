@@ -72,4 +72,24 @@ struct HistoryDaysTests {
             #expect(HistoryDays.title(day: today - 258, today: today) == "Tuesday, 30 December 2025")
         }
     }
+
+    @Test("on this day: conversations on today's month and day in an earlier year, newest first; this year and other days are excluded")
+    func onThisDayMatches() {
+        let oneYear: TimeInterval = 365 * 86_400
+        let now = mondayNoonUTC
+        let yearAgo = now - oneYear
+        let twoYearsAgo = yearAgo - oneYear
+
+        let matches = OnThisDay.matches(
+            in: [
+                summary(now, preview: "היום"),
+                summary(now - 86_400, preview: "אתמול"),
+                summary(twoYearsAgo, preview: "לפני שנתיים"),
+                summary(yearAgo, preview: "לפני שנה"),
+            ],
+            now: now,
+            utcOffsetSeconds: israel
+        )
+        #expect(matches.map(\.preview) == ["לפני שנה", "לפני שנתיים"])
+    }
 }

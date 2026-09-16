@@ -389,6 +389,31 @@ struct TranscriptHistoryTests {
         ])
         #expect(names == ["רותי", "אבי", "דובר חדש"])
     }
+
+    @Test("top speaker names rank by how many sessions they appeared in, ties broken alphabetically")
+    func topSpeakerNamesRanking() {
+        func summary(_ names: [String]) -> TranscriptSessionSummary {
+            TranscriptSessionSummary(id: UUID(), startedAt: 0, endedAt: nil, segmentCount: 1, preview: "", engine: .whisperKit, speakerNames: names)
+        }
+        let names = TranscriptSessionSummary.topSpeakerNames(in: [
+            summary(["רותי", "אבי"]),
+            summary(["רותי"]),
+            summary(["רותי", "דנה"]),
+            summary(["דנה"]),
+        ])
+        #expect(names == ["רותי", "דנה", "אבי"])
+    }
+
+    @Test("top speaker names counts a name once per session, however many times it repeats in speakerNames")
+    func topSpeakerNamesDedupesWithinSession() {
+        func summary(_ names: [String]) -> TranscriptSessionSummary {
+            TranscriptSessionSummary(id: UUID(), startedAt: 0, endedAt: nil, segmentCount: 1, preview: "", engine: .whisperKit, speakerNames: names)
+        }
+        // "רותי" repeats within one session but should still only count once
+        // against that session, not three times.
+        let names = TranscriptSessionSummary.topSpeakerNames(in: [summary(["רותי", "רותי", "אבי"]), summary(["אבי"])])
+        #expect(names == ["אבי", "רותי"])
+    }
 }
 
 @Suite("Transcript history summary files")

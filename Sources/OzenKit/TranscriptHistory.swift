@@ -263,6 +263,24 @@ extension TranscriptSessionSummary {
         return names
     }
 
+    /// Named speakers across `summaries`, most-appeared first, ties broken
+    /// alphabetically, for a short list of filter chips above a history
+    /// list a person can actually scan.
+    public static func topSpeakerNames(in summaries: [TranscriptSessionSummary], limit: Int = 8) -> [String] {
+        var counts: [String: Int] = [:]
+        var order: [String] = []
+        for summary in summaries {
+            for name in Set(summary.speakerNames) {
+                if counts[name] == nil { order.append(name) }
+                counts[name, default: 0] += 1
+            }
+        }
+        return order
+            .sorted { counts[$0]! != counts[$1]! ? counts[$0]! > counts[$1]! : $0 < $1 }
+            .prefix(limit)
+            .map { $0 }
+    }
+
     /// "dover 3" ("speaker 3"), "dover lo yadu'a" ("unknown speaker"), and the
     /// English labels older builds saved.
     public static func isGenericLabel(_ name: String) -> Bool {
