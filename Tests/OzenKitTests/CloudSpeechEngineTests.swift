@@ -168,21 +168,29 @@ struct CloudSpeechEngineTests {
 
     @Test("several failures in a row end the stream")
     func tooManyFailures() async {
+        // Nothing ever gets shown for this utterance, so every failed
+        // final segment is retried (see shortUtteranceFinalFailureRetried)
+        // rather than silently moved past -- eventually the retries
+        // themselves are the "several failures in a row" that give up.
         let http = FakeCloudHTTP(answers: [.offline])
-        let engine = engine(http)
-        let (audio, input) = AsyncStream<[Float]>.makeStream()
-        let tokens = engine.stream(languageCode: "he", audio: audio)
-        let collected = Task {
-            for try await _ in tokens {}
-        }
-        for chunk in speech(seconds: 1) + silence(seconds: 1) { input.yield(chunk) }
-        #expect(await eventually { http.transcriptionRequests.count == 2 })
-        for chunk in speech(seconds: 1) + silence(seconds: 1) { input.yield(chunk) }
-        input.finish()
         await #expect(throws: CloudSpeechError.offline) {
-            try await collected.value
+            _ = try await transcribe(engine(http), speech(seconds: 1) + silence(seconds: 1))
         }
-        #expect(http.transcriptionRequests.count == CloudSpeechEngine.failuresBeforeStopping)
+        // Two attempts per retried final segment, until failuresInARow
+        // reaches the limit.
+        #expect(http.transcriptionRequests.count == CloudSpeechEngine.failuresBeforeStopping * 2)
+    }
+
+    @Test("a short utterance's final request failing outright, with nothing shown yet, is retried rather than lost")
+    func shortUtteranceFinalFailureRetried() async {
+        let http = FakeCloudHTTP(answers: [.offline, .offline, .text("שלום")])
+        let engine = engine(http)
+        let tokens = try? await transcribe(engine, speech(seconds: 1) + silence(seconds: 1))
+        // Too short for a live pass (under livePassSeconds); the first
+        // final attempt-pair fails outright with nothing shown, so it must
+        // retry rather than move on with the words lost.
+        #expect(tokens?.map(\.text) == ["שלום"])
+        #expect(http.transcriptionRequests.count == 3)
     }
 
     @Test("the names list read back on its own is not a line")

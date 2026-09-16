@@ -179,23 +179,32 @@ public actor CloudSpeechEngine: TranscriptionEngine {
             samplesAtLastPass = total
 
             var turns: [String]?
+            var lastFailure: CloudSpeechError?
             let started = ContinuousClock.now
             for attempt in 1...(isFinal ? 2 : 1) {
                 do {
                     turns = try await transcribe(window, key: key, languageCode: languageCode)
-                    failuresInARow = 0
+                    lastFailure = nil
                     break
                 } catch let error as CloudSpeechError {
                     if error.needsPerson {
                         approvedKey = nil
                         throw error
                     }
-                    failuresInARow += 1
-                    if failuresInARow >= Self.failuresBeforeStopping { throw error }
+                    lastFailure = error
                     if attempt == 1 && isFinal {
                         try await Task.sleep(for: .milliseconds(400))
                     }
                 }
+            }
+            // One failed segment is one failure regardless of how many
+            // attempts it took to give up on it -- a final segment's own
+            // second try isn't a second, unrelated failure.
+            if let lastFailure {
+                failuresInARow += 1
+                if failuresInARow >= Self.failuresBeforeStopping { throw lastFailure }
+            } else {
+                failuresInARow = 0
             }
             if !isFinal {
                 let elapsed = ContinuousClock.now - started
@@ -213,6 +222,15 @@ public actor CloudSpeechEngine: TranscriptionEngine {
                 // A final request that failed, or came back empty, must not
                 // take away what was already on screen.
                 let finalTurns = turns.flatMap { $0.isEmpty ? nil : $0 } ?? (lastShownText.isEmpty ? [] : [lastShownText])
+                if turns == nil, lastShownText.isEmpty {
+                    // The request itself failed (as opposed to succeeding
+                    // with nothing to say) and there's no earlier live
+                    // preview to fall back to. Dropping the intake here
+                    // would lose these words outright with no trace of a
+                    // failure; retrying with the same audio, bounded by the
+                    // failuresInARow check above, is the only way not to.
+                    continue
+                }
                 for (index, turn) in finalTurns.enumerated() {
                     continuation.yield(TranscriptToken(
                         utteranceID: index == 0 ? utteranceID : UUID(),

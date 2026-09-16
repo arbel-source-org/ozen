@@ -323,12 +323,16 @@ public final class CaptionPipeline {
 
         streamTask = Task { [weak self] in
             guard let self else { return }
+            var cloudFailure: CloudSpeechError?
             var stopReason: String? = nil
             do {
                 for try await token in tokens {
                     guard self.runID == run else { break }
                     self.handle(token: token)
                 }
+            } catch let error as CloudSpeechError {
+                cloudFailure = error
+                stopReason = String(describing: error)
             } catch {
                 stopReason = String(describing: error)
             }
@@ -337,7 +341,15 @@ public final class CaptionPipeline {
             // still flowing. That's a failure the user should see and be
             // able to retry, not a silent stop.
             guard self.runID == run, self.phase.isListening else { return }
-            self.fail(.transcriptionStopped, detail: stopReason ?? "engine stream ended")
+            // A mid-stream CloudSpeechError already knows exactly what's
+            // wrong (a rejected key, no credit, no connection) -- reporting
+            // it generically would both show the wrong message and let
+            // AutoRecoveryPolicy auto-retry a problem only a person can fix.
+            if let cloudFailure {
+                self.fail(.engineUnavailable, detail: stopReason ?? "engine stream ended", engineUnavailability: cloudFailure.unavailability)
+            } else {
+                self.fail(.transcriptionStopped, detail: stopReason ?? "engine stream ended")
+            }
         }
 
         staleCommitTask = Task { [weak self] in

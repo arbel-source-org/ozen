@@ -143,6 +143,20 @@ struct CaptionPipelineRecoveryTests {
         #expect(pipeline.scheduledRetry == nil)
     }
 
+    @Test("a mid-stream cloud error that needs a person is reported specifically, not retried as a generic glitch")
+    func cloudErrorMidStreamReportedSpecifically() async {
+        let engine = FakeEngine()
+        let pipeline = makeRecoveringPipeline(engine: engine, policy: fast)
+        await pipeline.start(settings: .default)
+        #expect(pipeline.phase.isListening)
+
+        engine.endStream(throwing: CloudSpeechError.keyRejected)
+        #expect(await eventually { pipeline.phase.failure != nil })
+        #expect(pipeline.phase.failure?.kind == .engineUnavailable)
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .cloudKeyNeeded)
+        #expect(pipeline.scheduledRetry == nil)
+    }
+
     @Test("retries stop when the schedule runs out, leaving the failure for a person")
     func givesUp() async {
         let audio = FakeAudioCapturer()
