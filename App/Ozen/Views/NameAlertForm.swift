@@ -7,12 +7,19 @@ import OzenKit
 struct NameAlertForm: View {
     let viewModel: LiveCaptionViewModel
     @State private var nameDraft = ""
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private static let suggestedNames = ["סבתא", "אמא"]
 
+    private var formLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(spacing: 10))
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 10) {
+            formLayout {
                 TextField(tr("השם שלך", "Your name"), text: $nameDraft)
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
@@ -20,9 +27,10 @@ struct NameAlertForm: View {
                 Button(tr("להוסיף", "Add"), action: addName)
                     .buttonStyle(.bordered)
                     .controlSize(.large)
+                    .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
                     .disabled(nameDraft.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            HStack(spacing: 10) {
+            formLayout {
                 ForEach(Self.suggestedNames, id: \.self) { word in
                     suggestionButton(word)
                 }
@@ -50,6 +58,7 @@ struct NameAlertForm: View {
         .buttonStyle(.bordered)
         .controlSize(.large)
         .disabled(added)
+        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
     }
 
     private func addName() {

@@ -76,6 +76,11 @@ final class OzenScreenshotUITests: XCTestCase {
         for (index, name) in ["page2-how-it-works", "page3-engine", "page4-microphone", "page5-name", "page6-ready"].enumerated() {
             XCTAssertTrue(next.waitForExistence(timeout: 10), "onboarding: no Next button on page \(index + 1)")
             next.tap()
+            // The footer's own content (Skip/Next vs. the last page's lone
+            // Start button) animates along with the page change; without
+            // this, a capture taken mid-crossfade can look like a layout
+            // bug that isn't there once the animation settles.
+            Thread.sleep(forTimeInterval: 0.5)
             capture(app, name: "onboarding-accessibility-text-\(name)")
 
             if name == "page5-name" {
