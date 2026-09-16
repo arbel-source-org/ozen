@@ -208,9 +208,14 @@ struct OnboardingView: View {
                     Text(tr("הבא", "Next"))
                         .frame(minWidth: 120)
                 }
+                // Before the glass button style, not after: applied on
+                // the far side of .glassProminent, the identifier stopped
+                // reaching XCUITest even though the button rendered and
+                // worked fine -- unlike the caption screen's own buttons,
+                // which use .buttonStyle(.plain) and never had the issue.
+                .accessibilityIdentifier("onboardingNextButton")
                 .ozenGlassButton(prominent: true)
                 .controlSize(.large)
-                .accessibilityIdentifier("onboardingNextButton")
             } else {
                 Button {
                     finish()
