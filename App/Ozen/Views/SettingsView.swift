@@ -129,7 +129,7 @@ struct SettingsView: View {
         switch kind {
         case .whisperKit: return tr("Whisper (במכשיר)", "Whisper (on device)")
         case .appleSpeech: return tr("זיהוי הדיבור של אפל", "Apple's speech recognition")
-        case .cloud: return tr("תמלול בענן (OpenRouter)", "Cloud transcription (OpenRouter)")
+        case .cloud: return tr("תמלול בענן \u{2066}(OpenRouter)\u{2069}", "Cloud transcription (OpenRouter)")
         }
     }
 
@@ -137,7 +137,7 @@ struct SettingsView: View {
         switch kind {
         case .whisperKit: return tr("מודל קוד פתוח שרץ על הטלפון. עברית טובה, אפשר לבחור גודל מודל.", "An open-source model that runs on the phone. Good Hebrew, and you can choose the model size.")
         case .appleSpeech: return tr("מובנה ב‑iOS. מהיר מאוד, אבל עברית במכשיר לא זמינה בכל גרסה.", "Built into iOS. Very fast, but on-device Hebrew isn’t available in every version.")
-        case .cloud: return tr("מודל גדול באינטרנט. הכי מדויק, גם כשכמה אנשים מדברים. צריך אינטרנט ומפתח OpenRouter.", "A large model online. The most accurate, even with several people talking. Needs internet and an OpenRouter key.")
+        case .cloud: return tr("מודל גדול באינטרנט. הכי מדויק, גם כשכמה אנשים מדברים. צריך אינטרנט ומפתח \u{2066}OpenRouter.\u{2069}", "A large model online. The most accurate, even with several people talking. Needs internet and an OpenRouter key.")
         }
     }
 
@@ -157,7 +157,7 @@ struct SettingsView: View {
         } header: {
             Text("Whisper")
         } footer: {
-            Text(tr("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \"Turbo (compressed)\" הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.", "A bigger model understands Hebrew better but responds more slowly. “Turbo (compressed)” is the recommended choice for this iPhone. Models weigh hundreds of MB, so by default they only download over Wi‑Fi."))
+            Text(tr("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \u{2066}\"Turbo (compressed)\"\u{2069} הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.", "A bigger model understands Hebrew better but responds more slowly. “Turbo (compressed)” is the recommended choice for this iPhone. Models weigh hundreds of MB, so by default they only download over Wi‑Fi."))
         }
     }
 
