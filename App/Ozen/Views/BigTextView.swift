@@ -40,12 +40,21 @@ struct BigTextView: View {
         if isFlipped {
             // Read-only while upside down: editing text that is drawn
             // rotated would put the cursor where no one expects it.
-            ScrollView {
-                Text(text)
-                    .font(.system(size: Self.fontSize, weight: .bold))
-                    .foregroundStyle(theme.text)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(24)
+            //
+            // Centered vertically (falling back to top-anchored, scrollable
+            // once it outgrows the space): on an iPad-sized screen, a short
+            // phrase left at the scroll view's natural top edge landed at
+            // the bottom once flipped, right against the control buttons,
+            // with the rest of the screen the other person is reading it
+            // from left blank above it.
+            GeometryReader { geometry in
+                ScrollView {
+                    Text(text)
+                        .font(.system(size: Self.fontSize, weight: .bold))
+                        .foregroundStyle(theme.text)
+                        .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .center)
+                        .padding(24)
+                }
             }
             .rotationEffect(.degrees(180))
             .accessibilityLabel(text)
