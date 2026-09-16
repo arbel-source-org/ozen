@@ -115,4 +115,25 @@ final class OzenScreenshotUITests: XCTestCase {
             capture(app, name: "settings-accessibility-text-page\(index)")
         }
     }
+
+    /// The reply sheet: a composer with a Stop/Play pair sharing an HStack,
+    /// a typed phrase's replay row pairing a full-width button with a
+    /// fixed-size "add" button, and a scrollable quick-phrases list below
+    /// -- all unseen at the largest accessibility text size before.
+    func testTypeToSpeakAccessibilityText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "hebrewDefault", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let typeToSpeakButton = app.descendants(matching: .any)["typeToSpeakButton"]
+        XCTAssertTrue(typeToSpeakButton.waitForExistence(timeout: 10), "type to speak: the button to open it never appeared")
+        typeToSpeakButton.tap()
+
+        let screen = app.descendants(matching: .any)["typeToSpeakScreen"]
+        XCTAssertTrue(screen.waitForExistence(timeout: 10), "type to speak: the screen never appeared")
+        capture(app, name: "type-to-speak-accessibility-text-empty")
+
+        app.textFields.firstMatch.typeText("תזכירי לי לקחת תרופות")
+        capture(app, name: "type-to-speak-accessibility-text-typed")
+    }
 }

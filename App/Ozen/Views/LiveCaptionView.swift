@@ -1011,6 +1011,7 @@ struct LiveCaptionView: View {
         }
         .ozenGlassButton()
         .accessibilityLabel(tr("להגיד משהו בקול", "Say something out loud"))
+        .accessibilityIdentifier("typeToSpeakButton")
     }
 
     private var settingsButton: some View {

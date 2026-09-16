@@ -56,6 +56,7 @@ struct TypeToSpeakView: View {
                     }
                 }
             }
+            .accessibilityIdentifier("typeToSpeakScreen")
             .navigationTitle(tr("להגיד משהו", "Say something"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
