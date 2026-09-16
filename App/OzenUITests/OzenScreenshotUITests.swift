@@ -83,6 +83,15 @@ final class OzenScreenshotUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.5)
             capture(app, name: "onboarding-accessibility-text-\(name)")
 
+            if name == "page4-microphone" {
+                // The "Approve the microphone" button sits below the fold
+                // at this text size -- scroll to actually see it rather
+                // than assume the same fix that worked in the reply
+                // sheet's "Full screen, big letters" button holds here too.
+                app.swipeUp()
+                capture(app, name: "onboarding-accessibility-text-page4-microphone-button-scrolled")
+            }
+
             if name == "page5-name" {
                 // NameAlertForm's TextField and "Add" button sit below the
                 // fold at this text size -- scroll to actually see whether
