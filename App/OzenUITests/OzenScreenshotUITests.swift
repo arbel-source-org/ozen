@@ -183,18 +183,18 @@ final class OzenScreenshotUITests: XCTestCase {
         let settingsScreen = app.descendants(matching: .any)["settingsScreen"]
         XCTAssertTrue(settingsScreen.waitForExistence(timeout: 10), "secondary screens: settings never appeared")
 
-        openSettingsRow(app, labelContains: "מודל", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
-        openSettingsRow(app, labelContains: "מילים חשובות", screenIdentifier: "keywordAlertsScreen", captureName: "keyword-alerts-accessibility-text")
-        openSettingsRow(app, labelContains: "צלילים בבית", screenIdentifier: "soundAlertsScreen", captureName: "sound-alerts-accessibility-text")
-        openSettingsRow(app, labelContains: "שמות ומילים מיוחדות", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
-        openSettingsRow(app, labelContains: "אבחון", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
+        openSettingsRow(app, rowIdentifier: "modelManagerRow", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
+        openSettingsRow(app, rowIdentifier: "keywordAlertsRow", screenIdentifier: "keywordAlertsScreen", captureName: "keyword-alerts-accessibility-text")
+        openSettingsRow(app, rowIdentifier: "soundAlertsRow", screenIdentifier: "soundAlertsScreen", captureName: "sound-alerts-accessibility-text")
+        openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
+        openSettingsRow(app, rowIdentifier: "diagnosticsRow", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
 
-        let historyRow = app.buttons["שיחות קודמות"]
+        let historyRow = app.descendants(matching: .any)["historyRow"]
         XCTAssertTrue(historyRow.waitForExistence(timeout: 10), "secondary screens: the history row never appeared")
         historyRow.tap()
         let historyScreen = app.descendants(matching: .any)["historyScreen"]
         XCTAssertTrue(historyScreen.waitForExistence(timeout: 10), "secondary screens: history never appeared")
-        let starredRow = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "השורות המסומנות")).firstMatch
+        let starredRow = app.descendants(matching: .any)["starredLinesRow"]
         XCTAssertTrue(starredRow.waitForExistence(timeout: 10), "secondary screens: the seeded conversation never reached history")
         capture(app, name: "history-accessibility-text")
         starredRow.tap()
@@ -208,7 +208,7 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(backToSettingsFromHistory.waitForExistence(timeout: 10), "secondary screens: no way back from history")
         backToSettingsFromHistory.tap()
 
-        let addSpeaker = app.buttons["הוספת דובר"]
+        let addSpeaker = app.descendants(matching: .any)["addSpeakerButton"]
         XCTAssertTrue(addSpeaker.waitForExistence(timeout: 10), "secondary screens: the add-speaker button never appeared")
         addSpeaker.tap()
         let enrollmentScreen = app.descendants(matching: .any)["speakerEnrollmentScreen"]
@@ -226,21 +226,16 @@ final class OzenScreenshotUITests: XCTestCase {
         capture(app, name: "mic-picker-accessibility-text")
     }
 
-    /// Taps a Settings row by its visible label rather than by its own
-    /// accessibility identifier: Settings' Form already carries the
-    /// screen-level "settingsScreen" identifier, and an ancestor's
-    /// identifier can silently override a nested one (see how
-    /// "typeToSpeakScreen" had to move off its own screen's outer VStack
-    /// for the same reason) -- an unproven assumption here isn't worth an
-    /// extra CI round trip to find out the hard way.
-    private func openSettingsRow(_ app: XCUIApplication, labelContains: String, screenIdentifier: String, captureName: String) {
-        // BEGINSWITH, not CONTAINS: the engine picker's Whisper option
-        // summary starts with the Hebrew word for "model" too ("מודל קוד
-        // פתוח..."), and a CONTAINS match grabbed that row instead of the
-        // actual "מודל" navigation link -- a composed row's own label
-        // always leads with its own title, so anchoring there is unique.
-        let row = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", labelContains)).firstMatch
-        XCTAssertTrue(row.waitForExistence(timeout: 10), "secondary screens: the \(labelContains) row never appeared")
+    /// Taps a Settings row by its own accessibility identifier. Two earlier
+    /// attempts matched by visible label text instead ("CONTAINS" grabbed
+    /// the Whisper engine picker's option summary, which also starts with
+    /// the Hebrew word for "model"; "BEGINSWITH" then still didn't match
+    /// the row's own composed label, which reads the value before the
+    /// title) -- an explicit identifier on the row itself sidesteps both
+    /// the ambiguity and Hebrew text-matching fragility in general.
+    private func openSettingsRow(_ app: XCUIApplication, rowIdentifier: String, screenIdentifier: String, captureName: String) {
+        let row = app.descendants(matching: .any)[rowIdentifier]
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "secondary screens: \(rowIdentifier) never appeared")
         row.tap()
         let screen = app.descendants(matching: .any)[screenIdentifier]
         XCTAssertTrue(screen.waitForExistence(timeout: 10), "secondary screens: \(screenIdentifier) never appeared")
