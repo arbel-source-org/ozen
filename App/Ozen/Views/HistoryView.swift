@@ -49,6 +49,7 @@ struct HistoryView: View {
                 Label(tr("השורות המסומנות", "Starred lines"), systemImage: "star.fill")
                     .badge(sessions.reduce(0) { $0 + $1.starredCount })
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("starredLinesRow")
         }
     }

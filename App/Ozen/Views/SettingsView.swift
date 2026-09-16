@@ -153,6 +153,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("modelManagerRow")
             Toggle(tr("להוריד מודלים גם בחבילת הגלישה", "Download models on cellular data too"), isOn: $viewModel.allowCellularModelDownload)
         } header: {
@@ -379,6 +380,7 @@ struct SettingsView: View {
                     Label(tr("מילים חשובות", "Important words"), systemImage: "text.badge.star")
                 }
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("keywordAlertsRow")
             NavigationLink {
                 SoundAlertsView(viewModel: viewModel)
@@ -390,6 +392,7 @@ struct SettingsView: View {
                     Label(tr("צלילים בבית", "Sounds at home"), systemImage: "bell.badge")
                 }
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("soundAlertsRow")
             Toggle(isOn: Binding(
                 get: { viewModel.notifyWhenInBackground },
@@ -481,6 +484,7 @@ struct SettingsView: View {
             } label: {
                 Label(tr("שיחות קודמות", "Previous conversations"), systemImage: "clock.arrow.circlepath")
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("historyRow")
         } header: {
             Text(tr("היסטוריה", "History"))
@@ -503,6 +507,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("vocabularyRow")
         } footer: {
             Text(tr("שני המנועים מקבלים את הרשימה כרמז, כדי ששמות של בני משפחה ייכתבו נכון.", "Both engines get the list as a hint, so family members’ names are spelled correctly."))
@@ -541,6 +546,7 @@ struct SettingsView: View {
             } label: {
                 Label(tr("הוספת דובר", "Add speaker"), systemImage: "plus.circle")
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("addSpeakerButton")
         } header: {
             Text(tr("דוברים שמורים", "Saved speakers"))
@@ -615,6 +621,7 @@ struct SettingsView: View {
             } label: {
                 Label(tr("אבחון", "Diagnostics"), systemImage: "stethoscope")
             }
+            .accessibilityElement(children: .combine)
             .accessibilityIdentifier("diagnosticsRow")
             Button {
                 viewModel.showOnboardingAgain()
