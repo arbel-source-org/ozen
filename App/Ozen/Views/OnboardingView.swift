@@ -135,7 +135,6 @@ struct OnboardingView: View {
                         Label(tr("לאשר התראות", "Approve notifications"), systemImage: "bell.badge")
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
-                            .lineLimit(2)
                             .frame(maxWidth: .infinity)
                     }
                     .ozenGlassButton()
@@ -155,7 +154,6 @@ struct OnboardingView: View {
                         Label(tr("פתיחת הגדרות הטלפון", "Open phone settings"), systemImage: "gear")
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
-                            .lineLimit(2)
                     }
                     .ozenGlassButton()
                     .controlSize(.large)
@@ -171,7 +169,6 @@ struct OnboardingView: View {
                     Label(tr("לאשר את המיקרופון", "Approve the microphone"), systemImage: "mic.fill")
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                        .lineLimit(2)
                         .frame(maxWidth: .infinity)
                 }
                 .ozenGlassButton(prominent: true)
