@@ -265,29 +265,46 @@ private struct OnboardingPage<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Image(systemName: symbol)
-                    .font(.system(size: 72, weight: .light))
-                    .foregroundStyle(.tint)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 32)
-                    .accessibilityHidden(true)
-                Text(title)
-                    // Scales with the phone's text size, like everything
-                    // else here: the largest sizes are the ones she may use.
-                    .font(.largeTitle.bold())
-                    .accessibilityAddTraits(.isHeader)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.bottom, 8)
-                content
-                    .font(.title3)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                pageContent
             }
-            .padding(.horizontal, 28)
-            .padding(.bottom, 48)
+            // The page-style TabView draws its dots inside its own
+            // bounds, over whatever content is there -- not in reserved
+            // space a ScrollView could know to avoid. safeAreaInset
+            // couldn't move that (see OnboardingView), so this fades
+            // scrolled text to the background colour first instead,
+            // the same fix that worked for the caption screen's status
+            // bar collision.
+            LinearGradient(colors: [Color(.systemBackground).opacity(0), Color(.systemBackground)], startPoint: .top, endPoint: .bottom)
+                .frame(height: 40)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
+    }
+
+    private var pageContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Image(systemName: symbol)
+                .font(.system(size: 72, weight: .light))
+                .foregroundStyle(.tint)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 32)
+                .accessibilityHidden(true)
+            Text(title)
+                // Scales with the phone's text size, like everything
+                // else here: the largest sizes are the ones she may use.
+                .font(.largeTitle.bold())
+                .accessibilityAddTraits(.isHeader)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.bottom, 8)
+            content
+                .font(.title3)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 28)
+        .padding(.bottom, 48)
     }
 }
 
