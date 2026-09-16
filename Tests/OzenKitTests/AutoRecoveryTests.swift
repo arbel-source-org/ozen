@@ -65,6 +65,24 @@ struct AutoRecoveryPolicyTests {
         #expect(policy.nextDelay(for: loadFailure) == nil)
     }
 
+    @Test("a problem that keeps switching kind still stops retrying eventually")
+    func alternatingKindsStillExhausts() {
+        var policy = AutoRecoveryPolicy(glitchDelays: [1, 3, 8, 20], downloadDelays: [15])
+        let download = failure(.engineUnavailable, engine: .modelDownloadFailed)
+        let loadFailure = failure(.engineUnavailable, engine: .modelLoadFailed)
+
+        var sawNil = false
+        for i in 0..<(policy.maxAttemptsAcrossSchedules * 2) {
+            let delay = policy.nextDelay(for: i.isMultiple(of: 2) ? download : loadFailure)
+            if delay == nil {
+                sawNil = true
+                break
+            }
+        }
+        #expect(sawNil)
+        #expect(policy.overallAttempts <= policy.maxAttemptsAcrossSchedules)
+    }
+
     @Test("reset starts the count over, and the disabled policy never retries")
     func resetAndDisabled() {
         var policy = AutoRecoveryPolicy(glitchDelays: [1], downloadDelays: [])

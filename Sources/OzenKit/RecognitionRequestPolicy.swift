@@ -14,6 +14,11 @@ public enum RecognitionRequestPolicy {
     /// Roll over before Apple's own limits bite, so one runaway utterance
     /// can't grow without bound.
     public static let maxRequestSeconds = 45.0
+    /// This close to the hard cap, any decent pause is enough to cut
+    /// cleanly rather than waiting for the full `pauseSeconds` and risking
+    /// a word split mid-syllable at the limit instead.
+    public static let nearLimitGraceSeconds = 5.0
+    public static let nearLimitPauseSeconds = 0.4
     /// Pure silence for this long restarts the request quietly, before the
     /// recognizer times out with "no speech detected".
     public static let idleRestartSeconds = 8.0
@@ -24,12 +29,18 @@ public enum RecognitionRequestPolicy {
 
     public enum RolloverReason: Sendable, Equatable {
         case pauseAfterSpeech
+        case pauseNearLimit
         case tooLong
         case idle
     }
 
     public static func rollover(samplesInRequest: Int, samplesSinceSpeech: Int, requestHasSpeech: Bool) -> RolloverReason? {
         if requestHasSpeech && samplesSinceSpeech >= samples(pauseSeconds) { return .pauseAfterSpeech }
+        if requestHasSpeech,
+           samplesInRequest >= samples(maxRequestSeconds - nearLimitGraceSeconds),
+           samplesSinceSpeech >= samples(nearLimitPauseSeconds) {
+            return .pauseNearLimit
+        }
         if samplesInRequest >= samples(maxRequestSeconds) { return .tooLong }
         if !requestHasSpeech && samplesInRequest >= samples(idleRestartSeconds) { return .idle }
         return nil

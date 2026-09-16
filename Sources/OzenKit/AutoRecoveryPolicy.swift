@@ -26,7 +26,14 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
     /// Listening this long without trouble means the next failure is a new
     /// problem, not the same one again, so the attempt count starts over.
     public var healthyListeningSeconds: Double
+    /// A problem that keeps changing shape (a download that fails, then a
+    /// corrupt half-download that won't load, then fails again) would
+    /// otherwise get a fresh budget every time it switches schedule and
+    /// never stop retrying. This bounds the whole streak regardless of how
+    /// many different schedules it passes through.
+    public var maxAttemptsAcrossSchedules = 10
     public private(set) var attempts = 0
+    public private(set) var overallAttempts = 0
     /// The schedule `attempts` counts against. A retry for a glitch that
     /// turns out to actually be, say, a model failing to load is a new
     /// problem with its own two tries, not a continuation of the glitch's
@@ -91,14 +98,16 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
         case .download: delays = downloadDelays
         case .loadFailure: delays = Array(glitchDelays.prefix(2))
         }
-        guard attempts < delays.count else { return nil }
+        guard attempts < delays.count, overallAttempts < maxAttemptsAcrossSchedules else { return nil }
         let delay = delays[attempts]
         attempts += 1
+        overallAttempts += 1
         return delay
     }
 
     public mutating func reset() {
         attempts = 0
+        overallAttempts = 0
         lastSchedule = nil
     }
 }

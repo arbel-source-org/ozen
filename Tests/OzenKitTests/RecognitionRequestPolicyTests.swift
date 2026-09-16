@@ -17,6 +17,15 @@ struct RecognitionRequestPolicyTests {
         #expect(RecognitionRequestPolicy.rollover(samplesInRequest: seconds(45), samplesSinceSpeech: 0, requestHasSpeech: true) == .tooLong)
     }
 
+    @Test("close to the hard cap, a shorter pause is enough to cut cleanly instead of mid-word")
+    func pauseNearLimit() {
+        #expect(RecognitionRequestPolicy.rollover(samplesInRequest: seconds(41), samplesSinceSpeech: seconds(0.5), requestHasSpeech: true) == .pauseNearLimit)
+        // Same short pause, but not yet close to the limit: still waits for the full pause.
+        #expect(RecognitionRequestPolicy.rollover(samplesInRequest: seconds(35), samplesSinceSpeech: seconds(0.5), requestHasSpeech: true) == nil)
+        // Right at the hard cap with no pause at all: the fallback still fires.
+        #expect(RecognitionRequestPolicy.rollover(samplesInRequest: seconds(45), samplesSinceSpeech: 0, requestHasSpeech: true) == .tooLong)
+    }
+
     @Test("silence restarts the request before the recognizer can time out")
     func idle() {
         #expect(RecognitionRequestPolicy.rollover(samplesInRequest: seconds(8), samplesSinceSpeech: seconds(8), requestHasSpeech: false) == .idle)
