@@ -16,6 +16,7 @@ struct BigTextView: View {
     @State private var isFlipped = false
     @FocusState private var isTyping: Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     static let fontSize: CGFloat = 52
 
@@ -69,10 +70,18 @@ struct BigTextView: View {
         }
     }
 
+    // Two to a row above accessibility sizes; even that was too narrow at
+    // the largest one, where a single Hebrew word like "ניקוי" wrapped
+    // letter by letter down its half of the row, and the whole grid grew
+    // tall enough to push the text area up under the status bar.
+    private var gridColumns: [GridItem] {
+        dynamicTypeSize.isAccessibilitySize
+            ? [GridItem(.flexible())]
+            : [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    }
+
     private var controls: some View {
-        // Two to a row: four labelled buttons side by side don't fit at
-        // the text sizes she uses.
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+        LazyVGrid(columns: gridColumns, spacing: 12) {
             Button {
                 text = ""
                 isFlipped = false
