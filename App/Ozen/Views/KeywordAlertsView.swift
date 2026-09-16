@@ -5,6 +5,18 @@ struct KeywordAlertsView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var newPhrase = ""
     @FocusState private var isEditing: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    // The matched phrase has no length limit of its own, so at the largest
+    // accessibility text size it can wrap onto a second line; a plain
+    // HStack then lets the timestamp interleave with that wrapped line
+    // instead of sitting below it (the same overlap shape as the model
+    // manager's rating dots).
+    private var recentHitLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout())
+    }
 
     var body: some View {
         List {
@@ -64,9 +76,9 @@ struct KeywordAlertsView: View {
             if !viewModel.keywordHits.isEmpty {
                 Section(tr("נשמעו לאחרונה", "Recently heard")) {
                     ForEach(viewModel.keywordHits.suffix(10).reversed()) { hit in
-                        HStack {
+                        recentHitLayout {
                             Text(hit.match.matchedText)
-                            Spacer()
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             Text(Date(timeIntervalSince1970: hit.timestamp).formatted(date: .omitted, time: .shortened))
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
