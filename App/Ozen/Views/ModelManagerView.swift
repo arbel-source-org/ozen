@@ -35,6 +35,7 @@ struct ModelManagerView: View {
                 Text(tr("הורדה נעשית פעם אחת ונשמרת בטלפון (לא מגובה ל‑iCloud). סה\"כ שטח: \(Self.format(bytes: totalOnDisk)).", "Downloaded once and saved on the phone (not backed up to iCloud). Total space: \(Self.format(bytes: totalOnDisk)).") + (freeBytes.map { " " + tr("פנוי בטלפון: \(Self.format(bytes: $0)).", "Free on the phone: \(Self.format(bytes: $0)).") } ?? ""))
             }
         }
+        .accessibilityIdentifier("modelManagerScreen")
         .navigationTitle(tr("מודל Whisper", "Whisper model"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: refresh)

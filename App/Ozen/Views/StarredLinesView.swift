@@ -67,6 +67,7 @@ struct StarredLinesView: View {
                 }
             }
         }
+        .accessibilityIdentifier("starredLinesScreen")
         .navigationTitle(tr("שורות מסומנות", "Starred lines"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

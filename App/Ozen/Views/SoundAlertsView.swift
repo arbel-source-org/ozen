@@ -57,6 +57,7 @@ struct SoundAlertsView: View {
                 }
             }
         }
+        .accessibilityIdentifier("soundAlertsScreen")
         .navigationTitle(tr("צלילים בבית", "Sounds at home"))
         .navigationBarTitleDisplayMode(.inline)
     }

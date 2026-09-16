@@ -73,6 +73,7 @@ struct MicPickerView: View {
             // Opened before captions ever set up the microphone, the list
             // would otherwise be empty until someone found the refresh button.
             .onAppear { viewModel.refreshInputs() }
+            .accessibilityIdentifier("micPickerScreen")
             .navigationTitle(tr("בחירת מיקרופון", "Choose microphone"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

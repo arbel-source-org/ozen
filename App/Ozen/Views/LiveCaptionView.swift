@@ -995,6 +995,7 @@ struct LiveCaptionView: View {
         }
         .ozenGlassButton()
         .accessibilityLabel(tr("בחירת מיקרופון", "Choose microphone"))
+        .accessibilityIdentifier("micPickerButton")
     }
 
     private var typeToSpeakButton: some View {

@@ -48,6 +48,7 @@ struct SpeakerEnrollmentView: View {
                     Text(tr("ההקלטה עצמה לא נשמרת — רק \"טביעת קול\" מספרית קצרה שממנה אי אפשר לשחזר את הדיבור.", "The recording itself isn’t saved — only a short numeric “voiceprint” that the speech can’t be reconstructed from."))
                 }
             }
+            .accessibilityIdentifier("speakerEnrollmentScreen")
             .navigationTitle(tr("דובר חדש", "New speaker"))
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled(isRecording)

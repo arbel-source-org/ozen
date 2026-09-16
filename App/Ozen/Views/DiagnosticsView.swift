@@ -119,6 +119,7 @@ struct DiagnosticsView: View {
                 }
             }
         }
+        .accessibilityIdentifier("diagnosticsScreen")
         .navigationTitle(tr("אבחון", "Diagnostics"))
         .navigationBarTitleDisplayMode(.inline)
     }

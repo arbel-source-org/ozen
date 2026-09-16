@@ -68,6 +68,7 @@ struct VocabularyView: View {
                 Text(tr("השינויים נכנסים לתוקף מהמשפט הבא, בלי להפעיל מחדש.", "Changes take effect from the next sentence, without restarting."))
             }
         }
+        .accessibilityIdentifier("vocabularyScreen")
         .navigationTitle(tr("שמות ומילים", "Names and words"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

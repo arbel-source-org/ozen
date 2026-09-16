@@ -38,6 +38,20 @@ enum ScreenshotFixtures {
         if let starred = segments.first {
             viewModel.toggleStar(starred)
         }
+        if let first = segments.first {
+            let record = TranscriptSessionRecord.make(
+                from: segments,
+                speakerName: { [pipeline = viewModel.pipeline] in pipeline.displayName(for: $0) },
+                id: UUID(),
+                startedAt: first.startTimestamp,
+                endedAt: segments.last?.lastUpdateTimestamp,
+                engine: .whisperKit,
+                modelVariant: viewModel.settings.whisperModelVariant,
+                inputName: nil,
+                starred: [first.id]
+            )
+            _ = try? viewModel.historyStore.save(record)
+        }
 
         switch variant {
         case .hebrewDefault:

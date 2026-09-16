@@ -75,6 +75,7 @@ struct KeywordAlertsView: View {
                 }
             }
         }
+        .accessibilityIdentifier("keywordAlertsScreen")
         .navigationTitle(tr("מילים חשובות", "Important words"))
         .navigationBarTitleDisplayMode(.inline)
     }

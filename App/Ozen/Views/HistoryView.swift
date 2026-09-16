@@ -116,6 +116,7 @@ struct HistoryView: View {
             }
             conversationsSection
         }
+        .accessibilityIdentifier("historyScreen")
         .searchable(text: $query, prompt: tr("חיפוש במה שנאמר", "Search what was said"))
         .task(id: query) {
             // Every search reads every saved conversation from disk. Wait

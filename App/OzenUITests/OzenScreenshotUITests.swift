@@ -165,4 +165,83 @@ final class OzenScreenshotUITests: XCTestCase {
             capture(app, name: "big-text-accessibility-text-flipped")
         }
     }
+
+    /// Screens reached only through Settings' navigation links, or from
+    /// the microphone picker's own entry point on the caption screen --
+    /// none of them ever screenshotted at the largest accessibility text
+    /// size before. The `hebrewDefault` fixture also seeds one saved
+    /// conversation, with a starred line, so History and Starred lines
+    /// show real content instead of their empty states.
+    func testSecondaryScreensAccessibilityText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "hebrewDefault", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let settingsButton = app.descendants(matching: .any)["settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "secondary screens: the settings button never appeared")
+        settingsButton.tap()
+        let settingsScreen = app.descendants(matching: .any)["settingsScreen"]
+        XCTAssertTrue(settingsScreen.waitForExistence(timeout: 10), "secondary screens: settings never appeared")
+
+        openSettingsRow(app, labelContains: "מודל", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
+        openSettingsRow(app, labelContains: "מילים חשובות", screenIdentifier: "keywordAlertsScreen", captureName: "keyword-alerts-accessibility-text")
+        openSettingsRow(app, labelContains: "צלילים בבית", screenIdentifier: "soundAlertsScreen", captureName: "sound-alerts-accessibility-text")
+        openSettingsRow(app, labelContains: "שמות ומילים מיוחדות", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
+        openSettingsRow(app, labelContains: "אבחון", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
+
+        let historyRow = app.buttons["שיחות קודמות"]
+        XCTAssertTrue(historyRow.waitForExistence(timeout: 10), "secondary screens: the history row never appeared")
+        historyRow.tap()
+        let historyScreen = app.descendants(matching: .any)["historyScreen"]
+        XCTAssertTrue(historyScreen.waitForExistence(timeout: 10), "secondary screens: history never appeared")
+        let starredRow = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "השורות המסומנות")).firstMatch
+        XCTAssertTrue(starredRow.waitForExistence(timeout: 10), "secondary screens: the seeded conversation never reached history")
+        capture(app, name: "history-accessibility-text")
+        starredRow.tap()
+        let starredScreen = app.descendants(matching: .any)["starredLinesScreen"]
+        XCTAssertTrue(starredScreen.waitForExistence(timeout: 10), "secondary screens: starred lines never appeared")
+        capture(app, name: "starred-lines-accessibility-text")
+        let backToHistory = app.navigationBars.buttons["היסטוריה"]
+        XCTAssertTrue(backToHistory.waitForExistence(timeout: 10), "secondary screens: no way back from starred lines")
+        backToHistory.tap()
+        let backToSettingsFromHistory = app.navigationBars.buttons["הגדרות"]
+        XCTAssertTrue(backToSettingsFromHistory.waitForExistence(timeout: 10), "secondary screens: no way back from history")
+        backToSettingsFromHistory.tap()
+
+        let addSpeaker = app.buttons["הוספת דובר"]
+        XCTAssertTrue(addSpeaker.waitForExistence(timeout: 10), "secondary screens: the add-speaker button never appeared")
+        addSpeaker.tap()
+        let enrollmentScreen = app.descendants(matching: .any)["speakerEnrollmentScreen"]
+        XCTAssertTrue(enrollmentScreen.waitForExistence(timeout: 10), "secondary screens: speaker enrollment never appeared")
+        capture(app, name: "speaker-enrollment-accessibility-text")
+        app.buttons["ביטול"].tap()
+
+        app.buttons["סגור"].firstMatch.tap()
+
+        let micPickerButton = app.descendants(matching: .any)["micPickerButton"]
+        XCTAssertTrue(micPickerButton.waitForExistence(timeout: 10), "secondary screens: the mic picker button never appeared")
+        micPickerButton.tap()
+        let micPickerScreen = app.descendants(matching: .any)["micPickerScreen"]
+        XCTAssertTrue(micPickerScreen.waitForExistence(timeout: 10), "secondary screens: mic picker never appeared")
+        capture(app, name: "mic-picker-accessibility-text")
+    }
+
+    /// Taps a Settings row by its visible label rather than by its own
+    /// accessibility identifier: Settings' Form already carries the
+    /// screen-level "settingsScreen" identifier, and an ancestor's
+    /// identifier can silently override a nested one (see how
+    /// "typeToSpeakScreen" had to move off its own screen's outer VStack
+    /// for the same reason) -- an unproven assumption here isn't worth an
+    /// extra CI round trip to find out the hard way.
+    private func openSettingsRow(_ app: XCUIApplication, labelContains: String, screenIdentifier: String, captureName: String) {
+        let row = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", labelContains)).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "secondary screens: the \(labelContains) row never appeared")
+        row.tap()
+        let screen = app.descendants(matching: .any)[screenIdentifier]
+        XCTAssertTrue(screen.waitForExistence(timeout: 10), "secondary screens: \(screenIdentifier) never appeared")
+        capture(app, name: captureName)
+        let back = app.navigationBars.buttons["הגדרות"]
+        XCTAssertTrue(back.waitForExistence(timeout: 10), "secondary screens: no way back from \(screenIdentifier)")
+        back.tap()
+    }
 }
