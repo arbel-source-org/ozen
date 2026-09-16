@@ -28,6 +28,7 @@ struct BigTextView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             controls
         }
+        .accessibilityIdentifier("bigTextScreen")
         .background(theme.background.ignoresSafeArea())
         .preferredColorScheme(theme.colorScheme)
         .onAppear { isTyping = !isFlipped }

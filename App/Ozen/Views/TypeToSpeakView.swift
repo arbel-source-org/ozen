@@ -123,6 +123,7 @@ struct TypeToSpeakView: View {
             }
             .ozenGlassButton()
             .accessibilityHint(tr("כדי שמישהו יכתוב לך, או כדי להראות למי שמולך מה כתבת", "So someone can write to you, or to show the person you’re talking with what you wrote"))
+            .accessibilityIdentifier("bigTextButton")
 
             if !viewModel.hasHebrewVoice {
                 Label(tr("אין קול עברי מותקן. הגדרות ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice installed. Settings ← Accessibility ← Spoken Content ← Voices ← Hebrew."), systemImage: "exclamationmark.triangle")

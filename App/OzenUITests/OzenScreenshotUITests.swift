@@ -144,5 +144,25 @@ final class OzenScreenshotUITests: XCTestCase {
 
         app.textFields.firstMatch.typeText("תזכירי לי לקחת תרופות")
         capture(app, name: "type-to-speak-accessibility-text-typed")
+
+        // The button that just got fixed for wrapping at this same text
+        // size opens a screen built entirely around showing text as big
+        // as possible -- exactly where a rendering mistake here would
+        // show up worst, and never checked before.
+        let bigTextButton = app.descendants(matching: .any)["bigTextButton"]
+        XCTAssertTrue(bigTextButton.waitForExistence(timeout: 10), "big text: the button to open it never appeared")
+        bigTextButton.tap()
+
+        let bigTextScreen = app.descendants(matching: .any)["bigTextScreen"]
+        XCTAssertTrue(bigTextScreen.waitForExistence(timeout: 10), "big text: the screen never appeared")
+        capture(app, name: "big-text-accessibility-text")
+
+        // The "hebrewDefault" fixture always sets the UI language to
+        // Hebrew, regardless of the test runner's own locale.
+        let flipButton = app.descendants(matching: .any).buttons["להפוך"]
+        if flipButton.waitForExistence(timeout: 5) {
+            flipButton.tap()
+            capture(app, name: "big-text-accessibility-text-flipped")
+        }
     }
 }
