@@ -225,6 +225,11 @@ final class OzenScreenshotUITests: XCTestCase {
         openSettingsRow(app, rowIdentifier: "diagnosticsRow", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
 
         app.buttons["סגור"].firstMatch.tap()
+        // Settings' dismiss animation can still be finishing when the next
+        // element is already found by identifier -- tapping mid-animation
+        // is what produced an intermittent "kAXErrorCannotComplete
+        // performing AXAction kAXScrollToVisibleAction" here.
+        Thread.sleep(forTimeInterval: 0.5)
 
         let micPickerButton = app.descendants(matching: .any)["micPickerButton"]
         XCTAssertTrue(micPickerButton.waitForExistence(timeout: 10), "secondary screens: the mic picker button never appeared")
