@@ -1027,6 +1027,7 @@ struct LiveCaptionView: View {
         }
         .ozenGlassButton()
         .accessibilityLabel(tr("הגדרות", "Settings"))
+        .accessibilityIdentifier("settingsButton")
     }
 
     private var statusControl: some View {

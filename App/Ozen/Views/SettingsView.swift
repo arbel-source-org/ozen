@@ -50,6 +50,7 @@ struct SettingsView: View {
                 maintenanceSection
                 aboutSection
             }
+            .accessibilityIdentifier("settingsScreen")
             .navigationTitle(tr("הגדרות", "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

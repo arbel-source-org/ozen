@@ -93,4 +93,26 @@ final class OzenScreenshotUITests: XCTestCase {
             }
         }
     }
+
+    /// Settings is a long Form with over a dozen sections -- rows pairing a
+    /// label with a value, a segmented picker, sliders -- none of it ever
+    /// seen at the largest accessibility text size before.
+    func testSettingsAccessibilityText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "hebrewDefault", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let settingsButton = app.descendants(matching: .any)["settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "settings: the button to open it never appeared")
+        settingsButton.tap()
+
+        let screen = app.descendants(matching: .any)["settingsScreen"]
+        XCTAssertTrue(screen.waitForExistence(timeout: 10), "settings: the screen never appeared")
+        capture(app, name: "settings-accessibility-text-page1")
+
+        for index in 2...5 {
+            app.swipeUp()
+            capture(app, name: "settings-accessibility-text-page\(index)")
+        }
+    }
 }
