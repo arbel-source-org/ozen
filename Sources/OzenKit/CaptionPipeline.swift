@@ -734,6 +734,10 @@ public final class CaptionPipeline {
                 timestamp: now + 4
             )
         ]
+        // Mirrors what scanForKeywords does for a real match: the caption
+        // row's highlight and bell icon key off this set, not off
+        // keywordHits itself.
+        keywordHitSegmentIDs = [segments[1].id]
         return segments
     }
     #endif
