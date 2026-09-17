@@ -20,6 +20,9 @@ enum ScreenshotFixtures {
         /// Onboarding itself, never completed: the one screen every
         /// install passes through before any of the others exist.
         case onboarding
+        /// Quiet hours already on, so the toggle's revealed steppers can
+        /// be screenshotted without a UI test having to flip it live.
+        case quietHoursEnabled
     }
 
     @MainActor
@@ -73,6 +76,9 @@ enum ScreenshotFixtures {
             viewModel.setAppLanguage(.english)
         case .onboarding:
             break
+        case .quietHoursEnabled:
+            viewModel.setAppLanguage(.hebrew)
+            viewModel.quietHours = QuietHours(isEnabled: true, startHour: 22, endHour: 7)
         }
 
         return viewModel

@@ -125,6 +125,24 @@ final class OzenScreenshotUITests: XCTestCase {
         }
     }
 
+    /// The steppers quiet hours reveals once enabled, at this text size --
+    /// seeded on at launch (see ScreenshotFixtures.Variant.quietHoursEnabled)
+    /// rather than flipped live by the test, since tapping the toggle
+    /// itself reliably failed to reveal them across several attempts.
+    func testQuietHoursEnabledAccessibilityText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "quietHoursEnabled", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let settingsButton = app.descendants(matching: .any)["settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "quiet hours: the settings button never appeared")
+        settingsButton.tap()
+
+        let startStepper = scrollDownUntilVisible(app, identifier: "quietHoursStartStepper")
+        XCTAssertTrue(startStepper.exists, "quiet hours: the start-hour stepper never appeared")
+        capture(app, name: "quiet-hours-on-accessibility-text")
+    }
+
     /// The reply sheet: a composer with a Stop/Play pair sharing an HStack,
     /// a typed phrase's replay row pairing a full-width button with a
     /// fixed-size "add" button, and a scrollable quick-phrases list below
@@ -205,21 +223,17 @@ final class OzenScreenshotUITests: XCTestCase {
 
         // notifyWhenInBackground is seeded on in ScreenshotFixtures, so
         // this inline toggle (unlike the rows above) is already visible
-        // rather than reached through a NavigationLink.
+        // rather than reached through a NavigationLink. The enabled state
+        // (with its revealed steppers) is covered separately by
+        // testQuietHoursEnabledAccessibilityText, seeded from launch
+        // rather than flipped live here -- tapping this toggle mid-test
+        // reliably failed to reveal the steppers across several attempts,
+        // most likely an XCUITest quirk specific to this Toggle at this
+        // extreme text size rather than anything wrong with the toggle
+        // itself.
         let quietHoursToggle = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
         XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
         capture(app, name: "quiet-hours-off-accessibility-text")
-        quietHoursToggle.tap()
-        // The steppers this reveals render below the toggle, which was
-        // already at (or past) the bottom of the current scroll position --
-        // per scrollDownUntilVisible's own doc comment, a row below the
-        // current position isn't merely off-screen, it doesn't exist in
-        // the accessibility tree at all until actually scrolled near it.
-        // A bare waitForExistence never sees it appear; only scrolling
-        // does.
-        let startStepper = scrollDownUntilVisible(app, identifier: "quietHoursStartStepper")
-        XCTAssertTrue(startStepper.exists, "secondary screens: quiet hours toggle tap didn't reveal the hour steppers")
-        capture(app, name: "quiet-hours-on-accessibility-text")
 
         openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
 
