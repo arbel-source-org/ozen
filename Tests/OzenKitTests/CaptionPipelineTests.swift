@@ -589,6 +589,26 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.stats.speakerClustersOpened == 0)
     }
 
+    @Test("a profile saved by a different, since-replaced embedder is not seeded as a phantom speaker")
+    func mismatchedProfileLengthIsNotEnrolled() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        // FakeEmbedder always returns length-3 vectors; this profile is
+        // from a shorter, older embedder and can never match live speech.
+        pipeline.enroll(profile: SpeakerProfile(name: "דנה", embedding: [1, 0]))
+        #expect(pipeline.speakerClusters.isEmpty)
+
+        await pipeline.start(settings: .default)
+        let id = UUID()
+        engine.emit(token(id, "היי"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.segments.first?.speakerClusterID != nil })
+
+        #expect(pipeline.displayName(for: pipeline.segments[0]) != "דנה")
+        #expect(pipeline.stats.speakerClustersOpened == 1)
+    }
+
     @Test("clearTranscript empties segments but keeps listening")
     func clearTranscript() async {
         let engine = FakeEngine()

@@ -550,9 +550,24 @@ public final class CaptionPipeline {
 
     // MARK: - Speakers
 
+    /// What the active embedder's output looks like, probed fresh on
+    /// silence each time (enrollment is rare, not on the hot audio path).
+    /// A profile saved by a since-replaced embedder (see
+    /// `EmbeddingClusterer.assign`) is a different length and can never be
+    /// matched against live speech; seeding it anyway would still count as
+    /// a real "speaker identified" in diagnostics forever.
+    private var expectedEmbeddingLength: Int? {
+        embedder.embed(
+            samples: [Float](repeating: 0, count: Int(Self.embeddingWindowSeconds * Self.sampleRate)),
+            sampleRate: Self.sampleRate
+        )?.count
+    }
+
     /// Seeds the clusterer with a saved profile so that person is named
-    /// from their first utterance.
+    /// from their first utterance. Does nothing for a profile whose voice
+    /// print predates the current embedder — see `expectedEmbeddingLength`.
     public func enroll(profile: SpeakerProfile) {
+        guard expectedEmbeddingLength == nil || profile.embedding.count == expectedEmbeddingLength else { return }
         _ = clusterer.enroll(name: profile.name, embedding: profile.embedding)
         speakerClusters = clusterer.clusters
     }
