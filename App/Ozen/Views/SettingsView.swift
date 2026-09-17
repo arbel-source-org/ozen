@@ -433,6 +433,44 @@ struct SettingsView: View {
                     }
                 }
             }
+            if viewModel.notifyWhenInBackground {
+                Toggle(isOn: Binding(
+                    get: { viewModel.quietHours.isEnabled },
+                    set: { enabled in
+                        var hours = viewModel.quietHours
+                        hours.isEnabled = enabled
+                        viewModel.quietHours = hours
+                    }
+                )) {
+                    Label(tr("שעות שקטות", "Quiet hours"), systemImage: "moon.zzz")
+                }
+                .accessibilityIdentifier("quietHoursToggle")
+                if viewModel.quietHours.isEnabled {
+                    Stepper(value: Binding(
+                        get: { viewModel.quietHours.startHour },
+                        set: { hour in
+                            var hours = viewModel.quietHours
+                            hours.startHour = hour
+                            viewModel.quietHours = hours
+                        }
+                    ), in: 0...23) {
+                        LabeledContent(tr("מתחילות", "Starts"), value: Self.hourLabel(viewModel.quietHours.startHour))
+                    }
+                    Stepper(value: Binding(
+                        get: { viewModel.quietHours.endHour },
+                        set: { hour in
+                            var hours = viewModel.quietHours
+                            hours.endHour = hour
+                            viewModel.quietHours = hours
+                        }
+                    ), in: 0...23) {
+                        LabeledContent(tr("מסתיימות", "Ends"), value: Self.hourLabel(viewModel.quietHours.endHour))
+                    }
+                    Text(tr("צלילים דחופים כמו אזעקה עדיין יתריעו.", "Urgent sounds like a siren still alert."))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
         } header: {
             Text(tr("התראות", "Alerts"))
         } footer: {
@@ -678,5 +716,9 @@ struct SettingsView: View {
         let version = info["CFBundleShortVersionString"] as? String ?? "?"
         let build = info["CFBundleVersion"] as? String ?? "?"
         return "\(version) (\(build))"
+    }
+
+    private static func hourLabel(_ hour: Int) -> String {
+        String(format: "%02d:00", hour)
     }
 }

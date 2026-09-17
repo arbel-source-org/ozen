@@ -200,6 +200,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// Saved conversations delete themselves after this long; see
     /// `HistoryRetention`.
     public var historyRetention: HistoryRetention
+    /// A daily window in which only a `.critical` sound still notifies in
+    /// the background; see `QuietHours`.
+    public var quietHours: QuietHours
     /// "Not now" was tapped on the caption screen's offer to set up the
     /// alert for her name; see `offersNameAlert`.
     public var nameAlertOfferDismissed: Bool
@@ -249,6 +252,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         notifyWhenInBackground: Bool = true,
         allowCellularModelDownload: Bool = false,
         historyRetention: HistoryRetention = .forever,
+        quietHours: QuietHours = .default,
         nameAlertOfferDismissed: Bool = false,
         betterModelOfferDismissed: Bool = false
     ) {
@@ -274,6 +278,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.notifyWhenInBackground = notifyWhenInBackground
         self.allowCellularModelDownload = allowCellularModelDownload
         self.historyRetention = historyRetention
+        self.quietHours = quietHours
         self.nameAlertOfferDismissed = nameAlertOfferDismissed
         self.betterModelOfferDismissed = betterModelOfferDismissed
     }
@@ -307,6 +312,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding, appLanguage
         case notifyWhenInBackground, allowCellularModelDownload, historyRetention
+        case quietHours
         case nameAlertOfferDismissed, betterModelOfferDismissed
     }
 
@@ -344,6 +350,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         notifyWhenInBackground = container.lenient(Bool.self, forKey: .notifyWhenInBackground) ?? defaults.notifyWhenInBackground
         allowCellularModelDownload = container.lenient(Bool.self, forKey: .allowCellularModelDownload) ?? defaults.allowCellularModelDownload
         historyRetention = container.lenient(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
+        quietHours = container.lenient(QuietHours.self, forKey: .quietHours) ?? defaults.quietHours
         nameAlertOfferDismissed = container.lenient(Bool.self, forKey: .nameAlertOfferDismissed) ?? defaults.nameAlertOfferDismissed
         betterModelOfferDismissed = container.lenient(Bool.self, forKey: .betterModelOfferDismissed) ?? defaults.betterModelOfferDismissed
     }

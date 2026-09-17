@@ -176,6 +176,7 @@ public final class LiveCaptionViewModel {
         }
         self.settings = settingsStore.load()
         backgroundAlerts.isEnabled = settings.notifyWhenInBackground
+        backgroundAlerts.quietHours = settings.quietHours
         for profile in settings.speakerProfiles {
             pipeline.enroll(profile: profile)
         }
@@ -418,6 +419,15 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    public var quietHours: QuietHours {
+        get { settings.quietHours }
+        set {
+            settings.quietHours = newValue
+            backgroundAlerts.quietHours = newValue
+            persist()
+        }
+    }
+
     /// The battery is running low while captions run. On screen the
     /// banner says so; with the phone put away it becomes a notification.
     public func batteryWarningRaised(_ warning: BatteryWarning) {
@@ -426,14 +436,20 @@ public final class LiveCaptionViewModel {
     }
 
     private func alertRaised(sound alert: SoundAlert) {
-        guard let content = backgroundAlerts.notification(for: alert, appIsActive: isAppActive, now: Date().timeIntervalSince1970) else { return }
+        let now = Date().timeIntervalSince1970
+        guard let content = backgroundAlerts.notification(
+            for: alert, appIsActive: isAppActive, now: now, utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: now))
+        ) else { return }
         postNotification?(content)
     }
 
     private func alertRaised(keywords hits: [KeywordHit], in segment: TranscriptSegment) {
         let now = Date().timeIntervalSince1970
+        let utcOffsetSeconds = TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: now))
         for hit in hits {
-            if let content = backgroundAlerts.notification(for: hit, lineText: segment.text, appIsActive: isAppActive, now: now) {
+            if let content = backgroundAlerts.notification(
+                for: hit, lineText: segment.text, appIsActive: isAppActive, now: now, utcOffsetSeconds: utcOffsetSeconds
+            ) {
                 postNotification?(content)
             }
         }

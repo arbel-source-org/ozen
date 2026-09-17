@@ -24,14 +24,23 @@ public struct AlertNotificationContent: Sendable, Equatable {
 public struct BackgroundAlertPolicy: Sendable, Equatable {
     public var isEnabled: Bool
     public var cooldownSeconds: Double
+    /// While this window is on, only a `.critical` sound still notifies —
+    /// her name, an ordinary sound, wait until it ends.
+    public var quietHours: QuietHours
     private var lastNotified: [String: TimeInterval] = [:]
 
-    public init(isEnabled: Bool = true, cooldownSeconds: Double = 30) {
+    public init(isEnabled: Bool = true, cooldownSeconds: Double = 30, quietHours: QuietHours = .default) {
         self.isEnabled = isEnabled
         self.cooldownSeconds = cooldownSeconds
+        self.quietHours = quietHours
     }
 
-    public mutating func notification(for alert: SoundAlert, appIsActive: Bool, now: TimeInterval) -> AlertNotificationContent? {
+    public mutating func notification(
+        for alert: SoundAlert, appIsActive: Bool, now: TimeInterval, utcOffsetSeconds: Int = 0
+    ) -> AlertNotificationContent? {
+        guard alert.event.importance == .critical || !quietHours.isQuiet(now: now, utcOffsetSeconds: utcOffsetSeconds) else {
+            return nil
+        }
         // By name, not identifier: two classifier labels the catalog shows
         // as the exact same sound (see SoundEventPolicy.evaluate, which
         // keys its own cooldown the same way) must share this cooldown
@@ -51,7 +60,10 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         )
     }
 
-    public mutating func notification(for hit: KeywordHit, lineText: String, appIsActive: Bool, now: TimeInterval) -> AlertNotificationContent? {
+    public mutating func notification(
+        for hit: KeywordHit, lineText: String, appIsActive: Bool, now: TimeInterval, utcOffsetSeconds: Int = 0
+    ) -> AlertNotificationContent? {
+        guard !quietHours.isQuiet(now: now, utcOffsetSeconds: utcOffsetSeconds) else { return nil }
         let key = "keyword-\(hit.match.alertID.uuidString)"
         guard shouldNotify(key: key, appIsActive: appIsActive, now: now) else { return nil }
         return AlertNotificationContent(

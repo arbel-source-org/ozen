@@ -56,6 +56,22 @@ struct BackgroundAlertPolicyTests {
         #expect(policy.notification(for: sound("door_bell"), appIsActive: false, now: 99_400) != nil)
     }
 
+    @Test("quiet hours mute a keyword or ordinary sound but never a critical one")
+    func quietHoursMuteNonCritical() {
+        let quiet = QuietHours(isEnabled: true, startHour: 22, endHour: 7)
+        var policy = BackgroundAlertPolicy(quietHours: quiet)
+        // 23:00 UTC, inside the window.
+        let insideWindow: TimeInterval = 23 * 3_600
+        #expect(policy.notification(for: sound("door_bell"), appIsActive: false, now: insideWindow, utcOffsetSeconds: 0) == nil)
+        #expect(policy.notification(for: hit("סבתא"), lineText: "סבתא", appIsActive: false, now: insideWindow, utcOffsetSeconds: 0) == nil)
+        #expect(policy.notification(for: sound("civil_defense_siren"), appIsActive: false, now: insideWindow, utcOffsetSeconds: 0) != nil)
+
+        // Outside the window, the same sound and word notify normally.
+        let outsideWindow: TimeInterval = 12 * 3_600
+        #expect(policy.notification(for: sound("door_bell"), appIsActive: false, now: outsideWindow, utcOffsetSeconds: 0) != nil)
+        #expect(policy.notification(for: hit("אקמול"), lineText: "אקמול", appIsActive: false, now: outsideWindow, utcOffsetSeconds: 0) != nil)
+    }
+
     @Test("turned off, nothing is ever posted")
     func disabled() {
         var policy = BackgroundAlertPolicy(isEnabled: false)
