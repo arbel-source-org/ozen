@@ -219,6 +219,8 @@ final class OzenScreenshotUITests: XCTestCase {
         nudgeStart.press(forDuration: 0.05, thenDragTo: nudgeEnd)
         capture(app, name: "quiet-hours-off-accessibility-text")
         quietHoursToggle.tap()
+        let startStepper = app.descendants(matching: .any)["quietHoursStartStepper"]
+        XCTAssertTrue(startStepper.waitForExistence(timeout: 5), "secondary screens: quiet hours toggle tap didn't reveal the hour steppers")
         capture(app, name: "quiet-hours-on-accessibility-text")
 
         openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")

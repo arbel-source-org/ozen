@@ -456,6 +456,7 @@ struct SettingsView: View {
                     ), in: 0...23) {
                         LabeledContent(tr("מתחילות", "Starts"), value: Self.hourLabel(viewModel.quietHours.startHour))
                     }
+                    .accessibilityIdentifier("quietHoursStartStepper")
                     Stepper(value: Binding(
                         get: { viewModel.quietHours.endHour },
                         set: { hour in
