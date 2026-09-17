@@ -74,11 +74,18 @@ public struct PromptEchoDetector: Sendable, Equatable {
         for start in terms.indices {
             var position = 0
             var index = start
+            // Two entries sharing a word ("רותי" / "ד״ר רותי") is exactly
+            // what naming or disambiguating two people sounds like, not a
+            // list read back — a word already claimed by an earlier entry
+            // in this run can't count toward a later one.
+            var claimedWords = Set<String>()
             while index < terms.count, position < words.count {
                 let term = terms[index]
                 guard position + term.count <= words.count,
-                      Array(words[position..<(position + term.count)]) == term
+                      Array(words[position..<(position + term.count)]) == term,
+                      term.allSatisfy({ !claimedWords.contains($0) })
                 else { break }
+                claimedWords.formUnion(term)
                 position += term.count
                 index += 1
             }

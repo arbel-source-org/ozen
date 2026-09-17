@@ -42,6 +42,21 @@ struct CaptionStabilizerTests {
         #expect(!second.isCommitted)
     }
 
+    @Test("commit(id:) finishes a pending segment without touching its text, and does nothing twice")
+    func commitByIDLeavesTextAlone() {
+        var stabilizer = CaptionStabilizer()
+        let id = UUID()
+        stabilizer.ingest(TranscriptToken(utteranceID: id, text: "תודה", isFinal: false, timestamp: 0))
+
+        let committed = stabilizer.commit(id: id)
+        #expect(committed?.text == "תודה")
+        #expect(committed?.isCommitted == true)
+        #expect(stabilizer.segments.first?.isCommitted == true)
+
+        #expect(stabilizer.commit(id: id) == nil)
+        #expect(stabilizer.commit(id: UUID()) == nil)
+    }
+
     @Test("a pending segment commits on its own after a long enough silence")
     func silenceCommitsAStaleSegment() {
         var stabilizer = CaptionStabilizer(silenceCommitThreshold: 1.0)

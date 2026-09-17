@@ -821,8 +821,18 @@ public final class CaptionPipeline {
             return
         }
         // "toda. toda. toda." ("thanks") invented window after window on a
-        // quiet room: see `SilencePhraseGuard`.
-        guard silencePhraseGuard.admits(token, at: now()) else { return }
+        // quiet room: see `SilencePhraseGuard`. Suppressing this token
+        // still must not swallow a true final: the words already shown
+        // are good, so commit them now instead of leaving the line
+        // "still settling" until the stale-commit safety net catches up.
+        guard silencePhraseGuard.admits(token, at: now()) else {
+            if token.isFinal, let segment = stabilizer.commit(id: token.utteranceID) {
+                upsert(segment)
+                countCommittedLine()
+                stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
+            }
+            return
+        }
         var enriched = token
         if enriched.speakerClusterID == nil {
             if let assigned = utteranceClusterAssignments[token.utteranceID] {

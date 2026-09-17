@@ -129,6 +129,19 @@ public struct CaptionStabilizer: Sendable {
         return segment
     }
 
+    /// Marks an already-known segment as finished without changing its
+    /// text — for a final update whose words were suppressed elsewhere
+    /// (see `SilencePhraseGuard`) but whose finality still needs to reach
+    /// the reader, instead of leaving the line "still settling" until
+    /// `commitStale`'s safety net eventually catches up. Nil (nothing to
+    /// react to) if there's no such segment, or it's already committed.
+    @discardableResult
+    public mutating func commit(id: UUID) -> TranscriptSegment? {
+        guard let index = segments.lastIndex(where: { $0.id == id }), !segments[index].isCommitted else { return nil }
+        segments[index].isCommitted = true
+        return segments[index]
+    }
+
     /// Call periodically (e.g. once per incoming audio chunk) with the
     /// current stream time. Returns whichever segments just became
     /// committed as a result, so a caller can react (stop animating them)

@@ -28,12 +28,12 @@ public enum NumberEmphasis {
             // "at 10:30, pills").
             var end = found.upperBound
             var last = position
-            var endsWord = found.upperBound == word.text.endIndex
+            var endsWord = found.upperBound == word.text.endIndex && !isImmediatelyFollowedByComma(end, in: text)
             while endsWord, last + 1 < words.count,
                   let joined = joinedWord(words[last + 1], allowingFraction: last == position) {
                 last += 1
                 end = joined.range.upperBound
-                endsWord = end == words[last].text.endIndex
+                endsWord = end == words[last].text.endIndex && !isImmediatelyFollowedByComma(end, in: text)
                 guard joined.isFraction else { break }
             }
             result.append(found.lowerBound..<end)
@@ -47,6 +47,10 @@ public enum NumberEmphasis {
     /// which a unit may follow in turn. On its own "riv'ei" is no amount:
     /// "riv'ei ha-yare'ach" are the moon's quarters.
     private static func joinedWord(_ word: Word, allowingFraction: Bool) -> (range: Range<String.Index>, isFraction: Bool)? {
+        // The shekel sign is a unit with no letters in it, so it has no
+        // `core` at all: it needs its own check rather than the
+        // letters-only `units` lookup below.
+        if word.text == "₪" { return (word.text.startIndex..<word.text.endIndex, false) }
         guard let range = word.coreRange, let core = word.core else { return nil }
         if allowingFraction, fractionsOf.contains(core) { return (range, true) }
         let withoutArticle = core.hasPrefix("ה") && core.count > 2 ? String(core.dropFirst()) : core
@@ -57,7 +61,7 @@ public enum NumberEmphasis {
     private static func numberRange(of word: Word, at position: Int, in words: [Word]) -> Range<String.Index>? {
         if let firstDigit = word.text.firstIndex(where: \.isNumber), let lastDigit = word.text.lastIndex(where: \.isNumber) {
             var end = word.text.index(after: lastDigit)
-            if end < word.text.endIndex, word.text[end] == "%" {
+            if end < word.text.endIndex, gluedUnitSigns.contains(word.text[end]) {
                 end = word.text.index(after: end)
             }
             return firstDigit..<end
@@ -137,6 +141,7 @@ public enum NumberEmphasis {
     private static func separates(at index: String.Index, in text: String) -> Bool {
         let character = text[index]
         if character.isWhitespace { return true }
+        if character == "," { return !isThousandsGroupComma(at: index, in: text) }
         guard let scalar = character.unicodeScalars.first, character.unicodeScalars.count == 1,
               HebrewText.wordJoiners.contains(scalar)
         else { return false }
@@ -145,6 +150,35 @@ public enum NumberEmphasis {
         guard after < text.endIndex else { return true }
         return !(text[text.index(before: index)].isNumber && text[after].isNumber)
     }
+
+    /// A comma right after a number, once it's no longer part of the word
+    /// itself (see `isThousandsGroupComma`), still ends it the way any
+    /// other punctuation does: "be-sha'a 10:30, kadurim" ("at 10:30,
+    /// pills") isn't "10:30" pills.
+    private static func isImmediatelyFollowedByComma(_ index: String.Index, in text: String) -> Bool {
+        index < text.endIndex && text[index] == ","
+    }
+
+    /// A comma joins one number only as a thousands group: a digit before
+    /// it, and exactly three digits after before the next non-digit
+    /// ("1,234", "1,234,567" — real grouping always has exactly three
+    /// digits per group after the first). Anything else — "1,2,3" (three
+    /// pill counts), two phone numbers joined by a bare comma — is more
+    /// than one number, so the comma has to separate them instead.
+    private static func isThousandsGroupComma(at index: String.Index, in text: String) -> Bool {
+        guard index > text.startIndex, text[text.index(before: index)].isNumber else { return false }
+        var cursor = text.index(after: index)
+        var digitCount = 0
+        while cursor < text.endIndex, text[cursor].isNumber, digitCount < 4 {
+            digitCount += 1
+            cursor = text.index(after: cursor)
+        }
+        return digitCount == 3
+    }
+
+    /// Signs meaning a unit that can be glued right onto the digits with
+    /// no space: "20%", "150₪".
+    private static let gluedUnitSigns: Set<Character> = ["%", "₪"]
 
     /// The number word inside `word` and the prefixes attached in front
     /// of it (at most two: vav + bet + "shesh" — "and" + "at" + "six"), or nil

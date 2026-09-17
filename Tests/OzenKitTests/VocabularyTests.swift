@@ -75,6 +75,15 @@ struct PromptEchoDetectorTests {
         #expect(single.isEcho("סבתא.") == false)
     }
 
+    @Test("naming two people who share a word (a name and a titled form of it) is real speech, not an echo")
+    func overlappingEntriesAreNotAnEcho() {
+        let small = PromptEchoDetector(terms: ["רותי", "ד״ר רותי"])
+        #expect(small.isEcho("רותי, ד״ר רותי") == false)
+
+        let larger = PromptEchoDetector(terms: ["אבי", "רותי", "ד״ר רותי"])
+        #expect(larger.isEcho("אבי, רותי, ד״ר רותי") == false)
+    }
+
     @Test("the filter drops an echo segment and keeps the real one next to it")
     func filterIntegration() {
         let filter = WhisperResultFilter()

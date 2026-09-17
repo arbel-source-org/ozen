@@ -1710,6 +1710,19 @@ struct CaptionPipelineSilencePhraseTests {
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "מה שלומך היום?", isFinal: true, timestamp: 3))
         #expect(await eventually { pipeline.segments.map(\.text) == ["תודה.", "מה שלומך היום?"] })
     }
+
+    @Test("a final suppressed as a repeated thanks still commits the words already shown, without waiting on the stale-commit safety net")
+    func suppressedFinalStillCommits() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder(), recovery: .disabled)
+        await pipeline.start(settings: .default)
+        let id = UUID()
+        engine.emit(TranscriptToken(utteranceID: id, text: "תודה", isFinal: false, timestamp: 0))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        engine.emit(TranscriptToken(utteranceID: id, text: "תודה. תודה.", isFinal: true, timestamp: 1))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+        #expect(pipeline.segments.first?.text == "תודה")
+    }
 }
 
 @Suite("CaptionPipeline broken voice prints")

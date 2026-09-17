@@ -16,6 +16,20 @@ struct NumberEmphasisTests {
         #expect(emphasized("בין 10:30-11:00, (בערך)") == ["10:30-11:00"])
     }
 
+    @Test("a price in shekels joins the sign, glued or spaced; a thousands-grouped number stays whole")
+    func shekelsAndGrouping() {
+        #expect(emphasized("150₪") == ["150₪"])
+        #expect(emphasized("מחיר הבדיקה 150 ₪") == ["150 ₪"])
+        #expect(emphasized("המחיר הוא 1,234 שקל") == ["1,234 שקל"])
+        #expect(emphasized("יש לי 1,234,567 שקל בבנק") == ["1,234,567 שקל"])
+    }
+
+    @Test("distinct numbers joined by a bare comma stand out separately, not as one merged number")
+    func commaSeparatedDistinctNumbers() {
+        #expect(emphasized("קח כדורים 1,2,3 ותנוח") == ["1", "2", "3"])
+        #expect(emphasized("050-1234567,03-1234567") == ["050-1234567", "03-1234567"])
+    }
+
     @Test("numbers in words, with Hebrew's attached prefixes and around punctuation")
     func words() {
         #expect(emphasized("לקחת שלושה כדורים, ובשש בערב עוד חצי.") == ["שלושה כדורים", "ובשש", "חצי"])
