@@ -109,8 +109,20 @@ struct KeywordAlertsView: View {
         listed?.isEnabled == true
     }
 
+    /// Her own Vocabulary words (see VocabularyView) first, since a name
+    /// she already typed there to fix the captions is a stronger candidate
+    /// than the generic list below it; then the generic list. Each set is
+    /// de-duplicated against itself and against words already listed here.
+    /// Capped: Vocabulary allows up to 200 words, far more than belongs in
+    /// a suggestion row here.
     private var unusedSuggestions: [String] {
-        Self.suggestions.filter { word in !viewModel.keywordAlerts.contains { HebrewText.normalize($0.phrase) == HebrewText.normalize(word) } }
+        var seen = Set<String>()
+        let candidates = (viewModel.vocabulary + Self.suggestions).filter { word in
+            let normalized = HebrewText.normalize(word)
+            guard seen.insert(normalized).inserted else { return false }
+            return !viewModel.keywordAlerts.contains { HebrewText.normalize($0.phrase) == normalized }
+        }
+        return Array(candidates.prefix(8))
     }
 
     private func add() {
