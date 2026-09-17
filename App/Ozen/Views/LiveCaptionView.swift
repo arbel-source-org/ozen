@@ -14,6 +14,7 @@ struct LiveCaptionView: View {
     @State private var showingSettings = false
     @State private var showingTypeToSpeak = false
     @State private var namingSegment: TranscriptSegment?
+    @State private var fixingWordFromSegment: TranscriptSegment?
     @State private var isPinnedToBottom = true
     /// Whether her finger is on the captions, or they're still coasting
     /// from a flick, and when that last ended. Only scrolling she does
@@ -400,6 +401,9 @@ struct LiveCaptionView: View {
         .sheet(item: $namingSegment) { segment in
             NameSpeakerSheet(segment: segment, viewModel: viewModel)
         }
+        .sheet(item: $fixingWordFromSegment) { segment in
+            FixVocabularyWordSheet(segment: segment, viewModel: viewModel)
+        }
         .confirmationDialog(
             tr("להוריד את המודל בחבילת הגלישה?", "Download the model over cellular data?"),
             isPresented: $confirmingCellularDownload,
@@ -522,6 +526,11 @@ struct LiveCaptionView: View {
                 Label(tr("מי מדבר?", "Who is speaking?"), systemImage: "person.crop.circle.badge.questionmark")
             }
             Button {
+                fixingWordFromSegment = segment
+            } label: {
+                Label(tr("תיקון מילה למילון", "Fix a word for next time"), systemImage: "text.badge.checkmark")
+            }
+            Button {
                 UIPasteboard.general.string = segment.text
             } label: {
                 Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
@@ -538,6 +547,9 @@ struct LiveCaptionView: View {
             }
             Button(tr("מי מדבר?", "Who is speaking?")) {
                 namingSegment = segment
+            }
+            Button(tr("תיקון מילה למילון", "Fix a word for next time")) {
+                fixingWordFromSegment = segment
             }
         }
     }
@@ -1101,11 +1113,12 @@ struct LiveCaptionView: View {
     private func presentBigText() {
         viewModel.isShowingBigText = false
         let somethingOpen = showingMicPicker || showingSettings || showingTypeToSpeak
-            || namingSegment != nil || openedConversation != nil
+            || namingSegment != nil || fixingWordFromSegment != nil || openedConversation != nil
         showingMicPicker = false
         showingSettings = false
         showingTypeToSpeak = false
         namingSegment = nil
+        fixingWordFromSegment = nil
         openedConversation = nil
         Task {
             // Give the closing sheet its animation before the next one.

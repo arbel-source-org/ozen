@@ -170,6 +170,68 @@ struct NameSpeakerSheet: View {
     }
 }
 
+/// Closes the loop from "the captions got this wrong" to "teach it the
+/// right word": the mis-heard line for reference, and a field for the word
+/// or name that should have come out, straight into Vocabulary
+/// (`VocabularyHints`) so the next mention of it is more likely to land.
+struct FixVocabularyWordSheet: View {
+    let segment: TranscriptSegment
+    let viewModel: LiveCaptionViewModel
+    @State private var word = ""
+    @FocusState private var typing: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    private var trimmedWord: String { word.trimmingCharacters(in: .whitespaces) }
+    private var canSave: Bool { !trimmedWord.isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(CaptionLayout.displayText(segment.text))
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                } header: {
+                    Text(tr("איך זה נשמע בכתוביות", "How it showed up in the captions"))
+                }
+                Section {
+                    TextField(tr("המילה או השם הנכונים", "The correct word or name"), text: $word)
+                        .textInputAutocapitalization(.words)
+                        .focused($typing)
+                        .submitLabel(.done)
+                        .onSubmit { if canSave { save() } }
+                } footer: {
+                    Text(tr("מהמשפט הבא, הכתוביות ינסו לזהות את המילה הזו נכון.", "From the next sentence, the captions will try to recognize this word correctly."))
+                }
+            }
+            .navigationTitle(tr("תיקון מילה", "Fix a word"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(tr("הוספה", "Add"), action: save)
+                        .disabled(!canSave)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(tr("ביטול", "Cancel")) { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .task {
+            // Focus asked for while the sheet is still sliding up is often
+            // dropped: wait for it to settle (see NameSpeakerSheet).
+            try? await Task.sleep(for: .milliseconds(400))
+            typing = true
+        }
+    }
+
+    private func save() {
+        viewModel.addVocabularyTerm(trimmedWord)
+        dismiss()
+    }
+}
+
 /// The sound-event banner: big icon, the Hebrew name, importance colour.
 /// Tapping dismisses. Critical alerts (sirens, smoke detector) are red and
 /// stay longer; everything else is calm.
