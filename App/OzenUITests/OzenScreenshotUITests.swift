@@ -1,4 +1,3 @@
-import CoreGraphics
 import XCTest
 
 /// Launches the real app with a canned conversation (see
@@ -206,17 +205,16 @@ final class OzenScreenshotUITests: XCTestCase {
 
         // notifyWhenInBackground is seeded on in ScreenshotFixtures, so
         // this inline toggle (unlike the rows above) is already visible
-        // rather than reached through a NavigationLink. scrollDownUntilVisible
-        // only guarantees it's hittable, which at this text size can mean
-        // barely peeking over the bottom edge -- a full swipeUp() here
-        // once carried it straight past the top out of view instead of
-        // centering it, so this nudges the content up by a fixed, gentle
-        // amount instead.
+        // rather than reached through a NavigationLink. A coordinate-based
+        // drag added here to improve framing (both to center the row and
+        // then, separately, a full swipeUp()) each instead stopped the tap
+        // right after it from registering at all -- most likely the tap
+        // landing while the Form's scroll view was still settling from the
+        // drag. Tapping right where scrollDownUntilVisible leaves it, with
+        // no extra gesture in between, is the same pattern every row above
+        // already uses reliably.
         let quietHoursToggle = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
         XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
-        let nudgeStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
-        let nudgeEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
-        nudgeStart.press(forDuration: 0.05, thenDragTo: nudgeEnd)
         capture(app, name: "quiet-hours-off-accessibility-text")
         quietHoursToggle.tap()
         let startStepper = app.descendants(matching: .any)["quietHoursStartStepper"]
