@@ -205,8 +205,13 @@ final class OzenScreenshotUITests: XCTestCase {
 
         // notifyWhenInBackground is seeded on in ScreenshotFixtures, so
         // this inline toggle (unlike the rows above) is already visible
-        // rather than reached through a NavigationLink.
-        let quietHoursToggle = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
+        // rather than reached through a NavigationLink. scrollDownUntilVisible
+        // only guarantees it's hittable, which at this text size can mean
+        // barely peeking over the bottom edge -- one more swipe centers
+        // it (and, once tapped, the steppers it reveals) in frame.
+        _ = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
+        app.swipeUp()
+        let quietHoursToggle = app.descendants(matching: .any)["quietHoursToggle"]
         XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
         capture(app, name: "quiet-hours-off-accessibility-text")
         quietHoursToggle.tap()
