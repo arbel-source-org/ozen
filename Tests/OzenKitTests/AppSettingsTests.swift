@@ -168,10 +168,10 @@ struct AppSettingsTests {
         #expect(apple == nil)
     }
 
-    @Test("an empty cloud model name falls back to the fast model")
+    @Test("an empty cloud model name falls back to the default model")
     func emptyCloudModel() throws {
         let decoded = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"cloudModel":""}"#.utf8))
-        #expect(decoded.cloudModel == CloudSpeech.fastModel)
+        #expect(decoded.cloudModel == CloudSpeech.accurateModel)
         #expect(decoded.display.autoHideControls)
         #expect(decoded.appLanguage == .system)
     }

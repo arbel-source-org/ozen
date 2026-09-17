@@ -3,9 +3,20 @@ import Foundation
 /// Captions written by a speech model on the internet, reached through
 /// OpenRouter (openrouter.ai) with a key the person pastes into Settings.
 ///
-/// The phone's own models are slow on older phones and lose the thread
-/// when several people talk. Measured on twelve Hebrew FLEURS recordings
-/// (September 2026, about 250 words), share of words wrong:
+/// Kept as a fallback for phones where the on-device model (see
+/// `WhisperModelCatalog`) is too slow, or as an option for people who
+/// haven't downloaded a model yet. It is no longer clearly more accurate:
+/// the September 2026 numbers below, comparing these two models against
+/// stock Whisper, predate `ivrit.ai`'s Hebrew-tuned model, which measured
+/// 30.6% wrong on the five clips in `scripts/model-release/clips/` --
+/// beating every option in this table on a fresh rerun of the same clips
+/// (2026-09-17). `google/gemini-3.1-flash-lite` in particular measured
+/// worst of everything tried, cloud or on-device, which is why it is no
+/// longer `AppSettings`' default despite being named "fast": see
+/// `accurateModel`.
+///
+/// Measured on twelve Hebrew FLEURS recordings (September 2026, about 250
+/// words), share of words wrong:
 ///
 /// | engine                          | words wrong | seconds per request |
 /// |---------------------------------|-------------|---------------------|

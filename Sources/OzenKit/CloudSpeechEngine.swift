@@ -33,7 +33,7 @@ public actor CloudSpeechEngine: TranscriptionEngine {
     private var approvedKey: String?
 
     public init(
-        model: String = CloudSpeech.fastModel,
+        model: String = CloudSpeech.accurateModel,
         http: any CloudHTTP = URLSessionCloudHTTP(),
         filter: WhisperResultFilter = WhisperResultFilter(),
         apiKey: @escaping @Sendable () -> String?

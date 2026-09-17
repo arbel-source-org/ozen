@@ -237,7 +237,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         creditLine: String,
         whisperModelVariant: String = WhisperModelCatalog.defaultVariant,
         allowServerFallbackForAppleSpeech: Bool = false,
-        cloudModel: String = CloudSpeech.fastModel,
+        cloudModel: String = CloudSpeech.accurateModel,
         display: DisplayPreferences = .default,
         hapticOnSpeechResume: Bool = true,
         speakerSimilarityThreshold: Float = 0.45,
