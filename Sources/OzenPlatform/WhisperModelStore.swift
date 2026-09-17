@@ -116,7 +116,28 @@ public struct WhisperModelStore: Sendable {
 
     /// Downloads (or resumes) a model, reporting 0…1 progress, and returns
     /// the folder to load from.
+    ///
+    /// Routed through `DownloadCoordinator` so two calls for the same
+    /// variant, from two different `WhisperModelStore` values, never write
+    /// the same folder at once: `CaptionPipeline.cachedEngine()` can drop a
+    /// still-preparing engine from its cache without cancelling its
+    /// in-flight download, and if the same variant is requested again
+    /// right after (the model list re-selecting it, a retry), a second
+    /// engine's fresh `WhisperModelStore` would otherwise start a second,
+    /// uncoordinated writer over the same on-disk path -- both truncating
+    /// and re-fetching the same files from a `ReleaseModelDownloader`
+    /// resume, corrupting each other's output until the final checksum
+    /// catches it.
     public func download(
+        variant: String,
+        progress: @escaping @Sendable (Double) -> Void
+    ) async throws -> URL {
+        try await DownloadCoordinator.shared.run(for: folder(for: variant)) { [self] in
+            try await performDownload(variant: variant, progress: progress)
+        }
+    }
+
+    private func performDownload(
         variant: String,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> URL {
@@ -189,5 +210,27 @@ public struct WhisperModelStore: Sendable {
             total += Int64(values.fileSize ?? 0)
         }
         return total
+    }
+}
+
+/// Serializes concurrent downloads of the same on-disk folder into one
+/// writer: a second caller for a folder already being written joins the
+/// first's task instead of starting its own. Keyed by the resolved folder
+/// URL, not by any particular `WhisperModelStore` value, since every store
+/// pointed at the same `downloadBase` resolves the same variant to the
+/// same path.
+private actor DownloadCoordinator {
+    static let shared = DownloadCoordinator()
+
+    private var inFlight: [URL: Task<URL, any Error>] = [:]
+
+    func run(for folder: URL, _ operation: @escaping @Sendable () async throws -> URL) async throws -> URL {
+        if let existing = inFlight[folder] {
+            return try await existing.value
+        }
+        let task = Task { try await operation() }
+        inFlight[folder] = task
+        defer { inFlight[folder] = nil }
+        return try await task.value
     }
 }
