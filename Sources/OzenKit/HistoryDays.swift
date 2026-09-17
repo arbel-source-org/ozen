@@ -74,11 +74,19 @@ public enum HistoryDays {
 /// year -- a year-old conversation with the same person resurfacing at
 /// the top of History is worth the reminder, and costs no new data.
 public enum OnThisDay {
-    public static func matches(in summaries: [TranscriptSessionSummary], now: TimeInterval, utcOffsetSeconds: Int) -> [TranscriptSessionSummary] {
-        let today = CivilDate(daysSinceEpoch: CivilDate.localDay(of: now, utcOffsetSeconds: utcOffsetSeconds))
+    // Takes the offset as a function of the timestamp, like `grouped` and
+    // `title(of:)` above -- not a single `Int` resolved once for `now`.
+    // Israel's DST transition date shifts by up to about a week year to
+    // year, so a session near local midnight on the same month/day as
+    // today, in a year whose transition fell on the other side of that
+    // date, needs its *own* year's offset to land on the correct local
+    // day; reusing today's offset could misfile it a day off and produce
+    // a false (or missed) anniversary match.
+    public static func matches(in summaries: [TranscriptSessionSummary], now: TimeInterval, utcOffsetSeconds: (TimeInterval) -> Int) -> [TranscriptSessionSummary] {
+        let today = CivilDate(daysSinceEpoch: CivilDate.localDay(of: now, utcOffsetSeconds: utcOffsetSeconds(now)))
         return summaries
             .filter { summary in
-                let day = CivilDate(daysSinceEpoch: CivilDate.localDay(of: summary.startedAt, utcOffsetSeconds: utcOffsetSeconds))
+                let day = CivilDate(daysSinceEpoch: CivilDate.localDay(of: summary.startedAt, utcOffsetSeconds: utcOffsetSeconds(summary.startedAt)))
                 return day.month == today.month && day.day == today.day && day.year < today.year
             }
             .sorted { $0.startedAt > $1.startedAt }

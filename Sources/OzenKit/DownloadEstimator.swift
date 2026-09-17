@@ -30,7 +30,12 @@ public struct DownloadEstimator: Sendable, Equatable {
         }
         samples.append(Sample(time: time, fraction: fraction))
         // Keep one sample from before the window so the span stays full.
-        while samples.count > 2, time - samples[1].time >= Self.windowSeconds {
+        // Checked against the sample itself, not its successor: after a
+        // stall longer than the window, the next recorded sample can land
+        // well inside the window, so waiting for a *second* stale sample
+        // to show up before evicting the first left the estimate anchored
+        // to pre-stall progress for up to another full window.
+        while samples.count > 2, time - samples[0].time >= Self.windowSeconds {
             samples.removeFirst()
         }
     }

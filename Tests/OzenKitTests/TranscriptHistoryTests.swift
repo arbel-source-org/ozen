@@ -390,6 +390,21 @@ struct TranscriptHistoryTests {
         #expect(names == ["רותי", "אבי", "דובר חדש"])
     }
 
+    @Test("a placeholder saved while the app was in one language is still generic after switching to the other")
+    func genericLabelSurvivesALanguageSwitch() {
+        // SavedSegment.speakerName is a permanent snapshot: a session
+        // recorded in Hebrew keeps "דובר לא ידוע" even after the app's
+        // language later changes to English, at which point
+        // EmbeddingClusterer.unknownSpeakerName itself evaluates to
+        // "Unknown speaker" instead.
+        Localization.$override.withValue(.english) {
+            #expect(TranscriptSessionSummary.isGenericLabel("דובר לא ידוע"))
+        }
+        Localization.$override.withValue(.hebrew) {
+            #expect(TranscriptSessionSummary.isGenericLabel("Unknown speaker"))
+        }
+    }
+
     @Test("top speaker names rank by how many sessions they appeared in, ties broken alphabetically")
     func topSpeakerNamesRanking() {
         func summary(_ names: [String]) -> TranscriptSessionSummary {

@@ -284,7 +284,13 @@ extension TranscriptSessionSummary {
     /// "dover 3" ("speaker 3"), "dover lo yadu'a" ("unknown speaker"), and the
     /// English labels older builds saved.
     public static func isGenericLabel(_ name: String) -> Bool {
-        if name == EmbeddingClusterer.unknownSpeakerName || name == "Unknown speaker" { return true }
+        // Checked against both languages' literal text, not the current
+        // language's `EmbeddingClusterer.unknownSpeakerName`: a session
+        // saved while the app was in Hebrew keeps that Hebrew placeholder
+        // forever (SavedSegment.speakerName is a snapshot), so comparing
+        // against whatever language the app happens to be in *now* stops
+        // recognizing it as generic the moment the language is switched.
+        if name == "דובר לא ידוע" || name == "Unknown speaker" { return true }
         for prefix in ["דובר ", "Speaker "] where name.hasPrefix(prefix) {
             if Int(name.dropFirst(prefix.count)) != nil { return true }
         }

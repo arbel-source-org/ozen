@@ -46,6 +46,20 @@ struct DownloadEstimatorTests {
         #expect(left > 40)
     }
 
+    @Test("a stall longer than the window doesn't leave the estimate anchored to pre-stall progress")
+    func recoversFromAStall() throws {
+        var estimator = DownloadEstimator()
+        estimator.record(fraction: 0.1, at: 0)
+        // A ten-minute stall -- no progress reported at all.
+        estimator.record(fraction: 0.11, at: 600)
+        estimator.record(fraction: 0.5, at: 605)
+        let left = try #require(estimator.secondsRemaining())
+        // True recent pace is (0.5-0.11)/5 ≈ 7.8%/s, about 6.4s left.
+        // Anchored to the stale sample from before the stall instead, the
+        // span balloons to 605s and the estimate to well over ten minutes.
+        #expect(left < 15)
+    }
+
     @Test("a download that starts over starts the estimate over")
     func restart() {
         var estimator = DownloadEstimator()

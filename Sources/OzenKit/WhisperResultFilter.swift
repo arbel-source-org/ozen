@@ -281,9 +281,16 @@ public struct WhisperResultFilter: Sendable, Equatable {
     }
 
     static func normalize(_ text: String) -> String {
+        // Also strips Unicode format characters (bidi marks, zero-width
+        // joiners): WhisperKit's Hebrew/Arabic output regularly carries a
+        // stray U+200F alongside otherwise-exact hallucinated text, which
+        // survived punctuation/symbol stripping alone and made every
+        // known-hallucination and credit-line comparison in this file
+        // miss what would otherwise be an exact match.
         let stripped = text.unicodeScalars.filter { scalar in
             !CharacterSet.punctuationCharacters.contains(scalar)
                 && !CharacterSet.symbols.contains(scalar)
+                && scalar.properties.generalCategory != .format
         }
         return String(String.UnicodeScalarView(stripped))
             .lowercased()

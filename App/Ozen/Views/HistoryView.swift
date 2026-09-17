@@ -50,7 +50,7 @@ struct HistoryView: View {
     /// to find it.
     private var onThisDaySection: some View {
         let now = Date().timeIntervalSince1970
-        let matches = Array(OnThisDay.matches(in: sessions, now: now, utcOffsetSeconds: HistoryDays.localOffset(at: now)).prefix(3))
+        let matches = Array(OnThisDay.matches(in: sessions, now: now, utcOffsetSeconds: HistoryDays.localOffset).prefix(3))
         return Group {
             if !matches.isEmpty {
                 Section {

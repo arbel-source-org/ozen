@@ -88,8 +88,33 @@ struct HistoryDaysTests {
                 summary(yearAgo, preview: "לפני שנה"),
             ],
             now: now,
-            utcOffsetSeconds: israel
+            utcOffsetSeconds: { _ in israel }
         )
         #expect(matches.map(\.preview) == ["לפני שנה", "לפני שנתיים"])
+    }
+
+    @Test("on this day: each session's own offset decides its local day, not today's -- reusing today's offset would manufacture a false match")
+    func onThisDayUsesEachSessionsOwnOffset() {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        func timestamp(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int) -> TimeInterval {
+            utc.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!.timeIntervalSince1970
+        }
+
+        // 23:40 local time under a +2h offset (standard time) on Oct 26 last year.
+        let session = timestamp(2025, 10, 26, 21, 40)
+        // A year later, local time under a +3h offset (daylight time) is Oct 27.
+        let now = timestamp(2026, 10, 27, 9, 0)
+        let transition = timestamp(2026, 1, 1, 0, 0)
+        func offset(at time: TimeInterval) -> Int {
+            time < transition ? 2 * 3_600 : 3 * 3_600
+        }
+
+        let matches = OnThisDay.matches(in: [summary(session, preview: "אשתקד")], now: now, utcOffsetSeconds: offset)
+        // Converted with its own (pre-transition, +2h) offset the session
+        // lands on Oct 26, one day short of today's Oct 27 -- no match.
+        // Reusing today's +3h offset for the session too would instead
+        // push it to Oct 27, a false anniversary hit a year early.
+        #expect(matches.isEmpty)
     }
 }

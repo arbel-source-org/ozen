@@ -30,6 +30,12 @@ struct WhisperResultFilterTests {
         #expect(!filter.accepts(segment("[מוזיקה]")))
     }
 
+    @Test("a known hallucination is still caught with a bidi mark glued onto it")
+    func hallucinationWithBidiMarkDropped() {
+        #expect(!filter.accepts(segment("\u{200F}תודה שצפיתם")))
+        #expect(WhisperResultFilter.normalize("\u{200F}תודה\u{200F} שצפיתם\u{200E}") == "תודה שצפיתם")
+    }
+
     @Test("'toda' (thanks) inside a real sentence is not a hallucination")
     func thanksInsideSentenceKept() {
         #expect(filter.accepts(segment("תודה רבה על העזרה עם הקניות")))
