@@ -14,6 +14,7 @@ struct OnboardingView: View {
     @State private var notificationsAllowed: Bool?
     @State private var requesting = false
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
 
     private static let pageCount = 6
 
@@ -175,6 +176,14 @@ struct OnboardingView: View {
                 .controlSize(.large)
                 .disabled(requesting)
             }
+        }
+        // Coming back from "Open phone settings" below: re-check rather
+        // than leave this page stuck showing "blocked" after she just
+        // fixed it. Asking again is safe once denied -- iOS answers with
+        // the current status instead of showing the system prompt again.
+        .task(id: scenePhase) {
+            guard scenePhase == .active, microphone == .denied else { return }
+            microphone = await viewModel.requestMicrophonePermission()
         }
     }
 
