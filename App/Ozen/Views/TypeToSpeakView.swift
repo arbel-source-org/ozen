@@ -77,7 +77,14 @@ struct TypeToSpeakView: View {
                 text: $text,
                 display: viewModel.display,
                 canSpeak: viewModel.hasHebrewVoice,
-                onSpeak: { viewModel.speak($0) }
+                // lastTyped drives "Play again", so it has to track whatever
+                // was actually spoken last, not just what speakTyped() sent
+                // -- otherwise "Play again" can replay a stale, unrelated
+                // phrase after this screen speaks a different one.
+                onSpeak: { phrase in
+                    viewModel.speak(phrase)
+                    lastTyped = phrase
+                }
             )
             .alertOverlay(for: viewModel)
         }
