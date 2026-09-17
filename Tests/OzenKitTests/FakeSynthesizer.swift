@@ -17,6 +17,8 @@ final class FakeSynthesizer: SpeechSynthesizing {
 
     var isBusy: Bool { isSpeaking || !queued.isEmpty }
 
+    func refreshVoice() {}
+
     func speak(_ text: String, rate: Float) {
         requests.append(text)
         if isSpeaking {

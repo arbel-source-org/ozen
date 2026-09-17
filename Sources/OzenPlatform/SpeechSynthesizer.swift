@@ -38,8 +38,20 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
                 self.onSpeakingChanged?(speaking)
             }
         }
+        refreshVoice()
+    }
+
+    /// Re-reads the installed voice list. Called once at launch and again
+    /// whenever the app returns to the foreground (`LiveCaptionViewModel
+    /// .sceneActivityChanged`), so installing or removing the Hebrew voice
+    /// in iOS Settings and coming straight back is picked up without
+    /// needing a relaunch.
+    public func refreshVoice() {
         // Listing the installed voices reads their metadata from disk: not
-        // on the main thread while the app draws its first screen.
+        // on the main thread while the app draws its first screen. Captured
+        // as a local so the detached task doesn't need to hop back to the
+        // main actor just to read this instance's own immutable property.
+        let languageCode = self.languageCode
         Task { [weak self] in
             let identifier = await Task.detached(priority: .utility) {
                 SpeechSynthesizer.bestVoiceIdentifier(for: languageCode)

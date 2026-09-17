@@ -12,6 +12,11 @@ public protocol SpeechSynthesizing: AnyObject {
     var isBusy: Bool { get }
     var hasHebrewVoice: Bool { get }
     var onSpeakingChanged: (@MainActor (Bool) -> Void)? { get set }
+    /// Re-checks which Hebrew voice is installed. `hasHebrewVoice` is only
+    /// ever set once at launch otherwise, so installing or removing a
+    /// voice in iOS Settings and coming straight back would go unnoticed
+    /// until the app relaunches.
+    func refreshVoice()
     func speak(_ text: String, rate: Float)
     func stop()
 }

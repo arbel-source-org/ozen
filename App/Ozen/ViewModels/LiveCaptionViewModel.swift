@@ -271,6 +271,10 @@ public final class LiveCaptionViewModel {
         let now = Date().timeIntervalSince1970
         if isActive {
             awayCatchUp.screenReturned(at: now)
+            // Coming back from installing or removing the Hebrew voice in
+            // iOS Settings: without this, hasHebrewVoice stays whatever it
+            // was at launch until the app relaunches.
+            synthesizer?.refreshVoice()
         } else {
             awayCatchUp.screenLeft(at: now)
         }
