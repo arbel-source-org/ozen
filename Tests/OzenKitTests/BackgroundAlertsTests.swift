@@ -41,6 +41,21 @@ struct BackgroundAlertPolicyTests {
         #expect(policy.notification(for: hit("סבתא", alertID: alertID), lineText: "סבתא", appIsActive: false, now: 131) != nil)
     }
 
+    @Test("two sounds the catalog shows as the same sound share one cooldown, not two")
+    func synonymSoundsShareCooldown() {
+        var policy = BackgroundAlertPolicy(cooldownSeconds: 30)
+        #expect(policy.notification(for: sound("telephone_bell_ringing"), appIsActive: false, now: 0) != nil)
+        #expect(policy.notification(for: sound("ringtone"), appIsActive: false, now: 5) == nil)
+    }
+
+    @Test("a clock set backward doesn't extend the cooldown or suppress a genuinely new alert")
+    func clockSetBackward() {
+        var policy = BackgroundAlertPolicy(cooldownSeconds: 30)
+        #expect(policy.notification(for: sound("door_bell"), appIsActive: false, now: 100_000) != nil)
+        // The system clock jumps back ten minutes.
+        #expect(policy.notification(for: sound("door_bell"), appIsActive: false, now: 99_400) != nil)
+    }
+
     @Test("turned off, nothing is ever posted")
     func disabled() {
         var policy = BackgroundAlertPolicy(isEnabled: false)

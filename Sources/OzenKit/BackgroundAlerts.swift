@@ -32,7 +32,12 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
     }
 
     public mutating func notification(for alert: SoundAlert, appIsActive: Bool, now: TimeInterval) -> AlertNotificationContent? {
-        let key = "sound-\(alert.event.identifier)"
+        // By name, not identifier: two classifier labels the catalog shows
+        // as the exact same sound (see SoundEventPolicy.evaluate, which
+        // keys its own cooldown the same way) must share this cooldown
+        // too, or the classifier flipping labels for one ongoing sound
+        // notifies about it twice.
+        let key = "sound-\(alert.event.name)"
         guard shouldNotify(key: key, appIsActive: appIsActive, now: now) else { return nil }
         let urgent = alert.event.importance == .critical
         return AlertNotificationContent(
@@ -62,7 +67,13 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
 
     private mutating func shouldNotify(key: String, appIsActive: Bool, now: TimeInterval) -> Bool {
         guard isEnabled, !appIsActive else { return false }
-        if let last = lastNotified[key], now - last < cooldownSeconds {
+        // `now` is wall-clock time, which can go backward (an NTP sync, a
+        // manual clock change). Without the `now >= last` guard, a
+        // backward jump makes `now - last` deeply negative — always
+        // "under" the cooldown — silently suppressing a genuinely new
+        // alert until real time catches back up to where the clock used
+        // to read.
+        if let last = lastNotified[key], now >= last, now - last < cooldownSeconds {
             return false
         }
         lastNotified[key] = now

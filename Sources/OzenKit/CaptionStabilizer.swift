@@ -15,6 +15,13 @@ public struct TranscriptSegment: Identifiable, Sendable, Equatable {
     public var lastUpdateTimestamp: TimeInterval
     /// The engine's latest confidence in this line, 0...1, when it gave one.
     public var confidence: Float? = nil
+    /// Committed only as a guess that the engine went quiet for good (see
+    /// `commitStale`), not because the engine itself said this line was
+    /// done: it can still reopen and change. A listener that only rechecks
+    /// the newest few lines (`CaptionAnnouncer`) needs this to know a line
+    /// can't yet be treated as permanently settled, however far back it's
+    /// scrolled.
+    public var isProvisionalCommit: Bool = false
 }
 
 /// When a caption line should say "this may not be what was said".
@@ -85,6 +92,9 @@ public struct CaptionStabilizer: Sendable {
                     // Committed only because the engine went quiet, and it
                     // wasn't done: show the line as still settling again
                     // rather than changing words that looked final.
+                    // isProvisionalCommit is left as-is: if this same
+                    // update also finalizes the line below, that only
+                    // clears once the finality is real, not another guess.
                     segments[index].isCommitted = false
                 } else {
                     // Final is final. Both engines start a new utterance
@@ -112,6 +122,7 @@ public struct CaptionStabilizer: Sendable {
             }
             if token.isFinal {
                 segments[index].isCommitted = true
+                segments[index].isProvisionalCommit = false
             }
             return segments[index]
         }
@@ -139,6 +150,7 @@ public struct CaptionStabilizer: Sendable {
     public mutating func commit(id: UUID) -> TranscriptSegment? {
         guard let index = segments.lastIndex(where: { $0.id == id }), !segments[index].isCommitted else { return nil }
         segments[index].isCommitted = true
+        segments[index].isProvisionalCommit = false
         return segments[index]
     }
 
@@ -152,6 +164,7 @@ public struct CaptionStabilizer: Sendable {
         for index in segments.indices where !segments[index].isCommitted {
             if now - segments[index].lastUpdateTimestamp >= silenceCommitThreshold {
                 segments[index].isCommitted = true
+                segments[index].isProvisionalCommit = true
                 provisionalCommits.insert(segments[index].id)
                 justCommitted.append(segments[index])
             }

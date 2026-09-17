@@ -23,6 +23,16 @@ struct SoundNearMissesTests {
         #expect(misses.reportLine(utcOffsetSeconds: 0) == "door_bell 52% 00:03:20, knock 33% 00:02:30")
     }
 
+    @Test("two identifiers the catalog shows as the same sound are merged into one near-miss")
+    func synonymIdentifiersAreMerged() {
+        var misses = SoundNearMisses()
+        misses.record(heard("telephone_bell_ringing", 0.45, at: 100), alertConfidence: 0.6)
+        misses.record(heard("ringtone", 0.50, at: 101), alertConfidence: 0.6)
+        #expect(misses.entries.count == 1)
+        #expect(misses.entries.first?.bestConfidence == 0.50)
+        #expect(misses.entries.first?.lastHeardAt == 101)
+    }
+
     @Test("remembers a limited number of sounds, forgetting the one heard longest ago")
     func limited() {
         var misses = SoundNearMisses()

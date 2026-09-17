@@ -26,9 +26,15 @@ public struct SoundNearMisses: Sendable, Equatable {
     public mutating func record(_ observation: SoundObservation, alertConfidence: Double) {
         guard observation.confidence < alertConfidence,
               observation.confidence.isFinite,
-              SoundEventCatalog.event(for: observation.identifier) != nil
+              let event = SoundEventCatalog.event(for: observation.identifier)
         else { return }
-        if let index = entries.firstIndex(where: { $0.identifier == observation.identifier }) {
+        // By the catalog's display name, not the raw identifier: two
+        // classifier labels the catalog shows as the exact same sound
+        // (see SoundEventPolicy.evaluate, which merges its own cooldown
+        // the same way) must merge here too, or a faint ring the
+        // classifier flips between the two labels on shows up as two
+        // separate near-misses instead of one.
+        if let index = entries.firstIndex(where: { SoundEventCatalog.event(for: $0.identifier)?.name == event.name }) {
             entries[index].bestConfidence = max(entries[index].bestConfidence, observation.confidence)
             entries[index].lastHeardAt = max(entries[index].lastHeardAt, observation.timestamp)
         } else {

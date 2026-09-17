@@ -82,7 +82,13 @@ public struct CaptionAnnouncer: Sendable, Equatable {
 
     private mutating func noteScanned(_ segments: [TranscriptSegment], from start: Int) {
         scannedCount = segments.count
-        firstOpenIndex = segments[start...].firstIndex { !$0.isCommitted }
+        // A provisionally-committed line (CaptionStabilizer's stale-commit
+        // safety net guessing the engine is done) can still reopen and
+        // change later, possibly after this line has scrolled out of the
+        // recent-lines window otherwise kept below — it must stay pinned
+        // in range the same way a genuinely open line does, or its eventual
+        // correction is never picked up again to announce.
+        firstOpenIndex = segments[start...].firstIndex { !$0.isCommitted || $0.isProvisionalCommit }
     }
 
     private mutating func forgetLinesNoLongerShown(_ segments: [TranscriptSegment]) {

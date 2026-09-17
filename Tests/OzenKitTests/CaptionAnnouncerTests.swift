@@ -116,6 +116,27 @@ struct CaptionAnnouncerTests {
         #expect(announcer.announcement(for: lines, speakerName: { _ in nil }) == "והרופא אמר\nעוד")
     }
 
+    @Test("a line provisionally committed by the stale-commit safety net is still caught when it reopens and changes, however far back it's scrolled")
+    func provisionalCommitReopensAfterScrollingOut() {
+        var announcer = CaptionAnnouncer()
+        var provisional = TranscriptSegment(
+            id: UUID(), text: "הרופא אמר", isCommitted: true, speakerClusterID: nil,
+            startTimestamp: 0, lastUpdateTimestamp: 0, isProvisionalCommit: true
+        )
+        var lines = [provisional]
+        #expect(announcer.announcement(for: lines, speakerName: { _ in nil }) == "הרופא אמר")
+        for n in 1...(CaptionAnnouncer.recheckedLines * 3) {
+            lines.append(line("שורה \(n)"))
+            _ = announcer.announcement(for: lines, speakerName: { _ in nil })
+        }
+        // Reopens with more text, then really finalizes — as CaptionStabilizer.ingest
+        // does within one call when a straggler both reopens and finalizes a line.
+        provisional.text = "הרופא אמר כדור אחד"
+        provisional.isProvisionalCommit = false
+        lines[0] = provisional
+        #expect(announcer.announcement(for: lines, speakerName: { _ in nil }) == "הרופא אמר כדור אחד")
+    }
+
     @Test("a line corrected after it was read out is read again; unchanged lines are not")
     func correctedLineReadAgain() {
         var announcer = CaptionAnnouncer()
