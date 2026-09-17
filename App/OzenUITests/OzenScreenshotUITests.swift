@@ -1,3 +1,4 @@
+import CoreGraphics
 import XCTest
 
 /// Launches the real app with a canned conversation (see
@@ -207,12 +208,15 @@ final class OzenScreenshotUITests: XCTestCase {
         // this inline toggle (unlike the rows above) is already visible
         // rather than reached through a NavigationLink. scrollDownUntilVisible
         // only guarantees it's hittable, which at this text size can mean
-        // barely peeking over the bottom edge -- one more swipe centers
-        // it (and, once tapped, the steppers it reveals) in frame.
-        _ = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
-        app.swipeUp()
-        let quietHoursToggle = app.descendants(matching: .any)["quietHoursToggle"]
+        // barely peeking over the bottom edge -- a full swipeUp() here
+        // once carried it straight past the top out of view instead of
+        // centering it, so this nudges the content up by a fixed, gentle
+        // amount instead.
+        let quietHoursToggle = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
         XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
+        let nudgeStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8))
+        let nudgeEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+        nudgeStart.press(forDuration: 0.05, thenDragTo: nudgeEnd)
         capture(app, name: "quiet-hours-off-accessibility-text")
         quietHoursToggle.tap()
         capture(app, name: "quiet-hours-on-accessibility-text")
