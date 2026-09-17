@@ -404,10 +404,16 @@ public final class CaptionPipeline {
         phase = .paused
     }
 
-    public func resume() async {
-        guard phase == .paused, let activeSettings else { return }
+    /// `settings` defaults to the snapshot from the last `start(settings:)`,
+    /// but a caller that tracks its own live settings (the app's view
+    /// model) should pass its current value: any engine, model, keyword
+    /// alert, sound preference, or speaker threshold change made while
+    /// paused would otherwise vanish on resume, silently restarting with
+    /// whatever was in effect before the pause.
+    public func resume(settings: AppSettings? = nil) async {
+        guard phase == .paused, let effective = settings ?? activeSettings else { return }
         phase = .idle
-        await start(settings: activeSettings)
+        await start(settings: effective)
     }
 
     /// Stops and starts again with new settings — the engine, model, or
@@ -426,14 +432,17 @@ public final class CaptionPipeline {
     /// Starts again after a failure. Anything but a failure is left alone:
     /// retrying in the middle of a start would begin a second model
     /// download or load on the same engine while the first is still going.
-    public func retry() async {
-        guard case .failed = phase, let activeSettings else { return }
+    /// See `resume(settings:)`: defaults to the last-started snapshot, but
+    /// a caller with its own live settings should pass the current value
+    /// so a change made while failed isn't silently dropped on retry.
+    public func retry(settings: AppSettings? = nil) async {
+        guard case .failed = phase, let effective = settings ?? activeSettings else { return }
         cancelScheduledRetry()
         tearDownSession()
         // Straight from the failure to starting, never through .idle, which
         // means stopped on purpose (the "captions came back" announcement
         // forgets the failure there).
-        await start(settings: activeSettings)
+        await start(settings: effective)
     }
 
     public func clearTranscript() {

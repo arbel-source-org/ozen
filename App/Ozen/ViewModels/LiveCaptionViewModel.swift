@@ -577,7 +577,7 @@ public final class LiveCaptionViewModel {
         switch action {
         case .startCaptions:
             if pipeline.phase == .paused {
-                await pipeline.resume()
+                await pipeline.resume(settings: settings)
             } else if !pipeline.phase.isListening && !pipeline.phase.isTransitioning {
                 await pipeline.start(settings: settings)
             }
@@ -601,14 +601,14 @@ public final class LiveCaptionViewModel {
     }
 
     public func retry() async {
-        await pipeline.retry()
+        await pipeline.retry(settings: settings)
         historySessionDidChangePhase()
     }
 
     public func togglePause() async {
         speechPause.userTookControl()
         if pipeline.phase == .paused {
-            await pipeline.resume()
+            await pipeline.resume(settings: settings)
         } else if pipeline.phase.isListening {
             pipeline.pause()
         } else if pipeline.phase == .idle {
@@ -1073,7 +1073,7 @@ public final class LiveCaptionViewModel {
                 captionsPaused: self.pipeline.phase == .paused
             )
             guard resume else { return }
-            await self.pipeline.resume()
+            await self.pipeline.resume(settings: self.settings)
             self.historySessionDidChangePhase()
         }
     }

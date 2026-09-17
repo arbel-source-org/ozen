@@ -835,6 +835,37 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .listening)
     }
 
+    @Test("resume picks up settings changed while paused, not the ones from before the pause")
+    func resumeWithFreshSettingsPicksUpAChange() async {
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: FakeEngine(kind: .whisperKit), .appleSpeech: FakeEngine(kind: .appleSpeech)])
+        await pipeline.start(settings: .default)
+        pipeline.pause()
+
+        var changed = AppSettings.default
+        changed.engine = .appleSpeech
+        await pipeline.resume(settings: changed)
+
+        #expect(pipeline.phase == .listening)
+        #expect(pipeline.activeSettings?.engine == .appleSpeech)
+    }
+
+    @Test("retry picks up settings changed while failed, not the ones from before the failure")
+    func retryWithFreshSettingsPicksUpAChange() async {
+        let audio = FakeAudioCapturer()
+        audio.startError = TestError()
+        let (pipeline, _, _) = makePipeline(audio: audio, engines: [.whisperKit: FakeEngine(kind: .whisperKit), .appleSpeech: FakeEngine(kind: .appleSpeech)])
+        await pipeline.start(settings: .default)
+        #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+
+        audio.startError = nil
+        var changed = AppSettings.default
+        changed.engine = .appleSpeech
+        await pipeline.retry(settings: changed)
+
+        #expect(pipeline.phase == .listening)
+        #expect(pipeline.activeSettings?.engine == .appleSpeech)
+    }
+
     @Test("progress from a superseded run cannot clobber the new run's phase")
     func staleProgressIsIgnored() async {
         let slow = FakeEngine(progressUpdates: [EnginePreparationProgress(stage: .downloadingModel, fraction: 0.1)])
