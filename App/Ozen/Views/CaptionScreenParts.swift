@@ -268,13 +268,23 @@ struct AlertFlashOverlay: View {
 /// a visible explanation.
 struct KeywordHitPill: View {
     let hit: KeywordHit
+    let speakerName: String?
 
     var body: some View {
-        Label(tr("נאמר: \(hit.match.matchedText)", "Said: \(hit.match.matchedText)"), systemImage: "text.badge.star")
+        Label(text, systemImage: "text.badge.star")
             .font(.headline)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(Color.yellow.opacity(0.9), in: Capsule())
             .foregroundStyle(.black)
+    }
+
+    // A dash, not "X said" -- Hebrew's "said" is gendered and speakers
+    // aren't tracked by gender.
+    private var text: String {
+        guard let speakerName else {
+            return tr("נאמר: \(hit.match.matchedText)", "Said: \(hit.match.matchedText)")
+        }
+        return tr("\(speakerName) — נאמר: \(hit.match.matchedText)", "\(speakerName) said: \(hit.match.matchedText)")
     }
 }

@@ -1207,6 +1207,18 @@ public final class LiveCaptionViewModel {
         pipeline.displayName(for: segment)
     }
 
+    /// Who said the line a keyword hit matched, respecting the same
+    /// show-speaker-names setting the caption rows themselves do -- a
+    /// keyword banner shouldn't reveal a name the rest of the screen is
+    /// hiding.
+    public func speakerName(for hit: KeywordHit) -> String? {
+        guard display.showSpeakerNames,
+              let segment = segments.first(where: { $0.id == hit.segmentID }),
+              segment.speakerClusterID != nil
+        else { return nil }
+        return displayName(for: segment)
+    }
+
     // MARK: - History
 
     /// Writes the current transcript to history (if there is anything and

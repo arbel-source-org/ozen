@@ -77,8 +77,15 @@ struct KeywordAlertsView: View {
                 Section(tr("נשמעו לאחרונה", "Recently heard")) {
                     ForEach(viewModel.keywordHits.suffix(10).reversed()) { hit in
                         recentHitLayout {
-                            Text(hit.match.matchedText)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(hit.match.matchedText)
+                                if let name = viewModel.speakerName(for: hit) {
+                                    Text(name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Text(Date(timeIntervalSince1970: hit.timestamp).formatted(date: .omitted, time: .shortened))
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()

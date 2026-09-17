@@ -18,7 +18,7 @@ private struct AlertOverlay: ViewModifier {
                             .transition(.move(edge: .top).combined(with: .opacity))
                         }
                         if let shownHit {
-                            KeywordHitPill(hit: shownHit)
+                            KeywordHitPill(hit: shownHit, speakerName: viewModel.speakerName(for: shownHit))
                                 .transition(.move(edge: .top).combined(with: .opacity))
                         }
                     }

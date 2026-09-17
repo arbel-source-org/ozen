@@ -213,7 +213,7 @@ struct LiveCaptionView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 if let hit = visibleKeywordHit {
-                    KeywordHitPill(hit: hit)
+                    KeywordHitPill(hit: hit, speakerName: viewModel.speakerName(for: hit))
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 awayJumpButton

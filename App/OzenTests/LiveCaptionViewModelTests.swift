@@ -196,6 +196,32 @@ struct LiveCaptionViewModelAlertTests {
         #expect(store.load().keywordAlerts.isEmpty)
     }
 
+    @Test("a keyword hit resolves who said it, but only while speaker names are shown")
+    func keywordHitSpeakerName() async throws {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline)
+        await viewModel.start()
+        viewModel.addKeywordAlert(phrase: "סבתא")
+
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        await eventually { pipeline.speakerClusters.count == 1 }
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלום לסבתא", isFinal: true, timestamp: 1))
+        await eventually { !viewModel.keywordHits.isEmpty }
+        let hit = try #require(viewModel.keywordHits.first)
+
+        #expect(viewModel.speakerName(for: hit) != nil)
+
+        viewModel.display.showSpeakerNames = false
+        #expect(viewModel.speakerName(for: hit) == nil)
+        viewModel.display.showSpeakerNames = true
+
+        let unknownHit = KeywordHit(segmentID: UUID(), match: hit.match, timestamp: hit.timestamp)
+        #expect(viewModel.speakerName(for: unknownHit) == nil)
+    }
+
     @Test("sound preferences persist and unsupported sounds are reported as such")
     func soundPreferences() {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
