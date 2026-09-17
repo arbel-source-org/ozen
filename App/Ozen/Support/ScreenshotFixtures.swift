@@ -54,6 +54,10 @@ enum ScreenshotFixtures {
         }
         viewModel.addKeywordAlert(phrase: tr("שני כדורים", "two pills"))
         viewModel.addVocabularyTerm(tr("דנה אברהמי", "Dana Abrahami"))
+        // Seeded directly rather than through the Settings toggle, which
+        // also kicks off a real notification-permission request -- not
+        // something a screenshot test should be poking.
+        viewModel.notifyWhenInBackground = true
 
         switch variant {
         case .hebrewDefault:

@@ -202,6 +202,16 @@ final class OzenScreenshotUITests: XCTestCase {
         // case actually was.
         openSettingsRow(app, rowIdentifier: "keywordAlertsRow", screenIdentifier: "keywordAlertsScreen", captureName: "keyword-alerts-accessibility-text")
         openSettingsRow(app, rowIdentifier: "soundAlertsRow", screenIdentifier: "soundAlertsScreen", captureName: "sound-alerts-accessibility-text")
+
+        // notifyWhenInBackground is seeded on in ScreenshotFixtures, so
+        // this inline toggle (unlike the rows above) is already visible
+        // rather than reached through a NavigationLink.
+        let quietHoursToggle = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
+        XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
+        capture(app, name: "quiet-hours-off-accessibility-text")
+        quietHoursToggle.tap()
+        capture(app, name: "quiet-hours-on-accessibility-text")
+
         openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
 
         let addSpeaker = scrollDownUntilVisible(app, identifier: "addSpeakerButton")
