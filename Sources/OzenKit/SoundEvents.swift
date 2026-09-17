@@ -211,10 +211,16 @@ public struct SoundEventPolicy: Sendable, Equatable {
         guard let event = SoundEventCatalog.event(for: observation.identifier) else { return nil }
         guard event.importance >= preferences.minimumImportance else { return nil }
         guard !preferences.mutedIdentifiers.contains(event.identifier) else { return nil }
-        if let last = lastAlertAt[event.identifier], observation.timestamp - last < cooldownSeconds {
+        // Keyed by name, not identifier: two classifier labels the catalog
+        // shows as the very same sound ("telephone_bell_ringing" and
+        // "ringtone" both read "Phone ringing") must share one cooldown,
+        // or a ring the classifier flips between the two labels on
+        // defeats the cooldown entirely — two banners and two buzzes for
+        // what the user heard as one ring.
+        if let last = lastAlertAt[event.name], observation.timestamp - last < cooldownSeconds {
             return nil
         }
-        lastAlertAt[event.identifier] = observation.timestamp
+        lastAlertAt[event.name] = observation.timestamp
         return SoundAlert(event: event, confidence: observation.confidence, timestamp: observation.timestamp)
     }
 

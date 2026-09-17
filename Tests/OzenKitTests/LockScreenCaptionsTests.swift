@@ -105,6 +105,25 @@ struct LockScreenCaptionsTests {
         #expect(tail.count <= 40)
         #expect(LockScreenCaptions.tail(of: " short ", maximumCharacters: 40) == "short")
     }
+
+    @Test("a cut that lands mid-word skips to the next word, however long that word is")
+    func tailSkipsPastALongBrokenWord() {
+        let tail = LockScreenCaptions.tail(
+            of: "we need to talk about everyone's misunderstanding of the plan tomorrow morning",
+            maximumCharacters: 45
+        )
+        #expect(tail == "…of the plan tomorrow morning")
+    }
+
+    @Test("a cut that already lands on a word boundary keeps that word, even if it's short")
+    func tailKeepsAShortWordAlreadyAtTheBoundary() {
+        let tail = LockScreenCaptions.tail(
+            of: "we need to talk about the big report due on friday for the client meeting "
+                + "and also review notes from yesterday before lunch time today",
+            maximumCharacters: 45
+        )
+        #expect(tail.hasPrefix("…notes"))
+    }
 }
 
 @Suite("Throttling lock screen updates")

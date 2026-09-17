@@ -71,8 +71,16 @@ public enum LockScreenCaptions {
     public static func tail(of text: String, maximumCharacters: Int) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > maximumCharacters, maximumCharacters > 1 else { return trimmed }
-        var kept = String(trimmed.suffix(maximumCharacters - 1))
-        if let space = kept.firstIndex(where: \.isWhitespace), kept.distance(from: kept.startIndex, to: space) < maximumCharacters / 3 {
+        let cutPoint = trimmed.index(trimmed.endIndex, offsetBy: -(maximumCharacters - 1))
+        var kept = String(trimmed[cutPoint...])
+        // Whether the cut actually landed inside a word is the one thing
+        // that matters, not how long the leading fragment looks: a cut
+        // right after a space already starts at a real word, however
+        // short, and must not throw it away; a cut mid-word must skip to
+        // the next real word however long that takes, or the fragment
+        // stays visibly broken.
+        let cutMidWord = cutPoint > trimmed.startIndex && !trimmed[trimmed.index(before: cutPoint)].isWhitespace
+        if cutMidWord, let space = kept.firstIndex(where: \.isWhitespace) {
             kept = String(kept[kept.index(after: space)...])
         }
         return "…" + kept

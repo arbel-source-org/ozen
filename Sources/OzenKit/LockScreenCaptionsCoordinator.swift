@@ -123,16 +123,22 @@ public final class LockScreenCaptionsCoordinator {
         // newest line only.
         var shown = lines(presence.status == nil ? LockScreenCaptions.lineCount : 1, textSize)
         var ageNote: String?
-        if presence.status == nil {
-            switch LockScreenCaptions.quiet(newestLineAt: shown.map(\.lastUpdate).max(), now: time) {
-            case .recent:
-                break
-            case .minutesAgo(let minutes):
-                shown = lines(1, textSize)
+        // Staleness clearing applies whether or not there's a status note:
+        // a call arriving right after 15+ quiet minutes correctly cleared
+        // the screen must not bring that stale line back just because
+        // there's now a note above where it would sit. Only the age-note
+        // *text* is status-gated — a call's note already takes the room a
+        // moderately-old line's age note would (see the test covering that).
+        switch LockScreenCaptions.quiet(newestLineAt: shown.map(\.lastUpdate).max(), now: time) {
+        case .recent:
+            break
+        case .minutesAgo(let minutes):
+            shown = lines(1, textSize)
+            if presence.status == nil {
                 ageNote = LockScreenCaptions.ageNote(minutes: minutes)
-            case .over:
-                shown = []
             }
+        case .over:
+            shown = []
         }
         let content = LockScreenCaptionContent(lines: shown, status: presence.status, ageNote: ageNote, textSize: textSize)
         switch throttle.decide(content, now: time) {

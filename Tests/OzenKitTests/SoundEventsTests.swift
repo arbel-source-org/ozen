@@ -90,6 +90,20 @@ struct SoundEventsTests {
         #expect(afterReset != nil)
     }
 
+    @Test("two catalog entries shown as the same sound share one cooldown, not two")
+    func synonymIdentifiersShareCooldown() {
+        var policy = SoundEventPolicy(cooldownSeconds: 20)
+        let ringing = policy.evaluate(reading("telephone_bell_ringing", at: 100))
+        let ringtone = policy.evaluate(reading("ringtone", at: 100))
+        #expect(ringing != nil)
+        #expect(ringtone == nil)
+
+        let shout = policy.evaluate(reading("shout", at: 200))
+        let yell = policy.evaluate(reading("yell", at: 205))
+        #expect(shout != nil)
+        #expect(yell == nil)
+    }
+
     @Test("a banner gives way only to an alert at least as important")
     func bannerTakeOver() throws {
         func alert(_ identifier: String) throws -> SoundAlert {

@@ -185,6 +185,23 @@ struct LockScreenCaptionsCoordinatorTests {
         #expect(display.shown.last?.status != nil && display.shown.last?.ageNote == nil)
     }
 
+    @Test("a call arriving after 15+ quiet minutes doesn't bring the already-cleared stale line back")
+    func callAfterLongQuietStaysCleared() async {
+        let (coordinator, display, captions) = make()
+        captions.texts = ["the pills are on the table"]
+        coordinator.refresh()
+        coordinator.appActivityChanged(isActive: false)
+
+        captions.age = 16 * 60
+        coordinator.refresh()
+        #expect(await eventually { display.shown.last?.lines == [] })
+
+        captions.situation.interruptedByCall = true
+        coordinator.refresh()
+        #expect(display.shown.last?.status != nil)
+        #expect(display.shown.last?.lines == [])
+    }
+
     @Test("captions large in the app make the lock screen large")
     func textSize() {
         let (coordinator, display, captions) = make()
