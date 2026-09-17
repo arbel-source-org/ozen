@@ -205,20 +205,20 @@ final class OzenScreenshotUITests: XCTestCase {
 
         // notifyWhenInBackground is seeded on in ScreenshotFixtures, so
         // this inline toggle (unlike the rows above) is already visible
-        // rather than reached through a NavigationLink. A coordinate-based
-        // drag added here to improve framing (both to center the row and
-        // then, separately, a full swipeUp()) each instead stopped the tap
-        // right after it from registering at all -- most likely the tap
-        // landing while the Form's scroll view was still settling from the
-        // drag. Tapping right where scrollDownUntilVisible leaves it, with
-        // no extra gesture in between, is the same pattern every row above
-        // already uses reliably.
+        // rather than reached through a NavigationLink.
         let quietHoursToggle = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
         XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
         capture(app, name: "quiet-hours-off-accessibility-text")
         quietHoursToggle.tap()
-        let startStepper = app.descendants(matching: .any)["quietHoursStartStepper"]
-        XCTAssertTrue(startStepper.waitForExistence(timeout: 5), "secondary screens: quiet hours toggle tap didn't reveal the hour steppers")
+        // The steppers this reveals render below the toggle, which was
+        // already at (or past) the bottom of the current scroll position --
+        // per scrollDownUntilVisible's own doc comment, a row below the
+        // current position isn't merely off-screen, it doesn't exist in
+        // the accessibility tree at all until actually scrolled near it.
+        // A bare waitForExistence never sees it appear; only scrolling
+        // does.
+        let startStepper = scrollDownUntilVisible(app, identifier: "quietHoursStartStepper")
+        XCTAssertTrue(startStepper.exists, "secondary screens: quiet hours toggle tap didn't reveal the hour steppers")
         capture(app, name: "quiet-hours-on-accessibility-text")
 
         openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
