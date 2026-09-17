@@ -248,6 +248,13 @@ private final class RecognitionSession: @unchecked Sendable {
 
         if let error {
             lock.lock()
+            // stop() may have run between the snapshot above and this
+            // lock: re-check now, under the same lock stop() itself uses,
+            // rather than act on a value that's already stale.
+            guard !self.stopped else {
+                lock.unlock()
+                return
+            }
             // An error is a recognition task's last word: no final result
             // will come to clear this utterance's text, and over an evening
             // of recognizer hiccups the leftovers would only pile up.
@@ -269,6 +276,11 @@ private final class RecognitionSession: @unchecked Sendable {
                 rollOverLocked()
                 lock.unlock()
             case .giveUp:
+                // The stream is ending: nothing should be able to roll this
+                // session over again after this point.
+                self.stopped = true
+                request = nil
+                task = nil
                 lock.unlock()
                 continuation.finish(throwing: AppleSpeechEngine.EngineError.recognizerKeepsFailing(String(describing: error)))
             }

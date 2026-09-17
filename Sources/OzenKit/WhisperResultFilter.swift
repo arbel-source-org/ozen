@@ -141,12 +141,19 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// `echo` drops segments that are just the vocabulary prompt read back
     /// (see `PromptEchoDetector`).
     public func acceptedText(from segments: [WhisperSegmentSummary], echo: PromptEchoDetector? = nil) -> String {
-        let joined = segments
-            .filter { accepts($0) && !(echo?.isEcho(Self.stripSpecialTokens($0.text)) ?? false) }
+        let joined = accepted(from: segments, echo: echo)
             .map { Self.stripSpecialTokens($0.text).trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
         return Self.collapsingRepeats(joined)
+    }
+
+    /// The subset of `segments` that survive into `acceptedText`, for a
+    /// caller that needs to derive something else (confidence, timing)
+    /// from exactly the content actually shown, not from segments that
+    /// were rejected as hallucinations or noise.
+    public func accepted(from segments: [WhisperSegmentSummary], echo: PromptEchoDetector? = nil) -> [WhisperSegmentSummary] {
+        segments.filter { accepts($0) && !(echo?.isEcho(Self.stripSpecialTokens($0.text)) ?? false) }
     }
 
     /// A decoding loop that stays short enough to pass the compression check

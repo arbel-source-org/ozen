@@ -289,6 +289,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
         var utteranceID = UUID()
         var samplesAtLastPass = 0
         var lastShownText = ""
+        var lastShownConfidence: Float?
 
         while true {
             try Task.checkCancellation()
@@ -369,29 +370,38 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 let elapsed = ContinuousClock.now - passStarted
                 lastLivePassSeconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
             }
-            let segments = results.flatMap(\.segments)
-            let text = filter.acceptedText(from: segments.map {
+            let summaries = results.flatMap(\.segments).map {
                 WhisperSegmentSummary(
                     text: $0.text,
                     noSpeechProb: $0.noSpeechProb,
                     avgLogprob: $0.avgLogprob,
                     compressionRatio: $0.compressionRatio
                 )
-            }, echo: echoDetector)
-            let confidence = Self.confidence(from: segments.map(\.avgLogprob))
+            }
+            // Confidence has to describe exactly the text being shown, not
+            // the whole pass -- a rejected hallucination segment can have a
+            // confident logprob of its own and skew the mean either way for
+            // content that never reaches the screen.
+            let acceptedSegments = filter.accepted(from: summaries, echo: echoDetector)
+            let text = filter.acceptedText(from: summaries, echo: echoDetector)
+            let confidence = Self.confidence(from: acceptedSegments.map(\.avgLogprob))
 
             // A final pass that comes back empty (the pad was silence and
-            // the model changed its mind) must not erase what was shown.
+            // the model changed its mind) must not erase what was shown --
+            // and its confidence describes that unrelated, rejected pass,
+            // not the text now being shown again, so it falls back too.
             let shown = text.isEmpty ? lastShownText : text
+            let shownConfidence = text.isEmpty ? lastShownConfidence : confidence
             if !shown.isEmpty {
                 continuation.yield(TranscriptToken(
                     utteranceID: utteranceID,
                     text: shown,
                     isFinal: isFinal,
                     timestamp: Date().timeIntervalSince1970,
-                    confidence: confidence
+                    confidence: shownConfidence
                 ))
                 lastShownText = shown
+                lastShownConfidence = shownConfidence
             }
 
             if isFinal {
@@ -399,6 +409,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 utteranceID = UUID()
                 samplesAtLastPass = 0
                 lastShownText = ""
+                lastShownConfidence = nil
                 // How long a pass over the finished line took says little
                 // about the next, shorter one; its first preview shouldn't
                 // wait on it.

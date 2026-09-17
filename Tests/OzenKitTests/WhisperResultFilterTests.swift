@@ -90,6 +90,14 @@ struct WhisperResultFilterTests {
         #expect(text == "בוקר טוב איך ישנת")
     }
 
+    @Test("accepted(from:) returns exactly the segments acceptedText was built from")
+    func acceptedReturnsSurvivingSegments() {
+        let kept = segment("בוקר טוב")
+        let rejected = segment("תודה שצפיתם")
+        let alsoKept = segment("איך ישנת")
+        #expect(filter.accepted(from: [kept, rejected, alsoKept]) == [kept, alsoKept])
+    }
+
     @Test("a punctuation-only segment between two real ones is dropped, not joined as a word")
     func punctuationOnlyJoinDropped() {
         let text = filter.acceptedText(from: [
