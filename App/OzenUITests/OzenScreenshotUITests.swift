@@ -129,6 +129,11 @@ final class OzenScreenshotUITests: XCTestCase {
     /// seeded on at launch (see ScreenshotFixtures.Variant.quietHoursEnabled)
     /// rather than flipped live by the test, since tapping the toggle
     /// itself reliably failed to reveal them across several attempts.
+    /// Anchored on the plain Text footnote below the steppers, not a
+    /// Stepper itself: a Stepper paired with a LabeledContent label
+    /// apparently doesn't expose a single element under its own
+    /// accessibilityIdentifier the way a Toggle or Text does -- scrolling
+    /// for one by identifier never found it, seeded or not.
     func testQuietHoursEnabledAccessibilityText() throws {
         let app = XCUIApplication()
         app.launchArguments = ["-uiTestScreenshots", "quietHoursEnabled", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
@@ -138,8 +143,8 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "quiet hours: the settings button never appeared")
         settingsButton.tap()
 
-        let startStepper = scrollDownUntilVisible(app, identifier: "quietHoursStartStepper")
-        XCTAssertTrue(startStepper.exists, "quiet hours: the start-hour stepper never appeared")
+        let footnote = scrollDownUntilVisible(app, identifier: "quietHoursFootnote")
+        XCTAssertTrue(footnote.exists, "quiet hours: the steppers' footnote never appeared")
         capture(app, name: "quiet-hours-on-accessibility-text")
     }
 

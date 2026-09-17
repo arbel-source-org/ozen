@@ -456,7 +456,6 @@ struct SettingsView: View {
                     ), in: 0...23) {
                         LabeledContent(tr("מתחילות", "Starts"), value: Self.hourLabel(viewModel.quietHours.startHour))
                     }
-                    .accessibilityIdentifier("quietHoursStartStepper")
                     Stepper(value: Binding(
                         get: { viewModel.quietHours.endHour },
                         set: { hour in
@@ -470,6 +469,7 @@ struct SettingsView: View {
                     Text(tr("צלילים דחופים כמו אזעקה עדיין יתריעו.", "Urgent sounds like a siren still alert."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("quietHoursFootnote")
                 }
             }
         } header: {
