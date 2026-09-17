@@ -28,9 +28,13 @@ struct InferenceCadenceTests {
         #expect(criticalSaver == critical)
     }
 
-    @Test("a pass that took longer than the interval stretches the interval to match")
+    @Test("a pass that took longer than the interval doubles it, so an actual rest follows a slow pass")
     func slowPass() {
-        #expect(InferenceCadence.secondsBetweenLivePasses(heat: .nominal, lowPowerMode: false, lastPassSeconds: 1.7) == 1.7)
+        // The interval is measured from one pass's start to the next's
+        // (see InferenceCadence's own comment): since audio keeps arriving
+        // for the whole lastPassSeconds a pass takes, only double that
+        // leaves any rest after the pass actually finishes.
+        #expect(InferenceCadence.secondsBetweenLivePasses(heat: .nominal, lowPowerMode: false, lastPassSeconds: 1.7) == 3.4)
     }
 
     @Test("a nonsense pass duration is ignored")

@@ -143,7 +143,11 @@ public enum CloudSpeech {
             let text = WhisperResultFilter.collapsingRepeats(withoutAnnotations(String(line)))
             guard !text.isEmpty, !filter.isKnownHallucination(text) else { continue }
             if let previous = turns.last, label == nil || label == lastLabel {
-                turns[turns.count - 1] = previous + " " + text
+                // A looping hallucination can straddle the line break the
+                // model puts at a speaker change, with too few repeats on
+                // either side alone to trip collapsingRepeats above — only
+                // collapsing runs the merged turn is caught.
+                turns[turns.count - 1] = WhisperResultFilter.collapsingRepeats(previous + " " + text)
             } else {
                 turns.append(text)
             }

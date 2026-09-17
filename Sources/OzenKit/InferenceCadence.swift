@@ -39,8 +39,14 @@ public enum InferenceCadence {
         }
         // Give the chip at least as long to rest as it just worked, so a
         // struggling phone settles at half duty instead of running hot.
+        // The caller (WhisperKitEngine.runStreaming) measures `interval`
+        // from the start of one pass to the start of the next, and audio
+        // keeps arriving in real time while a pass runs — so by the time a
+        // lastPassSeconds-long pass finishes, that much new audio has
+        // already piled up. Only doubling it leaves an actual rest after
+        // the pass ends instead of firing the next one back to back.
         if let lastPassSeconds, lastPassSeconds.isFinite, lastPassSeconds > 0 {
-            interval = max(interval, lastPassSeconds)
+            interval = max(interval, lastPassSeconds * 2)
         }
         return interval
     }

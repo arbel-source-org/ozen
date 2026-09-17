@@ -59,6 +59,13 @@ struct CloudSpeechTests {
         #expect((turns.first?.split(separator: " ").count ?? 0) <= 3)
     }
 
+    @Test("a repeated phrase split across a same-speaker line break is shortened just like one on a single line")
+    func repeatsAcrossMergedLines() {
+        let turns = CloudSpeech.turns(in: "A: כן כן\nA: כן כן כן")
+        #expect(turns.count == 1)
+        #expect((turns.first?.split(separator: " ").count ?? 0) <= 3)
+    }
+
     @Test("the reply's text is the transcript")
     func transcriptFromReply() throws {
         let text = try CloudSpeech.transcript(from: reply(200, #"{"choices":[{"message":{"role":"assistant","content":"A: שלום"}}]}"#))
