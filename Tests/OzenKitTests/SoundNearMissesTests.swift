@@ -33,6 +33,16 @@ struct SoundNearMissesTests {
         #expect(misses.entries.first?.lastHeardAt == 101)
     }
 
+    @Test("looks an entry up by event, merging the same synonym identifiers record() does")
+    func entryLookupMergesSynonyms() throws {
+        var misses = SoundNearMisses()
+        misses.record(heard("ringtone", 0.5, at: 100), alertConfidence: 0.6)
+        let phone = try #require(SoundEventCatalog.event(for: "telephone_bell_ringing"))
+        #expect(misses.entry(for: phone)?.bestConfidence == 0.5)
+        let doorbell = try #require(SoundEventCatalog.event(for: "door_bell"))
+        #expect(misses.entry(for: doorbell) == nil)
+    }
+
     @Test("remembers a limited number of sounds, forgetting the one heard longest ago")
     func limited() {
         var misses = SoundNearMisses()

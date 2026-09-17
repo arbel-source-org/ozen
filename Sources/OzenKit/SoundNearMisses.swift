@@ -50,6 +50,12 @@ public struct SoundNearMisses: Sendable, Equatable {
         entries.sorted { $0.lastHeardAt > $1.lastHeardAt }
     }
 
+    /// The near-miss for `event`, merged the same way `record` merges two
+    /// classifier labels the catalog shows as one sound.
+    public func entry(for event: SoundEvent) -> Entry? {
+        entries.first { SoundEventCatalog.event(for: $0.identifier)?.name == event.name }
+    }
+
     /// "door_bell 45% 17:02:10, knock 38% 16:40:05", or nil when there are none.
     public func reportLine(utcOffsetSeconds: Int) -> String? {
         guard !entries.isEmpty else { return nil }

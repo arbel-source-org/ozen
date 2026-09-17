@@ -966,6 +966,16 @@ public final class LiveCaptionViewModel {
         soundAlertPreferences = preferences
     }
 
+    public func setSoundEvent(_ identifier: String, sensitive: Bool) {
+        var preferences = soundAlertPreferences
+        if sensitive {
+            preferences.sensitiveIdentifiers.insert(identifier)
+        } else {
+            preferences.sensitiveIdentifiers.remove(identifier)
+        }
+        soundAlertPreferences = preferences
+    }
+
     public func isSoundEventSupported(_ identifier: String) -> Bool {
         knownSoundIdentifiers?.contains(identifier) ?? true
     }

@@ -495,7 +495,7 @@ public final class CaptionPipeline {
            SoundEventCatalog.vibrationLookalikes.contains(observation.identifier) {
             return
         }
-        soundNearMisses.record(observation, alertConfidence: soundPolicy.minimumConfidence)
+        soundNearMisses.record(observation, alertConfidence: soundPolicy.requiredConfidence(for: observation.identifier))
         guard let alert = soundPolicy.evaluate(observation) else { return }
         soundAlerts.append(alert)
         onSoundAlert?(alert)

@@ -132,8 +132,40 @@ struct SoundEventsTests {
         let decoded = try JSONDecoder().decode(SoundAlertPreferences.self, from: Data("{}".utf8))
         #expect(decoded == .default)
 
-        let custom = SoundAlertPreferences(isEnabled: false, minimumImportance: .critical, mutedIdentifiers: ["cat", "music"])
+        let custom = SoundAlertPreferences(isEnabled: false, minimumImportance: .critical, mutedIdentifiers: ["cat", "music"], sensitiveIdentifiers: ["door_bell"])
         let data = try JSONEncoder().encode(custom)
         #expect(try JSONDecoder().decode(SoundAlertPreferences.self, from: data) == custom)
+    }
+
+    @Test("a settings file saved before sensitivity existed decodes to no sensitive sounds")
+    func sensitiveIdentifiersDefaultsEmptyOnOldSettings() throws {
+        let decoded = try JSONDecoder().decode(
+            SoundAlertPreferences.self,
+            from: Data(#"{"isEnabled":true,"minimumImportance":1,"mutedIdentifiers":["cat"]}"#.utf8)
+        )
+        #expect(decoded.sensitiveIdentifiers.isEmpty)
+        #expect(decoded.mutedIdentifiers == ["cat"])
+    }
+
+    @Test("a sensitive sound alerts at the lower floor; an ordinary one still needs the usual confidence")
+    func sensitivityLowersTheFloorOnlyForThatSound() {
+        var policy = SoundEventPolicy(preferences: SoundAlertPreferences(sensitiveIdentifiers: ["door_bell"]))
+        #expect(policy.requiredConfidence(for: "door_bell") == policy.sensitiveConfidence)
+        #expect(policy.requiredConfidence(for: "knock") == policy.minimumConfidence)
+
+        let faintDoorbell = policy.evaluate(reading("door_bell", confidence: 0.45))
+        let faintKnock = policy.evaluate(reading("knock", confidence: 0.45))
+        #expect(faintDoorbell?.event.identifier == "door_bell")
+        #expect(faintKnock == nil)
+    }
+
+    @Test("sensitivity never raises the floor above the ordinary minimum")
+    func sensitivityNeverStricterThanMinimum() {
+        let policy = SoundEventPolicy(
+            preferences: SoundAlertPreferences(sensitiveIdentifiers: ["door_bell"]),
+            minimumConfidence: 0.3,
+            sensitiveConfidence: 0.4
+        )
+        #expect(policy.requiredConfidence(for: "door_bell") == 0.3)
     }
 }

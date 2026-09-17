@@ -161,17 +161,27 @@ public struct SoundAlertPreferences: Codable, Sendable, Equatable {
     public var isEnabled: Bool
     public var minimumImportance: SoundEvent.Importance
     public var mutedIdentifiers: Set<String>
+    /// Sounds to alert on even when heard faintly -- set from a near-miss
+    /// (`SoundNearMisses`) the reader noticed kept not alerting, e.g. a
+    /// doorbell that's always heard around 45% against the usual 60% floor.
+    public var sensitiveIdentifiers: Set<String>
 
-    public init(isEnabled: Bool = true, minimumImportance: SoundEvent.Importance = .medium, mutedIdentifiers: Set<String> = []) {
+    public init(
+        isEnabled: Bool = true,
+        minimumImportance: SoundEvent.Importance = .medium,
+        mutedIdentifiers: Set<String> = [],
+        sensitiveIdentifiers: Set<String> = []
+    ) {
         self.isEnabled = isEnabled
         self.minimumImportance = minimumImportance
         self.mutedIdentifiers = mutedIdentifiers
+        self.sensitiveIdentifiers = sensitiveIdentifiers
     }
 
     public static let `default` = SoundAlertPreferences()
 
     private enum CodingKeys: String, CodingKey {
-        case isEnabled, minimumImportance, mutedIdentifiers
+        case isEnabled, minimumImportance, mutedIdentifiers, sensitiveIdentifiers
     }
 
     public init(from decoder: any Decoder) throws {
@@ -180,6 +190,7 @@ public struct SoundAlertPreferences: Codable, Sendable, Equatable {
         isEnabled = container.lenient(Bool.self, forKey: .isEnabled) ?? defaults.isEnabled
         minimumImportance = container.lenient(SoundEvent.Importance.self, forKey: .minimumImportance) ?? defaults.minimumImportance
         mutedIdentifiers = container.lenient(Set<String>.self, forKey: .mutedIdentifiers) ?? defaults.mutedIdentifiers
+        sensitiveIdentifiers = container.lenient(Set<String>.self, forKey: .sensitiveIdentifiers) ?? defaults.sensitiveIdentifiers
     }
 }
 
@@ -191,23 +202,38 @@ public struct SoundAlertPreferences: Codable, Sendable, Equatable {
 public struct SoundEventPolicy: Sendable, Equatable {
     public var preferences: SoundAlertPreferences
     public var minimumConfidence: Double
+    /// The floor for a sound in `preferences.sensitiveIdentifiers`. Kept
+    /// well above pure noise but below `minimumConfidence`, trading more
+    /// false alarms on that one sound against never hearing it at all.
+    public var sensitiveConfidence: Double
     public var cooldownSeconds: TimeInterval
     private var lastAlertAt: [String: TimeInterval] = [:]
 
     public init(
         preferences: SoundAlertPreferences = .default,
         minimumConfidence: Double = 0.6,
+        sensitiveConfidence: Double = 0.4,
         cooldownSeconds: TimeInterval = 20
     ) {
         self.preferences = preferences
         self.minimumConfidence = minimumConfidence
+        self.sensitiveConfidence = sensitiveConfidence
         self.cooldownSeconds = cooldownSeconds
+    }
+
+    /// The confidence `identifier` needs to raise an alert right now. Never
+    /// stricter than `minimumConfidence`, even if a future setting ever
+    /// lowered it below the default `sensitiveConfidence`.
+    public func requiredConfidence(for identifier: String) -> Double {
+        preferences.sensitiveIdentifiers.contains(identifier)
+            ? min(sensitiveConfidence, minimumConfidence)
+            : minimumConfidence
     }
 
     /// The alert to show for this reading, or nil.
     public mutating func evaluate(_ observation: SoundObservation) -> SoundAlert? {
         guard preferences.isEnabled else { return nil }
-        guard observation.confidence >= minimumConfidence else { return nil }
+        guard observation.confidence >= requiredConfidence(for: observation.identifier) else { return nil }
         guard let event = SoundEventCatalog.event(for: observation.identifier) else { return nil }
         guard event.importance >= preferences.minimumImportance else { return nil }
         guard !preferences.mutedIdentifiers.contains(event.identifier) else { return nil }

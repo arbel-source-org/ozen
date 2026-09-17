@@ -39,6 +39,11 @@ struct SoundAlertsView: View {
                             isOn: Binding(
                                 get: { !viewModel.soundAlertPreferences.mutedIdentifiers.contains(event.identifier) },
                                 set: { viewModel.setSoundEvent(event.identifier, muted: !$0) }
+                            ),
+                            nearMiss: viewModel.pipeline.soundNearMisses.entry(for: event),
+                            isSensitive: Binding(
+                                get: { viewModel.soundAlertPreferences.sensitiveIdentifiers.contains(event.identifier) },
+                                set: { viewModel.setSoundEvent(event.identifier, sensitive: $0) }
                             )
                         )
                         .disabled(!viewModel.soundAlertPreferences.isEnabled
@@ -130,24 +135,56 @@ private struct SoundEventRow: View {
     let event: SoundEvent
     let isSupported: Bool
     @Binding var isOn: Bool
+    let nearMiss: SoundNearMisses.Entry?
+    @Binding var isSensitive: Bool
 
     var body: some View {
-        Toggle(isOn: $isOn) {
-            HStack(spacing: 12) {
-                Image(systemName: event.systemImage)
-                    .foregroundStyle(SoundAlertsView.tint(event.importance))
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(event.name)
-                    if !isSupported {
-                        Text(tr("לא נתמך במכשיר הזה", "Not supported on this device"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: $isOn) {
+                HStack(spacing: 12) {
+                    Image(systemName: event.systemImage)
+                        .foregroundStyle(SoundAlertsView.tint(event.importance))
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(event.name)
+                        if !isSupported {
+                            Text(tr("לא נתמך במכשיר הזה", "Not supported on this device"))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
+            .disabled(!isSupported)
+            .foregroundStyle(isSupported ? .primary : .secondary)
+
+            // Only while it's genuinely actionable: once marked sensitive,
+            // the sound alerts at its new, lower floor and stops being a
+            // near miss, so this naturally disappears on its own next time
+            // it's heard -- no separate "already sensitive" state to show.
+            if isSupported, isOn, let nearMiss {
+                sensitivityNudge(nearMiss)
+            }
         }
-        .disabled(!isSupported)
-        .foregroundStyle(isSupported ? .primary : .secondary)
+    }
+
+    @ViewBuilder
+    private func sensitivityNudge(_ nearMiss: SoundNearMisses.Entry) -> some View {
+        HStack {
+            Text(tr(
+                "נשמע ב-\(Int((nearMiss.bestConfidence * 100).rounded()))%, קצת חלש מדי",
+                "Heard at \(Int((nearMiss.bestConfidence * 100).rounded()))%, a bit too faint"
+            ))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            Spacer()
+            Toggle(isOn: $isSensitive) {
+                Text(tr("להתריע גם על צליל חלש יותר", "Alert on a fainter sound too"))
+                    .font(.caption.weight(.semibold))
+            }
+            .toggleStyle(.button)
+            .controlSize(.small)
+        }
+        .accessibilityIdentifier("soundSensitivityToggle-\(event.identifier)")
     }
 }
