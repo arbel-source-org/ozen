@@ -35,7 +35,12 @@ struct MicPickerView: View {
                 }
 
                 Section(tr("עוצמת קליטה", "Input level")) {
+                    // A fresh identity per input: without it, switching mics
+                    // keeps the peak-hold tick from whichever mic was
+                    // selected before, showing a false-confidence reading
+                    // for the newly selected one until it decays away.
                     LevelMeter(level: viewModel.inputLevel, isActive: viewModel.isListening)
+                        .id(viewModel.selectedInputUID)
                     if viewModel.isListening {
                         Text(tr("דברו ותראו את הפס זז. אם הוא לא זז, המיקרופון שנבחר לא שומע.", "Speak and watch the bar move. If it doesn’t move, the selected microphone isn’t hearing anything."))
                             .font(.footnote)
