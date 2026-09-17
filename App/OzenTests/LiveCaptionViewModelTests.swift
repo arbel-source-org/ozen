@@ -81,6 +81,7 @@ struct LiveCaptionViewModelTests {
 
         viewModel.display.fontSize = 44
         viewModel.display.theme = .highContrast
+        viewModel.flushPendingSettingsSave()
 
         #expect(store.load().display.fontSize == 44)
         #expect(store.load().display.theme == .highContrast)

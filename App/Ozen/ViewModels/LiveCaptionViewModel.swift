@@ -768,7 +768,7 @@ public final class LiveCaptionViewModel {
         get { settings.display }
         set {
             settings.display = newValue
-            persist()
+            schedulePersist()
             refreshLockScreen()
         }
     }
@@ -786,7 +786,7 @@ public final class LiveCaptionViewModel {
         set {
             settings.speakerSimilarityThreshold = newValue
             pipeline.setSpeakerSimilarityThreshold(newValue)
-            persist()
+            schedulePersist()
         }
     }
 
@@ -1022,7 +1022,7 @@ public final class LiveCaptionViewModel {
         get { settings.speechRate }
         set {
             settings.speechRate = newValue
-            persist()
+            schedulePersist()
         }
     }
 
@@ -1366,7 +1366,11 @@ public final class LiveCaptionViewModel {
 
     // MARK: - Persistence
 
+    private var pendingPersistTask: Task<Void, Never>?
+
     private func persist() {
+        pendingPersistTask?.cancel()
+        pendingPersistTask = nil
         do {
             try settingsStore.save(settings)
             if settingsSaveError != nil { settingsSaveError = nil }
@@ -1374,6 +1378,28 @@ public final class LiveCaptionViewModel {
             settingsSaveError = String(describing: error)
         }
         refreshSavingTrouble()
+    }
+
+    /// Coalesces rapid-fire settings changes into one write instead of
+    /// many: a Slider fires its binding's setter at every step while
+    /// dragging, not only on release, so a property driven by one (font
+    /// size, speech rate, the speaker-similarity threshold) would
+    /// otherwise trigger a full synchronous settings-file write per step.
+    /// `flushPendingSettingsSave()` writes immediately if the app leaves
+    /// the foreground before the debounce fires, so a change made right
+    /// before backgrounding is never lost.
+    private func schedulePersist() {
+        pendingPersistTask?.cancel()
+        pendingPersistTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            self?.persist()
+        }
+    }
+
+    public func flushPendingSettingsSave() {
+        guard pendingPersistTask != nil else { return }
+        persist()
     }
 }
 
