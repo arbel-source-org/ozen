@@ -779,6 +779,8 @@ struct LiveCaptionViewModelConversationBreakTests {
         #expect(viewModel.savedConversationID(holdingLineAt: 0) == morning)
         #expect(viewModel.savedConversationID(holdingLineAt: 1) == evening)
         #expect(viewModel.savedConversationID(holdingLineAt: 2) == nil)
+        #expect(!viewModel.isCurrentConversation(morning))
+        #expect(viewModel.isCurrentConversation(evening))
 
         try viewModel.deleteConversation(id: morning)
         #expect(viewModel.savedConversationID(holdingLineAt: 0) == nil)

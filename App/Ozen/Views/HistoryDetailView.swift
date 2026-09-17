@@ -228,7 +228,36 @@ struct HistoryDetailView: View {
             }
             Button(tr("ביטול", "Cancel"), role: .cancel) {}
         }
-        .task { await load() }
+        .task {
+            await load()
+            // The conversation still being captioned keeps growing on disk
+            // (the autosave loop writes it roughly every 20s) while this
+            // screen stays open; every other, closed conversation's saved
+            // copy never changes again, so there's nothing to re-read.
+            guard viewModel.isCurrentConversation(sessionID) else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(20))
+                guard !Task.isCancelled else { return }
+                await refresh()
+            }
+        }
+    }
+
+    /// Re-reads this conversation's saved state, leaving scroll position,
+    /// the current search-match index, and any in-progress rename alone --
+    /// only `load()` (once, at open) sets those.
+    private func refresh() async {
+        let store = viewModel.historyStore
+        let id = sessionID
+        let query = searchQuery
+        let loaded = await Task.detached(priority: .utility) {
+            Loaded(store: store, id: id, query: query)
+        }.value
+        record = loaded.record
+        stats = loaded.stats
+        matches = loaded.matches
+        timeMarks = loaded.timeMarks
+        numberLineIDs = loaded.numberLineIDs
     }
 
     /// Everything the screen shows about one saved conversation, worked

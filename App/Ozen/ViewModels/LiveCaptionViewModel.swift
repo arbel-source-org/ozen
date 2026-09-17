@@ -1320,6 +1320,13 @@ public final class LiveCaptionViewModel {
         return closedHistorySessions.last(where: { $0.lines.contains(index) })?.id
     }
 
+    /// Whether `id` is the conversation still being captioned right now --
+    /// its saved copy keeps changing underneath a screen that opened it,
+    /// unlike every other (closed) conversation's, which is fixed for good.
+    public func isCurrentConversation(_ id: UUID) -> Bool {
+        id == historySessionID
+    }
+
     /// Deletes every saved conversation, including the one in progress.
     public func deleteAllConversations() throws {
         try historyWriter.deleteAllNow()
