@@ -136,7 +136,22 @@ private final class RecognitionSession: @unchecked Sendable {
     private var samplesInRequest = 0
     private var samplesSinceSpeech = 0
     private var requestHasSpeech = false
+    /// How many audio chunks in the current request the VAD called speech.
+    /// A one-off transient (a cough, a door slam) usually trips it for a
+    /// single chunk; real speech spans several. Snapshotted per utterance
+    /// below rather than read live, since a rollover resets this before an
+    /// in-flight result for the *previous* utterance can arrive.
+    private var speechChunksInRequest = 0
     private var lastTextByUtterance: [UUID: String] = [:]
+    /// `speechChunksInRequest` as of the last time `lastTextByUtterance[id]`
+    /// was set from real (non-empty) text -- the evidence an empty final
+    /// result is later checked against before trusting that cached text.
+    private var speechChunksAtLastText: [UUID: Int] = [:]
+    /// Below this many VAD-speech chunks, an empty final is treated as the
+    /// recognizer's own correct retraction of a noise-triggered partial,
+    /// not the known quirk of a real utterance's final coming back empty
+    /// merely because `endAudio()` cut the request short.
+    private static let minimumSpeechChunksForEmptyFinalFallback = 3
     private var consecutiveFailures = 0
 
     // When to end a request and what an error means are decided by
@@ -190,6 +205,7 @@ private final class RecognitionSession: @unchecked Sendable {
         if voiceDetector.isSpeech(chunk) {
             requestHasSpeech = true
             samplesSinceSpeech = 0
+            speechChunksInRequest += 1
         } else {
             samplesSinceSpeech += chunk.count
         }
@@ -230,6 +246,7 @@ private final class RecognitionSession: @unchecked Sendable {
         samplesInRequest = 0
         samplesSinceSpeech = 0
         requestHasSpeech = false
+        speechChunksInRequest = 0
         self.request = request
         // `SFSpeechRecognitionTask` isn't Sendable; it's only ever touched
         // under this session's lock, which is the real invariant here.
@@ -259,6 +276,7 @@ private final class RecognitionSession: @unchecked Sendable {
             // will come to clear this utterance's text, and over an evening
             // of recognizer hiccups the leftovers would only pile up.
             lastTextByUtterance[id] = nil
+            speechChunksAtLastText[id] = nil
             let response = RecognitionRequestPolicy.respond(
                 isCurrentRequest: isCurrent && id == utteranceID,
                 requestHadSpeech: requestHasSpeech,
@@ -296,15 +314,21 @@ private final class RecognitionSession: @unchecked Sendable {
             ? nil
             : segments.map(\.confidence).reduce(0, +) / Float(segments.count)
 
-        // An empty final (the recognizer heard nothing after we ended the
-        // request) must not wipe text that was already shown for this
-        // utterance, and an utterance that never had text is not worth a
-        // segment at all.
+        // An empty final usually just means `endAudio()` cut the request
+        // short right after a real partial -- that must not wipe the text
+        // already shown for this utterance. But it can also be the
+        // recognizer's own correct retraction of a partial that was never
+        // real speech (a cough, a door slam the VAD misread as speech for
+        // one chunk); those two cases produce the identical empty final, so
+        // the fallback only fires with enough VAD-speech evidence behind
+        // the cached text to look like the first case, not the second.
         let displayText: String = lock.withLock {
             if text.isEmpty {
+                guard (speechChunksAtLastText[id] ?? 0) >= Self.minimumSpeechChunksForEmptyFinalFallback else { return "" }
                 return lastTextByUtterance[id] ?? ""
             }
             lastTextByUtterance[id] = text
+            speechChunksAtLastText[id] = speechChunksInRequest
             return text
         }
         if displayText.isEmpty { return }
@@ -317,7 +341,10 @@ private final class RecognitionSession: @unchecked Sendable {
             confidence: confidence
         ))
         if result.isFinal {
-            lock.withLock { lastTextByUtterance[id] = nil }
+            lock.withLock {
+                lastTextByUtterance[id] = nil
+                speechChunksAtLastText[id] = nil
+            }
         }
     }
 
