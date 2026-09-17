@@ -59,14 +59,29 @@ public struct WhisperModelStore: Sendable {
     /// Whether any Whisper tokenizer has been cached yet. Without one the
     /// first model load needs the internet, which is worth saying plainly
     /// when it fails offline.
+    ///
+    /// A tokenizer fetch interrupted mid-write (a dropped connection, the
+    /// app backgrounded) leaves the file present but unparsable. Reporting
+    /// that as "cached" would misclassify every future load failure as a
+    /// broken model instead of an incomplete download, and the corrupt file
+    /// would sit there forever since nothing else ever checks its content;
+    /// this removes it so the next attempt gets a real fetch instead.
     public func hasCachedTokenizer() -> Bool {
         let openai = downloadBase
             .appendingPathComponent("models", isDirectory: true)
             .appendingPathComponent("openai", isDirectory: true)
         guard let names = try? FileManager.default.contentsOfDirectory(atPath: openai.path) else { return false }
-        return names.contains { name in
-            FileManager.default.fileExists(atPath: openai.appendingPathComponent(name).appendingPathComponent("tokenizer.json").path)
+        var foundValid = false
+        for name in names {
+            let path = openai.appendingPathComponent(name).appendingPathComponent("tokenizer.json")
+            guard let data = try? Data(contentsOf: path) else { continue }
+            if (try? JSONSerialization.jsonObject(with: data)) != nil {
+                foundValid = true
+            } else {
+                try? FileManager.default.removeItem(at: path)
+            }
         }
+        return foundValid
     }
 
     public func markComplete(variant: String) {

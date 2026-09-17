@@ -48,6 +48,12 @@ struct MFCCSpeakerEmbedderTests {
         #expect(closeSimilarity > farSimilarity)
     }
 
+    @Test("MFCC's own scale needs a much higher similarity threshold than the app default, tuned for CAM++")
+    func recommendsItsOwnThreshold() {
+        #expect(embedder.recommendedSimilarityThreshold == 0.75)
+        #expect(embedder.recommendedSimilarityThreshold != AppSettings.default.speakerSimilarityThreshold)
+    }
+
     @Test("silence still produces a valid embedding rather than nil")
     func silenceProducesAnEmbedding() {
         let silence = [Float](repeating: 0, count: Int(sampleRate))

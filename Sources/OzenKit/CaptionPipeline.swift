@@ -195,7 +195,15 @@ public final class CaptionPipeline {
         let run = UUID()
         runID = run
         activeSettings = settings
-        clusterer.similarityThreshold = settings.speakerSimilarityThreshold
+        // The stored threshold is the person's own choice once they've
+        // touched it, but at the untouched app default it's specifically
+        // calibrated for CAM++; a silent fallback to a different embedder
+        // (see SpeakerEmbedding.recommendedSimilarityThreshold) needs its
+        // own default instead of inheriting one tuned for a completely
+        // different score scale.
+        clusterer.similarityThreshold = settings.speakerSimilarityThreshold == AppSettings.default.speakerSimilarityThreshold
+            ? embedder.recommendedSimilarityThreshold
+            : settings.speakerSimilarityThreshold
         keywordMatcher = KeywordAlertMatcher(alerts: settings.keywordAlerts)
         soundPolicy.preferences = settings.soundAlerts
 

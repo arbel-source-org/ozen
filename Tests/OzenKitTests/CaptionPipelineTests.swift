@@ -525,6 +525,38 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.displayName(for: pipeline.segments[0]) != pipeline.displayName(for: pipeline.segments[1]))
     }
 
+    @Test("a custom embedder's own recommended threshold is used at the untouched app default, not CAM++'s")
+    func embedderRecommendedThresholdUsedAtDefault() async {
+        struct ThresholdTestEmbedder: SpeakerEmbedding {
+            let recommendedSimilarityThreshold: Float = 0.75
+            func embed(samples: [Float], sampleRate: Double) -> [Float]? {
+                guard let first = samples.first else { return nil }
+                // Cosine similarity of exactly 0.6 to each other: below this
+                // embedder's own 0.75, but above CAM++'s 0.45 default.
+                return first > 0 ? [1, 0] : [0.6, 0.8]
+            }
+        }
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: ThresholdTestEmbedder(), recovery: .disabled)
+        await pipeline.start(settings: .default)
+
+        let id = UUID()
+        engine.emit(token(id, "מי מדבר"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.segments.first?.speakerClusterID != nil })
+        #expect(pipeline.speakerClusters.count == 1)
+
+        let id2 = UUID()
+        engine.emit(token(id, "מי מדבר", final: true))
+        engine.emit(token(id2, "אני"))
+        #expect(await eventually { pipeline.segments.count == 2 })
+        audio.push([Float](repeating: -0.5, count: 24_000))
+        #expect(await eventually { pipeline.segments.last?.speakerClusterID == 1 })
+        #expect(pipeline.speakerClusters.count == 2)
+    }
+
     @Test("naming a speaker returns the centroid for persistence and renames the cluster")
     func nameSpeaker() async {
         let engine = FakeEngine()

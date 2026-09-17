@@ -10,4 +10,9 @@ import Foundation
 public protocol SpeakerEmbedding: Sendable {
     /// Returns nil if `samples` is too short to extract even one frame.
     func embed(samples: [Float], sampleRate: Double) -> [Float]?
+    var recommendedSimilarityThreshold: Float { get }
+}
+
+extension SpeakerEmbedding {
+    public var recommendedSimilarityThreshold: Float { AppSettings.default.speakerSimilarityThreshold }
 }

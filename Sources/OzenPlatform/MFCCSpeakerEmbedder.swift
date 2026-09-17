@@ -28,6 +28,11 @@ public struct MFCCSpeakerEmbedder: SpeakerEmbedding {
 
     public init() {}
 
+    // See this file's own doc comment: MFCC cosine scores sit on a
+    // completely different scale than CAM++'s, so a silent fallback to
+    // this embedder must not inherit AppSettings' CAM++-tuned default.
+    public var recommendedSimilarityThreshold: Float { 0.75 }
+
     public func embed(samples: [Float], sampleRate: Double) -> [Float]? {
         guard samples.count >= frameSize else { return nil }
 
