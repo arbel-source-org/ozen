@@ -239,6 +239,13 @@ public actor WhisperKitEngine: TranscriptionEngine {
     /// to end, a cancelled stream can still be inside `transcribe` (a pass
     /// doesn't stop part way), and an actor lets the next stream in while
     /// that call is suspended. The next stream now waits, at most one pass.
+    /// How the passes have gone since the engine was made, for the journal.
+    private var tally = PassTally()
+
+    public func diagnosticsSummary() async -> String? {
+        "\(modelVariant): \(tally.summary)"
+    }
+
     private var isStreaming = false
     private var streamWaiters: [CheckedContinuation<Void, Never>] = []
 
@@ -370,7 +377,9 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 // Only live passes: a final pass may retry at higher
                 // temperatures and would overstate how slow the phone is.
                 let elapsed = ContinuousClock.now - passStarted
-                lastLivePassSeconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+                let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+                lastLivePassSeconds = seconds
+                tally.recordLivePass(seconds: seconds)
             }
             // Only on the pass that stays: a line still being written
             // changes its mind about words as well as about itself.
@@ -391,6 +400,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
             let acceptedSegments = filter.accepted(from: summaries, echo: echoDetector)
             let text = filter.acceptedText(from: summaries, echo: echoDetector)
             let confidence = Self.confidence(from: acceptedSegments.map(\.avgLogprob))
+            tally.recordSegments(seen: summaries.count, accepted: acceptedSegments.count)
+            if isFinal { tally.recordFinalPass(cameBackEmpty: text.isEmpty) }
 
             // A final pass that comes back empty (the pad was silence and
             // the model changed its mind) must not erase what was shown --

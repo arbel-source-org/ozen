@@ -213,10 +213,17 @@ public protocol TranscriptionEngine: Sendable {
     /// Called before every `stream` and again whenever the user edits the
     /// list mid-conversation; engines that can't use hints ignore it.
     func setVocabulary(_ terms: [String]) async
+
+    /// What the engine knows about how its work has gone (how long passes
+    /// take, how much it threw away), for the journal when a problem is
+    /// marked. Nil from engines that keep no such count.
+    func diagnosticsSummary() async -> String?
 }
 
 public extension TranscriptionEngine {
     func setVocabulary(_ terms: [String]) async {}
+
+    func diagnosticsSummary() async -> String? { nil }
 
     func pendingDownloadMegabytes() async -> Int? { nil }
 

@@ -313,6 +313,10 @@ public final class LiveCaptionViewModel {
             journal?.append(line, at: now)
         }
         problemMarkedAt = now
+        Task { [weak self] in
+            guard let self, let engine = await self.pipeline.engineDiagnostics() else { return }
+            self.journal?.append("  engine: \(engine)", at: now)
+        }
     }
 
     /// Returns once the history tidying started at launch has finished.

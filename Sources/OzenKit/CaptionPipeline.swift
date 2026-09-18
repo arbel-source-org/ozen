@@ -565,6 +565,12 @@ public final class CaptionPipeline {
         }
     }
 
+    /// What the running engine says about its own work; see
+    /// `TranscriptionEngine.diagnosticsSummary`.
+    public func engineDiagnostics() async -> String? {
+        await currentEngine?.diagnosticsSummary()
+    }
+
     private func logEvent(_ kind: PipelineEvent.Kind) {
         let count = eventLog.events.count
         let last = eventLog.events.last
