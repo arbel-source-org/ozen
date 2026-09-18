@@ -542,6 +542,14 @@ struct LiveCaptionView: View {
             } label: {
                 Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
             }
+            if let saved = viewModel.savedConversationID(holdingLineAt: index) {
+                Button {
+                    viewModel.persistHistory(ended: false)
+                    openedConversation = OpenedConversation(id: saved, lineID: segment.id)
+                } label: {
+                    Label(tr("פתיחת השיחה כולה, לשיתוף או לחיפוש", "Open the whole conversation, to share or search"), systemImage: "square.and.arrow.up")
+                }
+            }
             Button {
                 viewModel.markProblem()
                 showingProblemMarked = true
