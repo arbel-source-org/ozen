@@ -432,6 +432,10 @@ private final class TapState: @unchecked Sendable {
         // few decibels for a microphone wired to one side, which the voice
         // detector's adaptive threshold takes in its stride.
         converter.downmix = true
+        // The default is a middling resampler. Going from the microphone's
+        // 48 kHz to Whisper's 16 kHz costs next to nothing at the best one,
+        // and keeps the consonants above 4 kHz from folding back as noise.
+        converter.sampleRateConverterQuality = AVAudioQuality.max.rawValue
         self.inputFormat = inputFormat
         self.continuation = continuation
         self.onLevel = onLevel
