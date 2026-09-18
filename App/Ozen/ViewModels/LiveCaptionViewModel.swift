@@ -136,7 +136,8 @@ public final class LiveCaptionViewModel {
             postNotification: { AlertNotifier.shared.post($0) },
             withdrawNotification: { AlertNotifier.shared.withdraw(identifier: $0) },
             phoneCalls: PhoneCallMonitor(),
-            lockScreen: LockScreenCaptionsActivity()
+            lockScreen: LockScreenCaptionsActivity(),
+            journal: SessionJournal(fileURL: support.appendingPathComponent("ozen-journal.log"))
         )
     }
 
@@ -153,10 +154,12 @@ public final class LiveCaptionViewModel {
         withdrawNotification: ((String) -> Void)? = nil,
         phoneCalls: PhoneCallMonitor? = nil,
         reclaimAudioSession: (@MainActor () -> Bool)? = nil,
-        lockScreen: (any LockScreenCaptionsDisplaying)? = nil
+        lockScreen: (any LockScreenCaptionsDisplaying)? = nil,
+        journal: SessionJournal? = nil
     ) {
         self.settingsStore = settingsStore
         self.pipeline = pipeline
+        self.journal = journal
         self.historyStore = historyStore ?? TranscriptHistoryStore(
             directoryURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-history-\(UUID())")
         )
@@ -186,6 +189,10 @@ public final class LiveCaptionViewModel {
         synthesizer?.onSpeakingChanged = { [weak self] speaking in
             self?.speakingDidChange(speaking)
         }
+        pipeline.onEvent = { [weak self] event in
+            self?.journal?.append(event.description, at: event.at)
+        }
+        startJournal()
         pipeline.onSoundAlert = { [weak self] alert in
             self?.alertRaised(sound: alert)
         }
@@ -253,6 +260,61 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    // MARK: - Journal
+
+    /// What happened, kept on disk for the diagnostics report; see
+    /// `SessionJournal`. Nil in tests that don't look at it.
+    public let journal: SessionJournal?
+    /// When a problem was last marked, for the caption screen to confirm.
+    public private(set) var problemMarkedAt: TimeInterval?
+    @ObservationIgnored private var journalObservers: [NSObjectProtocol] = []
+
+    private func note(_ text: String) {
+        journal?.append(text, at: Date().timeIntervalSince1970)
+    }
+
+    private static var deviceStateText: String {
+        let process = ProcessInfo.processInfo
+        let memory = DeviceMemory.footprintBytes().map { " memory \($0 / 1_048_576)MB" } ?? ""
+        return "thermal \(process.thermalState.rawValue) low power \(process.isLowPowerModeEnabled)\(memory)"
+    }
+
+    /// The line a new run of the app opens with, and the slow facts no
+    /// pipeline event carries: heat and Low Power Mode, which both slow the
+    /// captions down without anything on screen saying so.
+    private func startJournal() {
+        guard journal != nil else { return }
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
+        note("APP STARTED: \(version) iOS \(ProcessInfo.processInfo.operatingSystemVersionString) engine \(settings.engine.rawValue) model \(settings.modelDescription ?? "-") \(Self.deviceStateText)")
+        let center = NotificationCenter.default
+        journalObservers.append(center.addObserver(forName: ProcessInfo.thermalStateDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.note("heat: \(LiveCaptionViewModel.deviceStateText)") }
+        })
+        journalObservers.append(center.addObserver(forName: .NSProcessInfoPowerStateDidChange, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.note("power: \(LiveCaptionViewModel.deviceStateText)") }
+        })
+    }
+
+    /// "Something went wrong" on the caption screen: what was running and
+    /// what the captions last said goes into the journal, where the next
+    /// diagnostics report finds it even if the app is closed first.
+    public func markProblem() {
+        let now = Date().timeIntervalSince1970
+        let lines = ProblemSnapshot.lines(
+            settings: settings,
+            activeEngine: pipeline.activeEngineKind,
+            input: selectedInput,
+            stats: pipeline.stats,
+            segments: pipeline.segments,
+            device: Self.deviceStateText
+        )
+        for line in lines {
+            journal?.append(line, at: now)
+        }
+        problemMarkedAt = now
+    }
+
     /// Returns once the history tidying started at launch has finished.
     func finishLaunchHousekeeping() async {
         await launchHousekeeping?.value
@@ -267,6 +329,9 @@ public final class LiveCaptionViewModel {
     // MARK: - Alerts while the app isn't on screen
 
     public func sceneActivityChanged(isActive: Bool) {
+        if isActive != isAppActive {
+            note(isActive ? "app back on screen" : "app left the screen (phase \(pipeline.phase.isListening ? "listening" : "not listening"))")
+        }
         isAppActive = isActive
         let now = Date().timeIntervalSince1970
         if isActive {

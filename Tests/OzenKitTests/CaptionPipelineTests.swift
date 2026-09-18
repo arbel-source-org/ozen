@@ -1483,9 +1483,24 @@ struct CaptionPipelineAudioStallTests {
             case .retryScheduled(let attempt, _): return "retry \(attempt)"
             case .phoneCall: return "call"
             case .memoryWarning: return "memory"
+            case .step, .input, .note: return "journal only"
             }
         }
         #expect(Array(story) == ["listening", "stalled", "failed audioSessionFailed", "retry 1", "listening"])
+    }
+
+    @Test("the journal is told each step of getting ready and how long the one before took, the microphone, and every logged event")
+    func journalLines() async {
+        let (pipeline, _, _) = makePipeline(audioWatchdog: .disabled)
+        var lines: [String] = []
+        pipeline.onEvent = { lines.append($0.description) }
+        await pipeline.start(settings: .default)
+
+        #expect(lines.contains { $0.hasPrefix("engine: checkingSupport") })
+        #expect(lines.contains { $0.hasPrefix("starting audio (previous step took ") })
+        #expect(lines.contains { $0.hasPrefix("microphone: ") })
+        #expect(lines.last == "listening")
+        #expect(pipeline.eventLog.events.map(\.description) == ["listening"])
     }
 
     @Test("a phone call is logged when it starts and ends, once each")

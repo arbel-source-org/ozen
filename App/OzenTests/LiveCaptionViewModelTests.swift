@@ -44,6 +44,23 @@ struct LiveCaptionViewModelTests {
         #expect(viewModel.selectedInput?.portType == .builtInMic)
     }
 
+    @Test("the journal on disk gets the app's start, the steps to listening, and a marked problem; a second run of the app still reads them")
+    func journal() async {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ozen-journal-\(UUID())", isDirectory: true)
+            .appendingPathComponent("journal.log")
+        let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline(), journal: SessionJournal(fileURL: url))
+        await viewModel.start()
+        viewModel.markProblem()
+        #expect(viewModel.problemMarkedAt != nil)
+
+        let lines = SessionJournal(fileURL: url).entries().map(\.text)
+        #expect(lines.first?.hasPrefix("APP STARTED: ") == true)
+        #expect(lines.contains("listening"))
+        #expect(lines.contains { $0.hasPrefix("microphone: ") })
+        #expect(lines.contains { $0.hasPrefix("PROBLEM MARKED: engine whisperKit ") })
+    }
+
     @Test("switching engines persists to the settings file and restarts the pipeline on the new engine")
     func settingEnginePersistsAndRestarts() async {
         let store = temporaryStore()

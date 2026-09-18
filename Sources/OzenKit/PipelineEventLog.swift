@@ -10,6 +10,14 @@ public struct PipelineEvent: Sendable, Equatable {
         case phoneCall(began: Bool)
         /// iOS said memory is running out; it ends the biggest apps next.
         case memoryWarning(footprintMegabytes: Int?)
+        /// Getting ready moved on a step; `afterSeconds` is how long the
+        /// step before it took, which is what tells a model that loads in
+        /// seconds from one that took four minutes to set up.
+        case step(String, afterSeconds: Double?)
+        /// Recording moved to another microphone, chosen or not.
+        case input(name: String, type: AudioPortType)
+        /// Anything else worth keeping, already worded.
+        case note(String)
     }
 
     public let at: TimeInterval
@@ -27,7 +35,7 @@ public struct PipelineEvent: Sendable, Equatable {
         return "\(time) \(description)"
     }
 
-    var description: String {
+    public var description: String {
         switch kind {
         case .failed(let failure):
             var text = "failed: \(failure.kind.rawValue)"
@@ -49,6 +57,12 @@ public struct PipelineEvent: Sendable, Equatable {
             return began ? "audio taken by a call or another app" : "audio given back"
         case .memoryWarning(let megabytes):
             return "iOS low on memory" + (megabytes.map { " (app using \($0) MB)" } ?? "")
+        case .step(let name, let seconds):
+            return name + (seconds.map { " (previous step took \(String(format: "%.1f", $0))s)" } ?? "")
+        case .input(let name, let type):
+            return "microphone: \(name) [\(type.rawValue)]"
+        case .note(let text):
+            return text
         }
     }
 }

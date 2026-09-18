@@ -48,6 +48,33 @@ struct AudioRoutePolicyTests {
         #expect(selection == lavalier.uid)
     }
 
+    @Test("a Bluetooth headset nobody picked doesn't take the recording over from the phone's own microphone")
+    func unchosenHeadsetGivesWay() {
+        let connected = AudioRoutePolicy.resolveSelection(
+            available: [builtIn, airpods],
+            preferredUID: nil,
+            currentUID: airpods.uid
+        )
+        #expect(connected == builtIn.uid)
+
+        let besideWiredMic = AudioRoutePolicy.resolveSelection(
+            available: [airpods, lavalier],
+            preferredUID: nil,
+            currentUID: airpods.uid
+        )
+        #expect(besideWiredMic == lavalier.uid)
+    }
+
+    @Test("a headset that is the only microphone here is still used")
+    func onlyHeadset() {
+        let selection = AudioRoutePolicy.resolveSelection(
+            available: [airpods],
+            preferredUID: nil,
+            currentUID: airpods.uid
+        )
+        #expect(selection == airpods.uid)
+    }
+
     @Test("with no preference and no valid current input, falls back to the first available input")
     func fallsBackToFirstAvailable() {
         let selection = AudioRoutePolicy.resolveSelection(

@@ -49,9 +49,15 @@ public enum AudioRoutePolicy {
     /// actually present (so a preferred external mic reconnecting, e.g.
     /// AirPods coming back in range, is picked back up automatically);
     /// otherwise stick with whatever's already active rather than
-    /// switching for no reason; otherwise fall back to the first available
-    /// input so there's always *something* selected instead of silently
-    /// recording nothing.
+    /// switching for no reason, unless that is a Bluetooth headset nobody
+    /// chose; otherwise fall back to an available input so there's always
+    /// *something* selected instead of silently recording nothing.
+    ///
+    /// iOS moves recording to a Bluetooth headset the moment one connects.
+    /// Its microphone is a narrow-band phone-call one sitting on the
+    /// listener's own ear, far from whoever is talking, and captions from
+    /// it are far worse than from the phone on the table. A headset is
+    /// only recorded from when it was picked, or when nothing else is here.
     public static func resolveSelection(
         available: [AudioInputDescriptor],
         preferredUID: String?,
@@ -60,9 +66,12 @@ public enum AudioRoutePolicy {
         if let preferredUID, available.contains(where: { $0.uid == preferredUID }) {
             return preferredUID
         }
-        if let currentUID, available.contains(where: { $0.uid == currentUID }) {
-            return currentUID
+        let current = currentUID.flatMap { uid in available.first { $0.uid == uid } }
+        if let current, current.portType != .bluetooth {
+            return current.uid
         }
-        return available.first?.uid
+        let fallback = available.first { $0.portType == .builtInMic }
+            ?? available.first { $0.portType != .bluetooth }
+        return fallback?.uid ?? current?.uid ?? available.first?.uid
     }
 }

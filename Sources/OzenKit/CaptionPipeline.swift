@@ -23,6 +23,7 @@ public final class CaptionPipeline {
         didSet {
             // Download progress moves many times a second; only a change
             // of step is news.
+            noteStep(from: oldValue)
             guard oldValue.preparationProgress == nil || phase.preparationProgress == nil else { return }
             onPhaseChange?(phase)
         }
@@ -47,6 +48,9 @@ public final class CaptionPipeline {
     public var soundAlertConfidence: Double { soundPolicy.minimumConfidence }
     /// Failures, retries and recoveries in order, for the diagnostics report.
     public private(set) var eventLog = PipelineEventLog()
+    /// Called with each event as it is kept, for the journal on disk.
+    public var onEvent: ((PipelineEvent) -> Void)?
+    @ObservationIgnored private var stepBeganAt: TimeInterval?
 
     /// Keywords the reader asked to be told about, as they're spotted in
     /// captions. Each entry fires once per utterance (partial updates of
@@ -306,7 +310,7 @@ public final class CaptionPipeline {
         stats.sessionStartedAt = now()
         listeningStartedAt = stats.sessionStartedAt
         phase = .listening
-        eventLog.record(.listening, at: now())
+        logEvent(.listening)
         listeningSince = now()
         audioWatchdog.reset()
 
@@ -386,7 +390,7 @@ public final class CaptionPipeline {
     /// again, where iOS ending the app would lose the conversation on
     /// screen. While captions run, or are paused to be resumed, it stays.
     public func handleMemoryWarning(footprintBytes: Int64? = nil) {
-        eventLog.record(.memoryWarning(footprintMegabytes: footprintBytes.map { Int($0 / 1_048_576) }), at: now())
+        logEvent(.memoryWarning(footprintMegabytes: footprintBytes.map { Int($0 / 1_048_576) }))
         switch phase {
         case .idle:
             engineCache.removeAll()
@@ -554,7 +558,53 @@ public final class CaptionPipeline {
 
     private func syncInputs() {
         availableInputs = audio.availableInputs
+        let previous = selectedInputUID
         selectedInputUID = audio.selectedInputUID
+        if selectedInputUID != previous, let input = availableInputs.first(where: { $0.uid == selectedInputUID }) {
+            journalOnly(.input(name: input.portName, type: input.portType))
+        }
+    }
+
+    private func logEvent(_ kind: PipelineEvent.Kind) {
+        let count = eventLog.events.count
+        let last = eventLog.events.last
+        eventLog.record(kind, at: now())
+        if let event = eventLog.events.last, eventLog.events.count != count || event != last {
+            onEvent?(event)
+        }
+    }
+
+    /// Steps and microphone changes would crowd the short in-memory log out
+    /// of the failures it is there to tell in order; the journal has room.
+    private func journalOnly(_ kind: PipelineEvent.Kind) {
+        onEvent?(PipelineEvent(at: now(), kind: kind))
+    }
+
+    /// A line for each step of getting ready, with how long the one before
+    /// took. Download percentages aren't steps.
+    private func noteStep(from old: PipelinePhase) {
+        let name = Self.stepName(phase)
+        guard name != Self.stepName(old) else { return }
+        let time = now()
+        let took = stepBeganAt.map { time - $0 }
+        stepBeganAt = time
+        // Listening, failures and pauses have their own, fuller lines.
+        guard phase.isTransitioning else { return }
+        journalOnly(.step(name, afterSeconds: old.isTransitioning ? took : nil))
+    }
+
+    private static func stepName(_ phase: PipelinePhase) -> String {
+        switch phase {
+        case .idle: return "idle"
+        case .requestingMicrophonePermission: return "asking for the microphone"
+        case .preparingEngine(let progress):
+            let model = progress.detail.map { " \($0)" } ?? ""
+            return "engine: \(progress.stage.rawValue)\(model)\(progress.isFirstTime ? " (first time on this phone)" : "")"
+        case .startingAudio: return "starting audio"
+        case .listening: return "listening"
+        case .paused: return "paused"
+        case .failed: return "failed"
+        }
     }
 
     // MARK: - Speakers
@@ -979,7 +1029,7 @@ public final class CaptionPipeline {
         guard phase.isListening else { return }
         guard audioWatchdog.tick(chunksReceived: stats.audioChunksReceived, systemInterrupted: systemInterrupted) else { return }
         stats.audioStalls += 1
-        eventLog.record(.microphoneStalled, at: now())
+        logEvent(.microphoneStalled)
         fail(.audioSessionFailed, detail: "no audio from the microphone for \(Int(audioWatchdog.stallSeconds)) s")
     }
 
@@ -987,7 +1037,7 @@ public final class CaptionPipeline {
         tearDownSession()
         let failure = PipelineFailure(kind: kind, detail: detail, engineUnavailability: engineUnavailability)
         phase = .failed(failure)
-        eventLog.record(.failed(failure), at: now())
+        logEvent(.failed(failure))
         scheduleAutoRecovery(for: failure)
     }
 
@@ -1056,7 +1106,7 @@ public final class CaptionPipeline {
     /// released a failed pipeline gets a fresh set of attempts.
     public func systemInterruptionChanged(active: Bool) {
         if active != systemInterrupted {
-            eventLog.record(.phoneCall(began: active), at: now())
+            logEvent(.phoneCall(began: active))
         }
         systemInterrupted = active
         if active {
@@ -1078,7 +1128,7 @@ public final class CaptionPipeline {
         let token = UUID()
         retryToken = token
         scheduledRetry = ScheduledRetry(at: now() + delay, attempt: recovery.attempts)
-        eventLog.record(.retryScheduled(attempt: recovery.attempts, afterSeconds: delay), at: now())
+        logEvent(.retryScheduled(attempt: recovery.attempts, afterSeconds: delay))
         retryTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
             guard let self, !Task.isCancelled, self.retryToken == token, case .failed = self.phase else { return }

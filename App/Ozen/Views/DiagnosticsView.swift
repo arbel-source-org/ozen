@@ -9,6 +9,12 @@ import OzenPlatform
 struct DiagnosticsView: View {
     let viewModel: LiveCaptionViewModel
     @State private var copied = false
+    /// Read once, and again after a mark: reading waits for the file.
+    @State private var journalLines: [String] = []
+
+    private func loadJournalLines() -> [String] {
+        viewModel.journal?.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds) ?? []
+    }
 
     var body: some View {
         Form {
@@ -88,6 +94,25 @@ struct DiagnosticsView: View {
                 Text(tr("החדש ביותר למעלה. הדוח המועתק כולל את כל הרשימה.", "Newest at the top. The copied report includes the full list."))
             }
 
+            Section {
+                Button {
+                    viewModel.markProblem()
+                    journalLines = loadJournalLines()
+                } label: {
+                    Label(tr("לסמן בעיה עכשיו", "Mark a problem now"), systemImage: "exclamationmark.bubble")
+                }
+                ForEach(Array(journalLines.suffix(15).reversed().enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(.caption.monospaced())
+                        .environment(\.layoutDirection, .leftToRight)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } header: {
+                Text(tr("יומן, כולל הפעלות קודמות", "Journal, previous runs included"))
+            } footer: {
+                Text(tr("נשמר בטלפון גם כשהאפליקציה נסגרת, ונשלח רק עם הדוח. כשמסמנים בעיה נשמרות גם השורות האחרונות של הכתוביות.", "Kept on the phone even when the app closes, and sent only with the report. Marking a problem also keeps the last few caption lines."))
+            }
+
             Section(tr("מודל ומילים", "Model and words")) {
                 LabeledContent(tr("מצב המודל", "Model state"), value: Self.describe(modelState))
                 LabeledContent(tr("טוקנייזר שמור", "Tokenizer cached"), value: store.hasCachedTokenizer() ? tr("כן", "Yes") : tr("לא (צריך אינטרנט פעם אחת)", "No (needs internet once)"))
@@ -119,6 +144,7 @@ struct DiagnosticsView: View {
                 }
             }
         }
+        .task { journalLines = loadJournalLines() }
         .accessibilityIdentifier("diagnosticsScreen")
         .navigationTitle(tr("אבחון", "Diagnostics"))
         .navigationBarTitleDisplayMode(.inline)
@@ -161,6 +187,10 @@ struct DiagnosticsView: View {
     private var eventLines: String {
         let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds)
         return lines.isEmpty ? "-" : lines.joined(separator: "\n")
+    }
+
+    private var journalText: String {
+        journalLines.isEmpty ? "-" : journalLines.joined(separator: "\n")
     }
 
     private static var utcOffsetSeconds: Int {
@@ -224,6 +254,8 @@ struct DiagnosticsView: View {
         device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString) install expires: \(InstallExpiryStatus.shared.expiresAt.map { String(describing: $0) } ?? "-")
         events (oldest first):
         \(eventLines)
+        journal, previous runs included (oldest first):
+        \(journalText)
         """
     }
 

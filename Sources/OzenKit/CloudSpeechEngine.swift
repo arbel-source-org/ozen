@@ -254,7 +254,10 @@ public actor CloudSpeechEngine: TranscriptionEngine {
         let request = CloudSpeech.completionRequest(
             model: model,
             apiKey: key,
-            wav: WAVFile.pcm16(window, sampleRate: Self.sampleRate),
+            // Measurement mode hands speech from across a room over at
+            // -45 to -60 dBFS, where a 16-bit file keeps only a few bits
+            // of it.
+            wav: WAVFile.pcm16(SpeechGain.normalized(window), sampleRate: Self.sampleRate),
             languageCode: languageCode,
             vocabulary: vocabulary
         )

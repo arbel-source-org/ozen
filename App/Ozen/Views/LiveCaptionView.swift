@@ -421,6 +421,7 @@ struct LiveCaptionView: View {
     // MARK: - Transcript
 
     @State private var scrollProxy: ScrollViewProxy?
+    @State private var showingProblemMarked = false
 
     private var transcript: some View {
         transcriptScroll
@@ -431,6 +432,11 @@ struct LiveCaptionView: View {
             .sheet(isPresented: $showingNameAlertForm) {
                 NameAlertSheet(viewModel: viewModel)
                     .alertOverlay(for: viewModel)
+            }
+            .alert(tr("הבעיה סומנה", "Problem marked"), isPresented: $showingProblemMarked) {
+                Button(tr("אישור", "OK"), role: .cancel) {}
+            } message: {
+                Text(tr("מה שרץ עכשיו והשורות האחרונות נשמרו בטלפון בלבד. כדי לשלוח אותם למי שעוזר לך: הגדרות ← אבחון ← שליחת הדוח.", "What was running and the last few lines were saved, on the phone only. To send them to whoever helps you: Settings → Diagnostics → Send report."))
             }
     }
 
@@ -534,6 +540,12 @@ struct LiveCaptionView: View {
                 UIPasteboard.general.string = segment.text
             } label: {
                 Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
+            }
+            Button {
+                viewModel.markProblem()
+                showingProblemMarked = true
+            } label: {
+                Label(tr("הכתוביות לא טובות? לסמן בעיה", "Captions not good? Mark a problem"), systemImage: "exclamationmark.bubble")
             }
         }
         .accessibilityActions {
