@@ -252,36 +252,59 @@ struct AppSettingsFreshInstallTests {
 
 @Suite("AppSettings offer of the recommended model")
 struct BetterModelOfferTests {
-    @Test("offered to a phone still on Small from before it stopped being the default, until taken or turned down")
+    @Test("offered to a phone still on Small from before it stopped being the default, until taken")
     func offer() throws {
         let onSmall = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedOnboarding":true,"whisperModelVariant":"small"}"#.utf8))
-        #expect(onSmall.betterModelOfferDismissed == false)
-        #expect(onSmall.offersBetterModel)
-
-        var turnedDown = onSmall
-        turnedDown.betterModelOfferDismissed = true
-        let roundTripped = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(turnedDown))
-        #expect(roundTripped.offersBetterModel == false)
+        #expect(onSmall.offersBetterModel())
+        #expect(onSmall.runsWeakerModel)
 
         var switched = onSmall
         switched.whisperModelVariant = WhisperModelCatalog.recommendedVariant
-        #expect(switched.offersBetterModel == false)
+        #expect(switched.offersBetterModel() == false)
+        #expect(switched.runsWeakerModel == false)
+    }
+
+    @Test("\"Not now\" puts the offer away for three days, then two weeks, then two months, never for good")
+    func snooze() throws {
+        let day = 86_400.0
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        var settings = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedOnboarding":true,"whisperModelVariant":"small"}"#.utf8))
+
+        settings.snoozeBetterModelOffer(from: start)
+        let saved = try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(settings))
+        #expect(saved.offersBetterModel(at: start.addingTimeInterval(2.9 * day)) == false)
+        #expect(saved.offersBetterModel(at: start.addingTimeInterval(3.1 * day)))
+
+        settings.snoozeBetterModelOffer(from: start)
+        #expect(settings.offersBetterModel(at: start.addingTimeInterval(13 * day)) == false)
+        #expect(settings.offersBetterModel(at: start.addingTimeInterval(15 * day)))
+
+        settings.snoozeBetterModelOffer(from: start)
+        settings.snoozeBetterModelOffer(from: start)
+        #expect(settings.offersBetterModel(at: start.addingTimeInterval(59 * day)) == false)
+        #expect(settings.offersBetterModel(at: start.addingTimeInterval(61 * day)))
+    }
+
+    @Test("a phone that turned the offer down for good in an older build is asked once more")
+    func oldDismissal() throws {
+        let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedOnboarding":true,"whisperModelVariant":"small","betterModelOfferDismissed":true}"#.utf8))
+        #expect(old.offersBetterModel())
     }
 
     @Test("not offered to a fresh install, to a phone still in the walkthrough, or to one on another engine")
     func notOffered() throws {
-        #expect(AppSettings.default.offersBetterModel == false)
+        #expect(AppSettings.default.offersBetterModel() == false)
 
         let inWalkthrough = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"whisperModelVariant":"small"}"#.utf8))
-        #expect(inWalkthrough.offersBetterModel == false)
+        #expect(inWalkthrough.offersBetterModel() == false)
 
         var onApple = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"hasCompletedOnboarding":true,"whisperModelVariant":"small"}"#.utf8))
         onApple.engine = .appleSpeech
-        #expect(onApple.offersBetterModel == false)
+        #expect(onApple.offersBetterModel() == false)
 
         var onCloud = onApple
         onCloud.engine = .cloud
-        #expect(onCloud.offersBetterModel == false)
+        #expect(onCloud.offersBetterModel() == false)
     }
 }
 

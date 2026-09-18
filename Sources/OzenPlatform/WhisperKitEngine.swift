@@ -135,7 +135,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
             }
         }
 
-        progress(EnginePreparationProgress(stage: .loadingModel, detail: modelVariant))
+        let firstTime = !store.hasLoadedBefore(variant: variant)
+        progress(EnginePreparationProgress(stage: .loadingModel, detail: modelVariant, isFirstTime: firstTime))
         do {
             let loaded: WhisperKit
             do {
@@ -154,15 +155,16 @@ public actor WhisperKitEngine: TranscriptionEngine {
                     }
                     return .unavailable(.modelDownloadFailed, "\(variant): load failed (\(error)); repair download failed: \(downloadError)")
                 }
-                progress(EnginePreparationProgress(stage: .loadingModel, detail: variant))
+                progress(EnginePreparationProgress(stage: .loadingModel, detail: variant, isFirstTime: firstTime))
                 loaded = try await load(folder: folder)
             }
             store.markComplete(variant: variant)
+            store.markLoaded(variant: variant)
 
             // One throwaway pass over a second of silence: CoreML pays its
             // first-run specialization cost here rather than on the first
             // real sentence somebody says.
-            progress(EnginePreparationProgress(stage: .warmingUp, detail: modelVariant))
+            progress(EnginePreparationProgress(stage: .warmingUp, detail: modelVariant, isFirstTime: firstTime))
             let warmup: [TranscriptionResult]? = try? await loaded.transcribe(
                 audioArray: [Float](repeating: 0, count: Int(sampleRate)),
                 decodeOptions: liveOptions(languageCode: languageCode)

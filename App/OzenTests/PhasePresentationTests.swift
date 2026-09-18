@@ -126,6 +126,23 @@ struct PhasePresentationTests {
         #expect(timed.detail?.hasPrefix("עוד כ-3 דקות · ") == true)
     }
 
+    @Test("the first load of a model says it is a one-time wait of minutes; later loads don't")
+    func firstLoad() {
+        let first = PhasePresentation(
+            phase: .preparingEngine(EnginePreparationProgress(stage: .loadingModel, detail: "small", isFirstTime: true)),
+            engine: .whisperKit,
+            interruptedBySystem: false
+        )
+        let later = PhasePresentation(
+            phase: .preparingEngine(EnginePreparationProgress(stage: .loadingModel, detail: "small")),
+            engine: .whisperKit,
+            interruptedBySystem: false
+        )
+        #expect(first.detail?.contains("פעם אחת בלבד") == true)
+        #expect(later.detail?.contains("פעם אחת בלבד") == false)
+        #expect(first.title != later.title)
+    }
+
     @Test("time left reads as words, never falsely precise")
     func remainingText() {
         #expect(PhasePresentation.remainingText(seconds: 20) == "עוד פחות מדקה")

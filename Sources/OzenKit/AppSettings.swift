@@ -215,18 +215,37 @@ public struct AppSettings: Codable, Sendable, Equatable {
         hasCompletedOnboarding && keywordAlerts.isEmpty && !nameAlertOfferDismissed
     }
 
-    /// "Not now" was tapped on the caption screen's offer of the recommended
-    /// Whisper model, or the offer was taken; see `offersBetterModel`.
-    public var betterModelOfferDismissed: Bool
+    /// How many times "Not now" was tapped on the caption screen's offer of
+    /// the recommended Whisper model, and when the offer may come back.
+    /// A single slip of the finger used to hide the offer for good, leaving
+    /// the phone on a model that gets most Hebrew words wrong with nothing
+    /// on screen saying a better one exists; each "Not now" now only puts
+    /// the offer away for longer (see `betterModelOfferSnoozeDays`).
+    public var betterModelOfferDeclines: Int
+    public var betterModelOfferSnoozedUntil: Double?
+
+    public static let betterModelOfferSnoozeDays = [3, 14, 60]
+
+    /// Whether the phone runs a Whisper model clearly worse in Hebrew than
+    /// the recommended one. Settings says so for as long as it is true.
+    public var runsWeakerModel: Bool {
+        engine == .whisperKit && WhisperModelCatalog.recommendedImproves(on: whisperModelVariant)
+    }
 
     /// Whether the caption screen should offer the recommended Whisper
     /// model. Phones set up when Small was the default still run it, and
     /// Small gets most Hebrew words wrong; the walkthrough now preselects
     /// the recommended model, so a fresh install is never asked.
-    public var offersBetterModel: Bool {
-        hasCompletedOnboarding && engine == .whisperKit
-            && WhisperModelCatalog.recommendedImproves(on: whisperModelVariant)
-            && !betterModelOfferDismissed
+    public func offersBetterModel(at now: Date = Date()) -> Bool {
+        guard hasCompletedOnboarding, runsWeakerModel else { return false }
+        guard let until = betterModelOfferSnoozedUntil else { return true }
+        return now.timeIntervalSince1970 >= until
+    }
+
+    public mutating func snoozeBetterModelOffer(from now: Date = Date()) {
+        let days = Self.betterModelOfferSnoozeDays[min(betterModelOfferDeclines, Self.betterModelOfferSnoozeDays.count - 1)]
+        betterModelOfferDeclines += 1
+        betterModelOfferSnoozedUntil = now.timeIntervalSince1970 + Double(days) * 86_400
     }
 
     public init(
@@ -254,7 +273,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         historyRetention: HistoryRetention = .forever,
         quietHours: QuietHours = .default,
         nameAlertOfferDismissed: Bool = false,
-        betterModelOfferDismissed: Bool = false
+        betterModelOfferDeclines: Int = 0,
+        betterModelOfferSnoozedUntil: Double? = nil
     ) {
         self.engine = engine
         self.languageCode = languageCode
@@ -280,7 +300,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.historyRetention = historyRetention
         self.quietHours = quietHours
         self.nameAlertOfferDismissed = nameAlertOfferDismissed
-        self.betterModelOfferDismissed = betterModelOfferDismissed
+        self.betterModelOfferDeclines = betterModelOfferDeclines
+        self.betterModelOfferSnoozedUntil = betterModelOfferSnoozedUntil
     }
 
     /// The phrases a hard-of-hearing person needs most often in
@@ -313,7 +334,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding, appLanguage
         case notifyWhenInBackground, allowCellularModelDownload, historyRetention
         case quietHours
-        case nameAlertOfferDismissed, betterModelOfferDismissed
+        case nameAlertOfferDismissed, betterModelOfferDeclines, betterModelOfferSnoozedUntil
     }
 
     public init(from decoder: any Decoder) throws {
@@ -352,7 +373,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         historyRetention = container.lenient(HistoryRetention.self, forKey: .historyRetention) ?? defaults.historyRetention
         quietHours = container.lenient(QuietHours.self, forKey: .quietHours) ?? defaults.quietHours
         nameAlertOfferDismissed = container.lenient(Bool.self, forKey: .nameAlertOfferDismissed) ?? defaults.nameAlertOfferDismissed
-        betterModelOfferDismissed = container.lenient(Bool.self, forKey: .betterModelOfferDismissed) ?? defaults.betterModelOfferDismissed
+        betterModelOfferDeclines = max(0, container.lenient(Int.self, forKey: .betterModelOfferDeclines) ?? 0)
+        betterModelOfferSnoozedUntil = container.lenient(Double.self, forKey: .betterModelOfferSnoozedUntil)
     }
 
     /// The model behind the engine in use, for saved conversations and

@@ -88,6 +88,21 @@ public struct WhisperModelStore: Sendable {
         try? ModelFolderInspector.markComplete(folder(for: variant))
     }
 
+    /// Whether this phone has loaded `variant` before. The first load
+    /// compiles the model for the chip and takes minutes; a marker beside
+    /// the model (gone with it when it is deleted) tells the two apart.
+    public func hasLoadedBefore(variant: String) -> Bool {
+        FileManager.default.fileExists(atPath: loadedMarker(for: variant).path)
+    }
+
+    public func markLoaded(variant: String) {
+        FileManager.default.createFile(atPath: loadedMarker(for: variant).path, contents: nil)
+    }
+
+    private func loadedMarker(for variant: String) -> URL {
+        folder(for: variant).appendingPathComponent(".ozen-loaded-once")
+    }
+
     public func isInstalled(_ variant: String) -> Bool {
         installedFolder(for: variant) != nil
     }

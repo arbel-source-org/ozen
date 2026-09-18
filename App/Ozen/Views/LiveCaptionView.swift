@@ -700,13 +700,17 @@ struct LiveCaptionView: View {
                 .font(.system(size: max(17, liveDisplay.fontSize * 0.6)))
                 .foregroundStyle(theme.pendingText)
                 .fixedSize(horizontal: false, vertical: true)
+            // Ahead of the recent conversation: a phone that always has one
+            // would otherwise never be told its model is the weak one.
+            let better = viewModel.settings.offersBetterModel() ? betterModelOption : nil
+            if let better {
+                betterModelOfferCard(better)
+                    .padding(.top, 8)
+            }
             if let recent = viewModel.recentConversation {
                 recentConversationCard(recent)
                     .padding(.top, 8)
-            } else if viewModel.settings.offersBetterModel, let better = betterModelOption {
-                betterModelOfferCard(better)
-                    .padding(.top, 8)
-            } else if viewModel.settings.offersNameAlert {
+            } else if better == nil, viewModel.settings.offersNameAlert {
                 nameAlertOfferCard
                     .padding(.top, 8)
             }

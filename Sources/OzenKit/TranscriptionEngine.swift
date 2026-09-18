@@ -78,11 +78,16 @@ public struct EnginePreparationProgress: Sendable, Equatable {
     /// Free-form technical detail for the diagnostics screen, e.g. the
     /// model variant being fetched. Not user-facing copy.
     public var detail: String?
+    /// The model has never been loaded on this phone: the load compiles it
+    /// for the chip and takes minutes instead of seconds, and the screen
+    /// should say it is a one-time wait rather than look stuck.
+    public var isFirstTime: Bool
 
-    public init(stage: Stage, fraction: Double? = nil, detail: String? = nil) {
+    public init(stage: Stage, fraction: Double? = nil, detail: String? = nil, isFirstTime: Bool = false) {
         self.stage = stage
         self.fraction = fraction
         self.detail = detail
+        self.isFirstTime = isFirstTime
     }
 
     /// How often a download's fraction alone is put on screen when it

@@ -923,13 +923,13 @@ public final class LiveCaptionViewModel {
     /// The caption screen's offer of the recommended Whisper model, taken:
     /// the model switches (and downloads, on Wi-Fi) like a pick in Settings.
     public func acceptBetterModelOffer() async {
-        settings.betterModelOfferDismissed = true
         await setWhisperModel(WhisperModelCatalog.recommendedVariant)
     }
 
-    /// "Not now" on that offer.
+    /// "Not now" on that offer: it comes back later, see
+    /// `AppSettings.snoozeBetterModelOffer`.
     public func dismissBetterModelOffer() {
-        settings.betterModelOfferDismissed = true
+        settings.snoozeBetterModelOffer()
         persist()
     }
 

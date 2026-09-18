@@ -166,12 +166,24 @@ struct SettingsView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("modelManagerRow")
+            if viewModel.settings.runsWeakerModel, let recommended = WhisperModelCatalog.option(for: WhisperModelCatalog.recommendedVariant) {
+                Button {
+                    Task { await viewModel.acceptBetterModelOffer() }
+                } label: {
+                    Label(tr("המודל הזה טועה בהרבה מילים בעברית. הקישו כדי לעבור ל-\(recommended.displayName), \(recommended.sizeLabel)", "This model gets many Hebrew words wrong. Tap to switch to \(recommended.displayName), \(recommended.sizeLabel)"), systemImage: "sparkles")
+                }
+                .accessibilityIdentifier("switchToRecommendedModel")
+            }
             Toggle(tr("להוריד מודלים גם בחבילת הגלישה", "Download models on cellular data too"), isOn: $viewModel.allowCellularModelDownload)
         } header: {
             Text("Whisper")
         } footer: {
-            Text(tr("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \u{2066}\"Turbo (compressed)\"\u{2069} הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.", "A bigger model understands Hebrew better but responds more slowly. “Turbo (compressed)” is the recommended choice for this iPhone. Models weigh hundreds of MB, so by default they only download over Wi‑Fi."))
+            Text(tr("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \u{2066}\"\(recommendedModelName)\"\u{2069} הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.", "A bigger model understands Hebrew better but responds more slowly. “\(recommendedModelName)” is the recommended choice for this iPhone. Models weigh hundreds of MB, so by default they only download over Wi‑Fi."))
         }
+    }
+
+    private var recommendedModelName: String {
+        WhisperModelCatalog.option(for: WhisperModelCatalog.recommendedVariant)?.displayName ?? WhisperModelCatalog.recommendedVariant
     }
 
     private var currentModelLabel: String {
