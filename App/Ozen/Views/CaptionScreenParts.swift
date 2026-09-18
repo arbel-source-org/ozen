@@ -16,6 +16,7 @@ struct CaptionRow: View {
     let isKeywordHit: Bool
     let isStarred: Bool
     let isUncertain: Bool
+    var marksUncertainWords = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -56,7 +57,8 @@ struct CaptionRow: View {
                     size: display.fontSize,
                     // A line still being written keeps its dimmer colour
                     // throughout, numbers included, so it reads as unfinished.
-                    numberColor: segment.isCommitted ? theme.numberText : nil
+                    numberColor: segment.isCommitted ? theme.numberText : nil,
+                    uncertainWords: marksUncertainWords && segment.isCommitted ? segment.uncertainWords : []
                 )
                     .font(.system(size: display.fontSize, weight: display.boldText ? .bold : .medium))
                     .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)

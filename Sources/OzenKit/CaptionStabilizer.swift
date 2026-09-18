@@ -22,6 +22,10 @@ public struct TranscriptSegment: Identifiable, Sendable, Equatable {
     /// can't yet be treated as permanently settled, however far back it's
     /// scrolled.
     public var isProvisionalCommit: Bool = false
+    /// The words in `text` the engine was least sure of (see
+    /// `UncertainWords`): at the doctor's it matters whether the doubt is
+    /// about "10:30" or about "thank you".
+    public var uncertainWords: [String] = []
 }
 
 /// When a caption line should say "this may not be what was said".
@@ -117,6 +121,9 @@ public struct CaptionStabilizer: Sendable {
             if let confidence = token.confidence {
                 segments[index].confidence = confidence
             }
+            // Each update describes its own text: the doubts of the pass
+            // before don't carry over to words that may have changed.
+            segments[index].uncertainWords = token.uncertainWords
             if let clusterID = token.speakerClusterID {
                 segments[index].speakerClusterID = clusterID
             }
@@ -134,7 +141,8 @@ public struct CaptionStabilizer: Sendable {
             speakerClusterID: token.speakerClusterID,
             startTimestamp: token.timestamp,
             lastUpdateTimestamp: token.timestamp,
-            confidence: token.confidence
+            confidence: token.confidence,
+            uncertainWords: token.uncertainWords
         )
         segments.append(segment)
         return segment

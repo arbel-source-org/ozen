@@ -372,12 +372,16 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 let elapsed = ContinuousClock.now - passStarted
                 lastLivePassSeconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
             }
+            // Only on the pass that stays: a line still being written
+            // changes its mind about words as well as about itself.
+            let wordTokenizer = isFinal ? pipe.tokenizer : nil
             let summaries = results.flatMap(\.segments).map {
                 WhisperSegmentSummary(
                     text: $0.text,
                     noSpeechProb: $0.noSpeechProb,
                     avgLogprob: $0.avgLogprob,
-                    compressionRatio: $0.compressionRatio
+                    compressionRatio: $0.compressionRatio,
+                    uncertainWords: Self.uncertainWords(in: $0, tokenizer: wordTokenizer)
                 )
             }
             // Confidence has to describe exactly the text being shown, not
@@ -400,7 +404,8 @@ public actor WhisperKitEngine: TranscriptionEngine {
                     text: shown,
                     isFinal: isFinal,
                     timestamp: Date().timeIntervalSince1970,
-                    confidence: shownConfidence
+                    confidence: shownConfidence,
+                    uncertainWords: text.isEmpty ? [] : acceptedSegments.flatMap(\.uncertainWords)
                 ))
                 lastShownText = shown
                 lastShownConfidence = shownConfidence
@@ -486,6 +491,31 @@ public actor WhisperKitEngine: TranscriptionEngine {
         var options = liveOptions(languageCode: languageCode)
         options.temperatureFallbackCount = 2
         return options
+    }
+
+    /// The words of `segment` the model was least sure of. Special tokens
+    /// (timestamps, the language tag) aren't words and are left out, with
+    /// their scores, before the tokenizer puts pieces back into words.
+    private static func uncertainWords(in segment: TranscriptionSegment, tokenizer: (any WhisperTokenizer)?) -> [String] {
+        guard let tokenizer else { return [] }
+        let specialTokenBegin = tokenizer.specialTokens.specialTokenBegin
+        var tokens: [Int] = []
+        var logprobs: [Float] = []
+        for (token, scores) in zip(segment.tokens, segment.tokenLogProbs) where token < specialTokenBegin {
+            guard let logprob = scores[token] else { continue }
+            tokens.append(token)
+            logprobs.append(logprob)
+        }
+        guard !tokens.isEmpty else { return [] }
+        let split = tokenizer.splitToWordTokens(tokenIds: tokens)
+        var next = 0
+        var perWord: [[Float]] = []
+        for wordTokens in split.wordTokens {
+            let end = min(next + wordTokens.count, logprobs.count)
+            perWord.append(next < end ? Array(logprobs[next..<end]) : [])
+            next = end
+        }
+        return UncertainWords.pick(words: split.words, logprobs: perWord)
     }
 
     /// Whisper reports mean token log-probability; e^x of that is a

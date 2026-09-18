@@ -37,6 +37,9 @@ public struct TranscriptToken: Sendable, Equatable {
     /// stretch of audio as the line before (see `CloudSpeech.turns`). The
     /// voice heard just before belongs to that other line, not this one.
     public var startsNewSpeakerTurn: Bool
+    /// The words the engine was least sure of, when it can tell one word
+    /// from another (see `UncertainWords`). Empty means nothing to mark.
+    public var uncertainWords: [String]
 
     public init(
         utteranceID: UUID,
@@ -45,7 +48,8 @@ public struct TranscriptToken: Sendable, Equatable {
         timestamp: TimeInterval,
         speakerClusterID: Int? = nil,
         confidence: Float? = nil,
-        startsNewSpeakerTurn: Bool = false
+        startsNewSpeakerTurn: Bool = false,
+        uncertainWords: [String] = []
     ) {
         self.utteranceID = utteranceID
         self.text = text
@@ -54,6 +58,7 @@ public struct TranscriptToken: Sendable, Equatable {
         self.speakerClusterID = speakerClusterID
         self.confidence = confidence
         self.startsNewSpeakerTurn = startsNewSpeakerTurn
+        self.uncertainWords = uncertainWords
     }
 }
 
