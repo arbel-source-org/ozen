@@ -66,6 +66,10 @@ struct DownloadCoordinatorTests {
             await runs.increment()
             return url
         }
+        // `async let` only starts the second call; opening the gate before
+        // it has reached the coordinator lets the first finish, and the
+        // second then rightly runs an operation of its own.
+        while await coordinator.joinCount < 1 { await Task.yield() }
         await gate.open()
 
         let (a, b) = try await (first, second)
@@ -134,6 +138,7 @@ struct DownloadCoordinatorTests {
             await runs.increment()
             return url
         }
+        while await coordinator.joinCount < 1 { await Task.yield() }
         await gate.open()
 
         // #expect(throws:) can't capture an `async let` binding directly,

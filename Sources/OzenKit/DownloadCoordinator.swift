@@ -17,6 +17,9 @@ public actor DownloadCoordinator {
     public static let shared = DownloadCoordinator()
 
     private var inFlight: [URL: Task<URL, any Error>] = [:]
+    /// How many callers have joined a task already running, so a test can
+    /// wait for a join to have happened instead of hoping it has.
+    private(set) var joinCount = 0
 
     public init() {}
 
@@ -24,6 +27,7 @@ public actor DownloadCoordinator {
     /// already running, awaits that call's result instead.
     public func run(for url: URL, _ operation: @escaping @Sendable () async throws -> URL) async throws -> URL {
         if let existing = inFlight[url] {
+            joinCount += 1
             return try await existing.value
         }
         let task = Task { try await operation() }
