@@ -81,9 +81,27 @@ public struct CaptionStabilizer: Sendable {
     /// commit is a guess that nothing more is coming; if the engine turns
     /// out to be merely slow, its next update proves the guess wrong.
     private var provisionalCommits: Set<UUID> = []
+    /// For each line still being written, which of its words to hold
+    /// steady between passes; see `LiveAgreement`.
+    private var liveAgreements: [UUID: LiveAgreement] = [:]
 
     public init(silenceCommitThreshold: TimeInterval = CaptionStabilizer.defaultSilenceCommitThreshold) {
         self.silenceCommitThreshold = silenceCommitThreshold
+    }
+
+    /// The text to show for `token`: a final pass as it is, a live one with
+    /// the words earlier passes agreed on held in place.
+    private mutating func settled(_ token: TranscriptToken) -> String {
+        guard !token.isFinal else {
+            liveAgreements[token.utteranceID] = nil
+            return token.text
+        }
+        // Lines are written one at a time; anything else left here is a
+        // line whose final never came.
+        if liveAgreements.count > 4 {
+            liveAgreements = liveAgreements.filter { $0.key == token.utteranceID }
+        }
+        return liveAgreements[token.utteranceID, default: LiveAgreement()].settle(token.text)
     }
 
     @discardableResult
@@ -115,7 +133,7 @@ public struct CaptionStabilizer: Sendable {
             // when a request ends on silence). Text the reader has already
             // seen must never vanish because of it.
             if !token.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                segments[index].text = token.text
+                segments[index].text = settled(token)
             }
             segments[index].lastUpdateTimestamp = token.timestamp
             if let confidence = token.confidence {
@@ -136,7 +154,7 @@ public struct CaptionStabilizer: Sendable {
 
         let segment = TranscriptSegment(
             id: token.utteranceID,
-            text: token.text,
+            text: settled(token),
             isCommitted: token.isFinal,
             speakerClusterID: token.speakerClusterID,
             startTimestamp: token.timestamp,
