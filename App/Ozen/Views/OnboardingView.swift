@@ -75,10 +75,10 @@ struct OnboardingView: View {
     }
 
     private var enginePage: some View {
-        OnboardingPage(symbol: "cpu", title: tr("איזה מנוע?", "Which engine?")) {
+        OnboardingPage(symbol: "cpu", title: tr("הכנה חד-פעמית", "One-time setup")) {
             EngineCard(
-                title: tr("Whisper (מומלץ)", "Whisper (recommended)"),
-                subtitle: tr("מדויק יותר בעברית. מוריד פעם אחת קובץ של כ-\(modelSizeText), ב-Wi-Fi, ואז עובד בלי אינטרנט.", "More accurate in Hebrew. Downloads a file of about \(modelSizeText) once, over Wi‑Fi, then works without the internet."),
+                title: tr("עברית מדויקת (מומלץ)", "Accurate Hebrew (recommended)"),
+                subtitle: tr("מוריד פעם אחת קובץ של כ-\(modelSizeText), ב-Wi-Fi, ומכין אותו לטלפון במשך כמה דקות. אחר כך עובד בלי אינטרנט.", "Downloads a file of about \(modelSizeText) once, over Wi‑Fi, and takes a few minutes to set it up for the phone. After that it works without the internet."),
                 symbol: "sparkles",
                 selected: viewModel.settings.engine == .whisperKit
             ) {
@@ -103,8 +103,8 @@ struct OnboardingView: View {
                 }
             }
             EngineCard(
-                title: tr("Apple", "Apple"),
-                subtitle: tr("מובנה בטלפון, מתחיל מיד. עברית זמינה רק בחלק מגרסאות iOS.", "Built into the phone, starts right away. Hebrew is only available on some iOS versions."),
+                title: tr("בלי הורדה", "No download"),
+                subtitle: tr("הזיהוי של אפל, שמובנה בטלפון. מתחיל מיד, אבל עברית זמינה רק בחלק מגרסאות iOS.", "Apple’s recognition, built into the phone. Starts right away, but Hebrew is only available on some iOS versions."),
                 symbol: "apple.logo",
                 selected: viewModel.settings.engine == .appleSpeech
             ) {
@@ -272,7 +272,7 @@ struct OnboardingView: View {
         case WhisperModelCatalog.recommendedVariant:
             return tr("מדויק: עברית טובה בהרבה, מתעדכן קצת יותר לאט. מתאים לאייפון חדש.", "Accurate: much better Hebrew, updates a bit slower. Good for a newer iPhone.")
         case "small":
-            return tr("מהיר: מגיב מיד, עם יותר טעויות בעברית. מתאים לטלפון ישן.", "Fast: responds instantly, with more Hebrew mistakes. Good for an older phone.")
+            return tr("מהיר: מגיב מיד, אבל טועה בהרבה יותר מילים בעברית. רק לטלפון ישן שהמדויק איטי בו.", "Fast: responds instantly, but gets many more Hebrew words wrong. Only for an older phone the accurate one is slow on.")
         default:
             return tr("נבחר מודל אחר בהגדרות.", "A different model is selected in Settings.")
         }
