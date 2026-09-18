@@ -5,6 +5,7 @@ import OzenKit
 /// delete. Everything stays on the phone.
 struct HistoryView: View {
     @Bindable var viewModel: LiveCaptionViewModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var query = ""
     @State private var sessions: [TranscriptSessionSummary] = []
     @State private var totalSize: Int64 = 0
@@ -64,13 +65,25 @@ struct HistoryView: View {
         }
     }
 
+    // `.badge` beside a wrapping title squeezed the title until its Hebrew
+    // words broke into single letters at accessibility sizes.
+    private var starredRowLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout())
+    }
+
     private var starredSection: some View {
         Section {
             NavigationLink {
                 StarredLinesView(viewModel: viewModel, onHistoryChanged: reload)
             } label: {
-                Label(tr("השורות המסומנות", "Starred lines"), systemImage: "star.fill")
-                    .badge(sessions.reduce(0) { $0 + $1.starredCount })
+                starredRowLayout {
+                    Label(tr("השורות המסומנות", "Starred lines"), systemImage: "star.fill")
+                    if !dynamicTypeSize.isAccessibilitySize { Spacer() }
+                    Text("\(sessions.reduce(0) { $0 + $1.starredCount })")
+                        .foregroundStyle(.secondary)
+                }
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("starredLinesRow")
