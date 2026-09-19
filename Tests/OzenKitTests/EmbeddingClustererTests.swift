@@ -206,3 +206,60 @@ struct AppSettingsThresholdDecodingTests {
         #expect(try decode("0.8") == 0.8)
     }
 }
+
+@Suite("EmbeddingClusterer doubtful windows")
+struct EmbeddingClustererDoubtfulTests {
+    /// A unit vector at the given cosine from [1, 0, 0].
+    private func vector(cosine c: Float, side: Float = 1) -> [Float] {
+        [c, side * (1 - c * c).squareRoot(), 0]
+    }
+
+    @Test("one voice with the odd bad window stays one speaker")
+    func oneVoiceStaysOne() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.45)
+        let first = clusterer.assign(embedding: [1, 0, 0])
+        // Every other window is a poor one, at 0.30, on alternating sides so
+        // no two of them agree with each other: twelve "speakers" before.
+        for i in 0..<24 {
+            let window = i.isMultiple(of: 2) ? vector(cosine: 0.30, side: 1) : [1, 0, 0]
+            let sides: Float = (i / 2).isMultiple(of: 2) ? 1 : -1
+            let id = clusterer.assign(embedding: i.isMultiple(of: 2) ? vector(cosine: 0.30, side: sides) : window)
+            #expect(id == first)
+        }
+        #expect(clusterer.clusters.count == 1)
+    }
+
+    @Test("a voice that is clearly nobody so far opens a speaker at once")
+    func clearlyDifferentIsImmediate() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.45)
+        let first = clusterer.assign(embedding: [1, 0, 0])
+        let second = clusterer.assign(embedding: [0, 1, 0])
+        #expect(second != first)
+        #expect(clusterer.clusters.count == 2)
+    }
+
+    @Test("two doubtful windows that agree with each other are a new speaker")
+    func twoAgreeingWindowsOpenASpeaker() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.45)
+        let first = clusterer.assign(embedding: [1, 0, 0])
+        let doubtful = vector(cosine: 0.30)
+        // The first is counted with the nearest voice, the second confirms it.
+        #expect(clusterer.assign(embedding: doubtful) == first)
+        let second = clusterer.assign(embedding: doubtful)
+        #expect(second != first)
+        #expect(clusterer.clusters.count == 2)
+        // And it is a speaker from then on.
+        #expect(clusterer.assign(embedding: doubtful) == second)
+    }
+
+    @Test("a good window in between drops the doubt")
+    func goodWindowDropsTheDoubt() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.45)
+        let first = clusterer.assign(embedding: [1, 0, 0])
+        let doubtful = vector(cosine: 0.30)
+        _ = clusterer.assign(embedding: doubtful)
+        _ = clusterer.assign(embedding: [1, 0, 0])
+        #expect(clusterer.assign(embedding: doubtful) == first)
+        #expect(clusterer.clusters.count == 1)
+    }
+}

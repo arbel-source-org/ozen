@@ -38,32 +38,38 @@ public struct AlertVibration: Sendable, Equatable {
 
     public var totalSeconds: Double { pulses.map(\.end).max() ?? 0 }
 
-    /// The vibration for a sound alert.
+    /// The vibration for a sound alert. Every pulse is a real buzz at full
+    /// strength, not an instantaneous click: a click, even at full intensity,
+    /// is a moment long and easy to miss in a pocket or on a table.
     public static func pattern(for importance: SoundEvent.Importance) -> AlertVibration {
         switch importance {
         case .critical:
-            // Four long buzzes over three seconds.
-            return AlertVibration(pulses: stride(from: 0.0, to: 3.0, by: 0.8).map {
-                Pulse(start: $0, duration: 0.5, intensity: 1, sharpness: 0.7)
+            // Five long hard buzzes, back to back, for three and a half seconds.
+            return AlertVibration(pulses: stride(from: 0.0, to: 3.5, by: 0.75).map {
+                Pulse(start: $0, duration: 0.6, intensity: 1, sharpness: 0.8)
             })
         case .high:
             // Knock-knock, knock-knock.
-            return AlertVibration(pulses: [0, 0.18, 0.7, 0.88].map {
-                Pulse(start: $0, duration: 0, intensity: 1, sharpness: 0.9)
+            return AlertVibration(pulses: [0, 0.3, 1.0, 1.3].map {
+                Pulse(start: $0, duration: 0.16, intensity: 1, sharpness: 1)
             })
         case .medium, .low:
-            return AlertVibration(pulses: [Pulse(start: 0, duration: 0, intensity: 0.8, sharpness: 0.6)])
+            // Two firm buzzes.
+            return AlertVibration(pulses: [0, 0.32].map {
+                Pulse(start: $0, duration: 0.2, intensity: 1, sharpness: 0.8)
+            })
         }
     }
 
-    /// The vibration for a word from her keyword list.
-    public static let keyword = AlertVibration(pulses: [0, 0.14, 0.28].map {
-        Pulse(start: $0, duration: 0, intensity: 0.9, sharpness: 0.4)
+    /// The vibration for a word from her keyword list: three quick, hard
+    /// taps, like a hand on the shoulder.
+    public static let keyword = AlertVibration(pulses: [0, 0.24, 0.48].map {
+        Pulse(start: $0, duration: 0.13, intensity: 1, sharpness: 0.6)
     })
 
     /// Someone started talking after a long quiet (an optional setting): one
-    /// short, soft hum, gentler than any alert and unlike their taps.
+    /// short hum, gentler than any alert and unlike their taps.
     public static let speechResumed = AlertVibration(pulses: [
-        Pulse(start: 0, duration: 0.2, intensity: 0.5, sharpness: 0.1),
+        Pulse(start: 0, duration: 0.3, intensity: 0.7, sharpness: 0.2),
     ])
 }

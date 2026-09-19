@@ -552,6 +552,9 @@ struct CaptionPipelineTokenTests {
         engine.emit(token(id, "מי מדבר", final: true))
         engine.emit(token(id2, "אני"))
         #expect(await eventually { pipeline.segments.count == 2 })
+        // Below its own threshold but not by much: two windows of the new
+        // voice make a speaker (a single one is held as a doubtful window).
+        audio.push([Float](repeating: -0.5, count: 24_000))
         audio.push([Float](repeating: -0.5, count: 24_000))
         #expect(await eventually { pipeline.segments.last?.speakerClusterID == 1 })
         #expect(pipeline.speakerClusters.count == 2)

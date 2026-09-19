@@ -19,12 +19,23 @@ import OzenKit
 /// The model takes an 80-bin Kaldi mel filterbank, not raw audio —
 /// `KaldiFBank` reproduces the exact front end WeSpeaker was trained on.
 public final class CAMPlusPlusSpeakerEmbedder: SpeakerEmbedding, @unchecked Sendable {
-    private let model: MLModel
+    private let modelURL: URL
     private let fbank = KaldiFBank()
+    /// The model is loaded the first time a window is embedded, not when the
+    /// app starts. Loading it in `init` put it on the main thread before the
+    /// first screen was drawn, and CoreML's first load of a model on a phone
+    /// (or after iOS has cleared its cache) can take tens of seconds: a white
+    /// screen for that long, and the launch watchdog ending the app when it
+    /// ran over. `embed` is only ever called off the main thread.
+    private let lock = NSLock()
+    private var loadedModel: MLModel?
+    private var loadFailed = false
 
-    /// Nil if the bundled model can't be found or loaded — a corrupt
-    /// install, not something to crash the app launching over. Callers
-    /// fall back to `MFCCSpeakerEmbedder`.
+    /// Nil if the bundled model can't be found, a corrupt install rather than
+    /// something to crash the app launching over. Callers fall back to
+    /// `MFCCSpeakerEmbedder`. Only the file's presence is checked here; a
+    /// model that is there but won't load gives no voice prints, and so no
+    /// speaker labels, until the next launch.
     ///
     /// Looks for `.mlmodelc`, not the `.mlpackage` the source tree and
     /// `Package.swift` name: Xcode's own SPM integration compiles a
@@ -36,15 +47,34 @@ public final class CAMPlusPlusSpeakerEmbedder: SpeakerEmbedding, @unchecked Send
         guard let modelURL = Bundle.module.url(forResource: "CAMPlusPlus", withExtension: "mlmodelc") else {
             return nil
         }
+        self.modelURL = modelURL
+    }
+
+    /// Loads the model on the CPU. This model is small (7.3M parameters) and
+    /// a window is embedded every second or so, which the CPU does in a few
+    /// milliseconds. The default lets CoreML also compile it for the Neural
+    /// Engine, which is the slow, cached, and sometimes-lost part of a first
+    /// load, and gives nothing here.
+    private func model() -> MLModel? {
+        lock.lock()
+        defer { lock.unlock() }
+        if let loadedModel { return loadedModel }
+        guard !loadFailed else { return nil }
+        let configuration = MLModelConfiguration()
+        configuration.computeUnits = .cpuOnly
         do {
-            model = try MLModel(contentsOf: modelURL)
+            let model = try MLModel(contentsOf: modelURL, configuration: configuration)
+            loadedModel = model
+            return model
         } catch {
+            loadFailed = true
             return nil
         }
     }
 
     public func embed(samples: [Float], sampleRate: Double) -> [Float]? {
-        guard let frames = fbank.frames(samples: samples, sampleRate: sampleRate),
+        guard let model = model(),
+              let frames = fbank.frames(samples: samples, sampleRate: sampleRate),
               let input = try? featureArray(from: fixedLength(frames)),
               let output = try? model.prediction(from: SingleFeatureProvider(name: "feats", value: MLFeatureValue(multiArray: input))),
               let embedding = output.featureValue(for: "embs")?.multiArrayValue
