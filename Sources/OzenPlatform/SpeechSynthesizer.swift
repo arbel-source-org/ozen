@@ -56,10 +56,11 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
         // as a local so the detached task doesn't need to hop back to the
         // main actor just to read this instance's own immutable property.
         let languageCode = self.languageCode
+        let englishCode = SpeechSynthesizer.englishLanguageCode
         Task { [weak self] in
             let identifiers = await Task.detached(priority: .utility) {
                 (SpeechSynthesizer.bestVoiceIdentifier(for: languageCode),
-                 SpeechSynthesizer.bestVoiceIdentifier(for: SpeechSynthesizer.englishLanguageCode))
+                 SpeechSynthesizer.bestVoiceIdentifier(for: englishCode))
             }.value
             guard let self else { return }
             if let english = identifiers.1 { self.englishVoice = AVSpeechSynthesisVoice(identifier: english) }
