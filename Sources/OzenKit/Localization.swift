@@ -1,23 +1,24 @@
 import Foundation
 
-/// The language the app's own words are in: buttons, settings, status
-/// lines, notifications. Captions are in whatever language people speak.
 public enum UILanguage: String, Codable, Sendable, CaseIterable {
     case hebrew
     case english
 
     public var isRightToLeft: Bool { self == .hebrew }
+
+    public static func forSpeaking(_ text: String, otherwise fallback: UILanguage) -> UILanguage {
+        let scalars = text.unicodeScalars
+        if scalars.contains(where: { (0x0590...0x05FF).contains($0.value) }) { return .hebrew }
+        if scalars.contains(where: { ("a"..."z").contains($0) || ("A"..."Z").contains($0) }) { return .english }
+        return fallback
+    }
 }
 
-/// The choice in Settings: follow the phone, or always one language.
 public enum AppLanguage: String, Codable, Sendable, CaseIterable {
     case system
     case hebrew
     case english
 
-    /// Hebrew when the phone's first language is Hebrew, English for any
-    /// other language: the two the app is written in, and English is the
-    /// one more people read.
     public func resolved(preferredLanguages: [String]) -> UILanguage {
         switch self {
         case .hebrew: return .hebrew
@@ -29,12 +30,6 @@ public enum AppLanguage: String, Codable, Sendable, CaseIterable {
     }
 }
 
-/// Which language `tr` picks. Set once at launch and whenever the setting
-/// changes. Hebrew until then, which is what tests expect.
-///
-/// A test that wants English binds `override` for its own task instead of
-/// changing the shared value, so tests running side by side don't see
-/// each other's language.
 public enum Localization {
     @TaskLocal public static var override: UILanguage?
 
@@ -56,9 +51,6 @@ private final class LanguageStore: @unchecked Sendable {
     }
 }
 
-/// The app's words in the language in use: `tr("הגדרות", "Settings")`.
-/// Both versions sit side by side where the text is used, so neither can
-/// be forgotten or drift out of step with the other.
 public func tr(_ hebrew: String, _ english: String) -> String {
     tr(hebrew, english, in: Localization.language)
 }

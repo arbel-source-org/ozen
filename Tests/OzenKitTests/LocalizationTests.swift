@@ -37,4 +37,13 @@ struct LocalizationTests {
         #expect(UILanguage.hebrew.isRightToLeft)
         #expect(!UILanguage.english.isRightToLeft)
     }
+
+    @Test("the voice follows the letters, and the app's language when there are none")
+    func speakingVoice() {
+        #expect(UILanguage.forSpeaking("שלום, thanks", otherwise: .english) == .hebrew)
+        #expect(UILanguage.forSpeaking("Thank you", otherwise: .hebrew) == .english)
+        #expect(UILanguage.forSpeaking("10:30", otherwise: .hebrew) == .hebrew)
+        #expect(UILanguage.forSpeaking("10:30", otherwise: .english) == .english)
+        #expect(UILanguage.forSpeaking("Привет", otherwise: .hebrew) == .hebrew)
+    }
 }

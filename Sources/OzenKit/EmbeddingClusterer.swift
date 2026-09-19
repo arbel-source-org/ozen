@@ -33,7 +33,7 @@ public struct EmbeddingClusterer: Sendable {
     /// voice, and only opens a speaker if the very next window agrees with it.
     public var newSpeakerMargin: Float = 0.25
     /// A doubtful window waiting for the next one to agree with it.
-    private var doubtful: (embedding: [Float], count: Int)?
+    private var doubtful: [Float]?
     private var nextID = 0
     private var nextNumber = 1
     /// Unnamed voices from conversations that have ended. New speech is no
@@ -73,16 +73,15 @@ public struct EmbeddingClusterer: Sendable {
         // Doubtful. If the window before it was doubtful in the same way, that
         // is two windows of a voice that isn't any of these: a new speaker.
         if let held = doubtful,
-           held.embedding.count == embedding.count,
-           cosineSimilarity(held.embedding, embedding) >= similarityThreshold {
+           held.count == embedding.count,
+           cosineSimilarity(held, embedding) >= similarityThreshold {
             doubtful = nil
-            let count = Float(held.count)
-            let merged = zip(held.embedding, embedding).map { ($0 * count + $1) / (count + 1) }
-            return openCluster(with: merged, name: nil, sampleCount: held.count + 1)
+            let merged = zip(held, embedding).map { ($0 + $1) / 2 }
+            return openCluster(with: merged, name: nil, sampleCount: 2)
         }
         // Otherwise it is most likely the nearest voice on a bad window. It
         // is left out of that voice's average so it can't drag it away.
-        doubtful = (embedding, 1)
+        doubtful = embedding
         return clusters[bestIndex].id
     }
 

@@ -425,8 +425,14 @@ struct LiveCaptionView: View {
             Button(tr("מחיקה", "Delete"), role: .destructive) { viewModel.clearTranscript() }
             Button(tr("ביטול", "Cancel"), role: .cancel) {}
         } message: {
-            Text(tr("היסטוריית השיחות כבויה, ולכן הן לא יישמרו.", "History is off, so they won't be saved."))
+            Text(viewModel.settings.saveHistory
+                 ? tr("השמירה בהיסטוריה לא עובדת כרגע, ולכן הן לא יישמרו.", "Saving to History isn't working right now, so they won't be saved.")
+                 : tr("היסטוריית השיחות כבויה, ולכן הן לא יישמרו.", "History is off, so they won't be saved."))
         }
+    }
+
+    private var clearKeepsHistory: Bool {
+        viewModel.settings.saveHistory && viewModel.historySaveFailure == nil
     }
 
     // MARK: - Transcript
@@ -1068,11 +1074,11 @@ struct LiveCaptionView: View {
 
     /// Wipes the captions off the screen and starts fresh. What was said is
     /// kept in History first when saving is on, so nothing is lost with a tap;
-    /// with saving off it asks before throwing the lines away. Shown only when
-    /// there is something to clear.
+    /// with saving off, or saving failing, it asks before throwing the lines
+    /// away. Shown only when there is something to clear.
     private var clearButton: some View {
         Button {
-            if viewModel.settings.saveHistory {
+            if clearKeepsHistory {
                 viewModel.clearTranscript()
             } else {
                 confirmingClear = true

@@ -130,6 +130,39 @@ struct EnrollmentSpeechOnlyTests {
         // The whole recording's loudness would be about 0.19.
         #expect(abs(print[0] - 0.3) < 0.001)
     }
+
+    @Test("the voice print made off the main thread is the same one")
+    func backgroundPrintMatches() async {
+        let recording = speech(seconds: 6) + silence(seconds: 3) + speech(seconds: 3)
+        let pipeline = pipeline()
+        let inBackground = await pipeline.embeddingInBackground(forEnrollmentSamples: recording)
+        #expect(inBackground != nil)
+        #expect(inBackground == pipeline.embedding(forEnrollmentSamples: recording))
+        #expect(await pipeline.embeddingInBackground(forEnrollmentSamples: silence(seconds: 30)) == nil)
+    }
+
+    private final class CountingEmbedder: SpeakerEmbedding, @unchecked Sendable {
+        private let lock = NSLock()
+        private var calls = 0
+        var embedCalls: Int { lock.withLock { calls } }
+        var embeddingLength: Int? { 3 }
+        func embed(samples: [Float], sampleRate: Double) -> [Float]? {
+            lock.withLock { calls += 1 }
+            return [1, 0, 0]
+        }
+    }
+
+    // Saved profiles are checked when the app opens, on the main thread:
+    // running a neural model there to learn its print length froze launch.
+    @Test("checking saved voices at launch doesn't run the speaker model")
+    func savedVoicesCheckedWithoutTheModel() {
+        let embedder = CountingEmbedder()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in FakeEngine() }, embedder: embedder)
+        pipeline.enroll(profile: SpeakerProfile(name: "Savta", embedding: [1, 0, 0]))
+        pipeline.enroll(profile: SpeakerProfile(name: "Old", embedding: [Float](repeating: 1, count: 12)))
+        #expect(embedder.embedCalls == 0)
+        #expect(pipeline.speakerClusters.map(\.name) == ["Savta"])
+    }
 }
 
 @Suite("Saved conversations survive lines they can't read")

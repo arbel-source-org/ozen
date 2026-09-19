@@ -3,16 +3,19 @@ import Testing
 import OzenKit
 import Foundation
 
-// These only run where OzenPlatform builds at all — a macOS/iOS CI runner
-// with real CoreML (see MFCCSpeakerEmbedderTests): this is the one place
-// the shipped fbank -> CoreML -> embedding pipeline is actually exercised
-// end to end, since neither the model nor CoreML prediction runs on the
-// Linux dev machine this was written on.
 @Suite("CAMPlusPlusSpeakerEmbedder")
 struct CAMPlusPlusSpeakerEmbedderTests {
     @Test("the bundled model loads")
     func loads() {
         #expect(CAMPlusPlusSpeakerEmbedder() != nil)
+    }
+
+    @Test("the model runs and gives prints of the declared length")
+    func runsAtDeclaredLength() throws {
+        let embedder = try #require(CAMPlusPlusSpeakerEmbedder())
+        let window = (0..<24_000).map { Float(sin(Double($0) * 0.05)) * 0.1 }
+        let print = try #require(embedder.embed(samples: window, sampleRate: 16_000))
+        #expect(print.count == embedder.embeddingLength)
     }
 
     @Test("audio shorter than one frame returns nil instead of crashing")
@@ -21,11 +24,6 @@ struct CAMPlusPlusSpeakerEmbedderTests {
         #expect(embedder.embed(samples: [0.1, 0.2, 0.3], sampleRate: 16_000) == nil)
     }
 
-    /// The real verification for this feature: two clips of the same real
-    /// person, run through the actual shipped pipeline (fbank -> CoreML),
-    /// score clearly closer to each other than a different person's clip
-    /// does — clearly enough to sit either side of the 0.45 default
-    /// threshold `EmbeddingClusterer` uses.
     @Test("two clips of the same real speaker score far more alike than a different speaker's")
     func sameSpeakerScoresHigherThanDifferentSpeaker() throws {
         let embedder = try #require(CAMPlusPlusSpeakerEmbedder())

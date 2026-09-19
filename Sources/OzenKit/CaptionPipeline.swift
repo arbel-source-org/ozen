@@ -615,14 +615,17 @@ public final class CaptionPipeline {
 
     // MARK: - Speakers
 
-    /// What the active embedder's output looks like, probed fresh on
-    /// silence each time (enrollment is rare, not on the hot audio path).
+    /// What the active embedder's output looks like: what it declares, or
+    /// else probed on silence (enrollment is rare, not on the hot audio
+    /// path). Declaring it matters: this runs at launch, on the main
+    /// thread, and a probe loads the model.
     /// A profile saved by a since-replaced embedder (see
     /// `EmbeddingClusterer.assign`) is a different length and can never be
     /// matched against live speech; seeding it anyway would still count as
     /// a real "speaker identified" in diagnostics forever.
     private var expectedEmbeddingLength: Int? {
-        embedder.embed(
+        if let length = embedder.embeddingLength { return length }
+        return embedder.embed(
             samples: [Float](repeating: 0, count: Int(Self.embeddingWindowSeconds * Self.sampleRate)),
             sampleRate: Self.sampleRate
         )?.count
@@ -640,17 +643,33 @@ public final class CaptionPipeline {
     /// Computes an embedding from an enrollment recording, or nil if the
     /// recording was too short to say anything about the voice.
     public func embedding(forEnrollmentSamples samples: [Float]) -> [Float]? {
+        Self.averagePrint(of: Self.speechWindows(in: samples), embedder: embedder, sampleRate: Self.sampleRate)
+    }
+
+    /// The same, with the model run off the main thread. Enrolling can be
+    /// the first time the speaker model is needed, and its first load can
+    /// take seconds: the screen stays responsive meanwhile.
+    public func embeddingInBackground(forEnrollmentSamples samples: [Float]) async -> [Float]? {
+        let windows = Self.speechWindows(in: samples)
+        let embedder = self.embedder
+        let sampleRate = Self.sampleRate
+        return await Task.detached(priority: .userInitiated) {
+            Self.averagePrint(of: windows, embedder: embedder, sampleRate: sampleRate)
+        }.value
+    }
+
+    nonisolated private static func averagePrint(of windows: [[Float]], embedder: any SpeakerEmbedding, sampleRate: Double) -> [Float]? {
         // Made the way live speech is matched: 1.5 s windows, only those
         // with enough speech in them, averaged. One print of the whole
         // recording mixed the pauses between sentences into the voice,
         // and a recording nobody spoke in still became a "voice".
         var sum: [Float] = []
         var count = 0
-        for window in Self.speechWindows(in: samples) {
+        for window in windows {
             // A print with a NaN in it can't be compared, and can't be
             // saved either (JSON has no NaN): one would make every later
             // settings save fail.
-            guard let embedding = embedder.embed(samples: window, sampleRate: Self.sampleRate),
+            guard let embedding = embedder.embed(samples: window, sampleRate: sampleRate),
                   !embedding.isEmpty,
                   embedding.allSatisfy(\.isFinite),
                   sum.isEmpty || embedding.count == sum.count
@@ -662,7 +681,7 @@ public final class CaptionPipeline {
             }
             count += 1
         }
-        guard count >= Self.minimumEnrollmentWindows else { return nil }
+        guard count >= minimumEnrollmentWindows else { return nil }
         return sum.map { $0 / Float(count) }
     }
 
@@ -672,7 +691,7 @@ public final class CaptionPipeline {
 
     /// A voice print needs this many windows of speech, about 4.5 seconds
     /// of someone talking, to be worth keeping.
-    static let minimumEnrollmentWindows = 3
+    nonisolated static let minimumEnrollmentWindows = 3
 
     /// `samples` cut into embedding windows, keeping those that hold as
     /// much speech as live matching asks for. Fed through a voice detector

@@ -87,7 +87,7 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
         let utterance = AVSpeechUtterance(string: trimmed)
         // Spoken before the voice list was read: ask for the language, so
         // Hebrew never falls back to an English voice.
-        if SpeechSynthesizer.containsHebrew(trimmed) {
+        if UILanguage.forSpeaking(trimmed, otherwise: Localization.language) == .hebrew {
             utterance.voice = voice ?? AVSpeechSynthesisVoice(language: languageCode)
         } else {
             utterance.voice = englishVoice ?? AVSpeechSynthesisVoice(language: SpeechSynthesizer.englishLanguageCode)
@@ -99,11 +99,6 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
 
     public func stop() {
         synthesizer.stopSpeaking(at: .immediate)
-    }
-
-    /// Any Hebrew letter (the Hebrew block, U+0590...U+05FF) makes it Hebrew.
-    nonisolated static func containsHebrew(_ text: String) -> Bool {
-        text.unicodeScalars.contains { (0x0590...0x05FF).contains($0.value) }
     }
 }
 

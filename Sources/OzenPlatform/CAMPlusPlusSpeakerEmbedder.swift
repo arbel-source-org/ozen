@@ -28,6 +28,10 @@ public final class CAMPlusPlusSpeakerEmbedder: SpeakerEmbedding, @unchecked Send
     /// screen for that long, and the launch watchdog ending the app when it
     /// ran over. `embed` is only ever called off the main thread.
     private let lock = NSLock()
+
+    /// Known up front so saved profiles can be checked at launch without
+    /// loading the model; a test holds this to the model's real output.
+    public var embeddingLength: Int? { 512 }
     private var loadedModel: MLModel?
     private var loadFailed = false
 

@@ -25,6 +25,7 @@ public struct MFCCSpeakerEmbedder: SpeakerEmbedding {
     private let melBinCount = 26
     /// Coefficients 1 through 12 of the cepstrum.
     static let coefficientCount = SpeakerProfile.voicePrintLength
+    public var embeddingLength: Int? { Self.coefficientCount }
 
     public init() {}
 

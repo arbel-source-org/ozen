@@ -1207,12 +1207,19 @@ public final class LiveCaptionViewModel {
         let samples = await pipeline.captureEnrollmentSamples(seconds: seconds, onProgress: onProgress)
         // Stopped midway: the part recorded isn't kept as her voice.
         guard !Task.isCancelled else { return false }
-        return enroll(name: name, samples: samples)
+        guard let embedding = await pipeline.embeddingInBackground(forEnrollmentSamples: samples),
+              !Task.isCancelled
+        else { return false }
+        return save(name: name, embedding: embedding)
     }
 
     @discardableResult
     public func enroll(name: String, samples: [Float]) -> Bool {
         guard let embedding = pipeline.embedding(forEnrollmentSamples: samples) else { return false }
+        return save(name: name, embedding: embedding)
+    }
+
+    private func save(name: String, embedding: [Float]) -> Bool {
         let profile = SpeakerProfile(name: name, embedding: embedding)
         pipeline.enroll(profile: profile)
         settings.speakerProfiles.append(profile)
