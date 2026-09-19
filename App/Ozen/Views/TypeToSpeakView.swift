@@ -31,7 +31,7 @@ struct TypeToSpeakView: View {
 
                 List {
                     Section {
-                        ForEach(viewModel.settings.quickPhrases, id: \.self) { phrase in
+                        ForEach(viewModel.quickPhrases, id: \.self) { phrase in
                             Button {
                                 viewModel.speak(phrase)
                             } label: {
@@ -157,7 +157,7 @@ struct TypeToSpeakView: View {
             .ozenGlassButton()
             .accessibilityLabel(tr("להשמיע שוב: \(phrase)", "Play again: \(phrase)"))
 
-            if !viewModel.settings.quickPhrases.contains(phrase) {
+            if !viewModel.quickPhrases.contains(phrase) {
                 Button {
                     viewModel.addQuickPhrase(phrase)
                 } label: {
@@ -198,7 +198,7 @@ private struct QuickPhrasesEditor: View {
                 .accessibilityLabel(tr("הוספה", "Add"))
                 .disabled(newPhrase.trimmingCharacters(in: .whitespaces).isEmpty)
             }
-            ForEach(viewModel.settings.quickPhrases, id: \.self) { phrase in
+            ForEach(viewModel.quickPhrases, id: \.self) { phrase in
                 Text(phrase)
             }
             .onDelete { offsets in
@@ -210,7 +210,7 @@ private struct QuickPhrasesEditor: View {
             Button(tr("לשחזר את ברירת המחדל", "Restore defaults"), role: .destructive) {
                 confirmingReset = true
             }
-            .disabled(viewModel.settings.quickPhrases == AppSettings.defaultQuickPhrases)
+            .disabled(viewModel.quickPhrases == AppSettings.defaultQuickPhrases(for: viewModel.uiLanguage))
             .confirmationDialog(tr("לשחזר את המשפטים המוכנים?", "Restore the default phrases?"), isPresented: $confirmingReset, titleVisibility: .visible) {
                 Button(tr("לשחזר", "Restore"), role: .destructive) {
                     viewModel.resetQuickPhrases()

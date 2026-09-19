@@ -1123,7 +1123,7 @@ public final class LiveCaptionViewModel {
     }
 
     /// What the phone says for "ask them to repeat that" on a caption line.
-    public static let repeatRequest = "סליחה, אפשר לחזור על זה?"
+    public static var repeatRequest: String { tr("סליחה, אפשר לחזור על זה?", "Sorry, could you say that again?") }
 
     /// Asks the room to say that again, aloud, straight from a caption line.
     public func askToRepeat() {
@@ -1161,25 +1161,40 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    /// The phrases the Say screen lists, in the app's language while the list
+    /// is still the built-in one (see `AppSettings.displayedQuickPhrases`).
+    public var quickPhrases: [String] {
+        AppSettings.displayedQuickPhrases(stored: settings.quickPhrases, language: uiLanguage)
+    }
+
+    /// Keeps the list she sees as her own list before she changes it, so
+    /// editing an English built-in list doesn't bring the Hebrew one back.
+    private func adoptDisplayedQuickPhrases() {
+        settings.quickPhrases = quickPhrases
+    }
+
     public func addQuickPhrase(_ phrase: String) {
         let trimmed = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, !settings.quickPhrases.contains(trimmed) else { return }
+        guard !trimmed.isEmpty, !quickPhrases.contains(trimmed) else { return }
+        adoptDisplayedQuickPhrases()
         settings.quickPhrases.append(trimmed)
         persist()
     }
 
     public func removeQuickPhrases(at offsets: IndexSet) {
+        adoptDisplayedQuickPhrases()
         settings.quickPhrases.remove(atOffsets: offsets)
         persist()
     }
 
     public func moveQuickPhrases(from source: IndexSet, to destination: Int) {
+        adoptDisplayedQuickPhrases()
         settings.quickPhrases.move(fromOffsets: source, toOffset: destination)
         persist()
     }
 
     public func resetQuickPhrases() {
-        settings.quickPhrases = AppSettings.defaultQuickPhrases
+        settings.quickPhrases = AppSettings.defaultQuickPhrases(for: uiLanguage)
         persist()
     }
 

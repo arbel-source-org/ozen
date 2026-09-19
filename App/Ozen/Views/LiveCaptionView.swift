@@ -13,6 +13,7 @@ struct LiveCaptionView: View {
     @State private var showingMicPicker = false
     @State private var showingSettings = false
     @State private var showingTypeToSpeak = false
+    @State private var confirmingClear = false
     @State private var namingSegment: TranscriptSegment?
     @State private var fixingWordFromSegment: TranscriptSegment?
     @State private var isPinnedToBottom = true
@@ -415,6 +416,16 @@ struct LiveCaptionView: View {
             Button(tr("לחכות ל-Wi-Fi", "Wait for Wi‑Fi"), role: .cancel) {}
         } message: {
             Text(cellularDownloadMessage)
+        }
+        .confirmationDialog(
+            tr("למחוק את כל הכתוביות מהמסך?", "Delete all captions from the screen?"),
+            isPresented: $confirmingClear,
+            titleVisibility: .visible
+        ) {
+            Button(tr("מחיקה", "Delete"), role: .destructive) { viewModel.clearTranscript() }
+            Button(tr("ביטול", "Cancel"), role: .cancel) {}
+        } message: {
+            Text(tr("היסטוריית השיחות כבויה, ולכן הן לא יישמרו.", "History is off, so they won't be saved."))
         }
     }
 
@@ -1008,6 +1019,9 @@ struct LiveCaptionView: View {
             statusControl
                 .frame(maxWidth: .infinity)
             typeToSpeakButton
+            if !viewModel.segments.isEmpty {
+                clearButton
+            }
             settingsButton
         }
         .padding(.horizontal, 16)
@@ -1050,6 +1064,31 @@ struct LiveCaptionView: View {
         .ozenGlassButton()
         .accessibilityLabel(tr("להגיד משהו בקול", "Say something out loud"))
         .accessibilityIdentifier("typeToSpeakButton")
+    }
+
+    /// Wipes the captions off the screen and starts fresh. What was said is
+    /// kept in History first when saving is on, so nothing is lost with a tap;
+    /// with saving off it asks before throwing the lines away. Shown only when
+    /// there is something to clear.
+    private var clearButton: some View {
+        Button {
+            if viewModel.settings.saveHistory {
+                viewModel.clearTranscript()
+            } else {
+                confirmingClear = true
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: "trash")
+                    .font(.title2)
+                Text(tr("ניקוי", "Clear"))
+                    .font(.caption2)
+            }
+            .frame(width: 56)
+        }
+        .ozenGlassButton()
+        .accessibilityLabel(tr("ניקוי הכתוביות מהמסך", "Clear the captions from the screen"))
+        .accessibilityIdentifier("clearButton")
     }
 
     private var settingsButton: some View {

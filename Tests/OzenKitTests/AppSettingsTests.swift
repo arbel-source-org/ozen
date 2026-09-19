@@ -343,4 +343,20 @@ struct SavedSpeakerTests {
         #expect(speakers.last?.profileIDs == [other.id])
         #expect(SavedSpeaker.grouping([]).isEmpty)
     }
+
+    @Test("the untouched ready-made phrases follow the app's language, an edited list does not")
+    func quickPhrasesFollowLanguage() {
+        let hebrew = AppSettings.defaultQuickPhrases
+        let english = AppSettings.defaultQuickPhrasesEnglish
+        #expect(hebrew.count == english.count)
+        // Stored as Hebrew until anyone chooses: English shows the English list.
+        #expect(AppSettings.displayedQuickPhrases(stored: hebrew, language: .english) == english)
+        #expect(AppSettings.displayedQuickPhrases(stored: hebrew, language: .hebrew) == hebrew)
+        // And back again.
+        #expect(AppSettings.displayedQuickPhrases(stored: english, language: .hebrew) == hebrew)
+        // A list she has changed is hers, in either language.
+        let edited = hebrew + ["תודה רבה"]
+        #expect(AppSettings.displayedQuickPhrases(stored: edited, language: .english) == edited)
+        #expect(AppSettings.displayedQuickPhrases(stored: [], language: .english).isEmpty)
+    }
 }

@@ -26,6 +26,10 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
     private let synthesizer = AVSpeechSynthesizer()
     private let delegate = SpeakingDelegate()
     @ObservationIgnored private var voice: AVSpeechSynthesisVoice?
+    /// For text with no Hebrew in it: English phrases on the Say screen, or
+    /// anything typed in English. Spoken by the Hebrew voice they'd be mangled.
+    @ObservationIgnored private var englishVoice: AVSpeechSynthesisVoice?
+    private static let englishLanguageCode = "en-US"
     private let languageCode: String
 
     public init(languageCode: String = "he-IL") {
@@ -53,10 +57,13 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
         // main actor just to read this instance's own immutable property.
         let languageCode = self.languageCode
         Task { [weak self] in
-            let identifier = await Task.detached(priority: .utility) {
-                SpeechSynthesizer.bestVoiceIdentifier(for: languageCode)
+            let identifiers = await Task.detached(priority: .utility) {
+                (SpeechSynthesizer.bestVoiceIdentifier(for: languageCode),
+                 SpeechSynthesizer.bestVoiceIdentifier(for: SpeechSynthesizer.englishLanguageCode))
             }.value
-            guard let self, let identifier, let voice = AVSpeechSynthesisVoice(identifier: identifier) else { return }
+            guard let self else { return }
+            if let english = identifiers.1 { self.englishVoice = AVSpeechSynthesisVoice(identifier: english) }
+            guard let identifier = identifiers.0, let voice = AVSpeechSynthesisVoice(identifier: identifier) else { return }
             self.voice = voice
             self.hasHebrewVoice = voice.language == languageCode
         }
@@ -78,8 +85,12 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
         }
         let utterance = AVSpeechUtterance(string: trimmed)
         // Spoken before the voice list was read: ask for the language, so
-        // it never falls back to an English voice.
-        utterance.voice = voice ?? AVSpeechSynthesisVoice(language: languageCode)
+        // Hebrew never falls back to an English voice.
+        if SpeechSynthesizer.containsHebrew(trimmed) {
+            utterance.voice = voice ?? AVSpeechSynthesisVoice(language: languageCode)
+        } else {
+            utterance.voice = englishVoice ?? AVSpeechSynthesisVoice(language: SpeechSynthesizer.englishLanguageCode)
+        }
         utterance.rate = min(max(rate, AVSpeechUtteranceMinimumSpeechRate), AVSpeechUtteranceMaximumSpeechRate)
         utterance.prefersAssistiveTechnologySettings = false
         synthesizer.speak(utterance)
@@ -87,6 +98,11 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
 
     public func stop() {
         synthesizer.stopSpeaking(at: .immediate)
+    }
+
+    /// Any Hebrew letter (the Hebrew block, U+0590...U+05FF) makes it Hebrew.
+    nonisolated static func containsHebrew(_ text: String) -> Bool {
+        text.unicodeScalars.contains { (0x0590...0x05FF).contains($0.value) }
     }
 }
 

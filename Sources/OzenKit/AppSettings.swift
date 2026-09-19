@@ -318,6 +318,35 @@ public struct AppSettings: Codable, Sendable, Equatable {
         "בואו נדבר אחד אחד",
     ]
 
+    /// The same ready-made phrases in English, for someone who has the app
+    /// in English. Same order and meaning as `defaultQuickPhrases`.
+    public static let defaultQuickPhrasesEnglish: [String] = [
+        "Wait, I didn't catch that",
+        "Could you say that again?",
+        "Slower, please",
+        "Please speak closer to the phone",
+        "I'm reading the captions, give me a moment",
+        "Yes",
+        "No",
+        "Thank you",
+        "Let's talk one at a time",
+    ]
+
+    public static func defaultQuickPhrases(for language: UILanguage) -> [String] {
+        language == .english ? defaultQuickPhrasesEnglish : defaultQuickPhrases
+    }
+
+    /// What the Say screen lists. A list nobody has edited is one of the two
+    /// built-in lists, and follows the app's language: it is stored as
+    /// Hebrew before anyone chooses otherwise, so without this, switching
+    /// the app to English left every ready-made phrase in Hebrew. A list she
+    /// has changed in any way is hers and is shown as it is.
+    public static func displayedQuickPhrases(stored: [String], language: UILanguage) -> [String] {
+        stored == defaultQuickPhrases || stored == defaultQuickPhrasesEnglish
+            ? defaultQuickPhrases(for: language)
+            : stored
+    }
+
     public static let `default` = AppSettings(
         engine: .whisperKit,
         languageCode: "he",
