@@ -20,6 +20,22 @@ jobs:
           # The whole history and its tags, so the release notes can list
           # what changed since the previous build.
           fetch-depth: 0
+      - name: Use the newest Xcode 26
+        # Liquid Glass (GlassStyle.swift) is compiled only with the iOS 26 SDK,
+        # `#if compiler(>=6.2)`. macos-15's default Xcode is 16.x, which builds
+        # the app without it and falls back to plain material, and the app then
+        # also keeps the pre-iOS 26 look on an iOS 26 phone. So pick Xcode 26 and
+        # stop the build if the runner does not have one.
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$XCODE" ]; then
+            echo "No Xcode 26 on this runner; the app would build without Liquid Glass." >&2
+            ls -d /Applications/Xcode*.app >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
