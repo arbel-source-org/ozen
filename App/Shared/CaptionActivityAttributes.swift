@@ -26,7 +26,7 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
     }
 }
 
-extension CaptionActivityAttributes.ContentState {
+nonisolated extension CaptionActivityAttributes.ContentState {
     enum CodingKeys: String, CodingKey {
         case lines, status, ageNote, large
     }
