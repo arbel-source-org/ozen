@@ -38,6 +38,31 @@ things were broken along the way, none of them in Ozen itself.
    Auto-Lock to Never while installing, `sudo systemctl restart usbmuxd`, and run
    the same command again — the 2FA code will be asked for again.
 
+## On iOS 26: the app installs but will not open
+
+Seen on 2026-09-19 with an iPhone 13 mini on iOS 26.5.2 (Developer Mode on):
+AltServer signs and installs Ozen without an error, but tapping the icon does
+nothing, or the app closes at once. `idevicesyslog` shows why: the developer
+profile is accepted (`AMFI: profile validated the code signature`) and then the
+kernel's code-signature monitor refuses the binary (`TXM [Error]: CodeSignature`),
+so SpringBoard reports `Bootstrapping failed ... Launch failed.` There is no
+crash report, because the process never starts. Nothing in the app or its build
+settings changed between the builds that opened and the ones that did not.
+
+AltServer also prints `Error parsing entitlements` for the app and the widget
+while signing. That is the most likely place to look, but it is not proven to
+be the cause.
+
+To see it for yourself, leave `idevicesyslog` running, open the app, and search
+the output for `Ozen`, `amfid` and `TXM`.
+
+What to try instead, not yet confirmed to fix it: sign and install with
+[Impactor](https://github.com/claration/Impactor) (its Linux AppImage),
+which uses Apple's newer signing flow. Open the AppImage, drop `Ozen.ipa` on it,
+choose the phone, sign in with the same Apple ID (an app-specific password), and
+install. Keep the same Apple ID so settings and the downloaded model survive.
+This section will say so here once someone has confirmed it opens.
+
 ## Getting the build
 
 Each run of the release workflow attaches `Ozen.ipa` to a GitHub Release named
