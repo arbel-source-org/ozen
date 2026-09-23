@@ -466,7 +466,7 @@ struct SettingsView: View {
                             viewModel.quietHours = hours
                         }
                     ), in: 0...23) {
-                        LabeledContent(tr("מתחילות", "Starts"), value: Self.hourLabel(viewModel.quietHours.startHour))
+                        quietHoursRow(tr("מתחילות", "Starts"), hour: viewModel.quietHours.startHour)
                     }
                     Stepper(value: Binding(
                         get: { viewModel.quietHours.endHour },
@@ -476,7 +476,7 @@ struct SettingsView: View {
                             viewModel.quietHours = hours
                         }
                     ), in: 0...23) {
-                        LabeledContent(tr("מסתיימות", "Ends"), value: Self.hourLabel(viewModel.quietHours.endHour))
+                        quietHoursRow(tr("מסתיימות", "Ends"), hour: viewModel.quietHours.endHour)
                     }
                     Text(tr("צלילים דחופים כמו אזעקה עדיין יתריעו.", "Urgent sounds like a siren still alert."))
                         .font(.footnote)
@@ -729,6 +729,24 @@ struct SettingsView: View {
         let version = info["CFBundleShortVersionString"] as? String ?? "?"
         let build = info["CFBundleVersion"] as? String ?? "?"
         return "\(version) (\(build))"
+    }
+
+    /// At the largest text sizes the stepper leaves little room beside it:
+    /// side by side, "Starts" broke mid-word and "22:00" split in two. The
+    /// hour goes under the word there, and never wraps.
+    private func quietHoursRow(_ title: String, hour: Int) -> some View {
+        sliderLabelLayout {
+            // One word: shrink a little rather than break it in the middle.
+            Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            if !dynamicTypeSize.isAccessibilitySize { Spacer() }
+            Text(Self.hourLabel(hour))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .fixedSize()
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private static func hourLabel(_ hour: Int) -> String {
