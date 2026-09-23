@@ -149,7 +149,7 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "quiet hours: the settings button never appeared")
         settingsButton.tap()
 
-        let footnote = scrollDownUntilVisible(app, identifier: "quietHoursFootnote")
+        let footnote = scrollDownUntilVisible(app, identifier: "quietHoursFootnote", type: .staticText)
         XCTAssertTrue(footnote.exists, "quiet hours: the steppers' footnote never appeared")
         capture(app, name: "quiet-hours-on-accessibility-text")
     }
@@ -312,8 +312,12 @@ final class OzenScreenshotUITests: XCTestCase {
     /// `settings-accessibility-text-page1.png` showed the real cause: at
     /// this text size, a single picker option already fills most of the
     /// screen, so the actual row is nowhere close to visible yet.
-    private func scrollDownUntilVisible(_ app: XCUIApplication, identifier: String, maxSwipes: Int = 15) -> XCUIElement {
-        let element = app.descendants(matching: .any)[identifier]
+    ///
+    /// `type` narrows the query: matching `.any` walks every element on
+    /// every check, and at the largest text size a long Form took XCTest
+    /// past its own query timeout ("Timed out while evaluating UI query").
+    private func scrollDownUntilVisible(_ app: XCUIApplication, identifier: String, type: XCUIElement.ElementType = .any, maxSwipes: Int = 15) -> XCUIElement {
+        let element = app.descendants(matching: type)[identifier]
         var attempts = 0
         while !(element.exists && element.isHittable), attempts < maxSwipes {
             app.swipeUp()
