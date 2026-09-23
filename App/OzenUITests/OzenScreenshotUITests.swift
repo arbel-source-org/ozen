@@ -27,7 +27,13 @@ final class OzenScreenshotUITests: XCTestCase {
     private func capture(_ app: XCUIApplication, name: String) {
         let data = app.screenshot().pngRepresentation
         let url = Self.outputDirectory.appendingPathComponent("\(name).png")
-        try? data.write(to: url)
+        // A screenshot that silently isn't written leaves the job green
+        // with nothing to look at, which is the one thing it exists for.
+        do {
+            try data.write(to: url)
+        } catch {
+            XCTFail("\(name): could not write the screenshot to \(url.path): \(error)")
+        }
     }
 
     private func run(variant: String, name: String) throws {
