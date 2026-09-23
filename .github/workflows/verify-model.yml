@@ -41,7 +41,8 @@ jobs:
 
       - name: Build WhisperKit's command line
         run: |
-          git clone --depth 1 https://github.com/argmaxinc/WhisperKit.git /tmp/WhisperKit
+          # The same release the app is built against (Package.swift).
+          git clone --depth 1 --branch v1.1.0 https://github.com/argmaxinc/argmax-oss-swift.git /tmp/WhisperKit
           cd /tmp/WhisperKit
           swift build -c release --product whisperkit-cli
 

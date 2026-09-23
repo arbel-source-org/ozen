@@ -29,7 +29,10 @@ var targets: [Target] = [
 
 #if canImport(Darwin)
 dependencies.append(
-    .package(url: "https://github.com/argmaxinc/WhisperKit.git", from: "0.9.0")
+    // WhisperKit graduated into the Argmax open-source SDK at 1.0. 1.1 fixes
+    // empty transcriptions whenever promptTokens are set, which is every
+    // pass once the names list has an entry.
+    .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "1.1.0")
 )
 products.append(.library(name: "OzenPlatform", targets: ["OzenPlatform"]))
 targets.append(contentsOf: [
@@ -37,7 +40,7 @@ targets.append(contentsOf: [
         name: "OzenPlatform",
         dependencies: [
             "OzenKit",
-            .product(name: "WhisperKit", package: "WhisperKit"),
+            .product(name: "WhisperKit", package: "argmax-oss-swift"),
         ],
         resources: [.copy("CAMPlusPlus.mlpackage")],
         swiftSettings: [.swiftLanguageMode(.v6)]

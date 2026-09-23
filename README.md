@@ -29,7 +29,7 @@ things, for Hebrew conversation, entirely on-device.
   on-device via CoreML. On a LibriSpeech clustering test it separates a
   simulated four-person table correctly 96.8% of the time, against 45.8%
   for the classic MFCC print it replaced.
-- **Two swappable on-device engines, plus the cloud** — [WhisperKit](https://github.com/argmaxinc/WhisperKit)
+- **Two swappable on-device engines, plus the cloud** — [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift)
   (Whisper via CoreML) and Apple's own on-device Speech framework — picked
   in Settings, since which one is actually better for Hebrew on a given
   device is an open, testable question rather than an assumption.

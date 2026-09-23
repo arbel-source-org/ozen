@@ -481,7 +481,6 @@ public actor WhisperKitEngine: TranscriptionEngine {
             temperature: 0,
             temperatureFallbackCount: 0,
             usePrefillPrompt: true,
-            usePrefillCache: true,
             detectLanguage: false,
             skipSpecialTokens: true,
             withoutTimestamps: true,

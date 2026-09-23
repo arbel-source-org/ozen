@@ -714,7 +714,7 @@ struct SettingsView: View {
             Link(destination: URL(string: "https://github.com/arbelonson-source/ozen")!) {
                 Label(tr("קוד המקור בגיטהאב", "Source code on GitHub"), systemImage: "chevron.left.forwardslash.chevron.right")
             }
-            Link(destination: URL(string: "https://github.com/argmaxinc/WhisperKit")!) {
+            Link(destination: URL(string: "https://github.com/argmaxinc/argmax-oss-swift")!) {
                 Label(tr("WhisperKit (MIT) — מנוע Whisper", "WhisperKit (MIT) — Whisper engine"), systemImage: "shippingbox")
             }
         } header: {
