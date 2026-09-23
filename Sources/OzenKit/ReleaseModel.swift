@@ -124,7 +124,9 @@ public protocol ReleaseFileFetching: Sendable {
 /// Downloads a model published as release assets into a model folder,
 /// file by file, continuing where a cut-off download stopped.
 public struct ReleaseModelDownloader: Sendable {
-    public static let defaultRepository = "arbelonson-source/ozen"
+    /// Public on its own so the phone can download without signing in,
+    /// whether or not the app's code repository is public.
+    public static let defaultRepository = "arbel-source-org/ozen-models"
 
     public var repository: String
     public var fetcher: any ReleaseFileFetching

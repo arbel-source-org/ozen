@@ -40,8 +40,9 @@ things, for Hebrew conversation, entirely on-device.
   8 bits (819 MB). On 90 Hebrew test clips it got 6.6% of words wrong on
   lecture speech and 21% on read sentences, against 9.7% and 31% for
   OpenAI's Turbo and 27% and 48% for Small. Nobody publishes it in
-  WhisperKit's format, so it is downloaded from this repository's own
-  releases (`scripts/model-release/`) and compiled on the phone.
+  WhisperKit's format, so it is downloaded from the releases of the
+  public `ozen-models` repository (`scripts/model-release/`) and compiled
+  on the phone.
 - **Optional cloud captions** for when the phone's models are too slow or
   lose track of several people talking: each sentence goes to a speech
   model through [OpenRouter](https://openrouter.ai) with a key pasted into

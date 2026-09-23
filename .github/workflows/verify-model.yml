@@ -26,7 +26,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.tag }}
-        run: gh release download "$TAG" --dir assets
+        run: gh release download "$TAG" -R arbel-source-org/ozen-models --dir assets
 
       - name: Rebuild the model folder from the manifest
         run: python3 scripts/model-release/manifest.py unpack assets model

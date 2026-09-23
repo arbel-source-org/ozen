@@ -72,7 +72,7 @@ downloading needs an account with access: sign in on the Releases page, or
 with the GitHub CLI logged in,
 
 ```
-gh release download v0.2.N -R arbelonson-source/ozen -p Ozen.ipa --clobber
+gh release download v0.2.N -R arbel-source-org/ozen -p Ozen.ipa --clobber
 ```
 
 ## The command
