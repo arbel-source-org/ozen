@@ -62,8 +62,8 @@ leave the phone.
   conversation), or when the screen is cleared, unnamed voices are numbered
   from "Speaker 1" (dover 1) again, so a phone left listening all week
   doesn't end up at speaker 140. Lines already on screen keep their labels.
-  To have someone always called by name, tap one of their lines and type
-  the name.
+  To have someone always called by name, press and hold one of their
+  lines, choose "Who is speaking?" (mi medaber?) and type the name.
 - **A line across the captions: "Said while the app was closed · 12 lines"
   (ne'emar k'she-ha-aplikatzia hayta sgura).** Captions kept coming while
   the phone was locked or another app was open; the line shows where the

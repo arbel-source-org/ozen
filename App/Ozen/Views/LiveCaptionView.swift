@@ -529,7 +529,9 @@ struct LiveCaptionView: View {
             marksUncertainWords: viewModel.display.markUncertainLines
         )
         .id(segment.id)
-        .onTapGesture { namingSegment = segment }
+        // No plain-tap action: a finger brushing the text while reading, or
+        // handing the phone over, used to open the naming sheet and its
+        // keyboard mid-conversation. Naming lives in the hold menu below.
         .contextMenu {
             let starred = viewModel.starredSegmentIDs.contains(segment.id)
             Button {
@@ -733,7 +735,7 @@ struct LiveCaptionView: View {
                 .font(.system(size: liveDisplay.fontSize, weight: .medium))
                 .foregroundStyle(theme.text)
             Text(viewModel.isListening
-                 ? tr("כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. הקישו על שורה כדי לתת שם לדובר, לחצו עליה ארוכות כדי לסמן אותה כחשובה, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט.", "When someone talks, the words will appear here in real time. Tap a line to name the speaker, press and hold it to mark it as important, and pinch with two fingers to make the text bigger or smaller.")
+                 ? tr("כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. לחצו ארוכות על שורה כדי לסמן אותה כחשובה או לתת שם לדובר, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט.", "When someone talks, the words will appear here in real time. Press and hold a line to mark it as important or name the speaker, and pinch with two fingers to make the text bigger or smaller.")
                  : tr("אפשר לבחור מיקרופון בכפתור למטה מימין ולשנות מנוע תמלול בהגדרות.", "You can choose a microphone with the button at the bottom right, and change the transcription engine in Settings."))
                 .font(.system(size: max(17, liveDisplay.fontSize * 0.6)))
                 .foregroundStyle(theme.pendingText)
