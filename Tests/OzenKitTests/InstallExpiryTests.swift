@@ -115,7 +115,7 @@ struct InstallExpiryTests {
             let content = InstallExpiry.reminderContent(expiresAt: expiry, remindAt: monday(19, 59, plusDays: 5), utcOffsetSeconds: israel)
             #expect(content.title == "Ozen will stop opening on Monday at 07:24")
             #expect(content.body == InstallExpiry.warningDetail)
-            #expect(InstallExpiry.warningDetail.contains("reinstalled"))
+            #expect(InstallExpiry.warningDetail.contains("reinstall"))
         }
     }
 

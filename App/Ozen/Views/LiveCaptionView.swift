@@ -958,7 +958,9 @@ struct LiveCaptionView: View {
         } label: {
             Image(systemName: "chevron.up")
                 .font(.title3.weight(.semibold))
-                .frame(width: 64, height: 40)
+                // The one control left once the bar hides: at least the
+                // 44-point target a shaky finger needs.
+                .frame(width: 64, height: 44)
                 .ozenGlass(in: Capsule(), interactive: true)
         }
         .buttonStyle(.plain)
