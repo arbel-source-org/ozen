@@ -57,6 +57,17 @@ struct PhasePresentationTests {
         #expect(key.isBusy == false)
     }
 
+    @Test("the phone's own model covering for the cloud still reads as listening, and says why")
+    func coveringForCloud() {
+        let covering = PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: false, coveringForCloud: true)
+        let plain = PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: false)
+        #expect(covering.title == plain.title)
+        #expect(covering.action == .pause)
+        #expect(covering.tint == .green)
+        #expect(covering.detail != plain.detail)
+        #expect(covering.detail?.contains("בענן") == true)
+    }
+
     @Test("paused while the phone talks says so, and that captions come back by themselves")
     func pausedForSpeech() {
         let speaking = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false, pausedForSpeech: true)

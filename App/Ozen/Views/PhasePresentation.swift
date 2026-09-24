@@ -36,7 +36,8 @@ struct PhasePresentation {
         interruptedBySystem: Bool,
         scheduledRetry: ScheduledRetry? = nil,
         downloadSecondsRemaining: Double? = nil,
-        pausedForSpeech: Bool = false
+        pausedForSpeech: Bool = false,
+        coveringForCloud: Bool = false
     ) {
         if interruptedBySystem {
             self.init(
@@ -61,6 +62,11 @@ struct PhasePresentation {
 
         case .startingAudio:
             self.init(title: tr("מפעיל את המיקרופון", "Starting the microphone"), detail: nil, systemImage: "mic", tint: .yellow, isBusy: true)
+
+        case .listening where coveringForCloud:
+            // Still captioning, so still green: the words keep coming, only
+            // from the phone's own model while the cloud can't be used.
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("הכתוביות בענן לא זמינות, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "Cloud captions aren’t available, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
         case .listening:
             self.init(title: tr("מקשיב", "Listening"), detail: tr("הקישו להשהיה", "Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)

@@ -129,8 +129,13 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
         return availability
     }
 
+    private(set) var pendingDownloadChecks = 0
+
     func pendingDownloadMegabytes() async -> Int? {
-        lock.withLock { pendingDownload }
+        lock.withLock {
+            pendingDownloadChecks += 1
+            return pendingDownload
+        }
     }
 
     func stream(languageCode: String, audio: AsyncStream<[Float]>) -> AsyncThrowingStream<TranscriptToken, Error> {

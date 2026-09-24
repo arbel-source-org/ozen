@@ -49,7 +49,10 @@ things, for Hebrew conversation, entirely on-device.
   Settings (stored only in the phone's Keychain). On Hebrew test recordings
   it got 29% of words wrong against 39% for Whisper large-v3 turbo and 60%
   for Whisper small, and puts each change of speaker on its own line. About
-  15 cents per hour of continuous speech. See `CloudSpeech`.
+  15 cents per hour of continuous speech. See `CloudSpeech`. If the key
+  stops working, the credit runs out or the internet goes, a Whisper
+  model already on the phone takes over and the status line says so
+  (`CloudCover`); captions don't stop for a billing problem.
 - **Hebrew or English interface**, following the phone's language or a
   choice in Settings. Every piece of text holds both versions side by side
   (`tr(hebrew, english)`, checked by `scripts/check-translations.py`);

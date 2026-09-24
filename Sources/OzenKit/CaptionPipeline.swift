@@ -69,6 +69,12 @@ public final class CaptionPipeline {
     /// The settings the running (or last-run) session was started with.
     /// Engine/model/language changes need a restart; input changes don't.
     public private(set) var activeSettings: AppSettings?
+    /// Cloud captions stopped for something only a person can fix (no
+    /// key, no credit) or no internet, and the phone's own model, already
+    /// downloaded, took over. Lasts until captions are next started with
+    /// the chosen settings; the saved choice itself is never changed.
+    public private(set) var isCoveringForCloud = false
+    private var nextStartCoversCloud = false
     /// Set while a failure is waiting to be retried automatically.
     public private(set) var scheduledRetry: ScheduledRetry?
     /// How long the model download has left at its current pace, while
@@ -199,6 +205,8 @@ public final class CaptionPipeline {
         let run = UUID()
         runID = run
         activeSettings = settings
+        isCoveringForCloud = nextStartCoversCloud
+        nextStartCoversCloud = false
         // The stored threshold is the person's own choice once they've
         // touched it, but at the untouched app default it's specifically
         // calibrated for CAM++; a silent fallback to a different embedder
@@ -1063,7 +1071,28 @@ public final class CaptionPipeline {
         let failure = PipelineFailure(kind: kind, detail: detail, engineUnavailability: engineUnavailability)
         phase = .failed(failure)
         logEvent(.failed(failure))
+        if let settings = activeSettings, let onPhone = CloudCover.phoneSettings(replacing: settings, after: failure) {
+            Task { [weak self] in await self?.coverForCloud(with: onPhone, after: failure) }
+            return
+        }
         scheduleAutoRecovery(for: failure)
+    }
+
+    /// See `isCoveringForCloud`. Only a model that is already on the phone
+    /// takes over: a surprise download of hundreds of megabytes is not a
+    /// fair way to find out the cloud stopped.
+    private func coverForCloud(with settings: AppSettings, after failure: PipelineFailure) async {
+        let engine = cachedEngine(for: settings)
+        let needsDownload = await engine.pendingDownloadMegabytes() != nil
+        // Someone may have stopped or restarted captions meanwhile.
+        guard case .failed(let current) = phase, current == failure else { return }
+        guard !needsDownload else {
+            scheduleAutoRecovery(for: failure)
+            return
+        }
+        logEvent(.note("cloud unavailable, the phone's own model took over"))
+        nextStartCoversCloud = true
+        await start(settings: settings)
     }
 
     // MARK: - Downloads and the network
