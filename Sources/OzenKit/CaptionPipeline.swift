@@ -984,6 +984,11 @@ public final class CaptionPipeline {
             // people talk. Chunks arriving meanwhile wait in the stream.
             let embedder = self.embedder
             let sampleRate = Self.sampleRate
+            // The line being written while this audio was heard, taken now:
+            // the first embedding loads the model and can take many seconds,
+            // and asking afterwards gave the voice to whichever line had
+            // started meanwhile, leaving the speaker's own line unnamed.
+            let heardDuring = stabilizer.segments.last(where: { !$0.isCommitted })?.id
             let computed = await Task.detached(priority: .userInitiated) {
                 embedder.embed(samples: window, sampleRate: sampleRate)
             }.value
@@ -999,7 +1004,7 @@ public final class CaptionPipeline {
             speakerClusters = clusterer.clusters
             recentSpeechCluster = (clusterID, now())
 
-            guard let currentUtteranceID = stabilizer.segments.last(where: { !$0.isCommitted })?.id else { continue }
+            guard let currentUtteranceID = heardDuring else { continue }
             utteranceClusterAssignments[currentUtteranceID] = clusterID
             // Writing an unchanged value still tells every observer the
             // transcript changed and redraws the caption list, every 1.5 s

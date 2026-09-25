@@ -179,6 +179,23 @@ struct FakeEmbedder: SpeakerEmbedding {
 
 struct TestError: Error {}
 
+/// Holds every embedding until the test lets it go, like the first one of
+/// a session while the model loads.
+final class GatedEmbedder: SpeakerEmbedding, @unchecked Sendable {
+    private let gate = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var entered = 0
+    var callsStarted: Int { lock.withLock { entered } }
+
+    func embed(samples: [Float], sampleRate: Double) -> [Float]? {
+        lock.withLock { entered += 1 }
+        gate.wait()
+        return FakeEmbedder().embed(samples: samples, sampleRate: sampleRate)
+    }
+
+    func release() { gate.signal() }
+}
+
 /// Scripted sound classifier: the test pushes observations by hand.
 final class FakeSoundDetector: SoundEventDetecting, @unchecked Sendable {
     private let lock = NSLock()
@@ -499,6 +516,30 @@ struct CaptionPipelineTokenTests {
         #expect(await eventually { pipeline.segments.first?.isCommitted == true })
         #expect(pipeline.segments.first?.text == "מה שלומך?")
         #expect(pipeline.stats.segmentsCommitted == 1)
+    }
+
+    @Test("a slow embedding names the line that was being said, not one that started meanwhile")
+    func slowEmbeddingKeepsItsLine() async {
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        let embedder = GatedEmbedder()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: embedder, recovery: .disabled)
+        await pipeline.start(settings: .default)
+
+        let first = UUID()
+        engine.emit(token(first, "שלום"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { embedder.callsStarted == 1 })
+
+        let second = UUID()
+        engine.emit(token(first, "שלום", final: true))
+        engine.emit(token(second, "מה נשמע"))
+        #expect(await eventually { pipeline.segments.count == 2 })
+        embedder.release()
+
+        #expect(await eventually { pipeline.segments.first?.speakerClusterID != nil })
+        #expect(pipeline.segments.last?.speakerClusterID == nil)
     }
 
     @Test("audio windows are embedded and the pending utterance gets a speaker cluster")
