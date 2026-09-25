@@ -473,8 +473,32 @@ public struct TranscriptHistoryStore: Sendable {
     /// one of them, in any order and on any line, so "rofe kadurim"
     /// ("doctor pills") finds the visit where the doctor spoke about pills
     /// three lines before naming them.
-    private static func searchWords(_ query: String) -> [String] {
-        normalizedForSearch(query).split(whereSeparator: \.isWhitespace).map(String.init)
+    private static func searchWords(_ query: String) -> [SearchWord] {
+        normalizedForSearch(query).split(whereSeparator: \.isWhitespace).map { SearchWord(String($0)) }
+    }
+
+    /// One word of a search. Saved text is searched for the word as typed,
+    /// which also finds it with a prefix attached ("rofe" finds "la-rofe",
+    /// to the doctor). The reverse needs help: "ha-rofe" (the doctor),
+    /// typed with the article as people naturally do, is also looked for
+    /// without it, so it finds "la-rofe" and a bare "rofe" too. Only when
+    /// three letters or more remain, so a short name that starts with that
+    /// letter is not cut down to something found everywhere.
+    struct SearchWord {
+        let forms: [String]
+
+        init(_ word: String) {
+            let withoutArticle = word.dropFirst()
+            if word.first == "\u{05D4}", withoutArticle.count >= 3 {
+                forms = [word, String(withoutArticle)]
+            } else {
+                forms = [word]
+            }
+        }
+
+        func found(in text: String) -> Bool {
+            forms.contains(where: text.contains)
+        }
     }
 
     /// The lines of a conversation that a search for `query` found, in
@@ -487,9 +511,9 @@ public struct TranscriptHistoryStore: Sendable {
         let lines = record.segments.map { segment in
             (id: segment.id, text: normalizedForSearch(segment.text) + "\n" + (segment.speakerName.map(normalizedForSearch) ?? ""))
         }
-        let holdingAll = lines.filter { line in words.allSatisfy(line.text.contains) }
+        let holdingAll = lines.filter { line in words.allSatisfy { $0.found(in: line.text) } }
         guard holdingAll.isEmpty else { return holdingAll.map(\.id) }
-        return lines.filter { line in words.contains(where: line.text.contains) }.map(\.id)
+        return lines.filter { line in words.contains { $0.found(in: line.text) } }.map(\.id)
     }
 
     public func listSummaries() -> [TranscriptSessionSummary] {
@@ -536,7 +560,7 @@ public struct TranscriptHistoryStore: Sendable {
                 // Fast path: the conversation's prepared search text says
                 // no, or says yes and its summary is ready.
                 if let text = cachedSearchText(forRecordFile: url) {
-                    guard words.allSatisfy(text.contains) else { return nil }
+                    guard words.allSatisfy({ $0.found(in: text) }) else { return nil }
                     if let summary = cachedSummary(forRecordFile: url) { return summary }
                 }
                 // Slow path, once per conversation: read it whole and write
@@ -546,7 +570,7 @@ public struct TranscriptHistoryStore: Sendable {
                 let text = Self.searchableText(of: record)
                 writeSummary(summary, forRecordFile: url)
                 writeSearchText(text, forRecordFile: url)
-                return words.allSatisfy(text.contains) ? summary : nil
+                return words.allSatisfy({ $0.found(in: text) }) ? summary : nil
             }
             .sorted { $0.startedAt > $1.startedAt }
     }

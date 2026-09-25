@@ -176,6 +176,24 @@ struct TranscriptHistoryTests {
         #expect(store.search("רופא שוקולד").isEmpty)
     }
 
+    @Test("a search word typed with the article also finds it with another prefix or none, but a short name is not cut down")
+    func searchLooksPastTheArticle() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "צריך ללכת לרופא מחר")]))
+        try store.save(record(startedAt: 200, segments: [segment(text: "רופא שיניים")]))
+        try store.save(record(startedAt: 300, segments: [segment(text: "פרדס גדול")]))
+
+        #expect(store.search("הרופא").count == 2)
+        #expect(store.search("הרופא מחר").count == 1)
+        #expect(store.search("הדס").isEmpty)
+
+        let loaded = try #require(store.load(id: store.search("מחר")[0].id))
+        #expect(TranscriptHistoryStore.matchingSegmentIDs(in: loaded, query: "הרופא") == loaded.segments.map(\.id))
+    }
+
     @Test("search matches on speaker name even when the text doesn't contain the query")
     func searchMatchesSpeakerNames() throws {
         let dir = makeTempDirectory()
