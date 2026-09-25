@@ -212,7 +212,7 @@ struct OnboardingView: View {
         OnboardingPage(symbol: "bell.and.waves.left.and.right", title: tr("כשקוראים לך", "When you’re called")) {
             Text(tr("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.", "When someone says your name, the phone vibrates and the line is highlighted, even when no one is looking at the screen."))
             NameAlertForm(viewModel: viewModel)
-            Text(tr("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.", "More words can be added or removed in Settings ← Notifications ← Important words."))
+            Text(tr("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.", "More words can be added or removed in Settings → Alerts → Important words."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

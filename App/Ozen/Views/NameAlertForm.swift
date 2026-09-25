@@ -83,7 +83,7 @@ struct NameAlertSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(tr("כשמישהו אומר את השם שלך, הטלפון רוטט והשורה מסומנת, גם כשלא מסתכלים על המסך.", "When someone says your name, the phone vibrates and the line is marked, even when you’re not looking at the screen."))
                     NameAlertForm(viewModel: viewModel)
-                    Text(tr("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.", "You can add more words, or delete them, in Settings ← Alerts ← Important words."))
+                    Text(tr("אפשר להוסיף עוד מילים, או למחוק, בהגדרות ← התראות ← מילים חשובות.", "You can add more words, or delete them, in Settings → Alerts → Important words."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

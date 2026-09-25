@@ -19,6 +19,15 @@ struct VocabularyTests {
         #expect(VocabularyHints.normalized(many).count == VocabularyHints.maximumTerms)
     }
 
+    @Test("a typed word already on the list is found, ignoring case, niqqud and spaces")
+    func listedEntry() {
+        let terms = ["Ruti", "אבי"]
+        #expect(VocabularyHints.listedEntry(matching: "  ruti ", in: terms) == "Ruti")
+        #expect(VocabularyHints.listedEntry(matching: "אָבִי", in: terms) == "אבי")
+        #expect(VocabularyHints.listedEntry(matching: "Rotem", in: terms) == nil)
+        #expect(VocabularyHints.listedEntry(matching: "   ", in: terms) == nil)
+    }
+
     @Test("the Whisper prompt is a comma list ending in a period, or empty when there is nothing to say")
     func prompt() {
         #expect(VocabularyHints.whisperPrompt([]) == "")

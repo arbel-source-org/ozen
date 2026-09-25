@@ -29,6 +29,16 @@ public enum VocabularyHints {
         return result
     }
 
+    /// The entry already on the list that `term` would duplicate, compared
+    /// the way `normalized` compares, so the screen can say so instead of
+    /// clearing the field as if the word had been added.
+    public static func listedEntry(matching term: String, in terms: [String]) -> String? {
+        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = HebrewText.normalize(String(trimmed.prefix(maximumTermLength))).lowercased()
+        guard !key.isEmpty else { return nil }
+        return terms.first { HebrewText.normalize($0).lowercased() == key }
+    }
+
     /// The text Whisper is primed with. A plain comma-separated list is
     /// what the model was trained to treat as "previous context": it
     /// biases spelling towards these forms without the model trying to

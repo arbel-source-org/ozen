@@ -138,7 +138,7 @@ struct TypeToSpeakView: View {
             .accessibilityIdentifier("bigTextButton")
 
             if !viewModel.hasHebrewVoice {
-                Label(tr("אין קול עברי מותקן. הגדרות ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice installed. Settings ← Accessibility ← Spoken Content ← Voices ← Hebrew."), systemImage: "exclamationmark.triangle")
+                Label(tr("אין קול עברי מותקן. הגדרות ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice installed. Settings → Accessibility → Spoken Content → Voices → Hebrew."), systemImage: "exclamationmark.triangle")
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }

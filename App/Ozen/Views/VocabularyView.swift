@@ -21,8 +21,17 @@ struct VocabularyView: View {
                             .frame(minWidth: 44, minHeight: 44)
                             .contentShape(Rectangle())
                     }
-                    .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty || listed != nil || isFull)
                     .accessibilityLabel(tr("הוספה", "Add"))
+                }
+                if let listed {
+                    Text(tr("\"\(listed)\" כבר ברשימה.", "“\(listed)” is already in the list."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else if isFull {
+                    Text(tr("הרשימה מלאה. מחקו מילה כדי להוסיף אחרת.", "The list is full. Delete a word to add another."))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             } footer: {
                 Text(tr("שמות של בני משפחה, שכנים, רופאים, תרופות, מקומות — כל מילה שהכתוביות מתקשות איתה. הראשונים ברשימה חשובים ביותר.", "Names of family members, neighbors, doctors, medicines, places — any word the captions struggle with. The first ones on the list matter most."))
@@ -85,7 +94,16 @@ struct VocabularyView: View {
         return VocabularyHints.normalized(vocabulary + names) != vocabulary
     }
 
+    private var listed: String? {
+        VocabularyHints.listedEntry(matching: newTerm, in: viewModel.vocabulary)
+    }
+
+    private var isFull: Bool {
+        viewModel.vocabulary.count >= VocabularyHints.maximumTerms
+    }
+
     private func add() {
+        guard listed == nil, !isFull else { return }
         viewModel.addVocabularyTerm(newTerm)
         newTerm = ""
     }
