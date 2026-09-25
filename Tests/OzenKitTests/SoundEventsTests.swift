@@ -90,6 +90,15 @@ struct SoundEventsTests {
         #expect(afterReset != nil)
     }
 
+    @Test("a clock set back an hour doesn't hold back a new siren")
+    func clockSetBack() {
+        var policy = SoundEventPolicy(cooldownSeconds: 20)
+        let before = policy.evaluate(reading("civil_defense_siren", at: 10_000))
+        let afterTheClockWentBack = policy.evaluate(reading("civil_defense_siren", at: 10_000 - 3_600 + 30))
+        #expect(before != nil)
+        #expect(afterTheClockWentBack != nil)
+    }
+
     @Test("two catalog entries shown as the same sound share one cooldown, not two")
     func synonymIdentifiersShareCooldown() {
         var policy = SoundEventPolicy(cooldownSeconds: 20)

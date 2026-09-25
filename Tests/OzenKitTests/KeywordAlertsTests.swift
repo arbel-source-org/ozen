@@ -194,6 +194,21 @@ struct KeywordAlertDeduplicatorTests {
         #expect(secondReported[0].wordIndex == 3)
     }
 
+    @Test("a later pass that drops an earlier word moves the name, and it is still the same mention")
+    func revisionThatShiftsTheWordIsNotANewMention() {
+        let alert = KeywordAlert(phrase: "סבתא")
+        let matcher = KeywordAlertMatcher(alerts: [alert])
+        var deduplicator = KeywordAlertDeduplicator()
+        let utteranceID = UUID()
+
+        let first = deduplicator.newMatches(utteranceID: utteranceID, matches: matcher.matches(in: "אה בקיצור סבתא התקשרה"))
+        #expect(first.count == 1)
+        let revised = deduplicator.newMatches(utteranceID: utteranceID, matches: matcher.matches(in: "אה סבתא התקשרה"))
+        #expect(revised.isEmpty)
+        let longer = deduplicator.newMatches(utteranceID: utteranceID, matches: matcher.matches(in: "בקיצור אה סבתא התקשרה אתמול"))
+        #expect(longer.isEmpty)
+    }
+
     @Test("a different utterance fires again for the same keyword")
     func differentUtteranceFiresAgain() {
         let alert = KeywordAlert(phrase: "סבתא")
@@ -315,6 +330,16 @@ struct KeywordAttentionPolicyTests {
         // 15 s after the buzz, not after the quiet mention at 110.
         let fifteenSecondsAfterTheBuzz = policy.claimAttention(for: hit(name, at: 115))
         #expect(fifteenSecondsAfterTheBuzz)
+    }
+
+    @Test("a clock set back an hour doesn't hold back the next time her name is said")
+    func clockSetBack() {
+        var policy = KeywordAttentionPolicy(cooldownSeconds: 15)
+        let name = UUID()
+        let before = policy.claimAttention(for: hit(name, at: 10_000))
+        #expect(before)
+        let afterTheClockWentBack = policy.claimAttention(for: hit(name, at: 10_000 - 3_600 + 30))
+        #expect(afterTheClockWentBack)
     }
 
     @Test("a different word is not held back by the first one")

@@ -243,7 +243,10 @@ public struct SoundEventPolicy: Sendable, Equatable {
         // or a ring the classifier flips between the two labels on
         // defeats the cooldown entirely — two banners and two buzzes for
         // what the user heard as one ring.
-        if let last = lastAlertAt[event.name], observation.timestamp - last < cooldownSeconds {
+        // Wall-clock time can go backward (daylight saving ending, an NTP
+        // sync); `>= last` keeps a jump from holding back a new siren for
+        // as long as the jump, as in `BackgroundAlertPolicy`.
+        if let last = lastAlertAt[event.name], observation.timestamp >= last, observation.timestamp - last < cooldownSeconds {
             return nil
         }
         lastAlertAt[event.name] = observation.timestamp

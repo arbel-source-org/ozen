@@ -228,11 +228,13 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
 /// without this, buzzing/highlighting would fire again on every single
 /// token the engine emits for the same utterance instead of once when the
 /// keyword first appears.
+///
+/// Counted per word rather than keyed on its position: a later pass that
+/// drops a filler word earlier in the sentence moves "savta" from the
+/// third word to the second, and by position that read as a new mention,
+/// a second buzz for one she already heard. The second "savta" in a line
+/// is still a second mention.
 public struct KeywordAlertDeduplicator: Sendable {
-    private struct MatchKey: Hashable, Sendable {
-        let alertID: UUID
-        let wordIndex: Int
-    }
 
     /// How many utterances' worth of "already reported" state to keep.
     /// A live-captioning session can run for hours, and nothing ever tells
@@ -243,7 +245,8 @@ public struct KeywordAlertDeduplicator: Sendable {
     /// out of view, which is a cosmetic edge case, not a correctness one.
     public static let maxTrackedUtterances = 64
 
-    private var reportedByUtterance: [UUID: Set<MatchKey>] = [:]
+    /// For each utterance, how many mentions of each word were reported.
+    private var reportedByUtterance: [UUID: [UUID: Int]] = [:]
     /// Oldest-first order of tracked utterance ids, used only to know
     /// which one to evict once the cap is hit.
     private var trackingOrder: [UUID] = []
@@ -252,18 +255,22 @@ public struct KeywordAlertDeduplicator: Sendable {
 
     @discardableResult
     public mutating func newMatches(utteranceID: UUID, matches: [KeywordMatch]) -> [KeywordMatch] {
-        var alreadyReported = reportedByUtterance[utteranceID] ?? []
+        var reportedCounts = reportedByUtterance[utteranceID] ?? [:]
         let isNewUtterance = reportedByUtterance[utteranceID] == nil
 
         var fresh: [KeywordMatch] = []
-        for match in matches {
-            let key = MatchKey(alertID: match.alertID, wordIndex: match.wordIndex)
-            if !alreadyReported.contains(key) {
-                alreadyReported.insert(key)
+        var seenThisPass: [UUID: Int] = [:]
+        for match in matches.sorted(by: { $0.wordIndex < $1.wordIndex }) {
+            let ordinal = seenThisPass[match.alertID, default: 0]
+            seenThisPass[match.alertID] = ordinal + 1
+            if ordinal >= reportedCounts[match.alertID, default: 0] {
                 fresh.append(match)
             }
         }
-        reportedByUtterance[utteranceID] = alreadyReported
+        for (alertID, count) in seenThisPass {
+            reportedCounts[alertID] = max(reportedCounts[alertID, default: 0], count)
+        }
+        reportedByUtterance[utteranceID] = reportedCounts
 
         if isNewUtterance {
             trackingOrder.append(utteranceID)
@@ -307,7 +314,9 @@ public struct KeywordAttentionPolicy: Sendable, Equatable {
     /// Whether this hit should buzz and show, recording it if so.
     public mutating func claimAttention(for hit: KeywordHit) -> Bool {
         let alertID = hit.match.alertID
-        if let last = lastAttentionAt[alertID], hit.timestamp - last < cooldownSeconds {
+        // See `SoundEventPolicy.evaluate`: a clock set back must not
+        // silence her name for as long as it was set back.
+        if let last = lastAttentionAt[alertID], hit.timestamp >= last, hit.timestamp - last < cooldownSeconds {
             return false
         }
         lastAttentionAt[alertID] = hit.timestamp
