@@ -220,9 +220,12 @@ public struct TranscriptSessionSummary: Codable, Sendable, Equatable, Identifiab
         self.lastLineAt = lastLineAt
     }
 
+    /// Up to the last line when the conversation was never closed: the
+    /// app ended or was put away mid-conversation, and nothing goes back
+    /// to close a record, so its row showed no length forever.
     public var durationSeconds: TimeInterval? {
-        guard let endedAt else { return nil }
-        return endedAt - startedAt
+        guard let end = endedAt ?? lastLineAt else { return nil }
+        return max(0, end - startedAt)
     }
 }
 

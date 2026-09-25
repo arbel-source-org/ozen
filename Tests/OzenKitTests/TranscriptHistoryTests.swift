@@ -934,3 +934,24 @@ struct TranscriptHistoryTitledExportTests {
         #expect(TranscriptHistoryStore.exportText(record) == "שיחה מתאריך 01.01.1970\n\n\u{200F}[00:00:00] OK, נתראה מחר\n[00:00:00] דנה: OK, נתראה מחר")
     }
 }
+
+@Suite("A conversation's length in the history list")
+struct ConversationLengthTests {
+    @Test("a conversation cut off when the app closed is as long as its last line, not unknown")
+    func cutOffConversation() {
+        let summary = TranscriptSessionSummary(id: UUID(), startedAt: 1_000, endedAt: nil, segmentCount: 3, preview: "", engine: .whisperKit, lastLineAt: 1_600)
+        #expect(summary.durationSeconds == 600)
+    }
+
+    @Test("a closed conversation still ends where it was closed")
+    func closedConversation() {
+        let summary = TranscriptSessionSummary(id: UUID(), startedAt: 1_000, endedAt: 1_900, segmentCount: 3, preview: "", engine: .whisperKit, lastLineAt: 1_600)
+        #expect(summary.durationSeconds == 900)
+    }
+
+    @Test("with no lines and no end there is still nothing to show")
+    func nothingToMeasure() {
+        let summary = TranscriptSessionSummary(id: UUID(), startedAt: 1_000, endedAt: nil, segmentCount: 0, preview: "", engine: .whisperKit)
+        #expect(summary.durationSeconds == nil)
+    }
+}
