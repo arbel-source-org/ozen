@@ -1260,8 +1260,10 @@ public final class LiveCaptionViewModel {
         // nobody by that name is left.
         if !settings.speakerProfiles.contains(where: { $0.name == removed.name }) {
             pipeline.forgetSpeakerName(removed.name)
-            speakerLabelsChanged()
+        } else {
+            pipeline.forgetProfile(id: removed.id)
         }
+        speakerLabelsChanged()
     }
 
     /// Fixes a misspelled or changed name: the saved profile, the lines on

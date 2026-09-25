@@ -184,6 +184,15 @@ public struct EmbeddingClusterer: Sendable {
 
     /// A saved profile was deleted: clusters labeled with its name go back
     /// to a generic label instead of naming someone who was removed.
+    /// One voice stops being a known person, whatever it was called: a
+    /// saved voice print deleted while another under the same name stays.
+    public mutating func forgetName(ofCluster id: Int) {
+        guard let index = clusters.firstIndex(where: { $0.id == id }), clusters[index].name != nil else { return }
+        clusters[index].name = nil
+        clusters[index].number = nextNumber
+        nextNumber += 1
+    }
+
     public mutating func forgetName(_ name: String) {
         for index in clusters.indices where clusters[index].name == name {
             clusters[index].name = nil

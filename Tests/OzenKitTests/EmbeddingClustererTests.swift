@@ -150,6 +150,18 @@ struct EmbeddingClustererConversationTests {
         #expect(clusterer.displayName(forClusterID: ids[1]) == EmbeddingClusterer.genericName(number: 2))
     }
 
+    @Test("forgetting one voice under a shared name leaves the other one named")
+    func forgetOneOfTwoPrints() {
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)
+        let good = clusterer.enroll(name: "Savta", embedding: [1, 0, 0])
+        let wrong = clusterer.enroll(name: "Savta", embedding: [0, 1, 0])
+        clusterer.forgetName(ofCluster: wrong)
+        #expect(clusterer.clusters.first { $0.id == good }?.name == "Savta")
+        #expect(clusterer.clusters.first { $0.id == wrong }?.name == nil)
+        #expect(clusterer.assign(embedding: [0, 1, 0]) == wrong)
+        #expect(clusterer.displayName(forClusterID: wrong) == EmbeddingClusterer.genericName(number: 1))
+    }
+
     @Test("the first stranger is speaker 1 even with enrolled people ahead of them")
     func numberingSkipsEnrolled() {
         var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)

@@ -661,7 +661,20 @@ public final class CaptionPipeline {
     /// print predates the current embedder — see `expectedEmbeddingLength`.
     public func enroll(profile: SpeakerProfile) {
         guard expectedEmbeddingLength == nil || profile.embedding.count == expectedEmbeddingLength else { return }
-        _ = clusterer.enroll(name: profile.name, embedding: profile.embedding)
+        profileClusters[profile.id] = clusterer.enroll(name: profile.name, embedding: profile.embedding)
+        speakerClusters = clusterer.clusters
+    }
+
+    /// Which voice each saved profile was seeded as, so deleting one of
+    /// several prints under the same name stops that one being listened for.
+    private var profileClusters: [UUID: Int] = [:]
+
+    /// A saved voice print was deleted while the person keeps another one:
+    /// the deleted print (a recording of the wrong person, say) no longer
+    /// puts their name on anyone for the rest of this session.
+    public func forgetProfile(id: UUID) {
+        guard let clusterID = profileClusters.removeValue(forKey: id) else { return }
+        clusterer.forgetName(ofCluster: clusterID)
         speakerClusters = clusterer.clusters
     }
 

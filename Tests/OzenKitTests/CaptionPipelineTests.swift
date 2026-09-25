@@ -548,6 +548,18 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.segments.last?.speakerClusterID == nil)
     }
 
+    @Test("deleting one of two saved prints under a name stops only that print naming anyone")
+    func forgetOneProfile() {
+        let (pipeline, _, _) = makePipeline()
+        let good = SpeakerProfile(name: "Savta", embedding: [1, 0, 0])
+        let wrong = SpeakerProfile(name: "Savta", embedding: [0, 1, 0])
+        pipeline.enroll(profile: good)
+        pipeline.enroll(profile: wrong)
+        pipeline.forgetProfile(id: wrong.id)
+        #expect(pipeline.speakerClusters.filter { $0.name == "Savta" }.count == 1)
+        #expect(pipeline.speakerClusters.first { $0.name == "Savta" }?.centroid == [1, 0, 0])
+    }
+
     @Test("audio windows are embedded and the pending utterance gets a speaker cluster")
     func speakerAssignment() async {
         let engine = FakeEngine()
