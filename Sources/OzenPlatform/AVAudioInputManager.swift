@@ -207,10 +207,39 @@ public final class AVAudioInputManager: AudioCapturing {
     /// Starting the engine into that tap gives silence at best, so the tap
     /// is rebuilt for whatever the hardware reports now, with the same
     /// retries a route change gets.
+    ///
+    /// The call can also leave recording on another microphone than the
+    /// one she chose, so the choice is asked for again first.
     private func resumeCaptureAfterInterruption() {
         guard activeTap != nil, !engine.isRunning else { return }
+        if (try? applySelection()) == nil {
+            reapplySelectionSoon()
+        }
         recoverFromConfigurationChange()
     }
+
+    /// The chosen microphone was listed but refused: a hearing aid or
+    /// headset still finishing its connection does that for a moment. No
+    /// further route change is promised once it is ready, so ask again a
+    /// few times rather than record from another microphone for good.
+    private func reapplySelectionSoon(attempt: Int = 0) {
+        guard sessionPrepared, attempt < Self.selectionRetryLimit, let wanted = preferredInputUID else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1.5))
+            guard let self, self.preferredInputUID == wanted, self.inputInUse != wanted,
+                  self.availableInputs.contains(where: { $0.uid == wanted })
+            else { return }
+            let shown = self.selectedInputUID
+            if (try? self.applySelection()) == nil {
+                self.reapplySelectionSoon(attempt: attempt + 1)
+            }
+            if self.selectedInputUID != shown {
+                self.onInputsChanged?()
+            }
+        }
+    }
+
+    private static let selectionRetryLimit = 3
 
     public func refreshInputs() {
         if !sessionPrepared {
@@ -313,7 +342,9 @@ public final class AVAudioInputManager: AudioCapturing {
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 self.refreshAvailableInputs()
-                try? self.applySelection()
+                if (try? self.applySelection()) == nil {
+                    self.reapplySelectionSoon()
+                }
                 self.showInputInUse()
                 self.onInputsChanged?()
             }

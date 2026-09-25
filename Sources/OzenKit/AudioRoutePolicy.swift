@@ -10,6 +10,12 @@ public enum AudioPortType: String, Sendable, Equatable, Codable {
     case usb
     case hearingAid
     case other
+
+    /// A microphone worn by the person reading the captions: a headset's
+    /// or a hearing aid's, narrow-band and far from whoever is talking.
+    public var isOnTheListenersEar: Bool {
+        self == .bluetooth || self == .hearingAid
+    }
 }
 
 /// A microphone Ozen could record from, described independently of
@@ -58,6 +64,7 @@ public enum AudioRoutePolicy {
     /// listener's own ear, far from whoever is talking, and captions from
     /// it are far worse than from the phone on the table. A headset is
     /// only recorded from when it was picked, or when nothing else is here.
+    /// A hearing aid's microphone sits on the same ear, so the same rule.
     public static func resolveSelection(
         available: [AudioInputDescriptor],
         preferredUID: String?,
@@ -67,11 +74,11 @@ public enum AudioRoutePolicy {
             return preferredUID
         }
         let current = currentUID.flatMap { uid in available.first { $0.uid == uid } }
-        if let current, current.portType != .bluetooth {
+        if let current, !current.portType.isOnTheListenersEar {
             return current.uid
         }
         let fallback = available.first { $0.portType == .builtInMic }
-            ?? available.first { $0.portType != .bluetooth }
+            ?? available.first { !$0.portType.isOnTheListenersEar }
         return fallback?.uid ?? current?.uid ?? available.first?.uid
     }
 }

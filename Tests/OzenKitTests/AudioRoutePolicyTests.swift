@@ -65,6 +65,17 @@ struct AudioRoutePolicyTests {
         #expect(besideWiredMic == lavalier.uid)
     }
 
+    @Test("a hearing aid nobody chose gives way to the phone's microphone, like a headset; chosen, it stays")
+    func unchosenHearingAidGivesWay() {
+        let hearingAid = AudioInputDescriptor(uid: "hearing-aid", portName: "Phonak Audéo", portType: .hearingAid)
+        let unchosen = AudioRoutePolicy.resolveSelection(available: [builtIn, hearingAid], preferredUID: nil, currentUID: hearingAid.uid)
+        #expect(unchosen == builtIn.uid)
+        let chosen = AudioRoutePolicy.resolveSelection(available: [builtIn, hearingAid], preferredUID: hearingAid.uid, currentUID: builtIn.uid)
+        #expect(chosen == hearingAid.uid)
+        let alone = AudioRoutePolicy.resolveSelection(available: [hearingAid], preferredUID: nil, currentUID: hearingAid.uid)
+        #expect(alone == hearingAid.uid)
+    }
+
     @Test("a headset that is the only microphone here is still used")
     func onlyHeadset() {
         let selection = AudioRoutePolicy.resolveSelection(
