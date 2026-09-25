@@ -127,7 +127,9 @@ struct HistoryView: View {
     }
 
     private var topSpeakers: [String] {
-        TranscriptSessionSummary.topSpeakerNames(in: sessions)
+        let top = TranscriptSessionSummary.topSpeakerNames(in: sessions)
+        guard let speakerFilter, !top.contains(speakerFilter) else { return top }
+        return [speakerFilter] + top
     }
 
     @ViewBuilder
@@ -206,6 +208,11 @@ struct HistoryView: View {
             }
             if query.isEmpty {
                 onThisDaySection
+            }
+            // A chosen name keeps filtering while she searches, so its chip
+            // stays on screen too: hidden, it would silently drop every
+            // other conversation from the results with no way to clear it.
+            if query.isEmpty || speakerFilter != nil {
                 speakerFilterSection
             }
             conversationsSection
