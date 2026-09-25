@@ -161,7 +161,9 @@ leave the phone.
   too faintly to alert" (tzlilim she-nishme'u chalash midai le-hatra'a). A
   doorbell listed there was heard, but under the 60% sureness an alert
   needs: the phone is too far from the door, so keep it closer or in the
-  same room. Not listed at all means the sound classifier didn't recognize
+  same room, or under that doorbell in Settings → Sounds at home tap
+  "Alert on a fainter sound too" (lehatri'a gam al tzlil chalash yoter).
+  If that brings false alarms, the same button undoes it. Not listed at all means the sound classifier didn't recognize
   it as a doorbell (some electronic chimes don't sound like one to it).
 - **The doorbell notification comes, but she doesn't notice it.** With the
   phone face down or across the room, turn on iOS Settings → Accessibility →

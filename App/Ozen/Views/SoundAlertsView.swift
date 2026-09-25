@@ -158,23 +158,29 @@ private struct SoundEventRow: View {
             .disabled(!isSupported)
             .foregroundStyle(isSupported ? .primary : .secondary)
 
-            // Only while it's genuinely actionable: once marked sensitive,
-            // the sound alerts at its new, lower floor and stops being a
-            // near miss, so this naturally disappears on its own next time
-            // it's heard -- no separate "already sensitive" state to show.
-            if isSupported, isOn, let nearMiss {
+            // Offered after a near miss, and kept while it is on: a sound
+            // marked sensitive stops being a near miss, and if the lower
+            // floor then brings false alarms she needs the way back without
+            // turning the sound off altogether.
+            if isSupported, isOn, nearMiss != nil || isSensitive {
                 sensitivityNudge(nearMiss)
             }
         }
     }
 
     @ViewBuilder
-    private func sensitivityNudge(_ nearMiss: SoundNearMisses.Entry) -> some View {
+    private func sensitivityNudge(_ nearMiss: SoundNearMisses.Entry?) -> some View {
         HStack {
-            Text(tr(
-                "נשמע ב-\(Int((nearMiss.bestConfidence * 100).rounded()))%, קצת חלש מדי",
-                "Heard at \(Int((nearMiss.bestConfidence * 100).rounded()))%, a bit too faint"
-            ))
+            Group {
+                if let nearMiss {
+                    Text(tr(
+                        "נשמע ב-\(Int((nearMiss.bestConfidence * 100).rounded()))%, קצת חלש מדי",
+                        "Heard at \(Int((nearMiss.bestConfidence * 100).rounded()))%, a bit too faint"
+                    ))
+                } else {
+                    Text(tr("מתריע גם על צליל חלש. הקישו כדי לבטל.", "Alerts on a faint sound too. Tap to undo."))
+                }
+            }
             .font(.caption)
             .foregroundStyle(.secondary)
             Spacer()
