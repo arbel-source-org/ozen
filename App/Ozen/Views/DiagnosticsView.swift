@@ -252,15 +252,15 @@ struct DiagnosticsView: View {
         Ozen diagnostics
         phase: \(Self.describe(viewModel.phase))
         failure: \(viewModel.phase.failure?.detail ?? "-")
-        engine: \(viewModel.pipeline.activeEngineKind?.rawValue ?? "-") model: \(viewModel.settings.whisperModelVariant) lang: \(viewModel.settings.languageCode)
-        input: \(viewModel.selectedInput?.portName ?? "-") of \(viewModel.availableInputs.map { "\($0.portName) [\($0.portType.rawValue)]" }.joined(separator: ", "))
+        engine: \(viewModel.pipeline.activeEngineKind?.rawValue ?? "-") chosen: \(viewModel.settings.engine.rawValue) covering for cloud: \(viewModel.pipeline.isCoveringForCloud) model: \(viewModel.settings.whisperModelVariant) lang: \(viewModel.settings.languageCode)
+        input: \(viewModel.selectedInput?.portName ?? "-") chosen: \(Self.chosenInputText(viewModel)) of \(viewModel.availableInputs.map { "\($0.portName) [\($0.portType.rawValue)]" }.joined(separator: ", "))
         audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges) stalls: \(stats.audioStalls) damaged: \(stats.glitchedAudioChunks)
         levels: \(stats.inputLevels.summary ?? "-") speech: \(stats.speechShare.map { String(format: "%.1f%%", $0 * 100) } ?? "-") floor: \(stats.noiseFloorDecibels.map { String(format: "%.1f", $0) } ?? "-") margin: \(stats.noiseMarginDecibels.map { String(format: "%.1f dB", $0) } ?? "-")
         tokens: \(stats.tokensReceived) committed: \(stats.segmentsCommitted) on screen: \(viewModel.segments.count) lag: \(stats.captionLagSeconds.map { String(format: "%.2f", $0) } ?? "-")
         restarts: \(stats.engineRestarts) clusters: \(viewModel.pipeline.speakerClusters.count) opened: \(stats.speakerClustersOpened)
         retry: \(viewModel.pipeline.scheduledRetry.map { "attempt \($0.attempt)" } ?? "-") interrupted: \(viewModel.isInterruptedBySystem) sound detection: \(viewModel.stats.soundDetectionRunning)
         sounds heard below the alert level: \(viewModel.pipeline.soundNearMisses.reportLine(utcOffsetSeconds: Self.utcOffsetSeconds) ?? "-")
-        alerts: sounds \(viewModel.settings.soundAlerts.isEnabled) from \(viewModel.settings.soundAlerts.minimumImportance) muted \(viewModel.settings.soundAlerts.mutedIdentifiers.count) words on \(viewModel.settings.keywordAlerts.filter(\.isEnabled).count) of \(viewModel.settings.keywordAlerts.count) when away: \(viewModel.settings.notifyWhenInBackground) buzz on speech: \(viewModel.settings.hapticOnSpeechResume)
+        alerts: sounds \(viewModel.settings.soundAlerts.isEnabled) from \(viewModel.settings.soundAlerts.minimumImportance) muted \(viewModel.settings.soundAlerts.mutedIdentifiers.count) fainter \(viewModel.settings.soundAlerts.sensitiveIdentifiers.count) words on \(viewModel.settings.keywordAlerts.filter(\.isEnabled).count) of \(viewModel.settings.keywordAlerts.count) when away: \(viewModel.settings.notifyWhenInBackground) buzz on speech: \(viewModel.settings.hapticOnSpeechResume)
         history: saving \(viewModel.settings.saveHistory) keep \(viewModel.settings.historyRetention) speakers saved \(viewModel.settings.speakerProfiles.count) separation \(String(format: "%.2f", viewModel.settings.speakerSimilarityThreshold)) display: size \(Int(viewModel.display.fontSize)) theme \(viewModel.display.theme.rawValue) awake \(viewModel.display.keepScreenAwake)
         lock screen: setting \(viewModel.display.lockScreenCaptions) allowed by iOS: \(viewModel.lockScreenCaptionsAllowedBySystem) showing: \(viewModel.lockScreenCaptionsShowing) last refused: \(viewModel.lockScreenCaptionsLastStartFailure ?? "-")
         settings save error: \(viewModel.settingsSaveError ?? "-") history save error: \(viewModel.historySaveFailure ?? "-") notifications allowed: \(notificationsAllowed.map { $0 ? "yes" : "no" } ?? "not asked") notification error: \(AlertNotifier.shared.lastFailure ?? "-") haptics: \(AlertHapticPlayer.shared.supportsHaptics ? (AlertHapticPlayer.shared.lastFailure ?? "ok") : "unsupported") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
@@ -298,6 +298,15 @@ struct DiagnosticsView: View {
 
     /// The quiet, middle and loud ends of what the microphone heard, in
     /// Hebrew reading order: quiet first.
+    /// Whether the microphone she picked is the one recording: "-" when
+    /// she never picked one, "away" when it is not connected.
+    @MainActor
+    static func chosenInputText(_ viewModel: LiveCaptionViewModel) -> String {
+        guard let chosen = viewModel.settings.preferredInputUID else { return "-" }
+        guard let input = viewModel.availableInputs.first(where: { $0.uid == chosen }) else { return "away" }
+        return input.uid == viewModel.selectedInputUID ? "\(input.portName) (recording)" : "\(input.portName) (here, not recording)"
+    }
+
     static func levelsText(_ levels: AudioLevelHistogram) -> String {
         guard let quiet = levels.decibels(atFraction: 0.1),
               let middle = levels.decibels(atFraction: 0.5),
