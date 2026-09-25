@@ -121,7 +121,8 @@ leave the phone.
   saved voice's name on everybody's lines); updating fixes that, and saved
   voices keep working.
 - **Hearing aids or AirPods are connected, but the phone's microphone is
-  used.** On purpose: a microphone on her own ear hears her own voice best
+  used.** The report's `input:` line says which one records and, after
+  `chosen:`, the one she picked and whether it is recording. On purpose: a microphone on her own ear hears her own voice best
   and everyone else's worst. It is used only when she picks it with the
   button at the bottom right (or when no other microphone is there). Once
   picked it stays her choice: after a phone call, or when a hearing aid
@@ -155,8 +156,8 @@ leave the phone.
   it doesn't, a Focus mode or Scheduled Summary in iOS is holding it back.
 - **The doorbell rang and no alert came at all.** First the report's
   `alerts:` line: `sounds false` means sound alerts are off, `from critical`
-  means only alarms and sirens alert, and `muted` counts sounds switched off
-  one by one (Settings → Sounds at home (tzlilim ba-bayit)). Then its
+  means only alarms and sirens alert, `fainter` counts sounds set to alert
+  when fainter, and `muted` counts sounds switched off one by one (Settings → Sounds at home (tzlilim ba-bayit)). Then its
   `sounds heard below the alert level:` line, or Diagnostics → "Sounds heard
   too faintly to alert" (tzlilim she-nishme'u chalash midai le-hatra'a). A
   doorbell listed there was heard, but under the 60% sureness an alert
