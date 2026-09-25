@@ -42,21 +42,26 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
+            // Hers first: how captions look, what alerts her, the voice,
+            // the language and her saved conversations. The engine, models
+            // and keys, which the gear used to open onto, come after a
+            // line saying they are for whoever set up the phone.
             Form {
+                displaySection
+                alertsSection
+                speechSection
+                languageSection
+                historySection
+                helperSettingsNote
                 engineSection
                 switch viewModel.settings.engine {
                 case .whisperKit: whisperModelSection
                 case .appleSpeech: appleSpeechSection
                 case .cloud: cloudSection
                 }
-                languageSection
-                displaySection
-                alertsSection
-                speechSection
                 vocabularySection
                 speakersSection
                 behaviourSection
-                historySection
                 siriSection
                 maintenanceSection
                 aboutSection
@@ -102,6 +107,14 @@ struct SettingsView: View {
                 Button(tr("מחיקה", "Delete"), role: .destructive) { viewModel.clearTranscript() }
                 Button(tr("ביטול", "Cancel"), role: .cancel) {}
             }
+        }
+    }
+
+    private var helperSettingsNote: some View {
+        Section {
+            Label(tr("ההגדרות מכאן והלאה הן בשביל מי שהתקין את הטלפון", "The settings from here on are for whoever set up the phone"), systemImage: "wrench.and.screwdriver")
+                .font(.callout)
+                .foregroundStyle(.secondary)
         }
     }
 
