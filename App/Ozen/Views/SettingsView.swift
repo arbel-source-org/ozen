@@ -110,6 +110,23 @@ struct SettingsView: View {
         }
     }
 
+    /// A menu shows the chosen theme's name beside the label, and at the
+    /// largest text sizes there is room for two letters of it. There,
+    /// the three themes are rows of their own with a checkmark.
+    @ViewBuilder
+    private var themePicker: some View {
+        let picker = Picker(tr("צבעים", "Colors"), selection: $viewModel.display.theme) {
+            ForEach(DisplayPreferences.Theme.allCases, id: \.self) { theme in
+                Text(CaptionTheme.name(for: theme)).tag(theme)
+            }
+        }
+        if dynamicTypeSize.isAccessibilitySize {
+            picker.pickerStyle(.inline)
+        } else {
+            picker
+        }
+    }
+
     private var helperSettingsNote: some View {
         Section {
             Label(tr("ההגדרות מכאן והלאה הן בשביל מי שהתקין את הטלפון", "The settings from here on are for whoever set up the phone"), systemImage: "wrench.and.screwdriver")
@@ -340,11 +357,7 @@ struct SettingsView: View {
                     .foregroundStyle(CaptionTheme(viewModel.display.theme).text)
             }
 
-            Picker(tr("צבעים", "Colors"), selection: $viewModel.display.theme) {
-                ForEach(DisplayPreferences.Theme.allCases, id: \.self) { theme in
-                    Text(CaptionTheme.name(for: theme)).tag(theme)
-                }
-            }
+            themePicker
 
             Toggle(tr("טקסט מודגש", "Bold text"), isOn: $viewModel.display.boldText)
             Toggle(tr("להציג שמות דוברים", "Show speaker names"), isOn: $viewModel.display.showSpeakerNames)

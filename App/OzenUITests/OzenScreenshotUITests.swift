@@ -340,9 +340,13 @@ final class OzenScreenshotUITests: XCTestCase {
         // still coasting only stops the scroll; the row then needs a
         // second tap to open.
         if !screen.waitForExistence(timeout: 3), row.exists {
+            capture(app, name: "debug-\(rowIdentifier)-after-first-tap")
             row.tap()
         }
-        XCTAssertTrue(screen.waitForExistence(timeout: 10), "secondary screens: \(screenIdentifier) never appeared")
+        if !screen.waitForExistence(timeout: 10) {
+            capture(app, name: "debug-\(rowIdentifier)-never-opened")
+            XCTFail("secondary screens: \(screenIdentifier) never appeared")
+        }
         capture(app, name: captureName)
         let back = app.navigationBars.buttons["הגדרות"]
         XCTAssertTrue(back.waitForExistence(timeout: 10), "secondary screens: no way back from \(screenIdentifier)")
