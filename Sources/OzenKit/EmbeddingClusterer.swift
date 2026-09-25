@@ -41,6 +41,15 @@ public struct EmbeddingClusterer: Sendable {
     /// labels.
     private var retired: [SpeakerCluster] = []
     static let retiredLimit = 200
+    /// Unnamed voices listened for at once. A conversation only ends after
+    /// a quiet stretch, and a television never gives one: every voice it
+    /// played stayed a speaker for good, and a new person in the room could
+    /// be matched to a presenter from hours before. Past this, the voice
+    /// heard longest ago is retired the way an ended conversation's are.
+    static let activeUnnamedLimit = 12
+    /// When each voice was last given a window, in windows since launch.
+    private var lastHeard: [Int: Int] = [:]
+    private var windowsHeard = 0
 
     public init(similarityThreshold: Float = 0.75) {
         self.similarityThreshold = similarityThreshold
@@ -51,6 +60,27 @@ public struct EmbeddingClusterer: Sendable {
     /// enough. Returns the cluster id.
     @discardableResult
     public mutating func assign(embedding: [Float]) -> Int {
+        let id = match(embedding: embedding)
+        windowsHeard += 1
+        lastHeard[id] = windowsHeard
+        retireOldestIfCrowded(keeping: id)
+        return id
+    }
+
+    private mutating func retireOldestIfCrowded(keeping kept: Int) {
+        let unnamed = clusters.filter { $0.name == nil }
+        guard unnamed.count > Self.activeUnnamedLimit,
+              let oldest = unnamed.filter({ $0.id != kept }).min(by: { lastHeard[$0.id, default: 0] < lastHeard[$1.id, default: 0] })
+        else { return }
+        clusters.removeAll { $0.id == oldest.id }
+        lastHeard[oldest.id] = nil
+        retired.append(oldest)
+        if retired.count > Self.retiredLimit {
+            retired.removeFirst(retired.count - Self.retiredLimit)
+        }
+    }
+
+    private mutating func match(embedding: [Float]) -> Int {
         // A voice print of a different length (a profile saved by an older
         // build's embedder) can't be averaged into this one, whatever the
         // threshold says.
@@ -125,6 +155,7 @@ public struct EmbeddingClusterer: Sendable {
             retired.removeFirst(retired.count - Self.retiredLimit)
         }
         clusters.removeAll { $0.name == nil }
+        for cluster in ended { lastHeard[cluster.id] = nil }
         nextNumber = 1
     }
 

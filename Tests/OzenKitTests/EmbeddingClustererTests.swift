@@ -128,6 +128,28 @@ struct EmbeddingClustererTests {
 
 @Suite("EmbeddingClusterer numbering across conversations")
 struct EmbeddingClustererConversationTests {
+    @Test("past twelve unnamed voices, the one heard longest ago stops being listened for; named ones stay")
+    func crowdedRoomRetiresOldestVoice() {
+        func voice(_ index: Int) -> [Float] {
+            var vector = [Float](repeating: 0, count: 16)
+            vector[index] = 1
+            return vector
+        }
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)
+        clusterer.enroll(name: "Savta", embedding: voice(15))
+        let ids = (0..<12).map { clusterer.assign(embedding: voice($0)) }
+        #expect(clusterer.assign(embedding: voice(0)) == ids[0])
+
+        let thirteenth = clusterer.assign(embedding: voice(12))
+        let unnamed = clusterer.clusters.filter { $0.name == nil }.map(\.id)
+        #expect(unnamed.count == EmbeddingClusterer.activeUnnamedLimit)
+        #expect(!unnamed.contains(ids[1]))
+        #expect(unnamed.contains(ids[0]))
+        #expect(unnamed.contains(thirteenth))
+        #expect(clusterer.clusters.contains { $0.name == "Savta" })
+        #expect(clusterer.displayName(forClusterID: ids[1]) == EmbeddingClusterer.genericName(number: 2))
+    }
+
     @Test("the first stranger is speaker 1 even with enrolled people ahead of them")
     func numberingSkipsEnrolled() {
         var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)
