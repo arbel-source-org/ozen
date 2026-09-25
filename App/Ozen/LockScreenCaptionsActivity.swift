@@ -42,7 +42,8 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
             },
             status: content.status,
             ageNote: content.ageNote,
-            large: content.textSize == .large
+            large: content.textSize == .large,
+            english: Localization.language == .english
         )
         let staleDate = Date().addingTimeInterval(Self.staleAfterSeconds)
         if let activityID, Self.isRunning(id: activityID) {

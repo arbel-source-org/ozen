@@ -23,12 +23,15 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
         /// Larger lines, for someone who reads the captions large in the
         /// app (see `LockScreenTextSize`); the app cuts them shorter to fit.
         var large: Bool
+        /// The app's own words (not the captions) in English. The widget
+        /// can't read the app's language setting itself.
+        var english: Bool = false
     }
 }
 
 nonisolated extension CaptionActivityAttributes.ContentState {
     enum CodingKeys: String, CodingKey {
-        case lines, status, ageNote, large
+        case lines, status, ageNote, large, english
     }
 
     /// Lines sent by an older build, still on the lock screen after an
@@ -40,7 +43,8 @@ nonisolated extension CaptionActivityAttributes.ContentState {
             lines: try container.decode([Line].self, forKey: .lines),
             status: try container.decodeIfPresent(String.self, forKey: .status),
             ageNote: try container.decodeIfPresent(String.self, forKey: .ageNote),
-            large: try container.decodeIfPresent(Bool.self, forKey: .large) ?? false
+            large: try container.decodeIfPresent(Bool.self, forKey: .large) ?? false,
+            english: try container.decodeIfPresent(Bool.self, forKey: .english) ?? false
         )
     }
 }
