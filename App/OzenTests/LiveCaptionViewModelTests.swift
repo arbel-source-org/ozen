@@ -445,6 +445,21 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.captionsHeldForSpeech == false)
     }
 
+    @Test("\"start captions\" from Siri while the phone talks waits for it, instead of captioning the phone's voice")
+    func startFromSiriWhileSpeaking() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        await viewModel.start()
+        viewModel.speak("כן")
+        synthesizer.startNext()
+        #expect(viewModel.captionsHeldForSpeech)
+        await viewModel.perform(.startCaptions)
+        #expect(viewModel.phase == .paused)
+        #expect(viewModel.captionsHeldForSpeech)
+        synthesizer.finishCurrent()
+        await eventually { viewModel.phase.isListening }
+        #expect(viewModel.phase.isListening)
+    }
+
     @Test("a second phrase tapped while the first plays keeps captions paused until the last one ends")
     func secondPhraseDuringFirst() async throws {
         let (viewModel, synthesizer) = makeViewModel()

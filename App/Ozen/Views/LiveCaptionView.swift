@@ -1187,6 +1187,9 @@ struct LiveCaptionView: View {
     /// pad would silently fail to appear, so whatever is open closes first.
     private func presentBigText() {
         viewModel.isShowingBigText = false
+        // Opened from Siri or the Action button, the pad is for someone new;
+        // what the last person wrote on it is not theirs to read.
+        bigText = ""
         let somethingOpen = showingMicPicker || showingSettings || showingTypeToSpeak
             || namingSegment != nil || fixingWordFromSegment != nil || openedConversation != nil
         showingMicPicker = false

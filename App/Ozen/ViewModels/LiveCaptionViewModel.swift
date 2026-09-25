@@ -649,6 +649,12 @@ public final class LiveCaptionViewModel {
     public func perform(_ action: AppAction) async {
         switch action {
         case .startCaptions:
+            // Paused while the phone talks: captions come back by themselves
+            // when it's done. Opening the microphone now would caption the
+            // phone's own sentence.
+            if captionsHeldForSpeech {
+                break
+            }
             if pipeline.phase == .paused {
                 await pipeline.resume(settings: settings)
             } else if !pipeline.phase.isListening && !pipeline.phase.isTransitioning {
