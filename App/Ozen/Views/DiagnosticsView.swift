@@ -11,6 +11,11 @@ struct DiagnosticsView: View {
     @State private var copied = false
     /// Read once, and again after a mark: reading waits for the file.
     @State private var journalLines: [String] = []
+    /// Whether iOS lets Ozen show notifications at all. The last send's
+    /// own result can't say: with permission denied iOS drops every
+    /// notification without reporting an error, so it read "OK" while no
+    /// background alert was ever shown.
+    @State private var notificationsAllowed: Bool?
 
     private func loadJournalLines() -> [String] {
         viewModel.journal?.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds) ?? []
@@ -70,7 +75,7 @@ struct DiagnosticsView: View {
                 LabeledContent(tr("שיחת טלפון תופסת את האודיו", "Phone call is using the audio"), value: viewModel.isInterruptedBySystem ? tr("כן", "Yes") : tr("לא", "No"))
                 LabeledContent(tr("שמירת הגדרות", "Settings save"), value: viewModel.settingsSaveError == nil ? tr("תקינה", "OK") : tr("נכשלה", "Failed"))
                 LabeledContent(tr("שמירת שיחות", "Conversation history save"), value: viewModel.historySaveFailure == nil ? tr("תקינה", "OK") : tr("נכשלה", "Failed"))
-                LabeledContent(tr("הודעה אחרונה בטלפון", "Last phone notification"), value: AlertNotifier.shared.lastFailure == nil ? tr("תקינה", "OK") : tr("נכשלה", "Failed"))
+                LabeledContent(tr("הודעות בטלפון", "Phone notifications"), value: notificationsText)
                 LabeledContent(tr("רטט להתראות", "Alert vibration"), value: Self.vibrationText)
                 LabeledContent(tr("חיבור לאינטרנט", "Internet connection"), value: Self.describe(viewModel.pipeline.networkConditions))
             }
@@ -144,7 +149,10 @@ struct DiagnosticsView: View {
                 }
             }
         }
-        .task { journalLines = loadJournalLines() }
+        .task {
+            journalLines = loadJournalLines()
+            notificationsAllowed = await AlertNotifier.shared.isAllowed()
+        }
         .accessibilityIdentifier("diagnosticsScreen")
         .navigationTitle(tr("אבחון", "Diagnostics"))
         .navigationBarTitleDisplayMode(.inline)
@@ -154,6 +162,14 @@ struct DiagnosticsView: View {
 
     private var modelState: ModelFolderState {
         store.state(of: viewModel.settings.whisperModelVariant)
+    }
+
+    private var notificationsText: String {
+        switch notificationsAllowed {
+        case false?: return tr("כבויות בהגדרות של iOS", "Turned off in iOS Settings")
+        case nil: return tr("עוד לא נשאל", "Not asked yet")
+        case true?: return AlertNotifier.shared.lastFailure == nil ? tr("תקינות", "OK") : tr("השליחה האחרונה נכשלה", "Last one failed to send")
+        }
     }
 
     private var retryText: String {
@@ -247,7 +263,7 @@ struct DiagnosticsView: View {
         alerts: sounds \(viewModel.settings.soundAlerts.isEnabled) from \(viewModel.settings.soundAlerts.minimumImportance) muted \(viewModel.settings.soundAlerts.mutedIdentifiers.count) words on \(viewModel.settings.keywordAlerts.filter(\.isEnabled).count) of \(viewModel.settings.keywordAlerts.count) when away: \(viewModel.settings.notifyWhenInBackground) buzz on speech: \(viewModel.settings.hapticOnSpeechResume)
         history: saving \(viewModel.settings.saveHistory) keep \(viewModel.settings.historyRetention) speakers saved \(viewModel.settings.speakerProfiles.count) separation \(String(format: "%.2f", viewModel.settings.speakerSimilarityThreshold)) display: size \(Int(viewModel.display.fontSize)) theme \(viewModel.display.theme.rawValue) awake \(viewModel.display.keepScreenAwake)
         lock screen: setting \(viewModel.display.lockScreenCaptions) allowed by iOS: \(viewModel.lockScreenCaptionsAllowedBySystem) showing: \(viewModel.lockScreenCaptionsShowing) last refused: \(viewModel.lockScreenCaptionsLastStartFailure ?? "-")
-        settings save error: \(viewModel.settingsSaveError ?? "-") history save error: \(viewModel.historySaveFailure ?? "-") notification error: \(AlertNotifier.shared.lastFailure ?? "-") haptics: \(AlertHapticPlayer.shared.supportsHaptics ? (AlertHapticPlayer.shared.lastFailure ?? "ok") : "unsupported") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
+        settings save error: \(viewModel.settingsSaveError ?? "-") history save error: \(viewModel.historySaveFailure ?? "-") notifications allowed: \(notificationsAllowed.map { $0 ? "yes" : "no" } ?? "not asked") notification error: \(AlertNotifier.shared.lastFailure ?? "-") haptics: \(AlertHapticPlayer.shared.supportsHaptics ? (AlertHapticPlayer.shared.lastFailure ?? "ok") : "unsupported") network: \(Self.describe(viewModel.pipeline.networkConditions)) cellular downloads: \(viewModel.allowCellularModelDownload)
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText) free space: \(Self.freeSpaceText)
         memory: used \(DeviceMemory.footprintBytes().map(Self.format(bytes:)) ?? "-") left \(DeviceMemory.availableBytes().map(Self.format(bytes:)) ?? "-")
