@@ -1,0 +1,5 @@
+Ozen has a total addressable market of one: Grandma.
+Live captions for the conversation around her (who's talking, the numbers that matter, the doorbell), all on the phone. 485 commits, 6 days, no Mac.
+github.com/arbelonson-source/ozen
+
+Music: "Cheery Monday" by Kevin MacLeod (incompetech.com), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)

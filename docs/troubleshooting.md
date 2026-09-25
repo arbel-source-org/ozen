@@ -18,6 +18,7 @@ leave the phone.
 | She reads | What it means | What to do |
 | --- | --- | --- |
 | "Listening" (makshiv) | Captions are running. | Nothing. If no words appear, check the microphone (below). |
+| "Listening · Cloud captions aren't available, carrying on with the phone's own" (makshiv · ha-ktuviyot ba-anan lo zminot, mamshich im ha-zihuy she-ba-telefon) | Cloud captions lost their key, credit or internet, and a Whisper model already on the phone took over. Captions keep coming, a little less accurate. | Nothing urgent. Fix the key, credit or internet; the cloud is tried again the next time captions start (after Stop, or reopening the app). A pause and resume stays on the phone's model. |
 | "Paused" (mushhe) | Paused by a tap. | Tap it to continue. |
 | "The phone is talking" (ha-telefon medaber) | The phone is saying a typed reply aloud; captions pause so they don't caption it. | Nothing. They continue by themselves when it finishes. Tapping it stops the phone talking. |
 | "Inactive" (lo pail) | Stopped (for example by Siri). | Tap it to start. |
@@ -33,9 +34,9 @@ leave the phone.
 | "No access to the microphone" (ein gisha la-mikrofon) | Microphone permission was turned off for Ozen. | Tap it: it opens iOS Settings. Turn Microphone on. |
 | "No permission for speech recognition" (ein ishur le-zihuy dibur) | Speech recognition permission is off (Apple's engine only). | Tap it: it opens iOS Settings. |
 | "… not available in Hebrew on this device" (… lo zamin be-ivrit ba-machshir ha-ze) | Apple's engine has no on-device Hebrew on this iPhone. | Tap to switch to Whisper in Settings. |
-| "Cloud captions need a valid OpenRouter key" (ha-tamlul ba-anan tzarich mafte'ach OpenRouter takin) | Cloud captions are chosen but there is no key, or OpenRouter turned it down. | Tap it: Settings opens. Paste the key from openrouter.ai (Keys) and tap Save. |
-| "The OpenRouter key is out of credit" (nigmar ha-kredit shel mafte'ach OpenRouter) | The key used up its credit or its spending limit. | Add credit on openrouter.ai, or tap and switch back to Whisper. |
-| "No internet connection" (ein chibur la-internet) | Cloud captions can't reach the internet. | Check Wi-Fi or cellular data. It retries by itself; or switch to Whisper, which works offline. |
+| "Cloud captions need a valid OpenRouter key" (ha-tamlul ba-anan tzarich mafte'ach OpenRouter takin) | Cloud captions are chosen but there is no key, or OpenRouter turned it down, and no Whisper model is on the phone to take over. | Tap it: Settings opens. Paste the key from openrouter.ai (Keys) and tap Save. |
+| "The OpenRouter key is out of credit" (nigmar ha-kredit shel mafte'ach OpenRouter) | The key used up its credit or its spending limit, and no Whisper model is on the phone to take over. | Add credit on openrouter.ai, or tap and switch back to Whisper. |
+| "No internet connection" (ein chibur la-internet) | Cloud captions can't reach the internet, and no Whisper model is on the phone to take over. | Check Wi-Fi or cellular data. It retries by itself; or switch to Whisper, which works offline. |
 | "Retrying by itself · tap to try now" (menase shuv le-vad · hakishu kedei lenasot achshav) | Something failed and a retry is already scheduled. | Wait a few seconds, or tap to retry now. |
 
 ## Things that are working as intended
@@ -62,6 +63,9 @@ leave the phone.
   conversation), or when the screen is cleared, unnamed voices are numbered
   from "Speaker 1" (dover 1) again, so a phone left listening all week
   doesn't end up at speaker 140. Lines already on screen keep their labels.
+  In a room that never goes quiet (a television left on), once there are
+  more than twelve unnamed voices the one heard longest ago is forgotten,
+  so it gets a new number if it speaks again.
   To have someone always called by name, press and hold one of their
   lines, choose "Who is speaking?" (mi medaber?) and type the name.
 - **A line across the captions: "Said while the app was closed · 12 lines"
@@ -116,6 +120,12 @@ leave the phone.
   joined. Build 13 and earlier put everyone under one label (and a
   saved voice's name on everybody's lines); updating fixes that, and saved
   voices keep working.
+- **Hearing aids or AirPods are connected, but the phone's microphone is
+  used.** On purpose: a microphone on her own ear hears her own voice best
+  and everyone else's worst. It is used only when she picks it with the
+  button at the bottom right (or when no other microphone is there). Once
+  picked it stays her choice: after a phone call, or when a hearing aid
+  reconnects slowly, Ozen asks for it again by itself.
 - **People further away aren't captioned, or lines stop mid-sentence.**
   The report's `levels:` line says how loud the microphone hears the room
   (quiet / middle / loud, in dBFS) and `speech:` how much of it counted as

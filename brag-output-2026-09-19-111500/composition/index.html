@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Ozen — Good luck, Grandma (vertical)</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Heebo"; font-weight: 300; src: url(assets/fonts/heebo-latin-300.woff2) format("woff2"); }
+      @font-face { font-family: "Heebo"; font-weight: 400; src: url(assets/fonts/heebo-latin-400.woff2) format("woff2"); }
+      @font-face { font-family: "Heebo"; font-weight: 500; src: url(assets/fonts/heebo-latin-500.woff2) format("woff2"); }
+      @font-face { font-family: "Heebo"; font-weight: 700; src: url(assets/fonts/heebo-latin-700.woff2) format("woff2"); }
+      @font-face { font-family: "Heebo"; font-weight: 800; src: url(assets/fonts/heebo-latin-800.woff2) format("woff2"); }
+      @font-face { font-family: "Frank Ruhl Libre"; font-weight: 400; src: url(assets/fonts/frank-ruhl-libre-latin-400.woff2) format("woff2"); }
+      @font-face { font-family: "Frank Ruhl Libre"; font-weight: 900; src: url(assets/fonts/frank-ruhl-libre-latin-900.woff2) format("woff2"); }
+
+      /* tokens: every value comes from the app (icon, CaptionTheme, SpeakerColor, PhasePresentation) */
+      :root {
+        --navy-0: #0b2230; --navy-1: #0f2a39; --navy-2: #17384d;
+        --amber: #ffca28; --num: #ffe033; --white: #fff;
+        --pending: rgba(255, 255, 255, 0.62);
+        --green: #30d158; --spk-amber: #fabf2e; --spk-sky: #73c7fa; --orange: #ff9f0a;
+        --serif: "Frank Ruhl Libre", serif; --sans: "Heebo", sans-serif; --mono: "JetBrains Mono", monospace;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--navy-0); }
+      body { font-family: var(--sans); color: var(--white); -webkit-font-smoothing: antialiased; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+      #bg { position: absolute; inset: 0; background: radial-gradient(1300px 1300px at 540px 700px, var(--navy-2) 0%, var(--navy-1) 50%, var(--navy-0) 100%); }
+      #glow { position: absolute; left: -660px; top: -560px; width: 2400px; height: 2400px; opacity: 0.5;
+              background: radial-gradient(circle at 50% 50%, rgba(255, 202, 40, 0.13) 0%, rgba(255, 202, 40, 0) 30%); }
+
+      /* rings: market diagram -> sound ripples -> halo (1000px box centred on the anchor) */
+      #rings { position: absolute; left: 40px; top: 140px; width: 1000px; height: 1000px; }
+      #pulse { position: absolute; inset: 0; }
+      .ring { position: absolute; border-radius: 50%; }
+      .r3 { left: 130px; top: 130px; width: 740px; height: 740px; border: 2px solid rgba(255, 202, 40, 0.32); background: rgba(255, 202, 40, 0.035); }
+      .r2 { left: 250px; top: 250px; width: 500px; height: 500px; border: 2px solid rgba(255, 202, 40, 0.42); background: rgba(255, 202, 40, 0.06); }
+      .r1 { left: 370px; top: 370px; width: 260px; height: 260px; border: 2px solid rgba(255, 202, 40, 0.58); background: rgba(255, 202, 40, 0.10); }
+      .rp { position: absolute; left: 370px; top: 370px; width: 260px; height: 260px; border-radius: 50%; border: 3px solid rgba(255, 202, 40, 0.55); opacity: 0; }
+      .rlabel { position: absolute; left: 0; width: 1000px; text-align: center; font: 500 24px/1 var(--mono); letter-spacing: 0.08em; color: var(--pending); opacity: 0; }
+      #l3 { top: 152px; } #l2 { top: 272px; } #l1 { top: 392px; }
+      #dot { position: absolute; left: 486px; top: 486px; width: 28px; height: 28px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 40px rgba(255, 202, 40, 0.55); opacity: 0; }
+      #dotlabel { position: absolute; left: 0; top: 536px; width: 1000px; text-align: center; font: 400 34px/1 var(--sans); color: var(--white); opacity: 0; }
+      #icon { position: absolute; left: 390px; top: 490px; width: 300px; height: 300px; border-radius: 68px; opacity: 0; overflow: hidden;
+              box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 90px rgba(255, 202, 40, 0.22); }
+      #icon img { display: block; width: 100%; height: 100%; }
+
+      #chip { position: absolute; left: 70px; top: 120px; display: flex; align-items: center; gap: 14px; padding: 12px 26px 12px 22px; border-radius: 999px;
+              background: rgba(48, 209, 88, 0.12); border: 1.5px solid rgba(48, 209, 88, 0.46); color: var(--green); font: 700 28px/1 var(--sans); opacity: 0; }
+      #chipdot { width: 14px; height: 14px; border-radius: 50%; background: var(--green); }
+
+      .scene { position: absolute; inset: 0; }
+      .kicker { position: absolute; left: 70px; font: 500 22px/1 var(--mono); letter-spacing: 0.16em; color: var(--pending); opacity: 0; text-transform: uppercase; }
+      .kicker.amber { color: var(--amber); }
+      .w { display: inline-block; opacity: 0; color: var(--pending); }
+      .num { font-weight: 800; color: var(--pending); }
+
+      /* S1 */
+      #s1-l1 { position: absolute; left: 70px; top: 1090px; font: 400 74px/1.1 var(--serif); white-space: nowrap; }
+      #s1-l2 { position: absolute; left: 70px; top: 1178px; display: flex; align-items: baseline; gap: 24px; white-space: nowrap; }
+      #s1-one { font: 800 330px/0.85 var(--sans); color: var(--pending); opacity: 0; }
+      #s1-gm { font: 900 104px/1 var(--serif); }
+      #s1-k { top: 1500px; }
+
+      /* S2 */
+      #s2-k { top: 1006px; }
+      #s2-en { position: absolute; left: 70px; top: 1100px; font: 900 230px/1 var(--serif); opacity: 0; }
+      #s2-tag { position: absolute; left: 70px; top: 1372px; width: 940px; font: 300 64px/1.15 var(--sans); }
+
+      /* S3 */
+      #s3-k { top: 1490px; }
+      .ann { position: absolute; left: 70px; top: 1290px; width: 940px; }
+      .ann .idx { font: 500 22px/1 var(--mono); letter-spacing: 0.1em; color: var(--amber); opacity: 0; }
+      .ann .ttl { margin-top: 12px; font: 400 60px/1.1 var(--serif); white-space: nowrap; }
+      .ann .gloss { margin-top: 12px; font: 300 30px/1.3 var(--sans); color: var(--pending); opacity: 0; }
+
+      /* S4 */
+      .big { position: absolute; left: 70px; display: flex; align-items: baseline; gap: 26px; white-space: nowrap; opacity: 0; }
+      .big .n { font: 800 210px/0.9 var(--sans); color: var(--pending); }
+      .big .t { font: 400 96px/1 var(--serif); }
+      #b1 { top: 250px; } #b2 { top: 490px; } #b3 { top: 730px; }
+      #b3 .t { font: 900 210px/0.9 var(--serif); }
+      #term { position: absolute; left: 70px; top: 1060px; width: 940px; padding: 30px 38px 30px; border-radius: 22px; background: rgba(6, 20, 29, 0.92);
+              border: 1.5px solid rgba(255, 255, 255, 0.14); font: 400 24px/1.55 var(--mono); color: var(--pending); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.4); opacity: 0; }
+      #term .path { font-size: 20px; letter-spacing: 0.06em; margin-bottom: 18px; }
+      .tl { opacity: 0; margin-bottom: 12px; white-space: nowrap; }
+      .tl .p { color: var(--amber); } .tl .cmd { color: var(--white); }
+      .tl .out { display: block; margin-top: 2px; font: 700 40px/1.25 var(--mono); color: var(--num); }
+
+      /* S5 */
+      #s5-l1 { position: absolute; left: 0; top: 320px; width: 1080px; text-align: center; font: 400 128px/1.1 var(--serif); }
+      #s5-l2 { position: absolute; left: 0; top: 550px; width: 1080px; text-align: center; font: 900 176px/1.05 var(--serif); }
+      #s5-att { position: absolute; left: 0; top: 830px; width: 1080px; text-align: center; font: 500 22px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--pending); opacity: 0; }
+      #endcard { position: absolute; left: 0; top: 1050px; width: 1080px; display: flex; justify-content: center; align-items: center; gap: 40px; opacity: 0; }
+      #endicon { width: 168px; height: 168px; border-radius: 38px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 70px rgba(255, 202, 40, 0.2); }
+      #endicon img { display: block; width: 100%; height: 100%; }
+      #endtxt .nm { font: 900 108px/1 var(--serif); }
+      #endtxt .url { margin-top: 10px; font: 500 28px/1.2 var(--mono); color: var(--amber); }
+
+      /* the phone: the app's real caption screen, in its English interface */
+      #halo { position: absolute; left: 300px; top: 262px; width: 480px; height: 960px; border-radius: 78px; opacity: 0; box-shadow: 0 0 120px 30px rgba(255, 159, 10, 0.55); }
+      #phone { position: absolute; left: 300px; top: 262px; width: 480px; height: 960px; padding: 12px; border-radius: 78px; opacity: 0;
+               background: linear-gradient(150deg, #3b4650 0%, #161c21 46%, #2a343c 100%); box-shadow: 0 50px 100px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.07); }
+      #screen { position: relative; width: 456px; height: 936px; border-radius: 66px; background: #000; overflow: hidden; }
+      #flash { position: absolute; inset: 0; border-radius: 66px; opacity: 0; background: rgba(255, 159, 10, 0.2); box-shadow: inset 0 0 0 22px var(--orange); z-index: 6; }
+      #convo { position: absolute; left: 0; right: 0; top: 56px; bottom: 140px; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 8px; }
+      .row { padding: 0 24px; margin-top: 20px; }
+      .who { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font: 700 20px/1.2 var(--sans); opacity: 0; }
+      .who i { display: block; width: 9px; height: 9px; border-radius: 50%; }
+      .tx { font: 500 28px/1.42 var(--sans); text-align: left; }
+      .hl { display: flex; align-items: flex-start; gap: 10px; padding: 6px 12px; margin: -6px -12px; border-radius: 10px; background: rgba(255, 224, 51, 0); }
+      .hl svg { flex: none; width: 26px; height: 26px; margin-top: 8px; fill: #fff; opacity: 0; }
+      #pill { position: absolute; top: 84px; left: 0; right: 0; display: flex; justify-content: center; opacity: 0; z-index: 5; }
+      #pill span.pl { display: inline-flex; align-items: center; gap: 10px; padding: 10px 22px; border-radius: 999px; background: rgba(255, 224, 51, 0.92); color: #000; font: 700 22px/1.2 var(--sans); }
+      #pill svg { width: 24px; height: 24px; fill: #000; }
+      #banner { position: absolute; top: 84px; left: 10px; right: 10px; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 16px;
+                background: rgba(179, 77, 0, 0.92); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); opacity: 0; z-index: 5; }
+      #banner svg { flex: none; width: 34px; height: 34px; fill: #fff; }
+      #banner .bt { flex: 1; }
+      #banner .b1 { font: 700 26px/1.2 var(--sans); }
+      #banner .b2 { font: 400 19px/1.2 var(--sans); opacity: 0.85; }
+      #banner .bx { flex: none; width: 20px; height: 20px; stroke: #fff; opacity: 0.7; }
+      #bar { position: absolute; left: 10px; right: 10px; bottom: 16px; height: 112px; padding: 0 12px; border-radius: 32px; display: flex; align-items: center; gap: 6px;
+             background: rgba(150, 170, 185, 0.2); border: 1px solid rgba(255, 255, 255, 0.12); }
+      .bb { flex: none; width: 84px; display: flex; flex-direction: column; align-items: center; gap: 4px; font: 400 14px/1.1 var(--sans); color: #fff; }
+      .bb svg { width: 28px; height: 28px; fill: #fff; }
+      #status { flex: 1; text-align: center; }
+      #status .st { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--green); font: 700 25px/1.2 var(--sans); }
+      #status .st svg { width: 22px; height: 22px; fill: var(--green); }
+      #status .sd { margin-top: 3px; font: 400 15px/1.2 var(--sans); color: rgba(235, 235, 245, 0.6); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="22.36">
+      <div id="bg"></div>
+      <div id="glow" data-layout-ignore></div>
+
+      <div id="rings" data-layout-allow-overflow>
+        <div id="pulse">
+          <div class="ring r3"></div><div class="ring r2"></div><div class="ring r1"></div>
+          <div class="rp" id="rp1"></div><div class="rp" id="rp2"></div><div class="rp" id="rp3"></div>
+          <div class="rlabel" id="l3">TAM = 1</div><div class="rlabel" id="l2">SAM = 1</div><div class="rlabel" id="l1">SOM = 1</div>
+          <div id="dot"></div>
+          <div id="dotlabel">Grandma</div>
+        </div>
+      </div>
+      <div id="icon"><img src="assets/img/icon.png" alt="Ozen app icon" /></div>
+
+      <div id="chip"><span id="chipdot"></span><span>Listening</span></div>
+
+      <div class="scene" id="s1">
+        <div id="s1-l1" class="cap">Total addressable market:</div>
+        <div id="s1-l2"><span id="s1-one" data-layout-allow-overlap>1</span><span id="s1-gm" class="cap">grandmother.</span></div>
+        <div class="kicker" id="s1-k">Market sizing · Slide 1 of 1</div>
+      </div>
+
+      <div class="scene" id="s2">
+        <div class="kicker amber" id="s2-k">Hebrew for “ear”</div>
+        <div id="s2-en">Ozen</div>
+        <div id="s2-tag" class="cap">Live captions for conversation.</div>
+      </div>
+
+      <div class="scene" id="s3">
+        <div class="ann" id="a1"><div class="idx">01</div><div class="cap ttl">Knows who’s talking.</div><div class="gloss">Voices told apart on the phone.</div></div>
+        <div class="ann" id="a2"><div class="idx">02</div><div class="cap ttl">Makes numbers stand out.</div><div class="gloss">Times, doses, phone numbers.</div></div>
+        <div class="ann" id="a3"><div class="idx">03</div><div class="cap ttl">Buzzes on words she picks.</div><div class="gloss">Her name, or “two pills”. Three quick taps.</div></div>
+        <div class="ann" id="a4"><div class="idx">04</div><div class="cap ttl">Hears the doorbell.</div><div class="gloss">Banner, edge flash. One of about 50 sounds.</div></div>
+        <div class="kicker amber" id="s3-k">On the phone · No server · No account</div>
+      </div>
+
+      <div class="scene" id="s4">
+        <div class="big" id="b1"><span class="n" data-layout-allow-overlap>485</span><span class="t" data-layout-allow-overlap>commits.</span></div>
+        <div class="big" id="b2"><span class="n" data-layout-allow-overlap>6</span><span class="t" data-layout-allow-overlap>days.</span></div>
+        <div class="big" id="b3"><span class="t" data-layout-allow-overlap>No Mac.</span></div>
+        <div id="term">
+          <div class="path">~/Projects/ozen</div>
+          <div class="tl" id="t1"><span class="p">$</span> <span class="cmd">git rev-list --count HEAD</span><span class="out">485</span></div>
+          <div class="tl" id="t2"><span class="p">$</span> <span class="cmd">git log --format=%ad --date=short | sort -u | wc -l</span><span class="out">6</span></div>
+          <div class="tl" id="t3"><span class="p">$</span> <span class="cmd">uname -s</span><span class="out">Linux</span></div>
+        </div>
+      </div>
+
+      <div class="scene" id="s5">
+        <div id="s5-l1" class="cap">Good luck,</div>
+        <div id="s5-l2" class="cap">Grandma.</div>
+        <div id="s5-att">— The last line of Ozen’s first-run setup</div>
+        <div id="endcard">
+          <div id="endicon"><img src="assets/img/icon-end.png" alt="" /></div>
+          <div id="endtxt"><div class="nm">Ozen</div><div class="url">github.com/arbelonson-source/ozen</div></div>
+        </div>
+      </div>
+
+      <div id="halo" data-layout-ignore></div>
+      <div id="phone">
+        <div id="screen">
+          <div id="flash" data-layout-ignore></div>
+          <div id="pill"><span class="pl"><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg><span>Speaker 1 said: two pills</span></span></div>
+          <div id="banner">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+            <div class="bt"><div class="b1">Doorbell</div><div class="b2">Heard just now</div></div>
+            <svg class="bx" viewBox="0 0 20 20" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M4 4l12 12M16 4L4 16"/></svg>
+          </div>
+          <div id="convo">
+            <div class="row" id="row1">
+              <div class="who" style="color: var(--spk-amber)"><span>Dana</span><i style="background: var(--spk-amber)"></i></div>
+              <div class="tx cap">Good morning, how did you sleep?</div>
+            </div>
+            <div class="row" id="row2">
+              <div class="who" style="color: var(--spk-sky)"><span>Speaker 1</span><i style="background: var(--spk-sky)"></i></div>
+              <div class="hl" id="hl2">
+                <svg id="bell2" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                <div class="tx"><span class="w">Pretty</span> <span class="w">good,</span> <span class="w">thanks.</span> <span class="w">I</span> <span class="w">have</span> <span class="w">a</span> <span class="w">doctor’s</span> <span class="w">appointment</span> <span class="w">at</span> <span class="w"><b class="num">10:30</b></span> <span class="w">and</span> <span class="w">I</span> <span class="w">need</span> <span class="w">to</span> <span class="w">take</span> <span class="w"><b class="num">two</b></span> <span class="w"><b class="num">pills</b></span> <span class="w">before.</span></div>
+              </div>
+            </div>
+            <div class="row" id="row3">
+              <div class="who" style="color: var(--spk-amber)"><span>Dana</span><i style="background: var(--spk-amber)"></i></div>
+              <div class="tx cap">I can take you, no problem.</div>
+            </div>
+            <div class="row" id="row4">
+              <div class="who" style="color: var(--spk-sky)"><span>Speaker 1</span><i style="background: var(--spk-sky)"></i></div>
+              <div class="tx cap">I’m still not sure if</div>
+            </div>
+          </div>
+          <div id="bar">
+            <div class="bb"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg><span>Microphone</span></div>
+            <div id="status"><div class="st"><svg viewBox="0 0 24 24"><path d="M4 10h2v4H4zm4-4h2v12H8zm4-3h2v18h-2zm4 3h2v12h-2zm4 4h2v4h-2z"/></svg><span>Listening</span></div><div class="sd">Tap to pause</div></div>
+            <div class="bb"><svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg><span>Say</span></div>
+            <div class="bb"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>Settings</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- "Cheery Monday" by Kevin MacLeod (incompetech.com), CC BY 4.0. Starts 0.20s in so beats fall on 0.00, 0.59, 1.19 ... -->
+      <audio id="bed" data-start="0" data-duration="22.36" data-media-start="0.2" data-track-index="10" src="assets/music/bed.mp3"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.5,"v":0.5},{"t":12.1,"v":0.5},{"t":12.3,"v":0.36},{"t":14.0,"v":0.36},{"t":14.4,"v":0.5},{"t":21.2,"v":0.5},{"t":22.36,"v":0}]}]}'></audio>
+      <audio id="sfx-thud" data-start="3.7" data-duration="0.19" data-track-index="11" data-volume="0.5" src="assets/sfx/thud.ogg"></audio>
+      <audio id="sfx-tap1" data-start="10.62" data-duration="0.27" data-track-index="12" data-volume="0.42" src="assets/sfx/tap1.ogg"></audio>
+      <audio id="sfx-tap2" data-start="10.76" data-duration="0.27" data-track-index="13" data-volume="0.38" src="assets/sfx/tap2.ogg"></audio>
+      <audio id="sfx-tap3" data-start="10.9" data-duration="0.27" data-track-index="14" data-volume="0.38" src="assets/sfx/tap3.ogg"></audio>
+      <audio id="sfx-door" data-start="12.36" data-duration="1.75" data-track-index="15" data-volume="0.36" src="assets/sfx/doorbell.wav"></audio>
+      <audio id="sfx-lockup" data-start="20.59" data-duration="0.65" data-track-index="16" data-volume="0.34" src="assets/sfx/lockup.ogg"></audio>
+    </div>
+
+    <script>
+      /* per-frame [rms, bass] 0-100 of the bed (0.20s offset), 60 fps */
+      var AUDIO = [[12,7],[35,28],[71,63],[92,85],[83,78],[65,60],[81,54],[70,46],[66,49],[63,55],[67,59],[63,58],[61,54],[57,50],[55,48],[52,46],[54,45],[55,45],[51,45],[46,43],[45,42],[44,40],[43,38],[42,37],[40,35],[37,34],[35,31],[37,29],[34,29],[32,29],[29,29],[27,27],[26,24],[25,23],[26,23],[28,22],[37,21],[38,22],[30,22],[28,20],[27,18],[26,15],[25,16],[23,17],[21,15],[21,15],[21,15],[19,14],[17,12],[16,12],[14,11],[15,11],[15,11],[20,8],[44,7],[39,13],[19,16],[19,13],[19,9],[19,9],[14,10],[12,10],[13,9],[13,9],[12,9],[10,9],[11,10],[11,9],[10,9],[10,8],[21,7],[24,13],[58,31],[84,39],[71,32],[38,17],[33,6],[42,9],[38,9],[32,11],[26,9],[27,25],[31,42],[66,35],[65,21],[55,13],[52,9],[41,9],[37,6],[32,4],[45,7],[43,10],[44,12],[30,8],[23,4],[17,5],[9,4],[6,3],[6,8],[37,37],[70,80],[99,100],[92,90],[87,78],[82,67],[76,60],[68,56],[65,53],[59,53],[56,49],[41,37],[29,23],[20,15],[16,11],[12,6],[10,5],[8,17],[29,37],[64,40],[67,29],[62,18],[50,7],[52,7],[40,7],[43,10],[52,14],[38,17],[20,14],[26,9],[28,5],[24,5],[22,3],[24,2],[22,4],[22,5],[23,4],[13,3],[11,7],[13,7],[9,3],[7,2],[22,6],[36,24],[66,30],[71,24],[45,28],[44,25],[52,16],[30,8],[40,5],[35,6],[35,5],[36,4],[32,4],[30,4],[33,3],[31,2],[28,2],[32,2],[31,2],[30,1],[28,1],[29,0],[27,1],[26,1],[25,1],[23,1],[22,1],[20,1],[19,1],[18,1],[18,0],[16,0],[17,1],[16,1],[16,1],[18,1],[30,2],[34,2],[28,1],[25,1],[25,1],[21,1],[19,1],[18,1],[19,1],[16,1],[15,1],[12,0],[10,0],[10,0],[9,0],[9,0],[9,0],[10,0],[13,0],[11,0],[13,0],[13,0],[13,0],[14,0],[12,0],[12,0],[10,0],[9,0],[8,0],[6,0],[4,0],[4,1],[4,1],[7,1],[12,3],[18,9],[34,21],[57,27],[58,29],[37,26],[66,17],[43,11],[35,14],[44,13],[26,11],[19,17],[38,27],[63,26],[52,22],[24,19],[34,14],[51,15],[36,17],[25,14],[41,11],[40,9],[24,9],[21,8],[20,4],[15,3],[13,2],[10,3],[10,11],[26,37],[78,52],[74,37],[82,20],[58,11],[55,7],[41,6],[48,3],[49,4],[52,9],[44,9],[35,5],[33,4],[25,3],[21,3],[19,4],[14,2],[16,10],[25,29],[64,33],[56,27],[28,21],[32,16],[52,15],[36,17],[22,16],[27,11],[17,7],[16,4],[16,2],[20,1],[20,2],[20,3],[19,2],[16,2],[18,3],[14,2],[16,1],[12,1],[11,1],[9,2],[9,5],[17,10],[21,11],[69,21],[80,26],[47,14],[33,3],[43,9],[39,11],[37,8],[41,8],[34,7],[34,6],[37,3],[28,3],[34,4],[33,2],[27,2],[29,2],[29,2],[28,1],[31,1],[30,1],[28,2],[26,2],[23,2],[23,1],[21,1],[21,1],[19,1],[19,1],[19,1],[18,1],[17,1],[17,0],[16,0],[20,1],[22,1],[31,1],[25,1],[26,1],[22,1],[20,1],[18,1],[18,1],[18,1],[17,1],[15,1],[14,0],[12,0],[12,0],[11,0],[10,0],[9,0],[8,2],[22,7],[47,9],[22,8],[17,4],[14,1],[13,0],[10,0],[10,0],[10,1],[9,1],[9,0],[7,0],[6,0],[5,0],[5,0],[5,0],[5,0],[7,3],[34,16],[42,33],[63,35],[43,25],[28,18],[51,11],[43,12],[29,14],[42,11],[33,9],[29,13],[47,23],[70,22],[43,18],[24,17],[36,13],[46,14],[34,15],[26,15],[43,12],[28,8],[18,6],[18,4],[17,2],[15,1],[11,1],[11,2],[8,14],[30,45],[80,62],[77,46],[74,26],[56,11],[48,7],[41,7],[54,5],[47,7],[51,12],[35,7],[27,4],[21,4],[18,3],[13,4],[11,3],[10,7],[11,24],[50,32],[67,28],[39,22],[24,15],[46,14],[45,14],[32,14],[32,14],[47,12],[39,9],[22,7],[25,4],[20,1],[19,1],[16,1],[16,1],[14,1],[15,1],[11,1],[9,1],[9,1],[8,2],[9,1],[28,2],[32,13],[45,20],[75,18],[58,12],[58,16],[47,15],[56,14],[48,12],[43,9],[43,7],[41,5],[43,2],[35,3],[40,3],[37,3],[38,4],[32,4],[36,2],[36,1],[38,1],[32,1],[35,2],[32,2],[31,1],[29,1],[28,2],[25,2],[23,1],[22,1],[22,1],[21,1],[18,1],[17,1],[17,1],[20,1],[22,2],[36,3],[28,2],[26,1],[23,1],[20,1],[17,1],[19,1],[15,1],[11,1],[12,0],[12,0],[9,0],[10,1],[8,1],[9,0],[9,0],[10,0],[20,1],[18,1],[20,1],[18,1],[16,1],[14,1],[14,1],[13,1],[11,1],[9,1],[6,0],[5,0],[4,2],[5,3],[4,3],[6,4],[6,5],[23,4],[34,8],[70,20],[68,27],[66,22],[39,11],[51,5],[47,6],[46,7],[39,6],[38,5],[22,11],[43,19],[58,19],[22,14],[33,9],[42,9],[25,10],[34,9],[40,7],[30,7],[34,7],[28,4],[21,2],[19,2],[15,1],[12,1],[8,1],[8,13],[33,34],[71,40],[58,30],[26,22],[35,16],[54,13],[37,13],[34,14],[37,9],[30,5],[23,3],[20,4],[17,3],[16,2],[14,2],[11,1],[10,8],[9,33],[54,54],[81,40],[68,22],[60,14],[53,10],[44,9],[39,6],[33,17],[29,25],[46,22],[31,18],[31,13],[52,13],[44,15],[30,16],[33,13],[46,9],[35,8],[26,8],[25,3],[20,2],[13,4],[14,4],[15,4],[24,9],[41,34],[80,68],[95,83],[71,69],[63,53],[61,45],[62,41],[61,48],[59,52],[59,53],[59,51],[58,48],[56,45],[51,44],[48,43],[48,42],[46,41],[47,41],[45,41],[44,39],[41,37],[41,36],[43,34],[39,33],[34,31],[33,29],[32,28],[30,28],[31,28],[31,27],[29,25],[26,23],[26,23],[27,23],[26,22],[34,21],[29,21],[29,19],[27,18],[25,17],[25,16],[25,15],[22,15],[18,15],[17,15],[17,14],[16,13],[15,12],[15,11],[15,11],[14,11],[13,10],[17,11],[20,12],[19,11],[18,11],[18,10],[17,9],[16,9],[18,9],[14,10],[13,13],[11,14],[13,11],[12,6],[11,3],[10,1],[9,1],[9,1],[8,4],[23,19],[45,37],[81,38],[66,30],[32,19],[36,8],[42,8],[35,10],[30,11],[36,18],[29,38],[70,48],[69,36],[77,25],[56,13],[53,10],[39,8],[42,6],[43,8],[49,10],[54,12],[43,13],[38,8],[22,5],[20,2],[13,3],[10,2],[9,13],[47,49],[80,88],[100,97],[90,83],[80,73],[71,63],[74,59],[72,54],[68,52],[63,56],[54,53],[40,40],[30,27],[20,18],[15,11],[11,7],[8,6],[8,22],[36,38],[65,32],[61,21],[56,13],[52,6],[46,7],[43,7],[35,16],[19,18],[20,13],[26,9],[37,7],[41,4],[29,5],[22,7],[27,6],[31,4],[26,3],[24,2],[18,2],[14,4],[13,5],[12,6],[13,8],[26,7],[52,11],[54,12],[63,10],[33,17],[55,20],[53,17],[34,14],[45,14],[41,9],[33,6],[41,5],[35,5],[30,4],[37,4],[34,3],[28,4],[35,3],[33,2],[32,1],[33,2],[31,2],[29,2],[31,2],[29,2],[25,2],[28,1],[25,1],[23,1],[23,1],[21,0],[20,0],[19,1],[18,1],[19,1],[19,1],[32,1],[27,2],[27,2],[26,1],[24,1],[20,0],[19,0],[17,0],[16,1],[15,1],[14,1],[13,0],[11,0],[9,0],[9,0],[9,0],[8,0],[12,1],[13,0],[12,1],[11,1],[12,1],[13,0],[10,0],[11,0],[9,0],[11,0],[10,0],[9,1],[8,1],[7,1],[7,1],[6,1],[6,1],[20,2],[28,10],[50,19],[62,18],[53,11],[42,14],[58,17],[39,17],[42,16],[45,12],[28,11],[30,8],[29,6],[12,6],[16,5],[10,4],[6,2],[5,1],[13,1],[15,1],[15,1],[15,1],[16,1],[16,1],[15,1],[14,1],[11,1],[11,1],[8,11],[24,40],[74,57],[72,42],[81,25],[60,14],[50,10],[46,9],[42,5],[46,5],[43,9],[43,8],[32,6],[29,5],[17,3],[17,2],[13,2],[15,4],[12,21],[44,46],[69,44],[68,25],[63,16],[51,9],[53,11],[38,9],[44,10],[58,18],[55,22],[29,16],[25,9],[29,4],[27,5],[28,4],[30,3],[24,5],[26,5],[29,3],[28,3],[19,4],[12,2],[9,1],[12,2],[28,3],[45,13],[68,24],[57,24],[41,14],[42,8],[50,12],[38,12],[43,11],[44,8],[30,6],[37,5],[35,2],[31,3],[35,3],[33,2],[28,2],[29,2],[30,2],[33,2],[31,1],[30,1],[28,1],[27,1],[26,1],[24,1],[23,1],[21,1],[21,1],[20,1],[19,1],[18,1],[18,1],[17,1],[17,1],[20,1],[34,2],[33,2],[29,2],[29,1],[26,1],[25,1],[25,1],[21,1],[21,1],[18,1],[16,1],[15,1],[13,1],[12,1],[11,0],[10,0],[10,0],[15,0],[17,1],[16,1],[16,1],[15,1],[14,1],[13,0],[14,0],[12,0],[10,0],[9,0],[7,1],[6,0],[4,1],[4,0],[4,0],[9,1],[15,4],[22,11],[34,22],[59,28],[50,29],[48,25],[63,16],[45,12],[34,16],[45,14],[26,10],[28,11],[39,25],[66,30],[50,26],[26,20],[32,15],[55,15],[35,16],[26,15],[40,11],[42,8],[28,8],[23,5],[22,2],[19,1],[16,2],[13,2],[16,12],[26,39],[72,53],[69,39],[82,25],[58,13],[54,8],[41,10],[47,7],[52,7],[53,10],[53,12],[38,10],[32,6],[20,4],[17,2],[15,3],[14,2],[11,14],[36,31],[65,31],[54,25],[25,21],[35,14],[50,15],[35,17],[27,14],[43,10],[44,8],[31,8],[29,6],[26,2],[20,1],[21,2],[21,3],[19,1],[19,1],[16,1],[16,1],[11,2],[11,3],[8,3],[9,5],[16,13],[32,26],[84,30],[68,24],[60,25],[42,15],[57,6],[36,9],[53,9],[43,7],[42,5],[41,5],[44,4],[36,2],[38,3],[36,3],[36,3],[36,2],[32,3],[33,2],[34,1],[32,1],[30,1],[30,1],[28,1],[22,1],[14,1],[10,1],[6,1],[4,0],[3,0],[3,1],[3,1],[3,2],[2,2],[12,2],[21,18],[51,47],[83,54],[84,31],[70,15],[70,10],[49,9],[52,6],[44,4],[55,6],[52,7],[56,5],[56,3],[53,2],[49,1],[48,2],[53,3],[46,3],[47,8],[60,11],[42,8],[24,3],[19,2],[10,5],[6,4],[3,3],[3,1],[4,0],[3,0],[4,0],[4,1],[3,0],[4,0],[2,0],[9,1],[18,13],[53,27],[87,29],[55,28],[55,27],[38,16],[48,7],[44,4],[38,5],[41,5],[35,4],[39,3],[36,4],[37,3],[31,2],[36,1],[32,2],[29,2],[31,2],[31,1],[27,1],[29,1],[26,1],[27,1],[25,1],[17,1],[13,1],[10,1],[5,1],[4,0],[2,0],[2,0],[3,0],[2,0],[1,1],[13,9],[26,35],[66,60],[86,55],[76,33],[60,16],[54,4],[47,7],[46,5],[39,4],[55,7],[49,6],[52,4],[45,3],[52,2],[46,3],[48,2],[43,2],[47,4],[51,4],[46,2],[49,2],[43,3],[51,4],[44,4],[45,5],[37,6],[32,5],[23,4],[16,3],[13,3],[8,3],[6,1],[4,0],[5,1],[18,2],[28,9],[46,35],[82,74],[97,87],[81,71],[73,56],[63,45],[60,44],[62,51],[65,54],[67,56],[61,54],[57,51],[55,48],[54,46],[51,45],[50,44],[50,44],[48,43],[47,42],[49,41],[46,38],[43,37],[40,35],[37,33],[35,31],[35,29],[34,29],[33,29],[31,29],[29,27],[29,25],[28,23],[26,23],[24,23],[30,21],[41,22],[31,22],[29,19],[27,17],[28,16],[25,15],[24,16],[21,15],[19,14],[21,15],[20,15],[18,13],[17,12],[16,11],[15,10],[15,11],[17,11],[18,11],[17,11],[18,11],[17,10],[17,9],[17,10],[17,9],[14,9],[13,10],[12,10],[12,10],[15,9],[15,9],[14,9],[13,9],[13,11],[19,12],[25,13],[30,25],[59,40],[70,41],[39,28],[33,10],[46,10],[49,13],[35,15],[26,14],[39,22],[29,41],[55,42],[61,25],[56,16],[53,9],[40,9],[40,8],[32,5],[39,6],[40,9],[45,11],[35,10],[25,7],[19,3],[13,3],[8,3],[6,4],[9,20],[53,63],[91,96],[96,96],[93,84],[86,72],[78,60],[71,58],[67,55],[63,54],[59,51],[44,40],[32,28],[23,20],[18,15],[14,10],[11,5],[8,9],[15,29],[55,41],[58,33],[71,22],[52,10],[51,7],[38,7],[48,8],[55,14],[53,18],[27,14],[17,9],[25,6],[25,6],[21,5],[22,3],[23,2],[20,3],[23,5],[20,4],[16,4],[11,3],[9,1],[12,2],[15,6],[20,21],[47,36],[75,33],[42,14],[41,10],[55,7],[41,11],[40,10],[44,7],[32,10],[36,8],[38,5],[29,2],[33,3],[33,3],[28,3],[32,4],[33,3],[30,2],[31,1],[29,1],[29,1],[27,1],[27,1],[24,1],[24,1],[22,1],[20,1],[19,1],[18,0],[17,0],[17,0],[16,0],[16,0],[15,1],[17,1],[42,1],[29,1],[26,1],[26,1],[22,1],[21,2],[21,2],[18,1],[19,1],[14,0],[13,0],[12,0],[10,0],[10,0],[10,0],[9,0],[9,1],[13,6],[44,10],[24,9],[13,6],[13,1],[15,1],[15,1],[14,1],[11,1],[12,1],[10,1],[9,0],[9,0],[8,1],[7,1],[6,1],[13,3],[12,9],[28,28],[53,43],[79,40],[34,28],[53,17],[48,8],[33,13],[43,14],[37,12],[19,13],[28,23],[55,30],[70,26],[31,20],[25,16],[48,16],[39,16],[24,15],[33,11],[42,9],[28,9],[21,8],[20,4],[19,3],[14,6],[14,6],[10,5],[11,23],[54,47],[81,43],[87,24],[60,15],[62,8],[49,7],[46,5],[44,4],[62,14],[56,25]];
+      var tl = gsap.timeline({ paused: true });
+      function $(s) { return document.querySelector(s); }
+      function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+      function out(sel, t, d) { tl.to(sel, { opacity: 0, filter: "blur(10px)", duration: d || 0.5, ease: "power2.inOut" }, t); }
+
+      $$(".cap").forEach(function (el) {
+        if (el.children.length) return;
+        el.innerHTML = el.textContent.trim().split(/\s+/).map(function (w) { return '<span class="w">' + w + "</span>"; }).join(" ");
+      });
+
+      /* an Ozen caption: words arrive dim (still settling), then the whole line locks to full white */
+      function caption(sel, t0, gap, lockAt, opts) {
+        opts = opts || {};
+        var ws = $$(sel + " .w");
+        tl.fromTo(ws, { opacity: 0, y: opts.y === undefined ? 12 : opts.y }, { opacity: 1, y: 0, duration: opts.dur || 0.3, ease: "power2.out", stagger: gap }, t0);
+        if (lockAt === null) return;
+        tl.to(ws, { color: "#ffffff", duration: 0.3, ease: "power1.inOut" }, lockAt);
+        var nums = $$(sel + " .num");
+        if (nums.length) tl.to(nums, { color: "#ffe033", duration: 0.3, ease: "power1.inOut" }, lockAt);
+      }
+      function fadeIn(sel, t, d, y) { tl.fromTo(sel, { opacity: 0, y: y === undefined ? 10 : y }, { opacity: 1, y: 0, duration: d || 0.5, ease: "power2.out" }, t); }
+
+      /* beat grid (comp time = source - 0.20s): 0, .60, 1.20, 1.79, 2.38, 2.96, 3.54, 4.12, 4.73, 5.31, 5.92, 6.50, 7.08, 7.66, 8.26, 8.84,
+         9.44, 10.02, 10.62, 11.20, 11.79, 12.36, 12.97, 13.55, 14.14, 14.73, 15.30, 15.91, 16.51, 17.08, 17.67, 18.26, 18.85, 19.44, 20.02, 20.61, 21.20, 21.80 */
+
+      tl.fromTo("#chip", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.15);
+      tl.to("#chipdot", { scale: 1.5, opacity: 0.55, duration: 0.8, yoyo: true, repeat: 26, ease: "sine.inOut" }, 0.2);
+
+      /* ---------- S1  0.00 - 3.54  the market ---------- */
+      tl.fromTo("#pulse .r3", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.2);
+      tl.fromTo("#pulse .r2", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.34);
+      tl.fromTo("#pulse .r1", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.48);
+      tl.to("#l3", { opacity: 1, duration: 0.4 }, 0.75);
+      tl.to("#l2", { opacity: 1, duration: 0.4 }, 0.9);
+      tl.to("#l1", { opacity: 1, duration: 0.4 }, 1.05);
+      caption("#s1-l1", 0.3, 0.26, 1.2, { y: 16, dur: 0.4 });
+      tl.fromTo("#s1-one", { opacity: 0, y: 30, scale: 1.08 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "power3.out" }, 1.5);
+      caption("#s1-l2", 1.72, 0.2, 2.0, { y: 16, dur: 0.4 });
+      tl.to("#s1-one", { color: "#ffe033", duration: 0.35, ease: "power1.inOut" }, 2.0);
+      tl.fromTo("#dot", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2.2)" }, 2.05);
+      tl.fromTo("#dotlabel", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 2.2);
+      fadeIn("#s1-k", 0.6, 0.6, 0);
+
+      /* ---------- S1 -> S2 at 3.54 (beat) ---------- */
+      out("#s1", 3.54, 0.5);
+      tl.to(["#l1", "#l2", "#l3", "#dotlabel"], { opacity: 0, duration: 0.4, ease: "power2.in" }, 3.54);
+      tl.to("#dot", { scale: 2.4, opacity: 0, duration: 0.35, ease: "power2.in" }, 3.58);
+      tl.fromTo("#icon", { scale: 0.35, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.65, ease: "back.out(1.35)" }, 3.64);
+
+      /* ripples on the beat: 4.12 + k * 0.592 */
+      var rp = ["#rp1", "#rp2", "#rp3"];
+      for (var k = 0; k < 17; k++) {
+        tl.fromTo(rp[k % 3], { scale: 0.7, opacity: 0.5 }, { scale: 2.6, opacity: 0, duration: 1.7, ease: "power1.out", immediateRender: false }, 4.12 + k * 0.592);
+      }
+
+      /* ---------- S2  3.54 - 6.50 ---------- */
+      fadeIn("#s2-k", 4.1, 0.5, 0);
+      tl.fromTo("#s2-en", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "power3.out" }, 4.12);
+      caption("#s2-tag", 4.5, 0.13, 5.0, { y: 14 });
+
+      /* ---------- S2 -> S3 at 6.50 (beat; onset cue 6.38 nearby) ---------- */
+      out("#s2", 6.5, 0.5);
+      tl.to("#icon", { scale: 0.82, opacity: 0, filter: "blur(8px)", duration: 0.5, ease: "power2.in" }, 6.5);
+      tl.to("#rings", { y: 90, scale: 1.45, duration: 0.8, ease: "power2.inOut" }, 6.5);
+      tl.to("#glow", { y: 90, duration: 0.8, ease: "power2.inOut" }, 6.5);
+
+      /* ---------- S3  6.50 - 15.91  the table ---------- */
+      gsap.set(["#phone", "#halo"], { scale: 1.08 });
+      gsap.set("#phone", { transformPerspective: 1800, transformOrigin: "50% 50%" });
+      tl.fromTo("#phone", { opacity: 0, y: 120, rotationY: -16, filter: "blur(12px)" }, { opacity: 1, y: 0, rotationY: -7, filter: "blur(0px)", duration: 0.7, ease: "power3.out" }, 6.5);
+      tl.to("#phone", { rotationY: -3, duration: 8.0, ease: "none" }, 7.2);
+      fadeIn("#s3-k", 6.9, 0.5, 0);
+
+      /* one annotation at a time, in the slot under the phone */
+      function ann(id, t0, lockAt, glossAt, outAt) {
+        tl.fromTo("#" + id + " .idx", { opacity: 0 }, { opacity: 1, duration: 0.3 }, t0 - 0.1);
+        caption("#" + id + " .ttl", t0, 0.11, lockAt, { y: 14 });
+        tl.fromTo("#" + id + " .gloss", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, glossAt);
+        if (outAt) tl.to("#" + id, { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" }, outAt);
+      }
+
+      /* row 1 - Dana  // beat-grid: 7.08 row, 7.66 lock */
+      tl.to("#row1 .who", { opacity: 1, duration: 0.3 }, 7.05);
+      caption("#row1 .tx", 7.08, 0.08, 7.66);
+      ann("a1", 7.4, 7.9, 8.0, 9.15);
+
+      /* row 2 - numbers  // beat-grid: 8.84 row, 10.02 lock (numbers turn yellow) */
+      tl.to("#row2 .who", { opacity: 1, duration: 0.3 }, 8.8);
+      caption("#row2 .tx", 8.84, 0.05, 10.02, { dur: 0.25, y: 8 });
+      ann("a2", 9.3, 9.75, 9.85, 10.55);
+
+      /* keyword hit  // beat-locked: 10.62 (strong beat); taps at +0 / +.14 / +.28 */
+      tl.to("#hl2", { backgroundColor: "rgba(255,224,51,0.22)", duration: 0.25, ease: "power1.out" }, 10.62);
+      tl.fromTo("#bell2", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 10.62);
+      tl.fromTo("#pill", { opacity: 0, y: -24 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 10.62);
+      [10.62, 10.76, 10.9].forEach(function (t, i) {
+        var s = i % 2 ? -5 : 5;
+        tl.to("#phone", { x: s, duration: 0.04, ease: "power1.out" }, t);
+        tl.to("#phone", { x: 0, duration: 0.09, ease: "power1.inOut" }, t + 0.04);
+      });
+      tl.to("#pill", { opacity: 0, y: -12, duration: 0.3, ease: "power2.in" }, 12.0);
+      ann("a3", 10.75, 11.2, 11.3, 12.25);
+
+      /* row 3 - Dana replies  // beat-grid: 11.20 row, 11.79 lock */
+      tl.to("#row3 .who", { opacity: 1, duration: 0.3 }, 11.15);
+      caption("#row3 .tx", 11.2, 0.08, 11.79);
+
+      /* doorbell  // beat-grid: 12.36 banner + ding, dong lands on 12.97 */
+      tl.fromTo("#banner", { opacity: 0, y: -110 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 12.36);
+      [12.36, 13.16].forEach(function (t) {
+        tl.fromTo("#flash", { opacity: 0 }, { opacity: 1, duration: 0.08, ease: "power2.out", immediateRender: false }, t);
+        tl.to("#flash", { opacity: 0, duration: 0.15, ease: "power2.in" }, t + 0.4);
+        tl.fromTo("#halo", { opacity: 0 }, { opacity: 0.9, duration: 0.08, ease: "power2.out", immediateRender: false }, t);
+        tl.to("#halo", { opacity: 0, duration: 0.15, ease: "power2.in" }, t + 0.4);
+      });
+      [12.36, 12.54, 13.06, 13.24].forEach(function (t, i) {
+        var s = i % 2 ? -6 : 6;
+        tl.to("#phone", { x: s, duration: 0.05, ease: "power1.out" }, t);
+        tl.to("#phone", { x: 0, duration: 0.1, ease: "power1.inOut" }, t + 0.05);
+      });
+      ann("a4", 12.36, 12.97, 13.05, 0);
+      tl.to("#banner", { opacity: 0, y: -60, duration: 0.35, ease: "power2.in" }, 14.3);
+
+      /* row 4 - still settling (never locks)  // beat-grid: 13.55 */
+      tl.to("#row4 .who", { opacity: 1, duration: 0.3 }, 13.5);
+      caption("#row4 .tx", 13.55, 0.12, null);
+
+      /* ---------- S3 -> S4 at 15.91  // beat-locked: 15.91 (strong beat) ---------- */
+      out("#s3", 15.91, 0.5);
+      tl.to("#phone", { opacity: 0, y: 70, filter: "blur(12px)", duration: 0.55, ease: "power2.in" }, 15.91);
+      tl.to("#rings", { x: 520, y: -20, scale: 1.2, duration: 0.9, ease: "power2.inOut" }, 15.91);
+      tl.to("#glow", { x: 520, y: -20, duration: 0.9, ease: "power2.inOut" }, 15.91);
+
+      /* ---------- S4  15.91 - 18.85  // beat-grid: 16.51 (strong), 17.08, 17.67 (strong) ---------- */
+      tl.fromTo("#term", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 16.2);
+      [["#b1", "#t1", 16.51], ["#b2", "#t2", 17.08], ["#b3", "#t3", 17.67]].forEach(function (r) {
+        tl.fromTo(r[0], { opacity: 0, x: -50, filter: "blur(8px)" }, { opacity: 1, x: 0, filter: "blur(0px)", duration: 0.45, ease: "power3.out" }, r[2]);
+        tl.fromTo(r[1], { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, r[2] + 0.05);
+        var n = $(r[0] + " .n");
+        if (n) tl.to(n, { color: "#ffe033", duration: 0.3, ease: "power1.inOut" }, r[2] + 0.3);
+      });
+
+      /* ---------- S4 -> S5 at 18.85 (slowest) ---------- */
+      out("#s4", 18.85, 0.7);
+      tl.to("#rings", { x: 0, y: -80, scale: 1.3, opacity: 0.4, duration: 1.1, ease: "power2.inOut" }, 18.85);
+      tl.to("#glow", { x: 0, y: -80, duration: 1.1, ease: "power2.inOut" }, 18.85);
+
+      /* ---------- S5  18.85 - 22.36  the dedication ---------- */
+      caption("#s5-l1", 19.44, 0.2, 20.02, { y: 20, dur: 0.5 });      /* beat-grid: 19.44 arrives, 20.02 locks */
+      caption("#s5-l2", 19.72, 0.2, 20.02, { y: 20, dur: 0.5 });
+      tl.to("#s5-l2 .w", { color: "#ffca28", duration: 0.5, ease: "power1.inOut" }, 20.15);
+      fadeIn("#s5-att", 19.75, 0.45, 0);
+
+      /* end card  // beat-locked: 20.61 (beat; strong cue 20.49-20.69) */
+      tl.fromTo("#endcard", { opacity: 0, y: 26, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out" }, 20.61);
+      tl.fromTo("#rp1", { scale: 0.7, opacity: 0.5 }, { scale: 4.4, opacity: 0, duration: 1.7, ease: "power1.out", immediateRender: false }, 20.61);
+
+      /* ---------- audio-reactive (subtle): RMS -> glow, bass -> ring breathing (<= 3%), sampled at 60 fps ---------- */
+      var glowKF = [], pulseKF = [];
+      for (var f = 0; f < 1342; f++) {
+        var a = AUDIO[f] || [0, 0];
+        glowKF.push({ opacity: 0.42 + (a[0] / 100) * 0.5, duration: 1 / 60, ease: "none" });
+        pulseKF.push({ scale: 1 + (a[1] / 100) * 0.03, duration: 1 / 60, ease: "none" });
+      }
+      tl.to("#glow", { keyframes: glowKF, ease: "none" }, 0);
+      tl.to("#pulse", { keyframes: pulseKF, ease: "none" }, 0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

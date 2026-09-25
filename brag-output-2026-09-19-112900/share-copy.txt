@@ -1,0 +1,7 @@
+Ozen: live captions for conversation, all on the phone. Who's talking, numbers that pop, word alerts, doorbells. No server, no account.
+485 commits. 6 days. No Mac.
+github.com/arbelonson-source/ozen
+
+Music: "Hyperfun" by Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0 License
+http://creativecommons.org/licenses/by/4.0/

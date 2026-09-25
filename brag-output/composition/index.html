@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Ozen — Good luck, Grandma</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      /* ---- fonts (local woff2; Latin + Hebrew subsets share one family) ---- */
+      @font-face { font-family: "Heebo"; font-weight: 300; src: url(assets/fonts/heebo-latin-300.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+      @font-face { font-family: "Heebo"; font-weight: 300; src: url(assets/fonts/heebo-hebrew-300.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+      @font-face { font-family: "Heebo"; font-weight: 400; src: url(assets/fonts/heebo-latin-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+      @font-face { font-family: "Heebo"; font-weight: 400; src: url(assets/fonts/heebo-hebrew-400.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+      @font-face { font-family: "Heebo"; font-weight: 500; src: url(assets/fonts/heebo-latin-500.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+      @font-face { font-family: "Heebo"; font-weight: 500; src: url(assets/fonts/heebo-hebrew-500.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+      @font-face { font-family: "Heebo"; font-weight: 700; src: url(assets/fonts/heebo-latin-700.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+      @font-face { font-family: "Heebo"; font-weight: 700; src: url(assets/fonts/heebo-hebrew-700.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+      @font-face { font-family: "Heebo"; font-weight: 800; src: url(assets/fonts/heebo-latin-800.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+      @font-face { font-family: "Heebo"; font-weight: 800; src: url(assets/fonts/heebo-hebrew-800.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+      @font-face { font-family: "Frank Ruhl Libre"; font-weight: 400; src: url(assets/fonts/frank-ruhl-libre-latin-400.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+      @font-face { font-family: "Frank Ruhl Libre"; font-weight: 400; src: url(assets/fonts/frank-ruhl-libre-hebrew-400.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+      @font-face { font-family: "Frank Ruhl Libre"; font-weight: 900; src: url(assets/fonts/frank-ruhl-libre-latin-900.woff2) format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+      @font-face { font-family: "Frank Ruhl Libre"; font-weight: 900; src: url(assets/fonts/frank-ruhl-libre-hebrew-900.woff2) format("woff2"); unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+
+      /* ---- tokens: every value comes from the app (icon, CaptionTheme, SpeakerColor, PhasePresentation) ---- */
+      :root {
+        --navy-0: #0b2230;        /* AppIcon background, edge */
+        --navy-1: #0f2a39;
+        --navy-2: #17384d;        /* AppIcon background, center */
+        --amber: #ffca28;         /* AppIcon ear */
+        --amber-deep: #faa700;    /* AppIcon ear, inner */
+        --num: #ffe033;           /* CaptionTheme.numberText (dark) */
+        --white: #ffffff;
+        --pending: rgba(255, 255, 255, 0.62); /* CaptionTheme.pendingText */
+        --green: #30d158;         /* "Listening" status tint */
+        --spk-amber: #fabf2e;     /* SpeakerColor palette[0] */
+        --spk-sky: #73c7fa;       /* SpeakerColor palette[1] */
+        --orange: #ff9f0a;        /* doorbell / .high importance */
+        --banner: #b34d00;        /* orange.deepShade */
+        --serif: "Frank Ruhl Libre", serif;
+        --sans: "Heebo", sans-serif;
+        --mono: "JetBrains Mono", monospace;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--navy-0); }
+      body { font-family: var(--sans); color: var(--white); -webkit-font-smoothing: antialiased; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+      /* ---- background layers ---- */
+      #bg { position: absolute; inset: 0; background: radial-gradient(1500px 1050px at 1450px 560px, var(--navy-2) 0%, var(--navy-1) 52%, var(--navy-0) 100%); }
+      #glow { position: absolute; left: 250px; top: -640px; width: 2400px; height: 2400px; opacity: 0.5;
+              background: radial-gradient(circle at 50% 50%, rgba(255, 202, 40, 0.13) 0%, rgba(255, 202, 40, 0) 30%); }
+
+      /* ---- rings: TAM/SAM/SOM -> sound ripples -> halo ---- */
+      #rings { position: absolute; left: 950px; top: 60px; width: 1000px; height: 1000px; }
+      #pulse { position: absolute; inset: 0; }
+      .ring { position: absolute; border-radius: 50%; }
+      .r3 { left: 130px; top: 130px; width: 740px; height: 740px; border: 2px solid rgba(255, 202, 40, 0.32); background: rgba(255, 202, 40, 0.035); }
+      .r2 { left: 250px; top: 250px; width: 500px; height: 500px; border: 2px solid rgba(255, 202, 40, 0.42); background: rgba(255, 202, 40, 0.06); }
+      .r1 { left: 370px; top: 370px; width: 260px; height: 260px; border: 2px solid rgba(255, 202, 40, 0.58); background: rgba(255, 202, 40, 0.10); }
+      .rp { position: absolute; left: 370px; top: 370px; width: 260px; height: 260px; border-radius: 50%; border: 3px solid rgba(255, 202, 40, 0.55); opacity: 0; }
+      .rlabel { position: absolute; left: 0; width: 1000px; text-align: center; font: 500 24px/1 var(--mono); letter-spacing: 0.08em; color: var(--pending); opacity: 0; }
+      #l3 { top: 152px; } #l2 { top: 272px; } #l1 { top: 392px; }
+      #dot { position: absolute; left: 486px; top: 486px; width: 28px; height: 28px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 40px rgba(255, 202, 40, 0.55); opacity: 0; }
+      #dotlabel { position: absolute; left: 0; top: 540px; width: 1000px; text-align: center; font: 400 36px/1 var(--sans); color: var(--white); opacity: 0; direction: rtl; }
+      #icon { position: absolute; left: 1310px; top: 420px; width: 280px; height: 280px; border-radius: 64px; opacity: 0; overflow: hidden;
+              box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5), 0 0 90px rgba(255, 202, 40, 0.22); }
+      #icon img { display: block; width: 100%; height: 100%; }
+
+      /* ---- "Listening" chip (the app's own status control) ---- */
+      #chip { position: absolute; left: 140px; top: 84px; display: flex; align-items: center; gap: 14px; padding: 12px 26px 12px 22px; border-radius: 999px;
+              background: rgba(48, 209, 88, 0.12); border: 1.5px solid rgba(48, 209, 88, 0.46); color: var(--green); font: 700 26px/1 var(--sans); opacity: 0; }
+      #chipdot { width: 14px; height: 14px; border-radius: 50%; background: var(--green); }
+      .chip-sep { opacity: 0.6; }
+
+      /* ---- scenes ---- */
+      .scene { position: absolute; inset: 0; }
+      .kicker { position: absolute; left: 140px; font: 500 24px/1 var(--mono); letter-spacing: 0.16em; color: var(--pending); opacity: 0; text-transform: uppercase; }
+      .kicker.amber { color: var(--amber); }
+      .w { display: inline-block; opacity: 0; color: var(--pending); }
+      .num { font-weight: 800; color: var(--pending); }
+
+      /* S1 */
+      #s1-l1 { position: absolute; left: 140px; top: 318px; font: 400 80px/1.1 var(--serif); white-space: nowrap; }
+      #s1-l2 { position: absolute; left: 140px; top: 424px; display: flex; align-items: baseline; gap: 26px; white-space: nowrap; }
+      #s1-one { font: 800 360px/0.85 var(--sans); color: var(--pending); opacity: 0; }
+      #s1-gm { font: 900 108px/1 var(--serif); }
+      #s1-k { top: 964px; }
+
+      /* S2 */
+      #s2-k { top: 300px; }
+      #s2-word { position: absolute; left: 140px; top: 352px; display: flex; align-items: baseline; gap: 56px; white-space: nowrap; }
+      #s2-en, #s2-he { font: 900 200px/1 var(--serif); opacity: 0; }
+      #s2-he { direction: rtl; color: var(--amber); }
+      #s2-tag { position: absolute; left: 140px; top: 628px; font: 300 60px/1.15 var(--sans); white-space: nowrap; }
+
+      /* S3 annotations */
+      #s3-k { top: 176px; }
+      .ann { position: absolute; left: 140px; width: 880px; }
+      .ann .rule { position: absolute; left: 0; top: -22px; width: 100%; height: 1.5px; background: rgba(255, 255, 255, 0.16); transform-origin: 0 50%; opacity: 0; }
+      .ann .idx { position: absolute; left: 0; top: 14px; font: 500 24px/1 var(--mono); letter-spacing: 0.1em; color: var(--amber); opacity: 0; }
+      .ann .ttl { margin-left: 74px; font: 400 62px/1.1 var(--serif); white-space: nowrap; }
+      .ann .gloss { margin: 12px 0 0 74px; font: 300 30px/1.3 var(--sans); color: var(--pending); opacity: 0; }
+      #a1 { top: 290px; } #a2 { top: 464px; } #a3 { top: 638px; } #a4 { top: 812px; }
+
+      /* S4 */
+      .big { position: absolute; left: 140px; display: flex; align-items: baseline; gap: 30px; white-space: nowrap; opacity: 0; }
+      .big .n { font: 800 230px/0.9 var(--sans); color: var(--pending); }
+      .big .t { font: 400 104px/1 var(--serif); }
+      #b1 { top: 226px; } #b2 { top: 466px; } #b3 { top: 706px; }
+      #b3 .t { font: 900 230px/0.9 var(--serif); }
+      #term { position: absolute; left: 1090px; top: 330px; width: 730px; padding: 30px 38px 34px; border-radius: 22px; background: rgba(6, 20, 29, 0.92);
+              border: 1.5px solid rgba(255, 255, 255, 0.14); font: 400 20px/1.55 var(--mono); color: var(--pending); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.4); opacity: 0; }
+      #term .path { font-size: 19px; letter-spacing: 0.06em; margin-bottom: 20px; color: var(--pending); }
+      .tl { opacity: 0; margin-bottom: 14px; white-space: nowrap; }
+      .tl .p { color: var(--amber); }
+      .tl .cmd { color: var(--white); }
+      .tl .out { display: block; margin-top: 2px; font: 700 34px/1.3 var(--mono); color: var(--num); }
+
+      /* S5 */
+      #s5-he { position: absolute; left: 0; top: 214px; width: 1920px; text-align: center; direction: rtl; font: 900 176px/1.15 var(--serif); }
+      #s5-en { position: absolute; left: 0; top: 448px; width: 1920px; text-align: center; font: 400 72px/1.15 var(--serif); }
+      #s5-att { position: absolute; left: 0; top: 570px; width: 1920px; text-align: center; font: 500 22px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--pending); opacity: 0; }
+      #endcard { position: absolute; left: 0; top: 720px; width: 1920px; display: flex; justify-content: center; align-items: center; gap: 44px; opacity: 0; }
+      #endicon { width: 168px; height: 168px; border-radius: 38px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 0 70px rgba(255, 202, 40, 0.2); }
+      #endicon img { display: block; width: 100%; height: 100%; }
+      #endtxt .nm { font: 900 108px/1 var(--serif); }
+      #endtxt .url { margin-top: 10px; font: 500 30px/1.2 var(--mono); color: var(--amber); letter-spacing: 0.02em; }
+
+      /* ---- the phone: the app's real caption screen ---- */
+      #halo { position: absolute; left: 1170px; top: 60px; width: 480px; height: 960px; border-radius: 78px; opacity: 0; box-shadow: 0 0 120px 30px rgba(255, 159, 10, 0.55); }
+      #phone { position: absolute; left: 1170px; top: 60px; width: 480px; height: 960px; padding: 12px; border-radius: 78px; opacity: 0;
+               background: linear-gradient(150deg, #3b4650 0%, #161c21 46%, #2a343c 100%); box-shadow: 0 50px 100px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(255, 255, 255, 0.07); }
+      #screen { position: relative; width: 456px; height: 936px; border-radius: 66px; background: #000; overflow: hidden; }
+      #flash { position: absolute; inset: 0; border-radius: 66px; opacity: 0; background: rgba(255, 159, 10, 0.2); box-shadow: inset 0 0 0 22px var(--orange); z-index: 6; }
+      #convo { position: absolute; left: 0; right: 0; top: 56px; bottom: 140px; display: flex; flex-direction: column; justify-content: flex-end; direction: rtl; padding-bottom: 8px; }
+      .row { padding: 0 24px; margin-top: 22px; }
+      .who { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font: 700 20px/1.2 var(--sans); opacity: 0; }
+      .who i { display: block; width: 9px; height: 9px; border-radius: 50%; }
+      .tx { font: 500 30px/1.42 var(--sans); text-align: right; direction: rtl; }
+      .hl { display: flex; align-items: flex-start; gap: 10px; padding: 6px 12px; margin: -6px -12px; border-radius: 10px; background: rgba(255, 224, 51, 0); }
+      .hl svg { flex: none; width: 27px; height: 27px; margin-top: 9px; fill: #fff; opacity: 0; }
+      #pill { position: absolute; top: 84px; left: 0; right: 0; display: flex; justify-content: center; opacity: 0; z-index: 5; }
+      #pill span { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; border-radius: 999px; background: rgba(255, 224, 51, 0.92); color: #000; font: 700 21px/1.2 var(--sans); direction: rtl; }
+      #pill svg { width: 24px; height: 24px; fill: #000; }
+      #banner { position: absolute; top: 84px; left: 10px; right: 10px; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 16px;
+                background: rgba(179, 77, 0, 0.92); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3); direction: rtl; opacity: 0; z-index: 5; }
+      #banner svg { flex: none; width: 34px; height: 34px; fill: #fff; }
+      #banner .bt { flex: 1; }
+      #banner .b1 { font: 700 26px/1.2 var(--sans); }
+      #banner .b2 { font: 400 19px/1.2 var(--sans); opacity: 0.85; }
+      #banner .bx { flex: none; width: 20px; height: 20px; stroke: #fff; opacity: 0.7; }
+      #bar { position: absolute; left: 10px; right: 10px; bottom: 16px; height: 112px; padding: 0 16px; border-radius: 32px; display: flex; align-items: center; gap: 8px; direction: rtl;
+             background: rgba(150, 170, 185, 0.2); border: 1px solid rgba(255, 255, 255, 0.12); }
+      .bb { flex: none; width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; font: 400 14px/1.1 var(--sans); color: #fff; }
+      .bb svg { width: 28px; height: 28px; fill: #fff; }
+      #status { flex: 1; text-align: center; }
+      #status .st { display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--green); font: 700 25px/1.2 var(--sans); }
+      #status .st svg { width: 22px; height: 22px; fill: var(--green); }
+      #status .sd { margin-top: 3px; font: 400 15px/1.2 var(--sans); color: rgba(235, 235, 245, 0.6); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1920" data-height="1080" data-duration="22.9">
+      <div id="bg"></div>
+      <div id="glow" data-layout-ignore></div>
+
+      <!-- rings: market diagram -> sound ripples -> halo -->
+      <div id="rings" data-layout-allow-overflow>
+        <div id="pulse">
+          <div class="ring r3"></div>
+          <div class="ring r2"></div>
+          <div class="ring r1"></div>
+          <div class="rp" id="rp1"></div><div class="rp" id="rp2"></div><div class="rp" id="rp3"></div>
+          <div class="rlabel" id="l3">TAM = 1</div>
+          <div class="rlabel" id="l2">SAM = 1</div>
+          <div class="rlabel" id="l1">SOM = 1</div>
+          <div id="dot"></div>
+          <div id="dotlabel" lang="he">סבתא</div>
+        </div>
+      </div>
+      <div id="icon"><img src="assets/img/icon.png" alt="Ozen app icon" /></div>
+
+      <div id="chip"><span id="chipdot"></span><span>Listening</span><span class="chip-sep">·</span><span dir="rtl" lang="he">מקשיב</span></div>
+
+      <!-- S1: the market -->
+      <div class="scene" id="s1">
+        <div id="s1-l1" class="cap">Total addressable market:</div>
+        <div id="s1-l2"><span id="s1-one" class="num-one" data-layout-allow-overlap>1</span><span id="s1-gm" class="cap">grandmother.</span></div>
+        <div class="kicker" id="s1-k">Market sizing · Slide 1 of 1</div>
+      </div>
+
+      <!-- S2: the ear -->
+      <div class="scene" id="s2">
+        <div class="kicker amber" id="s2-k">Hebrew for “ear”</div>
+        <div id="s2-word"><span id="s2-en">Ozen</span><span id="s2-he" lang="he">אוזן</span></div>
+        <div id="s2-tag" class="cap">Live captions for conversation.</div>
+      </div>
+
+      <!-- S3: the table -->
+      <div class="scene" id="s3">
+        <div class="kicker amber" id="s3-k">On the phone · No server · No account</div>
+        <div class="ann" id="a1"><div class="rule"></div><div class="idx">01</div><div class="cap ttl">Knows who’s talking.</div><div class="gloss">“Good morning, how did you sleep?”</div></div>
+        <div class="ann" id="a2"><div class="rule"></div><div class="idx">02</div><div class="cap ttl">Makes numbers stand out.</div><div class="gloss">“…an appointment at 10:30… two pills before.”</div></div>
+        <div class="ann" id="a3"><div class="rule"></div><div class="idx">03</div><div class="cap ttl">Buzzes on words she picks.</div><div class="gloss">Her name, or “two pills”. Three quick taps.</div></div>
+        <div class="ann" id="a4"><div class="rule"></div><div class="idx">04</div><div class="cap ttl">Hears the doorbell.</div><div class="gloss">Banner, edge flash. One of about 50 sounds.</div></div>
+      </div>
+
+      <!-- S4: the effort -->
+      <div class="scene" id="s4">
+        <div class="big" id="b1"><span class="n" data-layout-allow-overlap>485</span><span class="t" data-layout-allow-overlap>commits.</span></div>
+        <div class="big" id="b2"><span class="n" data-layout-allow-overlap>6</span><span class="t" data-layout-allow-overlap>days.</span></div>
+        <div class="big" id="b3"><span class="t" data-layout-allow-overlap>No Mac.</span></div>
+        <div id="term">
+          <div class="path">~/Projects/ozen</div>
+          <div class="tl" id="t1"><span class="p">$</span> <span class="cmd">git rev-list --count HEAD</span><span class="out">485</span></div>
+          <div class="tl" id="t2"><span class="p">$</span> <span class="cmd">git log --format=%ad --date=short | sort -u | wc -l</span><span class="out">6</span></div>
+          <div class="tl" id="t3"><span class="p">$</span> <span class="cmd">uname -s</span><span class="out">Linux</span></div>
+        </div>
+      </div>
+
+      <!-- S5: the dedication -->
+      <div class="scene" id="s5">
+        <div id="s5-he" class="cap" lang="he"><span class="w">בהצלחה,</span> <span class="w" id="s5-sabta">סבתא.</span></div>
+        <div id="s5-en" class="cap">Good luck, Grandma.</div>
+        <div id="s5-att">— The last line of Ozen’s first-run setup</div>
+        <div id="endcard">
+          <div id="endicon"><img src="assets/img/icon-end.png" alt="" /></div>
+          <div id="endtxt"><div class="nm">Ozen</div><div class="url">github.com/arbelonson-source/ozen</div></div>
+        </div>
+      </div>
+
+      <!-- the phone -->
+      <div id="halo" data-layout-ignore></div>
+      <div id="phone">
+        <div id="screen">
+          <div id="flash" data-layout-ignore></div>
+          <div id="pill"><span><svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg><span lang="he">דובר 1 — נאמר: שני כדורים</span></span></div>
+          <div id="banner">
+            <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+            <div class="bt"><div class="b1">פעמון דלת</div><div class="b2">נשמע עכשיו</div></div>
+            <svg class="bx" viewBox="0 0 20 20" fill="none" stroke-width="2.4" stroke-linecap="round"><path d="M4 4l12 12M16 4L4 16"/></svg>
+          </div>
+          <div id="convo">
+            <div class="row" id="row1">
+              <div class="who" style="color: var(--spk-amber)"><span>דנה</span><i style="background: var(--spk-amber)"></i></div>
+              <div class="tx cap">בוקר טוב, איך ישנת הלילה?</div>
+            </div>
+            <div class="row" id="row2">
+              <div class="who" style="color: var(--spk-sky)"><span>דובר 1</span><i style="background: var(--spk-sky)"></i></div>
+              <div class="hl" id="hl2">
+                <svg id="bell2" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+                <div class="tx"><span class="w">די</span> <span class="w">טוב,</span> <span class="w">תודה.</span> <span class="w">יש</span> <span class="w">לי</span> <span class="w">תור</span> <span class="w">לרופא</span> <span class="w">ב-<b class="num">10:30</b></span> <span class="w">ואני</span> <span class="w">צריכה</span> <span class="w">לקחת</span> <span class="w"><b class="num">שני</b></span> <span class="w"><b class="num">כדורים</b></span> <span class="w">לפני.</span></div>
+              </div>
+            </div>
+            <div class="row" id="row3">
+              <div class="who" style="color: var(--spk-amber)"><span>דנה</span><i style="background: var(--spk-amber)"></i></div>
+              <div class="tx cap">אני יכולה לקחת אותך, אין בעיה.</div>
+            </div>
+            <div class="row" id="row4">
+              <div class="who" style="color: var(--spk-sky)"><span>דובר 1</span><i style="background: var(--spk-sky)"></i></div>
+              <div class="tx cap">עוד לא ברור לי אם</div>
+            </div>
+          </div>
+          <div id="bar">
+            <div class="bb"><svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg><span>מיקרופון</span></div>
+            <div id="status"><div class="st"><svg viewBox="0 0 24 24"><path d="M4 10h2v4H4zm4-4h2v12H8zm4-3h2v18h-2zm4 3h2v12h-2zm4 4h2v4h-2z"/></svg><span>מקשיב</span></div><div class="sd">הקישו להשהיה</div></div>
+            <div class="bb"><svg viewBox="0 0 24 24"><path d="M20 5H4c-1.1 0-1.99.9-1.99 2L2 17c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm-9 3h2v2h-2V8zm0 3h2v2h-2v-2zM8 8h2v2H8V8zm0 3h2v2H8v-2zm-1 2H5v-2h2v2zm0-3H5V8h2v2zm9 7H8v-2h8v2zm0-4h-2v-2h2v2zm0-3h-2V8h2v2zm3 3h-2v-2h2v2zm0-3h-2V8h2v2z"/></svg><span>להגיד</span></div>
+            <div class="bb"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg><span>הגדרות</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- audio: music bed starts 2.19s into the track so its strong cues land on the cuts -->
+      <audio id="bed" data-start="0" data-duration="22.9" data-media-start="2.19" data-track-index="10" src="assets/music/bed.mp3"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":0.5,"v":0.5},{"t":12.3,"v":0.5},{"t":12.5,"v":0.36},{"t":14.2,"v":0.36},{"t":14.6,"v":0.5},{"t":21.4,"v":0.5},{"t":22.9,"v":0}]}]}'></audio>
+      <audio id="sfx-thud" data-start="4.02" data-duration="0.19" data-track-index="11" data-volume="0.5" src="assets/sfx/thud.ogg"></audio>
+      <audio id="sfx-tap1" data-start="10.92" data-duration="0.27" data-track-index="12" data-volume="0.42" src="assets/sfx/tap1.ogg"></audio>
+      <audio id="sfx-tap2" data-start="11.06" data-duration="0.27" data-track-index="13" data-volume="0.38" src="assets/sfx/tap2.ogg"></audio>
+      <audio id="sfx-tap3" data-start="11.2" data-duration="0.27" data-track-index="14" data-volume="0.38" src="assets/sfx/tap3.ogg"></audio>
+      <audio id="sfx-door" data-start="12.54" data-duration="1.75" data-track-index="15" data-volume="0.36" src="assets/sfx/doorbell.wav"></audio>
+      <audio id="sfx-lockup" data-start="20.72" data-duration="0.65" data-track-index="16" data-volume="0.34" src="assets/sfx/lockup.ogg"></audio>
+    </div>
+
+    <script>
+      /* per-frame [rms, bass] 0-100 of the music bed (trimmed to the composition's 2.19s offset), 30 fps */
+      var AUDIO = [[19,0],[21,0],[20,0],[17,0],[34,1],[26,0],[23,0],[22,1],[29,1],[25,0],[18,0],[7,0],[32,0],[21,0],[17,0],[17,0],[40,1],[33,0],[27,0],[21,0],[8,0],[8,0],[7,0],[5,0],[32,1],[42,1],[38,0],[31,0],[31,1],[27,0],[22,0],[21,0],[16,0],[8,0],[4,0],[4,0],[20,0],[31,0],[28,0],[24,0],[19,0],[13,0],[9,0],[7,0],[9,0],[38,0],[28,0],[22,0],[27,1],[36,0],[28,0],[23,0],[24,0],[23,0],[25,0],[21,0],[7,0],[33,1],[29,0],[24,0],[21,0],[16,0],[14,0],[13,0],[11,0],[36,8],[40,20],[39,20],[37,19],[40,14],[33,5],[28,1],[22,1],[22,1],[24,0],[19,0],[11,0],[23,0],[25,0],[13,0],[8,0],[37,0],[35,0],[31,0],[32,0],[22,0],[10,0],[5,0],[3,0],[3,0],[27,0],[14,0],[13,0],[11,0],[38,1],[26,0],[23,0],[20,0],[12,0],[7,0],[5,0],[5,0],[35,1],[26,0],[22,0],[18,0],[14,0],[8,0],[6,0],[8,0],[32,1],[29,1],[27,0],[28,0],[39,1],[31,1],[27,0],[24,0],[23,0],[23,0],[22,0],[9,0],[21,0],[28,0],[26,0],[23,0],[20,0],[13,0],[7,0],[10,0],[26,0],[30,0],[20,0],[19,0],[16,0],[36,1],[26,0],[23,0],[25,0],[28,0],[25,0],[17,0],[9,0],[33,1],[22,0],[16,0],[19,0],[40,0],[32,0],[27,0],[21,0],[8,0],[8,0],[6,0],[5,0],[37,1],[41,0],[37,0],[30,0],[34,1],[27,1],[22,0],[20,0],[15,0],[7,0],[4,0],[4,0],[22,0],[29,0],[27,0],[23,0],[18,0],[12,0],[9,0],[7,0],[17,1],[38,1],[29,0],[24,0],[30,0],[35,1],[26,1],[24,0],[24,0],[24,0],[24,0],[21,0],[6,0],[34,1],[29,0],[24,0],[20,0],[16,0],[15,0],[12,0],[11,1],[77,47],[74,92],[53,70],[34,28],[36,9],[39,13],[39,16],[37,18],[32,17],[31,17],[28,17],[28,17],[36,18],[31,18],[29,18],[30,18],[61,35],[70,78],[56,74],[44,45],[29,14],[25,14],[23,15],[24,16],[26,16],[33,17],[27,15],[23,15],[24,16],[40,16],[33,14],[31,15],[40,6],[78,73],[65,88],[46,61],[21,17],[41,15],[43,19],[38,19],[33,17],[28,16],[27,16],[28,16],[26,17],[38,17],[35,14],[34,15],[35,16],[65,39],[72,87],[52,71],[33,33],[28,11],[31,14],[28,14],[21,15],[30,4],[41,6],[44,8],[37,11],[38,13],[39,14],[34,13],[35,11],[61,34],[78,84],[56,77],[46,51],[25,10],[41,4],[35,2],[34,1],[34,0],[33,1],[34,0],[29,0],[30,1],[35,1],[31,0],[29,0],[34,4],[69,53],[65,81],[54,60],[28,20],[21,3],[23,1],[22,0],[20,0],[44,0],[45,1],[45,1],[36,1],[40,1],[38,0],[37,0],[34,1],[69,37],[68,92],[59,76],[34,38],[35,5],[36,1],[37,0],[32,0],[30,1],[29,1],[29,0],[29,1],[34,1],[38,0],[32,1],[33,0],[53,15],[67,67],[65,74],[45,51],[30,12],[32,1],[33,0],[29,0],[26,1],[36,1],[35,1],[33,0],[31,0],[30,0],[30,0],[28,0],[27,2],[74,52],[72,88],[52,64],[36,25],[37,9],[37,13],[41,15],[35,16],[33,17],[30,17],[28,17],[29,18],[35,19],[32,18],[31,18],[27,19],[62,40],[69,83],[61,76],[39,40],[28,16],[23,15],[24,16],[25,17],[28,16],[29,17],[25,16],[24,16],[29,16],[39,16],[34,15],[32,15],[42,10],[78,79],[66,82],[41,58],[21,15],[38,13],[31,13],[30,15],[27,15],[26,15],[25,14],[22,14],[23,15],[38,14],[34,14],[34,15],[35,15],[66,43],[74,89],[51,69],[33,29],[29,10],[31,14],[30,16],[29,18],[33,6],[38,7],[42,11],[38,13],[39,14],[40,15],[47,16],[38,16],[63,38],[76,85],[59,76],[44,45],[32,9],[40,3],[40,1],[35,0],[38,0],[35,0],[33,0],[30,0],[30,0],[35,0],[31,0],[28,0],[39,8],[73,70],[70,79],[50,58],[31,27],[25,6],[24,1],[27,1],[28,0],[48,1],[55,1],[53,1],[46,0],[44,0],[40,1],[39,0],[37,1],[74,42],[71,89],[51,70],[33,32],[37,4],[40,1],[42,1],[42,1],[44,1],[35,1],[32,1],[29,1],[41,1],[48,1],[40,1],[25,1],[50,3],[55,4],[53,3],[52,5],[49,3],[33,3],[26,1],[26,1],[27,0],[33,0],[31,0],[29,0],[27,0],[30,0],[24,0],[25,0],[24,8],[86,60],[80,95],[59,49],[59,28],[63,34],[60,33],[49,23],[18,10],[18,2],[16,0],[17,0],[15,0],[31,0],[22,0],[16,0],[17,1],[75,40],[82,92],[55,71],[39,38],[25,9],[25,2],[19,0],[6,0],[17,0],[19,1],[16,0],[13,0],[27,0],[39,0],[36,0],[32,0],[47,18],[85,89],[67,95],[39,46],[21,12],[27,1],[26,0],[25,0],[24,2],[46,16],[47,18],[46,18],[49,18],[44,18],[43,19],[45,19],[44,26],[89,70],[76,91],[48,57],[28,24],[27,8],[35,14],[32,17],[31,18],[55,30],[57,25],[54,24],[57,24],[41,20],[53,24],[53,26],[54,27],[65,27],[78,86],[66,82],[39,36],[40,24],[44,30],[48,33],[49,34],[44,32],[36,18],[26,3],[24,1],[18,0],[21,1],[21,1],[19,0],[46,17],[100,93],[77,96],[49,55],[34,18],[32,2],[23,1],[5,0],[9,2],[59,19],[50,20],[56,15],[46,14],[60,13],[51,11],[55,10],[53,9],[80,46],[75,96],[58,60],[39,25],[46,4],[34,2],[22,1],[21,1],[53,14],[54,17],[47,17],[54,16],[45,14],[53,14],[46,14],[50,14],[68,26],[75,82],[60,71],[43,37],[40,11],[46,7],[49,8],[43,8],[46,10],[53,17],[56,17],[53,17],[53,15],[46,11],[54,2],[53,3],[50,14],[83,78],[75,98],[48,49],[46,26],[48,24],[48,27],[52,27],[45,29],[38,26],[22,15],[12,6],[9,2],[29,0],[22,0],[17,0],[19,2],[79,47],[79,95],[52,66],[32,33],[20,6],[19,1],[19,0],[8,0],[19,1],[19,1],[16,0],[14,0],[30,0],[35,0],[29,0],[29,0],[53,22],[85,92],[65,91],[35,43],[24,11],[23,1],[22,1],[21,0],[29,4],[54,21],[50,25],[47,24],[48,23],[45,23],[44,23],[45,24],[45,21],[83,49],[69,85],[43,52],[22,20],[29,10],[33,15],[33,15],[32,16],[56,24],[55,21],[53,17],[55,18],[49,20],[49,25],[46,25],[48,27],[77,32],[78,93],[54,69],[42,30],[42,24],[43,26],[46,29],[49,30],[45,28],[35,15],[30,5],[25,1],[19,0],[24,0],[23,0],[19,0],[57,17],[85,86],[65,85],[43,46],[27,14],[28,2],[26,1],[21,1],[18,5],[55,12],[52,15],[43,12],[52,10],[49,10],[56,9],[49,6],[52,9],[72,63],[85,100],[46,52]];
+      var tl = gsap.timeline({ paused: true });
+      function $(s) { return document.querySelector(s); }
+      function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+      function out(sel, t, d) { tl.to(sel, { opacity: 0, filter: "blur(10px)", duration: d || 0.5, ease: "power2.inOut" }, t); }
+
+      /* split plain-text .cap elements into word spans (hand-authored ones keep their spans) */
+      $$(".cap").forEach(function (el) {
+        if (el.children.length) return;
+        el.innerHTML = el.textContent.trim().split(/\s+/).map(function (w) { return '<span class="w">' + w + "</span>"; }).join(" ");
+      });
+
+      /* an Ozen caption: words arrive dim (still settling), then the whole line locks to full white */
+      function caption(sel, t0, gap, lockAt, opts) {
+        opts = opts || {};
+        var ws = $$(sel + " .w");
+        tl.fromTo(ws, { opacity: 0, y: opts.y === undefined ? 12 : opts.y }, { opacity: 1, y: 0, duration: opts.dur || 0.3, ease: "power2.out", stagger: gap }, t0);
+        if (lockAt === null) return;
+        tl.to(ws, { color: "#ffffff", duration: 0.3, ease: "power1.inOut" }, lockAt);
+        var nums = $$(sel + " .num");
+        if (nums.length) tl.to(nums, { color: "#ffe033", duration: 0.3, ease: "power1.inOut" }, lockAt);
+      }
+      function fadeIn(sel, t, d, y) { tl.fromTo(sel, { opacity: 0, y: y === undefined ? 10 : y }, { opacity: 1, y: 0, duration: d || 0.5, ease: "power2.out" }, t); }
+
+      /* ---------- persistent: chip ---------- */
+      tl.fromTo("#chip", { opacity: 0, y: -10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 0.15);
+      tl.to("#chipdot", { scale: 1.5, opacity: 0.55, duration: 0.8, yoyo: true, repeat: 27, ease: "sine.inOut" }, 0.2);
+
+      /* ---------- S1  0.00 - 3.81  the market ---------- */
+      tl.fromTo("#pulse .r3", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.2);
+      tl.fromTo("#pulse .r2", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.34);
+      tl.fromTo("#pulse .r1", { scale: 0.7, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.48);
+      tl.to("#l3", { opacity: 1, duration: 0.4 }, 0.75);
+      tl.to("#l2", { opacity: 1, duration: 0.4 }, 0.9);
+      tl.to("#l1", { opacity: 1, duration: 0.4 }, 1.05);
+      caption("#s1-l1", 0.3, 0.26, 1.3, { y: 16, dur: 0.4 });
+      tl.fromTo("#s1-one", { opacity: 0, y: 30, scale: 1.08 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "power3.out" }, 1.55);
+      caption("#s1-l2", 1.78, 0.2, 2.2, { y: 16, dur: 0.4 });
+      tl.to("#s1-one", { color: "#ffe033", duration: 0.35, ease: "power1.inOut" }, 2.2);
+      tl.fromTo("#dot", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2.2)" }, 2.25);
+      tl.fromTo("#dotlabel", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 2.4);
+      fadeIn("#s1-k", 0.6, 0.6, 0);
+
+      /* ---------- transition S1 -> S2 at 3.81 ---------- */
+      out("#s1", 3.81, 0.5);
+      tl.to(["#l1", "#l2", "#l3", "#dotlabel"], { opacity: 0, duration: 0.4, ease: "power2.in" }, 3.81);
+      tl.to("#dot", { scale: 2.4, opacity: 0, duration: 0.35, ease: "power2.in" }, 3.85);
+      tl.fromTo("#icon", { scale: 0.35, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.65, ease: "back.out(1.35)" }, 3.9);
+
+      /* ripples: sound leaving the ear, 4.30 -> 14.0, three rings in rotation */
+      var rp = ["#rp1", "#rp2", "#rp3"];
+      for (var k = 0; k < 14; k++) {
+        var rt = 4.3 + k * 0.72;
+        tl.fromTo(rp[k % 3], { scale: 0.7, opacity: 0.5 }, { scale: 2.6, opacity: 0, duration: 1.8, ease: "power1.out", immediateRender: false }, rt);
+      }
+
+      /* ---------- S2  3.81 - 6.55  the ear ---------- */
+      fadeIn("#s2-k", 4.35, 0.5, 0);
+      tl.fromTo("#s2-en", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "power3.out" }, 4.4);
+      tl.fromTo("#s2-he", { opacity: 0, y: 30, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, ease: "power3.out" }, 4.56);
+      caption("#s2-tag", 4.75, 0.13, 5.25, { y: 14 });
+
+      /* ---------- transition S2 -> S3 at 6.55  // beat-locked: 6.55s (strong cue, source 8.74s) ---------- */
+      out("#s2", 6.55, 0.5);
+      tl.to("#icon", { scale: 0.82, opacity: 0, filter: "blur(8px)", duration: 0.5, ease: "power2.in" }, 6.55);
+      tl.to("#rings", { x: -40, y: -20, duration: 0.7, ease: "power2.inOut" }, 6.55);
+      tl.to("#glow", { x: -40, y: -20, duration: 0.7, ease: "power2.inOut" }, 6.55);
+
+      /* ---------- S3  6.55 - 15.28  the table ---------- */
+      gsap.set("#phone", { transformPerspective: 1800, transformOrigin: "50% 50%" });
+      tl.fromTo("#phone", { opacity: 0, y: 120, rotationY: -16, filter: "blur(12px)" }, { opacity: 1, y: 0, rotationY: -7, filter: "blur(0px)", duration: 0.7, ease: "power3.out" }, 6.55);
+      tl.to("#phone", { rotationY: -3, duration: 8.0, ease: "none" }, 7.25);
+      fadeIn("#s3-k", 6.95, 0.5, 0);
+
+      function ann(id, idxAt, t0, lockAt, glossAt, words) {
+        tl.fromTo("#" + id + " .rule", { opacity: 1, scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.out" }, idxAt);
+        tl.fromTo("#" + id + " .idx", { opacity: 0 }, { opacity: 1, duration: 0.3 }, idxAt + 0.1);
+        caption("#" + id + " .ttl", t0, 0.12, lockAt, { y: 14 });
+        tl.fromTo("#" + id + " .gloss", { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, glossAt);
+      }
+
+      /* row 1 - Dana  // beat-grid: 7.10 (row 1), 7.64 (lock + A1) */
+      tl.to("#row1 .who", { opacity: 1, duration: 0.3 }, 7.05);
+      caption("#row1 .tx", 7.1, 0.09, 7.64);
+      ann("a1", 7.4, 7.64, 8.18, 8.25);
+
+      /* row 2 - speaker 1, numbers  // beat-grid: 8.74 (row 2), 9.83 (lock; numbers turn yellow) */
+      tl.to("#row2 .who", { opacity: 1, duration: 0.3 }, 8.7);
+      caption("#row2 .tx", 8.74, 0.06, 9.83, { dur: 0.25, y: 8 });
+      ann("a2", 9.05, 9.27, 9.83, 9.95);
+
+      /* keyword hit  // beat-locked: 10.92s (strong cue) - three quick taps 0 / .14 / .28 */
+      tl.to("#hl2", { backgroundColor: "rgba(255,224,51,0.22)", duration: 0.25, ease: "power1.out" }, 10.92);
+      tl.fromTo("#bell2", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, 10.92);
+      tl.fromTo("#pill", { opacity: 0, y: -24 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 10.92);
+      [10.92, 11.06, 11.2].forEach(function (t, i) {
+        var s = i % 2 ? -5 : 5;
+        tl.to("#phone", { x: s, duration: 0.04, ease: "power1.out" }, t);
+        tl.to("#phone", { x: 0, duration: 0.09, ease: "power1.inOut" }, t + 0.04);
+      });
+      tl.to("#pill", { opacity: 0, y: -12, duration: 0.3, ease: "power2.in" }, 12.2);
+      ann("a3", 11.2, 11.45, 12.01, 12.1);
+
+      /* row 3 - Dana replies */
+      tl.to("#row3 .who", { opacity: 1, duration: 0.3 }, 11.4);
+      caption("#row3 .tx", 11.45, 0.09, 12.01);
+
+      /* doorbell  // beat-grid: 12.54 (banner + ding), 13.10 (dong lands on a beat) */
+      tl.fromTo("#banner", { opacity: 0, y: -110 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 12.54);
+      [12.54, 13.34].forEach(function (t) {
+        tl.fromTo("#flash", { opacity: 0 }, { opacity: 1, duration: 0.08, ease: "power2.out", immediateRender: false }, t);
+        tl.to("#flash", { opacity: 0, duration: 0.15, ease: "power2.in" }, t + 0.4);
+        tl.fromTo("#halo", { opacity: 0 }, { opacity: 0.9, duration: 0.08, ease: "power2.out", immediateRender: false }, t);
+        tl.to("#halo", { opacity: 0, duration: 0.15, ease: "power2.in" }, t + 0.4);
+      });
+      [12.54, 12.72, 13.24, 13.42].forEach(function (t, i) {
+        var s = i % 2 ? -6 : 6;
+        tl.to("#phone", { x: s, duration: 0.05, ease: "power1.out" }, t);
+        tl.to("#phone", { x: 0, duration: 0.1, ease: "power1.inOut" }, t + 0.05);
+      });
+      ann("a4", 12.45, 12.54, 13.1, 13.2);
+      tl.to("#banner", { opacity: 0, y: -60, duration: 0.35, ease: "power2.in" }, 14.4);
+
+      /* row 4 - still settling (never locks: pending, dim) */
+      tl.to("#row4 .who", { opacity: 1, duration: 0.3 }, 13.6);
+      caption("#row4 .tx", 13.65, 0.12, null);
+
+      /* ---------- transition S3 -> S4 at 15.28  // beat-locked: 15.28s (strong cue, source 17.47s) ---------- */
+      out("#s3", 15.28, 0.5);
+      tl.to("#phone", { opacity: 0, y: 70, filter: "blur(12px)", duration: 0.55, ease: "power2.in" }, 15.28);
+      tl.to("#rings", { x: 640, y: 0, duration: 0.9, ease: "power2.inOut" }, 15.28);
+      tl.to("#glow", { x: 640, y: 0, duration: 0.9, ease: "power2.inOut" }, 15.28);
+
+      /* ---------- S4  15.28 - 18.56  the effort  // beat-grid: 15.83 / 16.37 / 16.91 ---------- */
+      tl.fromTo("#term", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 15.6);
+      [["#b1", "#t1", 15.83], ["#b2", "#t2", 16.37], ["#b3", "#t3", 16.91]].forEach(function (r) {
+        tl.fromTo(r[0], { opacity: 0, x: -50, filter: "blur(8px)" }, { opacity: 1, x: 0, filter: "blur(0px)", duration: 0.45, ease: "power3.out" }, r[2]);
+        tl.fromTo(r[1], { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: "power2.out" }, r[2] + 0.05);
+        var n = $(r[0] + " .n");
+        if (n) tl.to(n, { color: "#ffe033", duration: 0.3, ease: "power1.inOut" }, r[2] + 0.3);
+      });
+
+      /* ---------- transition S4 -> S5 at 18.56 (slowest of the film) ---------- */
+      out("#s4", 18.56, 0.7);
+      tl.to("#rings", { x: -490, y: -90, scale: 1.35, opacity: 0.4, duration: 1.1, ease: "power2.inOut" }, 18.56);
+      tl.to("#glow", { x: -490, y: -90, duration: 1.1, ease: "power2.inOut" }, 18.56);
+
+      /* ---------- S5  18.56 - 22.9  the dedication ---------- */
+      caption("#s5-he", 19.09, 0.22, 19.65, { y: 20, dur: 0.5 });   /* // beat-grid: 19.09 arrives, 19.65 locks */
+      tl.to("#s5-sabta", { color: "#ffca28", duration: 0.5, ease: "power1.inOut" }, 19.75);
+      caption("#s5-en", 19.9, 0.15, 20.4, { y: 14 });
+      fadeIn("#s5-att", 20.0, 0.45, 0);
+
+      /* end card  // beat-locked: 20.74s (strongest cue in the track, source 22.93s) */
+      tl.fromTo("#endcard", { opacity: 0, y: 26, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "power3.out" }, 20.74);
+      tl.fromTo("#rp1", { scale: 0.7, opacity: 0.5 }, { scale: 4.4, opacity: 0, duration: 1.9, ease: "power1.out", immediateRender: false }, 20.74);
+
+      /* ---------- audio-reactive (subtle): music RMS -> glow, bass -> ring breathing (<= 3%) ---------- */
+      var glowKF = [], pulseKF = [];
+      for (var f = 0; f < 687; f++) {
+        var a = AUDIO[f] || [0, 0];
+        glowKF.push({ opacity: 0.42 + (a[0] / 100) * 0.5, duration: 1 / 30, ease: "none" });
+        pulseKF.push({ scale: 1 + (a[1] / 100) * 0.03, duration: 1 / 30, ease: "none" });
+      }
+      tl.to("#glow", { keyframes: glowKF, ease: "none" }, 0);
+      tl.to("#pulse", { keyframes: pulseKF, ease: "none" }, 0);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
