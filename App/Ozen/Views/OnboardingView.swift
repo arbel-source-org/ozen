@@ -13,6 +13,10 @@ struct OnboardingView: View {
     @State private var microphone: AudioPermission?
     @State private var notificationsAllowed: Bool?
     @State private var requesting = false
+    /// The accurate model is right for nearly every phone, so its
+    /// alternative stays folded away unless it is already the choice:
+    /// "which model?" is not a question for the first minute of setup.
+    @State private var showsModelChoice = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
@@ -85,17 +89,30 @@ struct OnboardingView: View {
                 Task { await viewModel.setEngine(.whisperKit) }
             }
             if viewModel.settings.engine == .whisperKit {
-                Picker(tr("מודל", "Model"), selection: Binding(
-                    get: { viewModel.settings.whisperModelVariant },
-                    set: { variant in Task { await viewModel.setWhisperModel(variant) } }
-                )) {
-                    Text(tr("מדויק", "Accurate")).tag(WhisperModelCatalog.recommendedVariant)
-                    Text(tr("מהיר", "Fast")).tag("small")
+                DisclosureGroup(isExpanded: $showsModelChoice) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Picker(tr("מודל", "Model"), selection: Binding(
+                            get: { viewModel.settings.whisperModelVariant },
+                            set: { variant in Task { await viewModel.setWhisperModel(variant) } }
+                        )) {
+                            Text(tr("מדויק", "Accurate")).tag(WhisperModelCatalog.recommendedVariant)
+                            Text(tr("מהיר", "Fast")).tag("small")
+                        }
+                        .pickerStyle(.segmented)
+                        Text(modelChoiceNote)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 8)
+                } label: {
+                    Text(tr("טלפון ישן או איטי?", "An older or slow phone?"))
+                        .font(.callout)
                 }
-                .pickerStyle(.segmented)
-                Text(modelChoiceNote)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                .onAppear {
+                    if viewModel.settings.whisperModelVariant != WhisperModelCatalog.recommendedVariant {
+                        showsModelChoice = true
+                    }
+                }
                 if let missing = modelStorageShortfall {
                     Label(tr("אין מספיק מקום בטלפון למודל הזה. צריך לפנות עוד \(PhasePresentation.sizeText(megabytes: missing)).", "Not enough room on the phone for this model. \(PhasePresentation.sizeText(megabytes: missing)) more needs to be freed up."), systemImage: "externaldrive.badge.exclamationmark")
                         .font(.callout)
