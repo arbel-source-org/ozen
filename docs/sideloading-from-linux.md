@@ -67,9 +67,7 @@ This section will say so here once someone has confirmed it opens.
 
 Each run of the release workflow attaches `Ozen.ipa` to a GitHub Release named
 "Ozen build N", tagged `v0.2.N` (the app's version series, then the build
-number, which Settings shows in brackets). The repository is private, so
-downloading needs an account with access: sign in on the Releases page, or
-with the GitHub CLI logged in,
+number, which Settings shows in brackets). Download it from the repository's Releases page, or with the GitHub CLI:
 
 ```
 gh release download v0.2.N -R arbel-source-org/ozen -p Ozen.ipa --clobber
