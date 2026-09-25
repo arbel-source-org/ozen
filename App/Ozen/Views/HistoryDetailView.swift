@@ -425,7 +425,6 @@ private struct SavedLineRow: View {
                 if isUncertain {
                     Image(systemName: "questionmark.circle")
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel(tr("ייתכן שלא נשמע נכון", "May not have been heard correctly"))
                 }
                 Text(
                     caption: CaptionLayout.displayText(segment.text),
@@ -449,7 +448,8 @@ private struct SavedLineRow: View {
 
     private var accessibilityText: String {
         let star = segment.isStarred ? tr("מסומן כחשוב. ", "Marked as important. ") : ""
-        guard let name = segment.speakerName else { return star + segment.text }
-        return star + "\(name): \(segment.text)"
+        let uncertain = isUncertain ? tr("ייתכן שלא נשמע נכון. ", "May not have been heard correctly. ") : ""
+        guard let name = segment.speakerName else { return star + uncertain + segment.text }
+        return star + uncertain + "\(name): \(segment.text)"
     }
 }
