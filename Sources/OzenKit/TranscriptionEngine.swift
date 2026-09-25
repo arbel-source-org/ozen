@@ -209,6 +209,11 @@ public protocol TranscriptionEngine: Sendable {
     /// download can wait for Wi-Fi.
     func pendingDownloadMegabytes() async -> Int?
 
+    /// The free space that download needs at its peak, in megabytes: more
+    /// than the download when the model is compiled on the phone beside
+    /// its packages. Defaults to the download itself.
+    func pendingInstallMegabytes() async -> Int?
+
     /// Names and words to bias recognition towards (see `VocabularyHints`).
     /// Called before every `stream` and again whenever the user edits the
     /// list mid-conversation; engines that can't use hints ignore it.
@@ -226,6 +231,8 @@ public extension TranscriptionEngine {
     func diagnosticsSummary() async -> String? { nil }
 
     func pendingDownloadMegabytes() async -> Int? { nil }
+
+    func pendingInstallMegabytes() async -> Int? { await pendingDownloadMegabytes() }
 
     /// `prepare` without caring about progress — for callers (and tests)
     /// that only want the yes/no answer.

@@ -74,6 +74,9 @@ public final class CaptionPipeline {
     /// downloaded, took over. Lasts until captions are next started with
     /// the chosen settings; the saved choice itself is never changed.
     public private(set) var isCoveringForCloud = false
+    /// The room the last download refused for want of space needed, so a
+    /// return to the app only retries once that much is free.
+    private var storageNeededMegabytes: Int?
     private var nextStartCoversCloud = false
     /// Set while a failure is waiting to be retried automatically.
     public private(set) var scheduledRetry: ScheduledRetry?
@@ -207,6 +210,7 @@ public final class CaptionPipeline {
         activeSettings = settings
         isCoveringForCloud = nextStartCoversCloud
         nextStartCoversCloud = false
+        storageNeededMegabytes = nil
         // The stored threshold is the person's own choice once they've
         // touched it, but at the untouched app default it's specifically
         // calibrated for CAM++; a silent fallback to a different embedder
@@ -267,7 +271,13 @@ public final class CaptionPipeline {
                 )
                 return
             }
-            if let missing = storageShortfall(forDownloadOf: megabytes) {
+            // The room it needs, not only the download: a model compiled on
+            // the phone needs about twice its download for a while, and
+            // checking the download alone let one start that couldn't finish.
+            let neededMegabytes = await engine.pendingInstallMegabytes() ?? megabytes
+            guard runID == run else { return }
+            if let missing = storageShortfall(forDownloadOf: neededMegabytes) {
+                storageNeededMegabytes = neededMegabytes
                 fail(
                     .engineUnavailable,
                     detail: "\(megabytes) MB to download, \(missing) MB more free space needed",
@@ -1133,7 +1143,7 @@ public final class CaptionPipeline {
               why.kind == .notEnoughStorage,
               !phase.isTransitioning
         else { return }
-        if let megabytes = why.downloadMegabytes, storageShortfall(forDownloadOf: megabytes) != nil {
+        if let megabytes = storageNeededMegabytes ?? why.downloadMegabytes, storageShortfall(forDownloadOf: megabytes) != nil {
             return
         }
         await retry()

@@ -166,7 +166,9 @@ public struct WhisperModelStore: Sendable {
             // download's share of the bar stops just short of full.
             _ = try await ReleaseModelDownloader(fetcher: URLSessionReleaseFileFetcher())
                 .download(tag: tag, into: folder) { progress($0 * 0.95) }
-            try await Self.compilePackages(in: folder)
+            // The compile moves the bar on, one package at a time, rather
+            // than leaving it on 95% for minutes like a stuck download.
+            try await Self.compilePackages(in: folder) { progress(0.95 + $0 * 0.05) }
             progress(1)
         }
         // Only reached when every file arrived: this is the one moment the
@@ -179,18 +181,25 @@ public struct WhisperModelStore: Sendable {
     /// compiled bundle WhisperKit loads, and removes the package. Models
     /// from WhisperKit's hub arrive compiled already; a release built on a
     /// machine without Apple's compiler can't.
-    static func compilePackages(in folder: URL) async throws {
+    ///
+    /// The packages are removed only once every one has compiled: removed
+    /// one by one, a compile failing on the second (low memory on an older
+    /// phone) left the first missing, and the next try downloaded it again.
+    static func compilePackages(in folder: URL, progress: (Double) -> Void = { _ in }) async throws {
         let fileManager = FileManager.default
         let packages = try fileManager.contentsOfDirectory(atPath: folder.path)
             .filter { $0.hasSuffix(".mlpackage") }
             .sorted()
-        for name in packages {
+        for (done, name) in packages.enumerated() {
             let package = folder.appendingPathComponent(name, isDirectory: true)
             let compiled = try await MLModel.compileModel(at: package)
             let target = folder.appendingPathComponent(String(name.dropLast(".mlpackage".count)) + ".mlmodelc", isDirectory: true)
             try? fileManager.removeItem(at: target)
             try fileManager.moveItem(at: compiled, to: target)
-            try fileManager.removeItem(at: package)
+            progress(Double(done + 1) / Double(packages.count))
+        }
+        for name in packages {
+            try fileManager.removeItem(at: folder.appendingPathComponent(name, isDirectory: true))
         }
     }
 

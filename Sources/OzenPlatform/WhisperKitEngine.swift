@@ -92,6 +92,12 @@ public actor WhisperKitEngine: TranscriptionEngine {
         return max(total - onDiskMegabytes, 1)
     }
 
+    public func pendingInstallMegabytes() async -> Int? {
+        guard let download = await pendingDownloadMegabytes() else { return nil }
+        guard let option = WhisperModelCatalog.option(for: modelVariant) else { return download }
+        return download + (option.installMegabytes - option.sizeMB)
+    }
+
     /// A full disk, with how much room to free when that can be worked out.
     private static func outOfSpace(variant: String, error: any Error) -> EngineAvailability {
         let option = WhisperModelCatalog.option(for: variant)

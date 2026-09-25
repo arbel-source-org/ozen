@@ -130,6 +130,12 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
     }
 
     private(set) var pendingDownloadChecks = 0
+    /// Free space the download needs at its peak; nil means the download.
+    var pendingInstall: Int?
+
+    func pendingInstallMegabytes() async -> Int? {
+        lock.withLock { pendingInstall ?? pendingDownload }
+    }
 
     func pendingDownloadMegabytes() async -> Int? {
         lock.withLock {
@@ -1925,6 +1931,26 @@ struct CaptionPipelineStorageTests {
             #expect(pipeline.phase.isListening)
             #expect(engine.prepareCount == 1)
         }
+    }
+
+    @Test("a model compiled on the phone needs room for twice its download, and a return to the app waits for that much")
+    func roomForTheCompile() async {
+        let storage = FakeStorage(megabytes: 1_400)
+        let (pipeline, engine, _) = makePipeline(storage: storage, pendingDownload: 819)
+        engine.pendingInstall = 1_638
+        await pipeline.start(settings: .default)
+        let why = pipeline.phase.failure?.engineUnavailability
+        #expect(why?.kind == .notEnoughStorage)
+        #expect(why?.missingMegabytes == StorageSpaceGate.requiredMegabytes(forDownloadOf: 1_638) - 1_400)
+        #expect(engine.prepareCount == 0)
+
+        storage.set(megabytes: Int64(StorageSpaceGate.requiredMegabytes(forDownloadOf: 819) + 10))
+        await pipeline.appDidBecomeActive()
+        #expect(engine.prepareCount == 0)
+
+        storage.set(megabytes: Int64(StorageSpaceGate.requiredMegabytes(forDownloadOf: 1_638) + 10))
+        await pipeline.appDidBecomeActive()
+        #expect(pipeline.phase.isListening)
     }
 
     @Test("coming back to the app after freeing up room starts the download by itself")
