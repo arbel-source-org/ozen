@@ -56,7 +56,7 @@ struct CaptionLiveActivity: Widget {
             } minimal: {
                 Image(systemName: "captions.bubble.fill")
                     .foregroundStyle(.yellow)
-                    .accessibilityLabel("אוזן")
+                    .accessibilityLabel(context.state.english ? "Ozen" : "אוזן")
             }
         }
     }
