@@ -336,6 +336,12 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(row.exists, "secondary screens: \(rowIdentifier) never appeared")
         row.tap()
         let screen = app.descendants(matching: .any)[screenIdentifier]
+        // A tap that lands while the swipe that brought the row up is
+        // still coasting only stops the scroll; the row then needs a
+        // second tap to open.
+        if !screen.waitForExistence(timeout: 3), row.exists {
+            row.tap()
+        }
         XCTAssertTrue(screen.waitForExistence(timeout: 10), "secondary screens: \(screenIdentifier) never appeared")
         capture(app, name: captureName)
         let back = app.navigationBars.buttons["הגדרות"]
