@@ -219,7 +219,6 @@ final class OzenScreenshotUITests: XCTestCase {
         // tree at all -- not merely off-screen -- until scrolled near it
         // (see scrollDownUntilVisible). Going in declaration order means
         // every scroll only ever needs to move forward.
-        openSettingsRow(app, rowIdentifier: "modelManagerRow", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
         // Scrolling further into this screen to also capture the
         // "Recently heard" section (an unbounded-length matched phrase
         // sharing a row with a timestamp -- the same shape that overlapped
@@ -245,6 +244,10 @@ final class OzenScreenshotUITests: XCTestCase {
         let quietHoursToggle = scrollDownUntilVisible(app, identifier: "quietHoursToggle")
         XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
         capture(app, name: "quiet-hours-off-accessibility-text")
+
+        // Her own settings (alerts, quiet hours) come first; the model
+        // manager is in the part for whoever set up the phone, below them.
+        openSettingsRow(app, rowIdentifier: "modelManagerRow", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
 
         openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
 
