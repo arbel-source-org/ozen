@@ -245,20 +245,6 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(quietHoursToggle.exists, "secondary screens: quiet hours toggle never appeared")
         capture(app, name: "quiet-hours-off-accessibility-text")
 
-        // Her own settings (alerts, quiet hours) come first; the model
-        // manager is in the part for whoever set up the phone, below them.
-        openSettingsRow(app, rowIdentifier: "modelManagerRow", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
-
-        openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
-
-        let addSpeaker = scrollDownUntilVisible(app, identifier: "addSpeakerButton")
-        XCTAssertTrue(addSpeaker.exists, "secondary screens: the add-speaker button never appeared")
-        addSpeaker.tap()
-        let enrollmentScreen = app.descendants(matching: .any)["speakerEnrollmentScreen"]
-        XCTAssertTrue(enrollmentScreen.waitForExistence(timeout: 10), "secondary screens: speaker enrollment never appeared")
-        capture(app, name: "speaker-enrollment-accessibility-text")
-        app.buttons["ביטול"].tap()
-
         let historyRow = scrollDownUntilVisible(app, identifier: "historyRow")
         XCTAssertTrue(historyRow.exists, "secondary screens: the history row never appeared")
         historyRow.tap()
@@ -277,6 +263,20 @@ final class OzenScreenshotUITests: XCTestCase {
         let backToSettingsFromHistory = app.navigationBars.buttons["הגדרות"]
         XCTAssertTrue(backToSettingsFromHistory.waitForExistence(timeout: 10), "secondary screens: no way back from history")
         backToSettingsFromHistory.tap()
+
+        // Her own settings (alerts, quiet hours) come first; the model
+        // manager is in the part for whoever set up the phone, below them.
+        openSettingsRow(app, rowIdentifier: "modelManagerRow", screenIdentifier: "modelManagerScreen", captureName: "model-manager-accessibility-text")
+
+        openSettingsRow(app, rowIdentifier: "vocabularyRow", screenIdentifier: "vocabularyScreen", captureName: "vocabulary-accessibility-text")
+
+        let addSpeaker = scrollDownUntilVisible(app, identifier: "addSpeakerButton")
+        XCTAssertTrue(addSpeaker.exists, "secondary screens: the add-speaker button never appeared")
+        addSpeaker.tap()
+        let enrollmentScreen = app.descendants(matching: .any)["speakerEnrollmentScreen"]
+        XCTAssertTrue(enrollmentScreen.waitForExistence(timeout: 10), "secondary screens: speaker enrollment never appeared")
+        capture(app, name: "speaker-enrollment-accessibility-text")
+        app.buttons["ביטול"].tap()
 
         openSettingsRow(app, rowIdentifier: "diagnosticsRow", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
 
