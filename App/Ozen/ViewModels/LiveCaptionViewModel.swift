@@ -651,9 +651,11 @@ public final class LiveCaptionViewModel {
         case .startCaptions:
             // Paused while the phone talks: captions come back by themselves
             // when it's done. Opening the microphone now would caption the
-            // phone's own sentence.
+            // phone's own sentence. A phone that has gone quiet without
+            // saying so is not talking, and asking is then the way out.
             if captionsHeldForSpeech {
-                break
+                if synthesizer?.isBusy == true { break }
+                speechPause.userTookControl()
             }
             if pipeline.phase == .paused {
                 await pipeline.resume(settings: settings)
