@@ -1324,6 +1324,13 @@ public final class LiveCaptionViewModel {
     /// `inBackground` is for the periodic autosave: the conversation is
     /// encoded and written off the main thread so a long one doesn't
     /// stutter the captions. Every other save waits until it is on disk.
+    /// What is actually writing the captions: her settings, or the phone's
+    /// own model while it covers for the cloud (see `isCoveringForCloud`).
+    /// A saved conversation says which engine wrote it.
+    private var transcribingSettings: AppSettings {
+        pipeline.isCoveringForCloud ? (pipeline.activeSettings ?? settings) : settings
+    }
+
     public func persistHistory(ended: Bool, endedAt: TimeInterval? = nil, inBackground: Bool = false) {
         // After a conversation break the next conversation starts at its
         // first line, not at the moment the break was noticed.
@@ -1336,8 +1343,8 @@ public final class LiveCaptionViewModel {
             id: historySessionID,
             startedAt: startedAt,
             endedAt: ended ? (endedAt ?? Date().timeIntervalSince1970) : nil,
-            engine: settings.engine,
-            modelVariant: settings.modelDescription,
+            engine: transcribingSettings.engine,
+            modelVariant: transcribingSettings.modelDescription,
             inputName: selectedInput?.portName,
             starred: starredSegmentIDs
         )
@@ -1450,8 +1457,8 @@ public final class LiveCaptionViewModel {
                 lines: historySegmentOffset..<pipeline.segments.count,
                 startedAt: startedAt,
                 endedAt: lastCaptionAt,
-                engine: settings.engine,
-                modelVariant: settings.modelDescription,
+                engine: transcribingSettings.engine,
+                modelVariant: transcribingSettings.modelDescription,
                 inputName: selectedInput?.portName
             ))
         }

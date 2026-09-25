@@ -423,7 +423,14 @@ public final class CaptionPipeline {
     /// paused would otherwise vanish on resume, silently restarting with
     /// whatever was in effect before the pause.
     public func resume(settings: AppSettings? = nil) async {
-        guard phase == .paused, let effective = settings ?? activeSettings else { return }
+        guard phase == .paused, var effective = settings ?? activeSettings else { return }
+        // A pause is not a new start: the phone's model that was covering
+        // for the cloud (the caller's settings still say cloud) carries on,
+        // rather than trying the cloud again and reloading the model.
+        if isCoveringForCloud, effective.engine == .cloud {
+            effective.engine = .whisperKit
+            nextStartCoversCloud = true
+        }
         phase = .idle
         await start(settings: effective)
     }
@@ -1082,9 +1089,11 @@ public final class CaptionPipeline {
     /// takes over: a surprise download of hundreds of megabytes is not a
     /// fair way to find out the cloud stopped.
     private func coverForCloud(with settings: AppSettings, after failure: PipelineFailure) async {
+        // Someone may have stopped, retried or restarted captions since
+        // the failure; then the engine cache is theirs to fill, not ours.
+        guard case .failed(let before) = phase, before == failure else { return }
         let engine = cachedEngine(for: settings)
         let needsDownload = await engine.pendingDownloadMegabytes() != nil
-        // Someone may have stopped or restarted captions meanwhile.
         guard case .failed(let current) = phase, current == failure else { return }
         guard !needsDownload else {
             scheduleAutoRecovery(for: failure)

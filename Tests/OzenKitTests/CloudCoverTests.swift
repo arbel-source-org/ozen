@@ -83,6 +83,32 @@ struct CloudCoverTests {
         #expect(captions.activeEngineKind == .cloud)
     }
 
+    @Test("pausing and resuming with her cloud settings keeps the phone's model on, without building it again")
+    func resumeKeepsCover() async {
+        let cloud = FakeEngine(kind: .cloud, availability: .unavailable(.cloudOutOfCredit, "test"))
+        let phone = FakeEngine(kind: .whisperKit)
+        let built = BuiltEngines()
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                let engine = settings.engine == .cloud ? cloud : phone
+                built.add(engine)
+                return engine
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.isCoveringForCloud && captions.phase == .listening })
+        let builtBefore = built.count
+        captions.pause()
+        await captions.resume(settings: cloudSettings)
+        #expect(captions.phase == .listening)
+        #expect(captions.isCoveringForCloud)
+        #expect(captions.activeEngineKind == .whisperKit)
+        #expect(built.count == builtBefore)
+    }
+
     @Test("an engine already on the phone is never swapped")
     func onlyCloudIsCovered() {
         let failure = PipelineFailure(kind: .engineUnavailable, detail: "", engineUnavailability: EngineUnavailability(kind: .noInternet, detail: ""))
