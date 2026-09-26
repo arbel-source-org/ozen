@@ -385,6 +385,14 @@ public actor WhisperKitEngine: TranscriptionEngine {
                     utteranceID = UUID()
                     samplesAtLastPass = 0
                     lastLivePassSeconds = nil
+                } else if total > keepSamples {
+                    // Clatter that keeps the energy detector busy would
+                    // otherwise pile up for 28 s, and the first words after
+                    // it would wait on a pass over all of it. The half
+                    // second kept is longer than a chunk, so a word just
+                    // starting (not yet scored) stays.
+                    intake.drop(prefix: total - keepSamples)
+                    samplesAtLastPass = keepSamples
                 }
                 continue
             }
