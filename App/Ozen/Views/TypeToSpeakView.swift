@@ -177,7 +177,10 @@ struct TypeToSpeakView: View {
         guard !phrase.isEmpty else { return }
         viewModel.speak(phrase)
         lastTyped = phrase
-        text = ""
+        // Left in the field, editable, rather than cleared: a typo caught
+        // right after speaking otherwise meant retyping the whole
+        // sentence. Matches the full-screen big-text pad, which never
+        // clears itself either (see `BigTextView`).
     }
 }
 
