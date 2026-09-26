@@ -370,8 +370,15 @@ public struct TranscriptHistoryStore: Sendable {
     /// the history screen. A save without a title therefore keeps the one
     /// already on disk (read from the small summary file, not the whole
     /// conversation); `rename` is how a title is changed or removed.
+    ///
+    /// `updateSearchCaches` skips the summary and search-text files: real
+    /// work over every segment, worth skipping when a caller is waiting
+    /// synchronously for this save to land (see `TranscriptHistoryWriter`).
+    /// Reading the history back without them is unaffected — a missing or
+    /// stale cache is already rebuilt from the record the next time
+    /// anything asks for it (see `summaries(of:)`).
     @discardableResult
-    public func save(_ record: TranscriptSessionRecord) throws -> Bool {
+    public func save(_ record: TranscriptSessionRecord, updateSearchCaches: Bool = true) throws -> Bool {
         guard !record.segments.isEmpty else { return false }
         try FileManager.default.createDirectory(at: directoryURL, withIntermediateDirectories: true)
         let url = fileURL(for: record.id)
@@ -381,6 +388,7 @@ public struct TranscriptHistoryStore: Sendable {
         }
         let data = try JSONEncoder().encode(record)
         try data.write(to: url, options: .atomic)
+        guard updateSearchCaches else { return true }
         // Written after the record, so a fresh summary is never older than
         // its conversation. If this write fails the conversation is still
         // saved; the list just rebuilds the summary next time.

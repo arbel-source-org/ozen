@@ -45,10 +45,16 @@ public final class TranscriptHistoryWriter: Sendable {
         }
     }
 
-    /// Waits for earlier queued saves, then writes this one before returning.
+    /// Waits for earlier queued saves, then writes this one before
+    /// returning. Called directly from the main actor when a conversation
+    /// stops or the app leaves the screen, so what it blocks on matters:
+    /// the summary and search-text caches are skipped here (see
+    /// `TranscriptHistoryStore.save(_:updateSearchCaches:)`) so this holds
+    /// the caller up only for the one write that must not be lost, not for
+    /// the whole conversation's search index too.
     public func saveNow(_ record: TranscriptSessionRecord) {
         queue.sync { [store, failure, lastWritten] in
-            lastWritten.record = failure.capture { try store.save(record) } ? record : nil
+            lastWritten.record = failure.capture { try store.save(record, updateSearchCaches: false) } ? record : nil
         }
     }
 

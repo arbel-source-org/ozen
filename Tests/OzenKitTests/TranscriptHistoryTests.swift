@@ -583,6 +583,23 @@ struct TranscriptHistorySummaryCacheTests {
         #expect(FileManager.default.fileExists(atPath: summaryFile(dir, old.id).path))
     }
 
+    @Test("a save that skips the search caches writes no summary file, but the conversation still lists correctly")
+    func saveWithoutCachesStillLists() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let saved = record(startedAt: 100, texts: ["שלום סבתא", "מה שלומך"])
+        try store.save(saved, updateSearchCaches: false)
+
+        #expect(!FileManager.default.fileExists(atPath: summaryFile(dir, saved.id).path))
+        let listed = store.listSummaries()
+        #expect(listed.count == 1)
+        #expect(listed.first?.preview == "שלום סבתא")
+        #expect(listed.first?.segmentCount == 2)
+        // Listing rebuilds it, the way it does for any other missing cache.
+        #expect(FileManager.default.fileExists(atPath: summaryFile(dir, saved.id).path))
+    }
+
     @Test("a summary older than its conversation is rebuilt, not trusted")
     func staleSummaryIsRebuilt() throws {
         let dir = makeTempDirectory()
@@ -679,6 +696,20 @@ struct TranscriptHistorySearchCacheTests {
         #expect(store.search("שוק").map(\.id) == [saved.id])
         #expect(store.search("שרה").map(\.id) == [saved.id])
         #expect(store.search("ים").isEmpty)
+    }
+
+    @Test("a save that skips the search caches writes no search-text file, but the conversation is still found")
+    func saveWithoutCachesIsStillSearched() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let saved = record(lines: [("הלכנו לשוק", "שרה")])
+        try store.save(saved, updateSearchCaches: false)
+
+        #expect(!FileManager.default.fileExists(atPath: searchFile(dir, saved.id).path))
+        #expect(store.search("שוק").map(\.id) == [saved.id])
+        // The slow path it fell back to writes the file for next time.
+        #expect(FileManager.default.fileExists(atPath: searchFile(dir, saved.id).path))
     }
 
     @Test("a conversation saved by an older build is searched in full and gets its text file")

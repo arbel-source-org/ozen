@@ -119,6 +119,29 @@ struct TranscriptHistoryWriterTests {
         #expect(summary?.endedAt == 200)
     }
 
+    private func summaryFile(_ dir: URL, _ id: UUID) -> URL {
+        dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName).appendingPathComponent("\(id.uuidString).json")
+    }
+
+    @Test("a save made now skips the summary and search-text files an autosave would have written")
+    func saveNowSkipsSearchCaches() {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let writer = TranscriptHistoryWriter(store: store)
+
+        let now = record(id: UUID(), lines: 1, ended: true)
+        writer.saveNow(now)
+        #expect(!FileManager.default.fileExists(atPath: summaryFile(dir, now.id).path))
+        // The conversation itself is still there and lists correctly --
+        // only the cache files are skipped.
+        #expect(store.listSummaries().map(\.id) == [now.id])
+
+        let autosaved = record(id: UUID(), lines: 1, ended: false)
+        writer.saveInBackground(autosaved)
+        writer.waitUntilIdle()
+        #expect(FileManager.default.fileExists(atPath: summaryFile(dir, autosaved.id).path))
+    }
+
     @Test("a delete waits for an autosave of the same conversation, so the autosave can't bring it back")
     func deleteQueuesBehindAutosave() throws {
         let (store, dir) = makeStore()
