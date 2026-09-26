@@ -404,7 +404,7 @@ struct LiveCaptionView: View {
             BigTextView(
                 text: $bigText,
                 display: viewModel.display,
-                canSpeak: viewModel.hasHebrewVoice,
+                canSpeak: viewModel.canSay(bigText),
                 onSpeak: { viewModel.speak($0) }
             )
             .alertOverlay(for: viewModel)
@@ -551,7 +551,7 @@ struct LiveCaptionView: View {
             } label: {
                 Label(starred ? tr("ביטול הסימון", "Remove mark") : tr("סימון כחשוב", "Mark as important"), systemImage: starred ? "star.slash" : "star")
             }
-            if viewModel.hasHebrewVoice {
+            if viewModel.canSay(LiveCaptionViewModel.repeatRequest) {
                 Button {
                     viewModel.askToRepeat()
                 } label: {
@@ -592,7 +592,7 @@ struct LiveCaptionView: View {
             Button(viewModel.starredSegmentIDs.contains(segment.id) ? tr("ביטול הסימון", "Remove mark") : tr("סימון כחשוב", "Mark as important")) {
                 viewModel.toggleStar(segment)
             }
-            if viewModel.hasHebrewVoice {
+            if viewModel.canSay(LiveCaptionViewModel.repeatRequest) {
                 Button(tr("לבקש שיחזרו על זה", "Ask them to repeat that")) {
                     viewModel.askToRepeat()
                 }

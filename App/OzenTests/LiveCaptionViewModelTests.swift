@@ -585,6 +585,21 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(synthesizer.requests == ["כן", "תודה"])
     }
 
+    @Test("without a Hebrew voice, Hebrew is not spoken or allowed to pause captions; English still is")
+    func noHebrewVoiceHoldsBackHebrewOnly() async throws {
+        let (viewModel, synthesizer) = makeViewModel()
+        synthesizer.hasHebrewVoice = false
+        viewModel.start()
+        await eventually { viewModel.phase.isListening }
+        #expect(!viewModel.canSay("תודה"))
+        viewModel.speak("תודה")
+        #expect(synthesizer.requests.isEmpty)
+        #expect(viewModel.phase.isListening)
+        #expect(viewModel.canSay("Thank you"))
+        viewModel.speak("Thank you")
+        #expect(synthesizer.requests == ["Thank you"])
+    }
+
     @Test("pausing by hand while the phone talks is respected; captions stay paused afterwards")
     func manualPauseWins() async throws {
         let (viewModel, synthesizer) = makeViewModel()

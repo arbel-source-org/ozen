@@ -96,4 +96,18 @@ struct SpeechPauseCoordinatorTests {
         #expect(resume == false)
         #expect(coordinator.isHoldingCaptions == false)
     }
+
+    @Test("without a Hebrew voice only Hebrew text is held back; English still has a voice")
+    @MainActor
+    func canSayWithoutHebrewVoice() {
+        let synthesizer = FakeSynthesizer()
+        #expect(synthesizer.canSay("שלום"))
+        #expect(synthesizer.canSay("Hello"))
+        synthesizer.hasHebrewVoice = false
+        #expect(!synthesizer.canSay("שלום"))
+        #expect(!synthesizer.canSay("OK, תודה"))
+        #expect(synthesizer.canSay("Hello"))
+        Localization.$override.withValue(.hebrew) { #expect(!synthesizer.canSay("123")) }
+        Localization.$override.withValue(.english) { #expect(synthesizer.canSay("123")) }
+    }
 }

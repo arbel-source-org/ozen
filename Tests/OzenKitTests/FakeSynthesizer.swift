@@ -12,7 +12,7 @@ final class FakeSynthesizer: SpeechSynthesizing {
     private(set) var requests: [String] = []
     private var queued: [String] = []
     private var pendingCallbacks: [Bool] = []
-    let hasHebrewVoice = true
+    var hasHebrewVoice = true
     var onSpeakingChanged: (@MainActor (Bool) -> Void)?
 
     var isBusy: Bool { isSpeaking || !queued.isEmpty }

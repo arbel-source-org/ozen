@@ -47,7 +47,8 @@ struct TypeToSpeakView: View {
                                 }
                                 .contentShape(Rectangle())
                             }
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(viewModel.canSay(phrase) ? .primary : .secondary)
+                            .disabled(!viewModel.canSay(phrase))
                             .accessibilityLabel(phrase)
                             .accessibilityHint(tr("להשמיע", "Play"))
                         }
@@ -81,7 +82,7 @@ struct TypeToSpeakView: View {
             BigTextView(
                 text: $viewModel.typeToSpeakDraft,
                 display: viewModel.display,
-                canSpeak: viewModel.hasHebrewVoice,
+                canSpeak: viewModel.canSay(text),
                 // lastTyped drives "Play again", so it has to track whatever
                 // was actually spoken last, not just what speakTyped() sent
                 // -- otherwise "Play again" can replay a stale, unrelated
@@ -122,7 +123,7 @@ struct TypeToSpeakView: View {
                 }
                 .ozenGlassButton(prominent: true)
                 .controlSize(.large)
-                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !viewModel.canSay(text))
             }
 
             if let lastTyped {
@@ -160,6 +161,7 @@ struct TypeToSpeakView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .ozenGlassButton()
+            .disabled(!viewModel.canSay(phrase))
             .accessibilityLabel(tr("להשמיע שוב: \(phrase)", "Play again: \(phrase)"))
 
             if !viewModel.quickPhrases.contains(phrase) {

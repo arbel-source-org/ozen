@@ -1256,6 +1256,7 @@ public final class LiveCaptionViewModel {
 
     public var isSpeaking: Bool { synthesizer?.isSpeaking ?? false }
     public var hasHebrewVoice: Bool { synthesizer?.hasHebrewVoice ?? false }
+    public func canSay(_ text: String) -> Bool { synthesizer?.canSay(text) ?? false }
 
     public var speechRate: Float {
         get { settings.speechRate }
@@ -1271,7 +1272,7 @@ public final class LiveCaptionViewModel {
     public func speak(_ text: String) {
         guard let synthesizer else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty, synthesizer.canSay(trimmed) else { return }
         if speechPause.willSpeak(captionsListening: pipeline.phase.isListening) {
             pipeline.pause()
         }

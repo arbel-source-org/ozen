@@ -21,6 +21,15 @@ public protocol SpeechSynthesizing: AnyObject {
     func stop()
 }
 
+extension SpeechSynthesizing {
+    /// Whether `text` would come out as speech someone can understand.
+    /// Without a Hebrew voice iOS mangles Hebrew, but English phrases
+    /// still have a voice of their own, so only Hebrew text is held back.
+    public func canSay(_ text: String) -> Bool {
+        hasHebrewVoice || UILanguage.forSpeaking(text, otherwise: Localization.language) != .hebrew
+    }
+}
+
 /// Decides when captions pause for the phone's own voice and when they
 /// come back.
 ///
