@@ -91,6 +91,24 @@ struct PhasePresentationTests {
         #expect(refused.action == .pause && refused.tint == .green)
     }
 
+    @Test("covering for the cloud sends the family to Settings when only they can fix it, and offers nothing to fix for no internet")
+    func coveringForCloudActionableReasons() {
+        func covering(_ reason: EngineUnavailability.Kind) -> PhasePresentation {
+            PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: false, coveringForCloud: true, coveredEngine: .cloud, coverReason: reason)
+        }
+        let noKey = covering(.cloudKeyNeeded)
+        let noCredit = covering(.cloudOutOfCredit)
+        let offline = covering(.noInternet)
+        #expect(noKey.detail?.contains("OpenRouter") == true)
+        #expect(noKey.action == .openEngineSettings && noKey.tint == .green)
+        #expect(noCredit.detail?.contains("הקרדיט") == true)
+        #expect(noCredit.action == .openEngineSettings && noCredit.tint == .green)
+        // No internet still just says so and lets her keep going: nothing
+        // in Settings would fix a dropped connection.
+        #expect(offline.action == .pause)
+        #expect(offline.detail?.contains("בענן") == true)
+    }
+
     @Test("paused while the phone talks says so, and that captions come back by themselves")
     func pausedForSpeech() {
         let speaking = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false, pausedForSpeech: true)

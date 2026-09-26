@@ -76,6 +76,16 @@ struct PhasePresentation {
         case .listening where coveringForCloud && coveredEngine == .homeServer:
             self.init(title: tr("מקשיב", "Listening"), detail: tr("אין חיבור למחשב בבית, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "Can’t reach the home computer, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
+        // Cloud problems only a person can fix (no key, no credit) get their
+        // own detail and a way to Settings, same as the failed-outright
+        // screen for these two reasons; a generic "unavailable" here would
+        // leave the family with no clue what to actually go fix.
+        case .listening where coveringForCloud && coveredEngine == .cloud && coverReason == .cloudKeyNeeded:
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("התמלול בענן צריך מפתח OpenRouter תקין, ממשיך עם הזיהוי שבטלפון · הקישו להגדרות", "Cloud transcription needs a valid OpenRouter key, carrying on with the phone’s own · Tap for Settings"), systemImage: "waveform", tint: .green, action: .openEngineSettings)
+
+        case .listening where coveringForCloud && coveredEngine == .cloud && coverReason == .cloudOutOfCredit:
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("נגמר הקרדיט של מפתח OpenRouter, ממשיך עם הזיהוי שבטלפון · הקישו להגדרות", "The OpenRouter key’s credit ran out, carrying on with the phone’s own · Tap for Settings"), systemImage: "waveform", tint: .green, action: .openEngineSettings)
+
         case .listening where coveringForCloud:
             // Still captioning, so still green: the words keep coming, only
             // from the phone's own model while the cloud can't be used.
