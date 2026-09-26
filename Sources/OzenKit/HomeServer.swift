@@ -108,6 +108,12 @@ public struct HomeServerPairing: Sendable, Equatable {
         self.code = code
     }
 
+    /// Meant as a pairing link, whether or not it survived the trip: a
+    /// damaged one has to be reported, not silently ignored.
+    public static func isPairingLink(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == scheme && url.host?.lowercased() == "pair"
+    }
+
     public init?(url: URL) {
         guard let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
               parts.scheme?.lowercased() == Self.scheme, parts.host?.lowercased() == "pair",

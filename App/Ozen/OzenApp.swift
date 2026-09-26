@@ -91,6 +91,20 @@ struct OzenApp: App {
                     "Captions carry on as before. Scan the code again, or ask whoever set up the phone for help."
                 ))
             }
+            .alert(
+                tr("הקישור למחשב בבית לא תקין", "The home computer link didn’t come through"),
+                isPresented: Binding(
+                    get: { viewModel.pairingLinkBroken },
+                    set: { if !$0 { viewModel.pairingLinkBroken = false } }
+                )
+            ) {
+                Button(tr("סגירה", "Close"), role: .cancel) {}
+            } message: {
+                Text(tr(
+                    "חלק מהקישור חסר או השתבש. סרקו שוב את הריבוע במחשב עם מצלמת האייפון, ממש מקרוב.",
+                    "Part of the link is missing or garbled. Scan the square on the computer again with the iPhone camera, up close."
+                ))
+            }
             // When a free Apple ID install stops opening, and a reminder
             // the day before.
             .task { await InstallExpiryStatus.shared.load() }

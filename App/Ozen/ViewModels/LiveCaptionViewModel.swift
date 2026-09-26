@@ -890,8 +890,13 @@ public final class LiveCaptionViewModel {
     public var pairingSaveFailed = false
     @ObservationIgnored var saveHomeServerCode: (String) -> Bool = HomeServerCodeStore.save
 
+    /// A pairing link arrived damaged (a copy-paste cut it short, or the
+    /// scan misread it): before, nothing at all happened.
+    public var pairingLinkBroken = false
+
     public func openURL(_ url: URL) {
         pendingPairing = HomeServerPairing(url: url)
+        pairingLinkBroken = pendingPairing == nil && HomeServerPairing.isPairingLink(url)
     }
 
     /// Saves the confirmed pairing and switches captions to that computer.

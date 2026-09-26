@@ -127,6 +127,11 @@ struct HomeServerEngineTests {
             #expect(HomeServerPairing(url: try #require(URL(string: bad))) == nil, "\(bad)")
         }
         #expect(HomeServerPairing(address: "10.0.0.5", code: "two words") == nil)
+
+        #expect(HomeServerPairing.isPairingLink(link))
+        #expect(HomeServerPairing.isPairingLink(try #require(URL(string: "OZEN://Pair?code="))))
+        #expect(!HomeServerPairing.isPairingLink(try #require(URL(string: "ozen://settings?address=wss://x.net&code=abc"))))
+        #expect(!HomeServerPairing.isPairingLink(try #require(URL(string: "https://pair?address=wss://x.net&code=abc"))))
     }
 
     @Test("Test connection says connected with the time it took, a refused code, no answer, or nothing set up yet")
