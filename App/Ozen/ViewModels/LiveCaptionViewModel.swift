@@ -255,6 +255,10 @@ public final class LiveCaptionViewModel {
                     }
                 }
             )
+            self.lockScreen?.onEndedWhileAway = { [weak self] in
+                guard let self, self.settings.notifyWhenInBackground else { return }
+                self.postNotification?(LockScreenCaptions.endedNotice)
+            }
         }
         pipeline.onCaptionsChanged = { [weak self] in
             self?.refreshLockScreen()

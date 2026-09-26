@@ -166,6 +166,20 @@ extension LockScreenCaptions {
 }
 
 /// Times said the way Hebrew says them.
+extension LockScreenCaptions {
+    /// Sent when iOS took the captions off the lock screen while the app
+    /// was away; opening the app puts them back.
+    public static var endedNotice: AlertNotificationContent {
+        AlertNotificationContent(
+            identifier: "ozen.lockscreen.ended",
+            title: tr("הכתוביות ירדו ממסך הנעילה", "Captions left the lock screen"),
+            body: tr("הכתוביות ממשיכות באפליקציה. פתחו את אוזן כדי להחזיר אותן למסך הנעילה.", "Captions carry on in the app. Open Ozen to bring them back to the lock screen."),
+            threadIdentifier: "status",
+            isUrgent: false
+        )
+    }
+}
+
 public enum HebrewTime {
     /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago";
     /// from an hour on, whole hours ("two hours ago", not "130 minutes ago").

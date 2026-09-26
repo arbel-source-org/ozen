@@ -185,6 +185,30 @@ struct LockScreenCaptionsCoordinatorTests {
         #expect(display.shown.last?.status != nil && display.shown.last?.ageNote == nil)
     }
 
+    @Test("lock-screen captions iOS ended while the app was away are reported once; ended in front, they simply start again")
+    func endedWhileAwayIsReported() async {
+        let (coordinator, display, captions) = make(keepAliveSeconds: 0.05)
+        var reports = 0
+        coordinator.onEndedWhileAway = { reports += 1 }
+        captions.texts = ["good morning"]
+        coordinator.refresh()
+        #expect(coordinator.isShowing)
+
+        coordinator.appActivityChanged(isActive: false)
+        display.isRunning = false
+        #expect(await eventually { reports == 1 })
+        #expect(!coordinator.isShowing)
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(reports == 1)
+
+        coordinator.appActivityChanged(isActive: true)
+        #expect(coordinator.isShowing)
+        display.isRunning = false
+        coordinator.refresh()
+        #expect(await eventually { coordinator.isShowing })
+        #expect(reports == 1)
+    }
+
     @Test("a call arriving after 15+ quiet minutes doesn't bring the already-cleared stale line back")
     func callAfterLongQuietStaysCleared() async {
         let (coordinator, display, captions) = make()

@@ -70,6 +70,10 @@ public final class LockScreenCaptionsCoordinator {
     private var isAppActive = true
     /// Whether the lines are on the lock screen, as far as the app knows.
     public private(set) var isShowing = false
+    /// Called once when iOS ended the lock-screen captions while the app
+    /// was away (its eight-hour limit, or swiped off): only the app in
+    /// front can start them again, so she needs telling to open it.
+    public var onEndedWhileAway: (@MainActor () -> Void)?
 
     /// `situation` and `lines` are asked on every refresh; `lines` gets how
     /// many lines there is room for and how large they are.
@@ -174,9 +178,14 @@ public final class LockScreenCaptionsCoordinator {
         // A start iOS refused (Live Activities off, too many running) isn't
         // asked for again with every word that follows.
         let mayStart = isAppActive && time >= nextStartAttempt
+        let wasShowing = isShowing
         isShowing = display.show(content, mayStart: mayStart)
         guard isShowing else {
             if mayStart { nextStartAttempt = time + Self.startRetrySeconds }
+            // Nothing left for the keep-alive to keep alive.
+            keepAlive?.cancel()
+            keepAlive = nil
+            if wasShowing, !isAppActive { onEndedWhileAway?() }
             return
         }
         throttle.sent(content, at: time)
