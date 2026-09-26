@@ -43,8 +43,7 @@ private struct AlertOverlay: ViewModifier {
             }
             .task(id: shown?.id) {
                 guard let current = shown else { return }
-                let seconds = current.event.importance == .critical ? 16 : 8
-                try? await Task.sleep(for: .seconds(seconds))
+                try? await Task.sleep(for: .seconds(current.bannerSeconds))
                 if shown?.id == current.id {
                     withAnimation { shown = nil }
                 }
