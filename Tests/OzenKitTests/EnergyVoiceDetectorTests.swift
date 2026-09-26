@@ -94,6 +94,24 @@ struct EnergyVoiceDetectorTests {
         #expect(abs(swinging.currentNoiseFloorRatio - 2.5) < 0.01)
     }
 
+    @Test("the line for Whisper hears a voice 5 dB over a steady hum that the default line misses")
+    func whisperLineIsLower() {
+        let hum = tone(amplitude: 0.002, count: 1_600)
+        let quietVoice = tone(amplitude: 0.002 * pow(10, 5 / 20), count: 1_600)
+        var standard = EnergyVoiceDetector()
+        var forWhisper = EnergyVoiceDetector.forWhisperLines()
+        for _ in 0..<600 {
+            standard.isSpeech(hum)
+            forWhisper.isSpeech(hum)
+        }
+        let standardHears = standard.isSpeech(quietVoice)
+        let whisperHears = forWhisper.isSpeech(quietVoice)
+        let whisperHearsHum = forWhisper.isSpeech(hum)
+        #expect(!standardHears)
+        #expect(whisperHears)
+        #expect(!whisperHearsHum)
+    }
+
     @Test("a window only a few chunks long can't tell how the noise swings, so the margin stays cautious")
     func fewChunksKeepTheMargin() {
         var detector = EnergyVoiceDetector(recentWindowSamples: 3_200)

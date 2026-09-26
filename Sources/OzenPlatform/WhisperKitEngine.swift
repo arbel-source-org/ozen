@@ -596,7 +596,7 @@ private final class AudioIntake: @unchecked Sendable {
     private var samples: [Float] = []
     private var lastSpeechEnd: Int?
     private var finished = false
-    private var detector = EnergyVoiceDetector()
+    private var detector = EnergyVoiceDetector.forWhisperLines()
     /// Nil when the voice model isn't there or didn't load: then every
     /// line goes to Whisper, as before (see `VoiceEvidence`).
     private var evidence: VoiceEvidence?

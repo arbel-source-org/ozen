@@ -84,6 +84,19 @@ public struct EnergyVoiceDetector: Sendable {
     private var recentLevels: [(level: Float, samples: Int)] = []
     private var recentSamples = 0
 
+    /// The line for cutting what goes to Whisper, a fifth lower than the
+    /// default (6.9 dB over the noise floor, 4.1 dB when it holds still).
+    /// Measured on the owner's desktop with the voice check on: a speaker
+    /// across the room 51.3 -> 48.3% of words wrong, the same speaker
+    /// quieter 86.5 -> 77.5%, conversation and lectures unchanged (8.9%,
+    /// 13.3 -> 13.2%), and household noise 1 invented line in 12 minutes
+    /// where it was none. Lower still (x0.65) cost conversation (9.3%).
+    /// What the lower line lets through is mostly noise the voice check
+    /// (`VoiceEvidence`) then keeps from Whisper.
+    public static func forWhisperLines() -> EnergyVoiceDetector {
+        EnergyVoiceDetector(noiseFloorRatio: 2.0, steadyNoiseFloorRatio: 1.6)
+    }
+
     public init(
         absoluteThreshold: Float = 0.001,
         noiseFloorRatio: Float = 2.5,

@@ -55,10 +55,10 @@ log = logging.getLogger("ozen")
 class EnergyVoiceDetector:
     """Port of Sources/OzenKit/EnergyVoiceDetector.swift, same constants."""
 
-    def __init__(self):
+    def __init__(self, ratio=2.5, steady_ratio=2.0):
         self.absolute = 0.001
-        self.ratio = 2.5
-        self.steady_ratio = 2.0
+        self.ratio = ratio
+        self.steady_ratio = steady_ratio
         self.swing_rate = 0.02
         self.fall = 0.3
         self.rise = 0.02
@@ -224,7 +224,9 @@ class Session:
         self.language = language
         self.vocabulary = vocabulary
         self.live_interval = live_interval
-        self.detector = EnergyVoiceDetector()
+        # A fifth lower than the default, as the phone cuts for Whisper
+        # (EnergyVoiceDetector.forWhisperLines, measured there).
+        self.detector = EnergyVoiceDetector(ratio=2.0, steady_ratio=1.6)
         self.buf = np.zeros(0, dtype=np.float32)
         self.offset = 0
         self.last_speech_end = None
