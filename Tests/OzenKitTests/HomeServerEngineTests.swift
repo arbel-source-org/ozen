@@ -137,12 +137,12 @@ struct HomeServerEngineTests {
         let server = engine(socket)
         let (audio, feed) = AsyncStream<[Float]>.makeStream()
         let tokens = server.stream(languageCode: "he", audio: audio)
+        feed.yield([0.1])
         var waited = 0
-        while await socket.sentTexts.isEmpty, waited < 400 {
+        while await socket.sentBytes == 0, waited < 400 {
             try await Task.sleep(for: .milliseconds(5))
             waited += 1
         }
-        try await Task.sleep(for: .milliseconds(20))
         await server.setVocabulary(["Ruti"])
         #expect(await socket.sentTexts.last == HomeServer.vocabularyUpdate(["Ruti"]))
         #expect(HomeServer.vocabularyUpdate(["Ruti"]) == #"{"terms":["Ruti"],"type":"vocabulary"}"#)
