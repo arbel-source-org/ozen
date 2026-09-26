@@ -162,7 +162,7 @@ struct TypeToSpeakView: View {
                     viewModel.addQuickPhrase(phrase)
                 } label: {
                     Image(systemName: "plus.bubble")
-                        .frame(minWidth: 44, minHeight: 32)
+                        .frame(minWidth: 44, minHeight: 44)
                 }
                 .ozenGlassButton()
                 .accessibilityLabel(tr("להוסיף למשפטים המוכנים", "Add to quick phrases"))

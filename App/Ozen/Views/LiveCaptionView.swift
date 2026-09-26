@@ -1054,11 +1054,13 @@ struct LiveCaptionView: View {
                 Text(viewModel.selectedInput.map(MicPickerView.shortName) ?? tr("מיקרופון", "Microphone"))
                     .font(.caption2)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
             .frame(width: 56)
         }
         .ozenGlassButton()
         .accessibilityLabel(tr("בחירת מיקרופון", "Choose microphone"))
+        .accessibilityValue(viewModel.selectedInput?.portName ?? "")
         .accessibilityIdentifier("micPickerButton")
     }
 
