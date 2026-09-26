@@ -352,6 +352,13 @@ final class OzenScreenshotUITests: XCTestCase {
     private func openSettingsRow(_ app: XCUIApplication, rowIdentifier: String, screenIdentifier: String, captureName: String) {
         let row = scrollDownUntilVisible(app, identifier: rowIdentifier)
         XCTAssertTrue(row.exists, "secondary screens: \(rowIdentifier) never appeared")
+        // At the largest text size a row counts as hittable while only its
+        // top edge shows above the home indicator, and a tap at its middle
+        // lands on nothing. A slow drag (no coasting) brings it up first.
+        if row.frame.midY > app.windows.firstMatch.frame.maxY - 200 {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            from.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
+        }
         row.tap()
         let screen = app.descendants(matching: .any)[screenIdentifier]
         // A tap that lands while the swipe that brought the row up is
