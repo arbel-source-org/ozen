@@ -71,6 +71,19 @@ struct NumberEmphasisTests {
         #expect(emphasized("בדיקה שבועית וכדור יומי, תשלום חודשי") == [])
     }
 
+    @Test("Latin dosage units, medication terms, temperatures and prices grandma hears from a doctor or a cashier keep their unit")
+    func medicalAndCurrencyUnits() {
+        #expect(emphasized("לקחת 500 mg בבוקר") == ["500 mg"])
+        #expect(emphasized("לקחת 500 MG בבוקר") == ["500 MG"])
+        #expect(emphasized("10 ml פעמיים ביום") == ["10 ml", "פעמיים"])
+        #expect(emphasized("קח שתי טבליות ושתי קפסולות") == ["שתי טבליות", "ושתי קפסולות"])
+        #expect(emphasized("שתי שאיפות מהמשאף") == ["שתי שאיפות"])
+        #expect(emphasized("שלוש מנות ביום") == ["שלוש מנות"])
+        #expect(emphasized("חום 38 מעלות") == ["38 מעלות"])
+        #expect(emphasized("עולה 150 ש״ח") == ["150 ש״ח"])
+        #expect(emphasized("זה עולה 20 דולר") == ["20 דולר"])
+    }
+
     @Test("doses and measures written out in full, and three quarters, keep their unit")
     func moreUnits() {
         #expect(emphasized("שלושים מיליגרם בבוקר ועשר יחידות אינסולין") == ["שלושים מיליגרם", "ועשר יחידות"])

@@ -66,7 +66,7 @@ public enum NumberEmphasis {
         guard let range = word.coreRange, let core = word.core else { return nil }
         if allowingFraction, fractionsOf.contains(core) { return (range, true) }
         let withoutArticle = core.hasPrefix("ה") && core.count > 2 ? String(core.dropFirst()) : core
-        guard units.contains(core) || units.contains(withoutArticle) else { return nil }
+        guard units.contains(core) || units.contains(withoutArticle) || units.contains(core.lowercased()) else { return nil }
         return (range, false)
     }
 
@@ -200,8 +200,8 @@ public enum NumberEmphasis {
     }
 
     /// Signs meaning a unit that can be glued right onto the digits with
-    /// no space: "20%", "150₪".
-    private static let gluedUnitSigns: Set<Character> = ["%", "₪"]
+    /// no space: "20%", "150₪", "$500".
+    private static let gluedUnitSigns: Set<Character> = ["%", "₪", "$"]
 
     /// The number word inside `word` and the prefixes attached in front
     /// of it (at most two: vav + bet + "shesh" — "and" + "at" + "six"), or nil
@@ -227,7 +227,15 @@ public enum NumberEmphasis {
         "כף", "כפות", "כוס", "כוסות", "יחידה", "יחידות",
         "מ״ג", "מ\"ג", "מג", "מיליגרם", "מ״ל", "מ\"ל", "מל", "מיליליטר", "ליטר", "סמ״ק", "סמ\"ק",
         "גרם", "קילו", "ק״ג", "מטר", "קילומטר",
-        "שקל", "שקלים", "אחוז", "אחוזים",
+        // A tablet, capsule, inhaler puff or dose — as often taken as a
+        // "kadur" ("pill"), but doctors say these too.
+        "טבליה", "טבליות", "קפסולה", "קפסולות", "שאיפה", "שאיפות", "מנה", "מנות",
+        // Whisper Turbo regularly writes dosages in Latin letters
+        // ("500 mg", "10 ml"); matched case-insensitively in `joinedWord`.
+        "mg", "ml", "g", "kg", "cc", "cm",
+        // A fever, read out in degrees.
+        "מעלה", "מעלות",
+        "שקל", "שקלים", "ש״ח", "ש\"ח", "שח", "דולר", "דולרים", "אחוז", "אחוזים",
         "שניות", "דקה", "דקות", "שעה", "שעות", "יום", "ימים", "שבוע", "שבועות", "חודש", "חודשים", "שנה", "שנים",
         "פעם", "פעמים",
     ]
