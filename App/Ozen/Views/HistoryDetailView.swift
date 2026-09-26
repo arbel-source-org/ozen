@@ -383,7 +383,7 @@ private struct ConversationSummarySection: View {
                             .monospacedDigit()
                     }
                     ProgressView(value: stats.wordFraction(of: speaker))
-                        .tint(SpeakerColor.color(forClusterID: speaker.clusterID, on: colorScheme))
+                        .tint(SpeakerColor.color(forClusterID: speaker.clusterID, speakerName: speaker.name, on: colorScheme))
                         .accessibilityHidden(true)
                 }
                 .accessibilityElement(children: .combine)
@@ -424,7 +424,7 @@ private struct SavedLineRow: View {
             if let name = segment.speakerName, CaptionLayout.showsSpeakerLabel(for: segment, after: previous) {
                 Text(name)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID, on: colorScheme))
+                    .foregroundStyle(SpeakerColor.color(forClusterID: segment.speakerClusterID, speakerName: name, on: colorScheme))
             }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 if segment.isStarred {

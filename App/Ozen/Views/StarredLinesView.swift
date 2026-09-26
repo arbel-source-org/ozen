@@ -38,7 +38,7 @@ struct StarredLinesView: View {
                                             if let name = line.segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
                                                 Text(name)
                                                     .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID, on: colorScheme))
+                                                    .foregroundStyle(SpeakerColor.color(forClusterID: line.segment.speakerClusterID, speakerName: name, on: colorScheme))
                                             }
                                         }
                                         Text(

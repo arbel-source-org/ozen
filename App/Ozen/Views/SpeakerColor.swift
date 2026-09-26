@@ -1,4 +1,5 @@
 import SwiftUI
+import OzenKit
 
 /// A small, fixed, colorblind-checked palette — not generated per
 /// speaker — so a color always carries the same identity meaning it did a
@@ -23,9 +24,22 @@ enum SpeakerColor {
         Color(red: 0.42, green: 0.25, blue: 0.70),  // violet
     ]
 
-    static func color(forClusterID id: Int?, on scheme: ColorScheme) -> Color {
-        guard let id else { return scheme == .light ? Color(white: 0.4) : .gray }
+    static func color(forClusterID id: Int?, speakerName: String? = nil, on scheme: ColorScheme) -> Color {
+        guard id != nil || speakerName != nil else { return scheme == .light ? Color(white: 0.4) : .gray }
         let colors = scheme == .light ? deepPalette : palette
+        if let speakerName, !TranscriptSessionSummary.isGenericLabel(speakerName) {
+            return colors[stableIndex(speakerName, count: colors.count)]
+        }
+        guard let id else { return scheme == .light ? Color(white: 0.4) : .gray }
         return colors[id % colors.count]
+    }
+
+    private static func stableIndex(_ name: String, count: Int) -> Int {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for byte in name.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 1_099_511_628_211
+        }
+        return Int(hash % UInt64(count))
     }
 }
