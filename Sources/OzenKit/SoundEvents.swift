@@ -313,14 +313,17 @@ public struct SoundEventPolicy: Sendable, Equatable {
         // costs nothing, while a single TV or clatter spike never gets a
         // second confirmation and never raises the banner.
         if Self.sustainedIdentifiers.contains(event.identifier), observation.confidence < emergencyConfidence {
-            guard let pendingAt = pendingSince[event.identifier],
+            // By the sound, not the label: a kettle the classifier hears as
+            // "boiling" in one window and "whistling" in the next is one
+            // kettle confirming itself, not two sounds each starting over.
+            guard let pendingAt = pendingSince[event.cooldownKey],
                   observation.timestamp >= pendingAt,
                   observation.timestamp - pendingAt <= persistenceWindowSeconds
             else {
-                pendingSince[event.identifier] = observation.timestamp
+                pendingSince[event.cooldownKey] = observation.timestamp
                 return nil
             }
-            pendingSince[event.identifier] = nil
+            pendingSince[event.cooldownKey] = nil
         }
         // Keyed by name, not identifier: two classifier labels the catalog
         // shows as the very same sound ("telephone_bell_ringing" and
