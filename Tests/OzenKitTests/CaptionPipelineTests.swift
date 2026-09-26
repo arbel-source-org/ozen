@@ -474,6 +474,18 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.segments.first?.text == "שלום סבתא")
     }
 
+    @Test("the last sound heard is kept in memory for a marked problem, and forgotten when captions stop")
+    func keepsRecentAudio() async {
+        let audio = FakeAudioCapturer()
+        let (pipeline, _, _) = makePipeline(audio: audio, engines: [.whisperKit: FakeEngine()])
+        await pipeline.start(settings: .default)
+        #expect(await eventually { pipeline.phase == .listening })
+        audio.push([0.25, -0.5, 0.75])
+        #expect(await eventually { pipeline.recentAudioSamples == [0.25, -0.5, 0.75] })
+        pipeline.stop()
+        #expect(pipeline.recentAudioSamples.isEmpty)
+    }
+
     @Test("tokens become segments; the same utterance updates in place; final commits it")
     func tokensBecomeSegments() async {
         let engine = FakeEngine()

@@ -143,7 +143,8 @@ public final class LiveCaptionViewModel {
             withdrawNotification: { AlertNotifier.shared.withdraw(identifier: $0) },
             phoneCalls: PhoneCallMonitor(),
             lockScreen: LockScreenCaptionsActivity(),
-            journal: SessionJournal(fileURL: support.appendingPathComponent("ozen-journal.log"))
+            journal: SessionJournal(fileURL: support.appendingPathComponent("ozen-journal.log")),
+            problemAudio: ProblemAudioStore(directory: support.appendingPathComponent("problem-audio", isDirectory: true))
         )
     }
 
@@ -161,11 +162,13 @@ public final class LiveCaptionViewModel {
         phoneCalls: PhoneCallMonitor? = nil,
         reclaimAudioSession: (@MainActor () -> Bool)? = nil,
         lockScreen: (any LockScreenCaptionsDisplaying)? = nil,
-        journal: SessionJournal? = nil
+        journal: SessionJournal? = nil,
+        problemAudio: ProblemAudioStore? = nil
     ) {
         self.settingsStore = settingsStore
         self.pipeline = pipeline
         self.journal = journal
+        self.problemAudio = problemAudio
         self.historyStore = historyStore ?? TranscriptHistoryStore(
             directoryURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-history-\(UUID())")
         )
@@ -271,6 +274,9 @@ public final class LiveCaptionViewModel {
     /// What happened, kept on disk for the diagnostics report; see
     /// `SessionJournal`. Nil in tests that don't look at it.
     public let journal: SessionJournal?
+    /// The last half-minute of sound, saved when a problem is marked, so
+    /// what was actually said can be compared with what was shown.
+    public let problemAudio: ProblemAudioStore?
     /// When a problem was last marked, for the caption screen to confirm.
     public private(set) var problemMarkedAt: TimeInterval?
     @ObservationIgnored private var journalObservers: [NSObjectProtocol] = []
@@ -317,6 +323,9 @@ public final class LiveCaptionViewModel {
         )
         for line in lines {
             journal?.append(line, at: now)
+        }
+        if let clip = problemAudio?.save(pipeline.recentAudioSamples, sampleRate: 16_000, at: Date(timeIntervalSince1970: now)) {
+            journal?.append("  sound saved: \(clip.lastPathComponent)", at: now)
         }
         problemMarkedAt = now
         Task { [weak self] in

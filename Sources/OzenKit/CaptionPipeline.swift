@@ -87,6 +87,11 @@ public final class CaptionPipeline {
     /// isn't cut in half.
     public var homeServerSwitchBackQuietSeconds: Double = 2
     private var coveredSettings: AppSettings?
+    /// The last half-minute of microphone sound, in memory only, so that
+    /// "mark a problem" can keep what was actually heard. Cleared when
+    /// captions stop.
+    private var recentAudio = RecentAudio(seconds: 30, sampleRate: 16_000)
+    public var recentAudioSamples: [Float] { recentAudio.samples() }
     private var homeServerRecheck: Task<Void, Never>?
     /// The room the last download refused for want of space needed, so a
     /// return to the app only retries once that much is free.
@@ -417,6 +422,7 @@ public final class CaptionPipeline {
     }
 
     public func stop() {
+        recentAudio.clear()
         homeServerRecheck?.cancel()
         homeServerRecheck = nil
         cancelScheduledRetry()
@@ -1022,6 +1028,7 @@ public final class CaptionPipeline {
             stats.audioChunksReceived += 1
             stats.audioSecondsReceived += Double(chunk.count) / Self.sampleRate
             stats.lastAudioAt = now()
+            recentAudio.append(chunk)
 
             buffer.append(contentsOf: chunk)
             let isSpeech = embeddingVoiceDetector.isSpeech(chunk)

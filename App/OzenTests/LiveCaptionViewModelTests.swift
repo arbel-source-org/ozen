@@ -53,6 +53,26 @@ struct LiveCaptionViewModelTests {
         #expect(HomeServerCodeStore.read() == "testcode123")
     }
 
+    @Test("marking a problem saves the last sound heard as a clip, and says so in the journal")
+    func problemKeepsSound() async throws {
+        let audio = FakeAudioCapturer()
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-vm-problem-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let journalURL = directory.appendingPathComponent("journal.log")
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: temporaryStore(),
+            pipeline: fakePipeline(audio: audio),
+            journal: SessionJournal(fileURL: journalURL),
+            problemAudio: ProblemAudioStore(directory: directory.appendingPathComponent("clips"))
+        )
+        await viewModel.start()
+        audio.push([0.1, 0.2, 0.3])
+        #expect(await eventually { viewModel.pipeline.recentAudioSamples.count == 3 })
+        viewModel.markProblem()
+        #expect(viewModel.problemAudio?.clips().count == 1)
+        #expect(SessionJournal(fileURL: journalURL).entries().contains { $0.text.hasPrefix("  sound saved: problem-") })
+    }
+
     @Test("start() drives the pipeline to listening")
     func startListens() async {
         let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())

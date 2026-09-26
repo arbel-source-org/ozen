@@ -11,11 +11,21 @@ struct DiagnosticsView: View {
     @State private var copied = false
     /// Read once, and again after a mark: reading waits for the file.
     @State private var journalLines: [String] = []
+    @State private var problemClips: [URL] = []
     /// Whether iOS lets Ozen show notifications at all. The last send's
     /// own result can't say: with permission denied iOS drops every
     /// notification without reporting an error, so it read "OK" while no
     /// background alert was ever shown.
     @State private var notificationsAllowed: Bool?
+
+    private static func clipTitle(_ clip: URL) -> String {
+        let stamp = clip.deletingPathExtension().lastPathComponent.replacingOccurrences(of: "problem-", with: "")
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd-HHmmss"
+        guard let date = parser.date(from: stamp) else { return stamp }
+        return date.formatted(date: .abbreviated, time: .standard)
+    }
 
     private func loadJournalLines() -> [String] {
         viewModel.journal?.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds) ?? []
@@ -103,6 +113,7 @@ struct DiagnosticsView: View {
                 Button {
                     viewModel.markProblem()
                     journalLines = loadJournalLines()
+                    problemClips = viewModel.problemAudio?.clips() ?? []
                 } label: {
                     Label(tr("לסמן בעיה עכשיו", "Mark a problem now"), systemImage: "exclamationmark.bubble")
                 }
@@ -116,6 +127,24 @@ struct DiagnosticsView: View {
                 Text(tr("יומן, כולל הפעלות קודמות", "Journal, previous runs included"))
             } footer: {
                 Text(tr("נשמר בטלפון גם כשהאפליקציה נסגרת, ונשלח רק עם הדוח. כשמסמנים בעיה נשמרות גם השורות האחרונות של הכתוביות.", "Kept on the phone even when the app closes, and sent only with the report. Marking a problem also keeps the last few caption lines."))
+            }
+
+            if !problemClips.isEmpty {
+                Section {
+                    ForEach(problemClips, id: \.self) { clip in
+                        ShareLink(item: clip) {
+                            Label(Self.clipTitle(clip), systemImage: "waveform")
+                        }
+                    }
+                    .onDelete { offsets in
+                        for index in offsets { viewModel.problemAudio?.remove(problemClips[index]) }
+                        problemClips = viewModel.problemAudio?.clips() ?? []
+                    }
+                } header: {
+                    Text(tr("הקול מהבעיות שסומנו", "Sound from marked problems"))
+                } footer: {
+                    Text(tr("כשמסמנים בעיה נשמרות 30 השניות האחרונות של הקול, רק בטלפון, כדי להשוות מה נאמר למה שנכתב. נשמרות עד 5; שליחה רק כשלוחצים עליהן. החלקה מוחקת.", "Marking a problem keeps the last 30 seconds of sound, on the phone only, to compare what was said with what was shown. Up to 5 are kept, and they’re sent only when you tap one. Swipe to delete."))
+                }
             }
 
             Section(tr("מודל ומילים", "Model and words")) {
@@ -151,6 +180,7 @@ struct DiagnosticsView: View {
         }
         .task {
             journalLines = loadJournalLines()
+            problemClips = viewModel.problemAudio?.clips() ?? []
             notificationsAllowed = await AlertNotifier.shared.isAllowed()
         }
         .accessibilityIdentifier("diagnosticsScreen")
