@@ -164,6 +164,9 @@ public actor HomeServerEngine: TranscriptionEngine {
     ) async {
         var ids: [Int: UUID] = [:]
         var shown: [Int: String] = [:]
+        // A frame for a line that already got its final would otherwise
+        // get a fresh id and show the same words again as a new line.
+        var finished = Set<Int>()
         while true {
             let frame: String
             do {
@@ -184,8 +187,14 @@ public actor HomeServerEngine: TranscriptionEngine {
                 }
                 return
             }
+            // Only a frame the phone understands proves the server is
+            // working: garbage arriving often enough would otherwise keep
+            // the stall check from ever handing captions to the phone.
+            guard let message = HomeServerMessage(json: frame) else { continue }
             noteReply()
-            guard case .text(let number, let received, let isFinal, let confidence, let segments)? = HomeServerMessage(json: frame) else { continue }
+            guard case .text(let number, let received, let isFinal, let confidence, let segments) = message,
+                  !finished.contains(number)
+            else { continue }
             let id = ids[number] ?? UUID()
             ids[number] = id
             // The same checks the phone's own model gets: the names list
@@ -202,6 +211,8 @@ public actor HomeServerEngine: TranscriptionEngine {
             if isFinal {
                 ids[number] = nil
                 shown[number] = nil
+                finished.insert(number)
+                if finished.count > 200 { finished = finished.filter { $0 > number - 100 } }
             } else {
                 shown[number] = words
             }

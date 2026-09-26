@@ -162,7 +162,7 @@ struct HomeServerEngineTests {
 
     @Test("a server that stays connected but never answers speech is given up on, so the phone's own model can take over; silence alone never is")
     func stuckServerIsDropped() async throws {
-        func run(_ chunk: [Float], replyEvery: Int?) async throws -> Error? {
+        func run(_ chunk: [Float], replyEvery: Int?, reply: @escaping (Int) -> String = { text($0, "", final: true) }) async throws -> Error? {
             let socket = ScriptedSocket(helloReply: ready)
             let server = HomeServerEngine(address: "10.0.0.5", token: { "1234" }, connector: Connector(socket: socket), handshakeSeconds: 0.3, stallSeconds: 2)
             let (audio, feed) = AsyncStream<[Float]>.makeStream()
@@ -172,8 +172,12 @@ struct HomeServerEngineTests {
             for index in 0..<40 {
                 feed.yield(chunk)
                 if let every = replyEvery, index % every == 0 {
-                    while await socket.sentBytes < (10 + index + 1) * 3200 { try await Task.sleep(for: .milliseconds(2)) }
-                    await socket.deliver(text(index, "", final: true))
+                    var waited = 0
+                    while await socket.sentBytes < (10 + index + 1) * 3200, waited < 500 {
+                        try await Task.sleep(for: .milliseconds(2))
+                        waited += 1
+                    }
+                    await socket.deliver(reply(index))
                 }
             }
             feed.finish()
@@ -190,6 +194,8 @@ struct HomeServerEngineTests {
         #expect((stuck as? EngineUnavailability)?.kind == .homeServerUnreachable)
         #expect(try await run(quiet, replyEvery: nil) == nil)
         #expect(try await run(loud, replyEvery: 5) == nil)
+        let garbage = try await run(loud, replyEvery: 5) { _ in "<html>502 Bad Gateway</html>" }
+        #expect((garbage as? EngineUnavailability)?.kind == .homeServerUnreachable)
     }
 
     @Test("a diagnostics report goes to the server, which says it kept it; a server that doesn't answer is a failure")
@@ -271,9 +277,11 @@ struct HomeServerEngineTests {
         #expect(live.utteranceID == final.utteranceID)
         #expect(!live.isFinal && final.isFinal && final.text == "shalom savta")
 
+        await socket.deliver(text(0, "shalom savta", final: false))
         await socket.deliver(text(1, "ma nishma", final: false))
         let next = try #require(try await iterator.next())
         #expect(next.utteranceID != final.utteranceID)
+        #expect(next.text == "ma nishma")
 
         feed.yield([0.1, 0.2, 0.3])
         feed.finish()
