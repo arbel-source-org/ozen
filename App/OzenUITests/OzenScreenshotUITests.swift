@@ -238,6 +238,9 @@ final class OzenScreenshotUITests: XCTestCase {
         let settingsButton = app.descendants(matching: .any)["settingsButton"]
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "home server guide: the settings button never appeared")
         settingsButton.tap()
+        let screen = app.descendants(matching: .any)["settingsScreen"]
+        XCTAssertTrue(screen.waitForExistence(timeout: 10), "home server guide: settings never appeared")
+        capture(app, name: "home-server-guide-settings-top")
 
         openSettingsRow(app, rowIdentifier: "homeServerGuideRow", screenIdentifier: "homeServerGuideScreen", captureName: "home-server-guide-accessibility-text-top")
         app.descendants(matching: .any)["homeServerGuideRow"].tap()

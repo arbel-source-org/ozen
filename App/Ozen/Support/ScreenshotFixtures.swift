@@ -32,6 +32,11 @@ enum ScreenshotFixtures {
     static func viewModel(variant: Variant) -> LiveCaptionViewModel {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("ozen-screenshot-\(UUID().uuidString).json")
+        if variant == .homeServer {
+            var seeded = AppSettings.default
+            seeded.engine = .homeServer
+            try? SettingsStore(fileURL: url).save(seeded)
+        }
         let viewModel = LiveCaptionViewModel(settingsStore: SettingsStore(fileURL: url))
 
         guard variant != .onboarding else {
@@ -84,7 +89,6 @@ enum ScreenshotFixtures {
             viewModel.quietHours = QuietHours(isEnabled: true, startHour: 22, endHour: 7)
         case .homeServer:
             viewModel.setAppLanguage(.hebrew)
-            Task { await viewModel.setEngine(.homeServer) }
         }
 
         return viewModel
