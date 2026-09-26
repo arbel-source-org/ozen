@@ -9,7 +9,8 @@ public enum ProblemSnapshot {
         input: AudioInputDescriptor?,
         stats: PipelineStats,
         segments: [TranscriptSegment],
-        device: String
+        device: String,
+        utcOffsetSeconds: Int
     ) -> [String] {
         let engine = activeEngine ?? settings.engine
         var lines = [
@@ -19,7 +20,13 @@ public enum ProblemSnapshot {
         ]
         for segment in segments.suffix(lineCount) {
             let sureness = segment.confidence.map { String(format: "%.2f", $0) } ?? "-"
-            lines.append("  line (\(segment.isCommitted ? "final" : "live"), sure \(sureness)): \(segment.text)")
+            // The problem-marked line above and the journal entry this all
+            // becomes both carry the moment the problem was marked, not
+            // when each line last changed: without its own clock time here
+            // there's no telling a line stuck for ten minutes from one
+            // that just went wrong.
+            let time = TranscriptHistoryStore.formattedClockTime(segment.lastUpdateTimestamp, utcOffsetSeconds: utcOffsetSeconds)
+            lines.append("  line (\(segment.isCommitted ? "final" : "live"), sure \(sureness), \(time)): \(segment.text)")
         }
         return lines
     }

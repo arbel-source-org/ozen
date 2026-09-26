@@ -323,7 +323,8 @@ public final class LiveCaptionViewModel {
             input: selectedInput,
             stats: pipeline.stats,
             segments: pipeline.segments,
-            device: Self.deviceStateText
+            device: Self.deviceStateText,
+            utcOffsetSeconds: TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: now))
         )
         for line in lines {
             journal?.append(line, at: now)
