@@ -70,7 +70,7 @@ private func text(_ utterance: Int, _ words: String, final: Bool) -> String {
 }
 
 private func engine(_ socket: ScriptedSocket?, address: String = "10.0.0.5", token: String? = "1234") -> HomeServerEngine {
-    HomeServerEngine(address: address, token: { token }, connector: Connector(socket: socket), handshakeSeconds: 0.3)
+    HomeServerEngine(address: address, token: { token }, connector: Connector(socket: socket), handshakeSeconds: 0.3, client: "Ozen 36, iOS 18.2")
 }
 
 @Suite("Home server")
@@ -141,6 +141,8 @@ struct HomeServerEngineTests {
         #expect(hello.contains(#""token":"1234""#))
         #expect(hello.contains(#""language":"he""#))
         #expect(hello.contains("Ruti"))
+        #expect(hello.contains(#""purpose":"check""#))
+        #expect(hello.contains(#""client":"Ozen 36, iOS 18.2""#))
         #expect(await socket.isClosed)
     }
 
@@ -187,6 +189,7 @@ struct HomeServerEngineTests {
         #expect(try await iterator.next() == nil)
         #expect(await socket.sentBytes == 6)
         #expect(await socket.sentTexts.last == HomeServer.end)
+        #expect(await socket.sentTexts.first?.contains(#""purpose":"captions""#) == true)
     }
 
     @Test("a text frame's per-segment numbers are read; a frame without them still parses")

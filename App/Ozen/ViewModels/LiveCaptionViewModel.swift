@@ -120,7 +120,8 @@ public final class LiveCaptionViewModel {
                     return HomeServerEngine(
                         address: settings.homeServerAddress,
                         token: { HomeServerCodeStore.read() },
-                        connector: URLSessionHomeServerConnector()
+                        connector: URLSessionHomeServerConnector(),
+                        client: LiveCaptionViewModel.homeServerClient
                     )
                 }
             },
@@ -898,13 +899,22 @@ public final class LiveCaptionViewModel {
         return true
     }
 
+    /// How the phone introduces itself to the home computer, so its log
+    /// shows which build came by.
+    nonisolated static var homeServerClient: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
+        return "Ozen \(version), iOS \(ProcessInfo.processInfo.operatingSystemVersionString)"
+    }
+
     /// "Test connection": says hello to the saved address with the saved
     /// code, the way captions would, and times the answer.
     public func checkHomeServer() async -> HomeServerCheck {
         let engine = HomeServerEngine(
             address: settings.homeServerAddress,
             token: { HomeServerCodeStore.read() },
-            connector: URLSessionHomeServerConnector()
+            connector: URLSessionHomeServerConnector(),
+            client: Self.homeServerClient
         )
         let clock = ContinuousClock()
         let start = clock.now

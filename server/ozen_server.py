@@ -14,7 +14,8 @@ phone can, and leaves room for what the phone can't afford.
 Protocol, version 1. Text frames are JSON, binary frames are audio.
   phone -> server
     {"type": "hello", "version": 1, "token": "...", "language": "he",
-     "vocabulary": ["Ruti", ...]}            first frame, required
+     "vocabulary": ["Ruti", ...], "purpose": "check" | "captions",
+     "client": "Ozen 0.2.36 (36), iOS 18.2"}  first frame, required
     <binary>                                  PCM16 little-endian, 16 kHz, mono
     {"type": "vocabulary", "terms": [...]}    the names list changed
     {"type": "end"}                           no more audio; finish the line
@@ -349,7 +350,9 @@ async def handle(ws, transcriber, token, live_interval):
     session = Session(ws, transcriber, hello.get("language", "he"),
                       [str(v) for v in hello.get("vocabulary", [])][:200], live_interval)
     await ws.send(json.dumps({"type": "ready", "model": transcriber.name, "version": PROTOCOL_VERSION}))
-    log.info("session from %s", peer)
+    purpose = str(hello.get("purpose", "captions"))[:20]
+    client = str(hello.get("client", ""))[:80]
+    log.info("session from %s: %s, %s", peer, purpose, client or "unknown app")
     worker = asyncio.create_task(session.run())
 
     # A pass that fails (a CUDA error, say) must end the connection: an

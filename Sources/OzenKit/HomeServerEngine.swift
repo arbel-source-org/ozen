@@ -17,6 +17,7 @@ public actor HomeServerEngine: TranscriptionEngine {
     private let token: @Sendable () -> String?
     private let connector: any HomeServerConnecting
     private let handshakeSeconds: Double
+    private let client: String
     private var vocabulary: [String] = []
     private var echo: PromptEchoDetector?
     private let filter = WhisperResultFilter()
@@ -28,12 +29,14 @@ public actor HomeServerEngine: TranscriptionEngine {
         address: String,
         token: @escaping @Sendable () -> String?,
         connector: any HomeServerConnecting,
-        handshakeSeconds: Double = 5
+        handshakeSeconds: Double = 5,
+        client: String = ""
     ) {
         self.address = address
         self.token = token
         self.connector = connector
         self.handshakeSeconds = handshakeSeconds
+        self.client = client
     }
 
     public func setVocabulary(_ terms: [String]) async {
@@ -57,7 +60,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
         if let verified, verified.url == target.url, verified.token == target.token { return .available }
         do {
-            let socket = try await handshake(target, languageCode: languageCode)
+            let socket = try await handshake(target, languageCode: languageCode, purpose: "check")
             await socket.close()
             verified = target
             return .available
@@ -98,7 +101,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
         let socket: any HomeServerSocket
         do {
-            socket = try await handshake(target, languageCode: languageCode)
+            socket = try await handshake(target, languageCode: languageCode, purpose: "captions")
         } catch {
             verified = nil
             continuation.finish(throwing: error as? EngineUnavailability ?? .homeServerUnreachable("\(error)"))
@@ -199,7 +202,7 @@ public actor HomeServerEngine: TranscriptionEngine {
     /// Opens a connection, says hello and waits for the server's answer.
     /// A server that never answers is closed after `handshakeSeconds`, so
     /// a dead address doesn't leave captions waiting.
-    private func handshake(_ target: (url: URL, token: String), languageCode: String) async throws -> any HomeServerSocket {
+    private func handshake(_ target: (url: URL, token: String), languageCode: String, purpose: String) async throws -> any HomeServerSocket {
         let socket: any HomeServerSocket
         do {
             socket = try await connector.open(target.url)
@@ -207,7 +210,9 @@ public actor HomeServerEngine: TranscriptionEngine {
             throw EngineUnavailability.homeServerUnreachable("could not connect: \(error)")
         }
         do {
-            try await socket.send(text: HomeServer.hello(token: target.token, languageCode: languageCode, vocabulary: vocabulary))
+            try await socket.send(text: HomeServer.hello(
+                token: target.token, languageCode: languageCode, vocabulary: vocabulary, purpose: purpose, client: client
+            ))
             let reply = try await Self.firstReply(from: socket, within: handshakeSeconds)
             switch HomeServerMessage(json: reply) {
             case .ready?:

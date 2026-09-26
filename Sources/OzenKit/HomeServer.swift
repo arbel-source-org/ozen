@@ -34,13 +34,24 @@ public enum HomeServer {
         return parts.url
     }
 
-    public static func hello(token: String, languageCode: String, vocabulary: [String]) -> String {
+    /// `purpose` is "check" for a connection test that closes straight
+    /// after `ready`, "captions" for a stream; `client` names the app build
+    /// and system, so the server's log shows which phone came by and why.
+    public static func hello(
+        token: String,
+        languageCode: String,
+        vocabulary: [String],
+        purpose: String = "captions",
+        client: String = ""
+    ) -> String {
         encode([
             "type": "hello",
             "version": protocolVersion,
             "token": token,
             "language": languageCode,
             "vocabulary": vocabulary,
+            "purpose": purpose,
+            "client": client,
         ])
     }
 
