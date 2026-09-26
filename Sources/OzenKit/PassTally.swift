@@ -9,6 +9,7 @@ public struct PassTally: Sendable, Equatable {
     public private(set) var segmentsSeen = 0
     public private(set) var segmentsRejected = 0
     public private(set) var emptyFinalPasses = 0
+    public private(set) var skippedWithoutVoice = 0
 
     public init() {}
 
@@ -24,6 +25,10 @@ public struct PassTally: Sendable, Equatable {
         if cameBackEmpty { emptyFinalPasses += 1 }
     }
 
+    public mutating func recordSkippedWithoutVoice() {
+        skippedWithoutVoice += 1
+    }
+
     public mutating func recordSegments(seen: Int, accepted: Int) {
         segmentsSeen += seen
         segmentsRejected += max(0, seen - accepted)
@@ -32,6 +37,6 @@ public struct PassTally: Sendable, Equatable {
     public var summary: String {
         let average = livePasses > 0 ? String(format: "%.2f", liveSeconds / Double(livePasses)) : "-"
         let last = lastLiveSeconds.map { String(format: "%.2f", $0) } ?? "-"
-        return "live passes \(livePasses) avg \(average)s slowest \(String(format: "%.2f", slowestLiveSeconds))s last \(last)s, final passes \(finalPasses) (\(emptyFinalPasses) empty), segments \(segmentsSeen) rejected by the filter \(segmentsRejected)"
+        return "live passes \(livePasses) avg \(average)s slowest \(String(format: "%.2f", slowestLiveSeconds))s last \(last)s, final passes \(finalPasses) (\(emptyFinalPasses) empty), segments \(segmentsSeen) rejected by the filter \(segmentsRejected), skipped with no voice \(skippedWithoutVoice)"
     }
 }

@@ -290,7 +290,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
     ) async throws {
         guard let pipe else { throw EngineError.notPrepared }
 
-        let intake = AudioIntake()
+        let intake = AudioIntake(voiceScorer: SileroVoiceScorer())
         let intakeTask = Task {
             for await chunk in audio {
                 if Task.isCancelled { break }
@@ -371,6 +371,22 @@ public actor WhisperKitEngine: TranscriptionEngine {
             }
             let end = window.count
             samplesAtLastPass = total
+
+            // Kitchen clatter and a running tap pass the energy detector
+            // and come back from Whisper as confident Hebrew. A stretch in
+            // which the voice model heard no voice at all never reaches
+            // Whisper; a line already on screen is always finished.
+            if intake.hasVoice(upTo: end) == false && lastShownText.isEmpty {
+                tally.recordSkippedWithoutVoice()
+                if isFinal {
+                    intake.drop(prefix: end)
+                    utteranceID = UUID()
+                    samplesAtLastPass = 0
+                    lastLivePassSeconds = nil
+                    if status.finished && total - end == 0 { break }
+                }
+                continue
+            }
 
             var options = isFinal ? finalPass : livePass
             options.promptTokens = promptTokens(using: pipe)
@@ -572,6 +588,13 @@ private final class AudioIntake: @unchecked Sendable {
     private var lastSpeechEnd: Int?
     private var finished = false
     private var detector = EnergyVoiceDetector()
+    /// Nil when the voice model isn't there or didn't load: then every
+    /// line goes to Whisper, as before (see `VoiceEvidence`).
+    private var evidence: VoiceEvidence?
+
+    init(voiceScorer: SileroVoiceScorer?) {
+        evidence = voiceScorer.map { scorer in VoiceEvidence(score: scorer.score) }
+    }
 
     func append(_ chunk: [Float]) {
         lock.withLock {
@@ -579,7 +602,14 @@ private final class AudioIntake: @unchecked Sendable {
             if detector.isSpeech(chunk) {
                 lastSpeechEnd = samples.count
             }
+            evidence?.append(chunk)
         }
+    }
+
+    /// Whether the first `end` samples had a voice in them; nil when
+    /// that isn't known.
+    func hasVoice(upTo end: Int) -> Bool? {
+        lock.withLock { evidence?.hasVoice(inFirst: end) }
     }
 
     func markFinished() {
@@ -603,6 +633,7 @@ private final class AudioIntake: @unchecked Sendable {
         lock.withLock {
             let dropped = min(count, samples.count)
             samples.removeFirst(dropped)
+            evidence?.drop(prefix: dropped)
             if let end = lastSpeechEnd {
                 lastSpeechEnd = end > dropped ? end - dropped : nil
             }

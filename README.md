@@ -26,7 +26,10 @@ things, for Hebrew conversation, entirely on-device.
   1 in each conversation, so a phone listening all week doesn't reach
   "speaker 140". Voices are told apart by [WeSpeaker CAM++](https://huggingface.co/Wespeaker/wespeaker-voxceleb-campplus-LM),
   a small (7.3M-parameter) neural speaker-embedding model run entirely
-  on-device via CoreML. On a LibriSpeech clustering test it separates a
+  on-device via CoreML. Lines with no voice in them (a pot put down,
+  a running tap) are skipped before Whisper sees them, using
+  [Silero VAD](https://github.com/snakers4/silero-vad) in the CoreML
+  conversion by [FluidAudio](https://huggingface.co/FluidInference/silero-vad-coreml) (MIT). On a LibriSpeech clustering test it separates a
   simulated four-person table correctly 96.8% of the time, against 45.8%
   for the classic MFCC print it replaced.
 - **Two swappable on-device engines, plus the cloud** — [WhisperKit](https://github.com/argmaxinc/argmax-oss-swift)

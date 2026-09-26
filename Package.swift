@@ -42,7 +42,7 @@ targets.append(contentsOf: [
             "OzenKit",
             .product(name: "WhisperKit", package: "argmax-oss-swift"),
         ],
-        resources: [.copy("CAMPlusPlus.mlpackage")],
+        resources: [.copy("CAMPlusPlus.mlpackage"), .copy("SileroVAD.mlpackage")],
         swiftSettings: [.swiftLanguageMode(.v6)]
     ),
     .testTarget(
