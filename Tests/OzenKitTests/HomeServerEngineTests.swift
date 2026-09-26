@@ -131,6 +131,38 @@ struct HomeServerEngineTests {
         #expect(bytes == [0, 0, 0xFF, 0x7F, 0x01, 0x80, 0xFF, 0x7F, 0, 0])
     }
 
+    @Test("a server that stays connected but never answers speech is given up on, so the phone's own model can take over; silence alone never is")
+    func stuckServerIsDropped() async throws {
+        func run(_ chunk: [Float], replyEvery: Int?) async throws -> Error? {
+            let socket = ScriptedSocket(helloReply: ready)
+            let server = HomeServerEngine(address: "10.0.0.5", token: { "1234" }, connector: Connector(socket: socket), handshakeSeconds: 0.3, stallSeconds: 2)
+            let (audio, feed) = AsyncStream<[Float]>.makeStream()
+            let tokens = server.stream(languageCode: "he", audio: audio)
+            let quiet = [Float](repeating: 0.0005, count: 1600)
+            for _ in 0..<10 { feed.yield(quiet) }
+            for index in 0..<40 {
+                feed.yield(chunk)
+                if let every = replyEvery, index % every == 0 {
+                    while await socket.sentBytes < (10 + index + 1) * 3200 { try await Task.sleep(for: .milliseconds(2)) }
+                    await socket.deliver(text(index, "", final: true))
+                }
+            }
+            feed.finish()
+            do {
+                for try await _ in tokens {}
+                return nil
+            } catch {
+                return error
+            }
+        }
+        let loud = (0..<1600).map { Float(0.3 * sin(Double($0) * 0.3)) }
+        let quiet = [Float](repeating: 0.0005, count: 1600)
+        let stuck = try await run(loud, replyEvery: nil)
+        #expect((stuck as? EngineUnavailability)?.kind == .homeServerUnreachable)
+        #expect(try await run(quiet, replyEvery: nil) == nil)
+        #expect(try await run(loud, replyEvery: 5) == nil)
+    }
+
     @Test("a name added while captions stream reaches the server at once, as a vocabulary frame")
     func vocabularyMidStream() async throws {
         let socket = ScriptedSocket(helloReply: ready)

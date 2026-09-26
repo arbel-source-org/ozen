@@ -18,6 +18,11 @@ public actor HomeServerEngine: TranscriptionEngine {
     private let connector: any HomeServerConnecting
     private let handshakeSeconds: Double
     private let client: String
+    private let stallSeconds: Double
+    private var speechDetector = EnergyVoiceDetector.forWhisperLines()
+    private var samplesSent = 0
+    private var speechSinceReply: Int?
+    private var stalled = false
     private var vocabulary: [String] = []
     private var echo: PromptEchoDetector?
     private let filter = WhisperResultFilter()
@@ -30,13 +35,15 @@ public actor HomeServerEngine: TranscriptionEngine {
         token: @escaping @Sendable () -> String?,
         connector: any HomeServerConnecting,
         handshakeSeconds: Double = 5,
-        client: String = ""
+        client: String = "",
+        stallSeconds: Double = 35
     ) {
         self.address = address
         self.token = token
         self.connector = connector
         self.handshakeSeconds = handshakeSeconds
         self.client = client
+        self.stallSeconds = stallSeconds
     }
 
     public func setVocabulary(_ terms: [String]) async {
@@ -109,10 +116,18 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
         liveSocket = socket
         endSent = false
+        stalled = false
+        samplesSent = 0
+        speechSinceReply = nil
+        speechDetector = EnergyVoiceDetector.forWhisperLines()
         let sender = Task {
             for await chunk in audio {
                 if Task.isCancelled { return }
                 try? await socket.send(data: HomeServer.pcm16(chunk))
+                if self.noteSent(chunk) {
+                    await socket.close()
+                    return
+                }
             }
             try? await socket.send(text: HomeServer.end)
             self.markEndSent()
@@ -142,7 +157,10 @@ public actor HomeServerEngine: TranscriptionEngine {
             } catch {
                 liveSocket = nil
                 await socket.close()
-                if Task.isCancelled || endSent {
+                if stalled {
+                    verified = nil
+                    continuation.finish(throwing: EngineUnavailability.homeServerUnreachable("no reply for \(Int(stallSeconds)) s of speech"))
+                } else if Task.isCancelled || endSent {
                     continuation.finish()
                 } else {
                     // Checked again for real next time: the pipeline asks
@@ -152,6 +170,7 @@ public actor HomeServerEngine: TranscriptionEngine {
                 }
                 return
             }
+            noteReply()
             guard case .text(let number, let received, let isFinal, let confidence, let segments)? = HomeServerMessage(json: frame) else { continue }
             let id = ids[number] ?? UUID()
             ids[number] = id
@@ -185,6 +204,28 @@ public actor HomeServerEngine: TranscriptionEngine {
 
     private func markEndSent() {
         endSent = true
+    }
+
+    /// A server that stays connected but stops answering would leave the
+    /// captions frozen with nothing to say why. It always answers within
+    /// about 28 s of speech starting (its longest line), so speech sent
+    /// for `stallSeconds` with no reply at all means it is stuck: true
+    /// here closes the connection, and the phone's own model takes over.
+    private func noteSent(_ chunk: [Float]) -> Bool {
+        samplesSent += chunk.count
+        let speech = speechDetector.isSpeech(chunk)
+        if speechSinceReply == nil, speech {
+            speechSinceReply = samplesSent
+        }
+        guard let start = speechSinceReply,
+              Double(samplesSent - start) >= stallSeconds * 16_000
+        else { return false }
+        stalled = true
+        return true
+    }
+
+    private func noteReply() {
+        speechSinceReply = nil
     }
 
     // MARK: - Connecting
