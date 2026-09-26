@@ -61,6 +61,7 @@ struct LiveCaptionView: View {
     /// edge to edge, which otherwise makes lines too long to track by eye
     /// and pushes the buttons into the screen's far corners.
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var theme: CaptionTheme { CaptionTheme(viewModel.display.theme) }
 
@@ -1184,7 +1185,7 @@ struct LiveCaptionView: View {
             perform(current.action)
         } label: {
             VStack(spacing: 4) {
-                HStack(spacing: 6) {
+                statusTitleLayout {
                     if current.isBusy {
                         ProgressView()
                             .controlSize(.small)
@@ -1202,7 +1203,7 @@ struct LiveCaptionView: View {
                 // on the white theme.
                 .foregroundStyle(current.tint.readable(on: theme.colorScheme))
 
-                if let detail = current.detail, current.detailFitsInStatus {
+                if let detail = current.detail, !statusDetailGoesBelow(current) {
                     Text(detail)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -1226,12 +1227,26 @@ struct LiveCaptionView: View {
         .accessibilityHint(current.detail ?? "")
     }
 
+    /// From the larger text sizes up the status button is only about as
+    /// wide as the others: its title went missing beside the icon and even
+    /// "tap to pause" was cut to a few letters. The icon then sits above
+    /// the title, as on the other buttons, and every detail goes below.
+    private var statusIsNarrow: Bool { dynamicTypeSize >= .xxLarge }
+
+    private var statusTitleLayout: AnyLayout {
+        statusIsNarrow ? AnyLayout(VStackLayout(spacing: 2)) : AnyLayout(HStackLayout(spacing: 6))
+    }
+
+    private func statusDetailGoesBelow(_ current: PhasePresentation) -> Bool {
+        current.detail != nil && (statusIsNarrow || !current.detailFitsInStatus)
+    }
+
     /// A detail too long for the status button, in full, across the bar.
     /// VoiceOver already reads it as the status button's hint.
     @ViewBuilder
     private var statusDetailLine: some View {
         let current = presentation
-        if let detail = current.detail, !current.detailFitsInStatus {
+        if let detail = current.detail, statusDetailGoesBelow(current) {
             Button {
                 perform(current.action)
             } label: {
