@@ -22,7 +22,9 @@ Protocol, version 1. Text frames are JSON, binary frames are audio.
     {"type": "ready", "model": "...", "version": 1}
     {"type": "error", "code": "unauthorized" | "bad_request" | "busy", "detail": "..."}
     {"type": "text", "utterance": 7, "text": "...", "final": false,
-     "confidence": 0.93}
+     "confidence": 0.93, "end_s": 12.4}
+  `end_s` is where in the session's audio the pass ended, in seconds, so
+  a client can measure how long after the words were said they arrived.
 """
 import argparse
 import asyncio
@@ -174,6 +176,7 @@ class Session:
         self.live_interval = live_interval
         self.detector = EnergyVoiceDetector()
         self.buf = np.zeros(0, dtype=np.float32)
+        self.offset = 0
         self.last_speech_end = None
         self.finished = False
         self.samples_at_last_pass = 0
@@ -211,6 +214,7 @@ class Session:
             if end_speech is None:
                 if total > keep:
                     self.buf = self.buf[total - keep:]
+                    self.offset += total - keep
                 if self.finished:
                     return
                 await self._wait()
@@ -234,12 +238,14 @@ class Session:
             if text or final:
                 await self.ws.send(json.dumps({
                     "type": "text", "utterance": self.utterance, "text": text,
-                    "final": final, "confidence": confidence}, ensure_ascii=False))
+                    "final": final, "confidence": confidence,
+                    "end_s": round((self.offset + len(window)) / R, 3)}, ensure_ascii=False))
             if final:
                 if text:
                     self.previous_text = (self.previous_text + " " + text).strip()[-400:]
                 used = len(window)
                 self.buf = self.buf[used:]
+                self.offset += used
                 if self.last_speech_end is not None:
                     self.last_speech_end = self.last_speech_end - used if self.last_speech_end > used else None
                 self.utterance += 1

@@ -1,0 +1,4 @@
+faster-whisper==1.2.1
+websockets>=13
+numpy
+soundfile
