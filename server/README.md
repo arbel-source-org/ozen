@@ -52,6 +52,16 @@ skipped before the model sees it: kitchen clatter and a TV room hum turned
 into about ten invented lines a minute, and none with the check, with no
 change on real speech. `--speech-gate 0` turns it off.
 
+Finished lines are written with beam 5 (`--beam`), live words with beam 1: on
+the 2080 Ti that cut conversation mistakes from 8.9% to 8.3% for about 0.15 s
+more per finished line.
+
+Each connection is logged with what it was for (`check` when the phone only
+tests that the server is there, `captions` when it streams) and the app build
+that made it, and ends with a summary: minutes of audio, lines written, and
+how long a finished line took. Measurements on the same card make live lines
+lag by many seconds, so run them only when the log shows no captions session.
+
 The first start downloads the model (about 1.6 GB, 3 GB more for the full one). The pairing code goes
 into the phone: Settings, Engine, Home computer.
 
