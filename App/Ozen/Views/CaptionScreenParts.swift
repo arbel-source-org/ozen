@@ -129,7 +129,7 @@ struct NameSpeakerSheet: View {
                         .onSubmit { if canSave { save() } }
                 } footer: {
                     Text(segment.speakerClusterID == nil
-                         ? tr("עדיין לא זוהה קול לשורה הזו. נסו שוב אחרי שהאדם ידבר עוד קצת.", "No voice has been identified for this line yet. Try again after the person talks a bit more.")
+                         ? tr("עדיין לא זוהה קול לשורה הזו. נסו שוב אחרי שידברו עוד קצת.", "No voice has been identified for this line yet. Try again after the person talks a bit more.")
                          : tr("מעכשיו כל מה שהקול הזה יגיד יופיע עם השם הזה.", "From now on, everything this voice says will show with this name."))
                 }
                 if segment.speakerClusterID != nil, !savedNames.isEmpty {
@@ -195,7 +195,7 @@ struct FixVocabularyWordSheet: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
                 } header: {
-                    Text(tr("איך זה נשמע בכתוביות", "How it showed up in the captions"))
+                    Text(tr("מה נכתב בכתוביות", "What the captions showed"))
                 }
                 Section {
                     TextField(tr("המילה או השם הנכונים", "The correct word or name"), text: $word)

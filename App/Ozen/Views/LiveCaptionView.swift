@@ -464,7 +464,7 @@ struct LiveCaptionView: View {
             .alert(tr("הבעיה סומנה", "Problem marked"), isPresented: $showingProblemMarked) {
                 Button(tr("אישור", "OK"), role: .cancel) {}
             } message: {
-                Text(tr("מה שרץ עכשיו והשורות האחרונות נשמרו בטלפון בלבד. כדי לשלוח אותם למי שעוזר לך: הגדרות ← אבחון ← שליחת הדוח.", "What was running and the last few lines were saved, on the phone only. To send them to whoever helps you: Settings → Diagnostics → Send report."))
+                Text(tr("פרטי התקלה והשורות האחרונות נשמרו בטלפון בלבד. כדי לשלוח אותם למי שעוזר לך: הגדרות ← אבחון ← שליחת הדוח.", "What was running and the last few lines were saved, on the phone only. To send them to whoever helps you: Settings → Diagnostics → Send report."))
             }
     }
 
