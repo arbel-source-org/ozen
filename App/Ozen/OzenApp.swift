@@ -77,6 +77,20 @@ struct OzenApp: App {
                     "The audio will go to \(pairing.computerName) for captions. Only connect if this is the family’s computer."
                 ))
             }
+            .alert(
+                tr("החיבור למחשב בבית לא נשמר", "The connection to the home computer wasn’t saved"),
+                isPresented: Binding(
+                    get: { viewModel.pairingSaveFailed },
+                    set: { if !$0 { viewModel.pairingSaveFailed = false } }
+                )
+            ) {
+                Button(tr("סגירה", "Close"), role: .cancel) {}
+            } message: {
+                Text(tr(
+                    "הכתוביות ממשיכות כמו קודם. סרקו שוב את הקוד, או בקשו עזרה ממי שהתקין את הטלפון.",
+                    "Captions carry on as before. Scan the code again, or ask whoever set up the phone for help."
+                ))
+            }
             // When a free Apple ID install stops opening, and a reminder
             // the day before.
             .task { await InstallExpiryStatus.shared.load() }

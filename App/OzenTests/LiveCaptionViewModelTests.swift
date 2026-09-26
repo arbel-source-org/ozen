@@ -53,6 +53,18 @@ struct LiveCaptionViewModelTests {
         #expect(HomeServerCodeStore.read() == "testcode123")
     }
 
+    @Test("a pairing code the phone won't keep changes nothing and says so")
+    func pairingSaveFails() async throws {
+        let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())
+        viewModel.saveHomeServerCode = { _ in false }
+        viewModel.openURL(try #require(URL(string: "ozen://pair?address=wss://desktop.tail.ts.net&code=testcode123")))
+        #expect(!viewModel.pairingSaveFailed)
+        #expect(await viewModel.acceptPendingPairing() == false)
+        #expect(viewModel.pairingSaveFailed)
+        #expect(viewModel.settings.engine == .whisperKit)
+        #expect(viewModel.pendingPairing == nil)
+    }
+
     @Test("marking a problem saves the last sound heard as a clip, and says so in the journal")
     func problemKeepsSound() async throws {
         let audio = FakeAudioCapturer()

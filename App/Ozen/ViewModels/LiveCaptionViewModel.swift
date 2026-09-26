@@ -884,6 +884,11 @@ public final class LiveCaptionViewModel {
     /// A pairing link from a home computer's QR code, waiting for someone
     /// to confirm it (see `HomeServerPairing`).
     public var pendingPairing: HomeServerPairing?
+    /// The phone refused to keep a confirmed pairing code: without saying
+    /// so, the "Connect" she tapped looked like it worked while captions
+    /// stayed where they were.
+    public var pairingSaveFailed = false
+    @ObservationIgnored var saveHomeServerCode: (String) -> Bool = HomeServerCodeStore.save
 
     public func openURL(_ url: URL) {
         pendingPairing = HomeServerPairing(url: url)
@@ -895,7 +900,10 @@ public final class LiveCaptionViewModel {
     public func acceptPendingPairing() async -> Bool {
         guard let pairing = pendingPairing else { return false }
         pendingPairing = nil
-        guard HomeServerCodeStore.save(pairing.code) else { return false }
+        guard saveHomeServerCode(pairing.code) else {
+            pairingSaveFailed = true
+            return false
+        }
         settings.homeServerAddress = pairing.address
         settings.engine = .homeServer
         persist()
