@@ -11,10 +11,20 @@ import Foundation
 ///
 /// Writes go through a private queue: a line is a few dozen bytes, but the
 /// callers are on the main actor in the middle of captioning.
+///
+/// Lines are held in a memory buffer and only actually written to disk in
+/// batches (`flushDelay` apart, or sooner if `entries()` is asked for
+/// them), instead of opening, seeking and closing a `FileHandle` for every
+/// single line: during captioning the journal is appended to constantly
+/// (a line per token, per stat), and unbuffered disk I/O for each one would
+/// waste battery and flash wear for no benefit anyone reads in real time.
+/// `flushDelay` bounds what a crash could lose; `entries()` always flushes
+/// first, so it never misses a line that was already asked to be appended.
 public final class SessionJournal: @unchecked Sendable {
     public static let maximumBytes = 96_000
     public static let keptLines = 500
     static let textLimit = 400
+    static let flushDelay: TimeInterval = 2
 
     public struct Entry: Sendable, Equatable {
         public let at: TimeInterval
@@ -23,8 +33,17 @@ public final class SessionJournal: @unchecked Sendable {
 
     private let fileURL: URL
     /// One queue for every journal, so two of them on one file (tests, or a
-    /// second one made by mistake) still write and read in order.
+    /// second one made by mistake) still write and read in order. Also
+    /// guards the pending-lines buffers below, which are keyed by file
+    /// rather than by instance for the same reason: a line appended by one
+    /// instance must be visible to `entries()` on another instance opened
+    /// on the same file right after (e.g. across a simulated relaunch).
     private static let queue = DispatchQueue(label: "ozen.session-journal", qos: .utility)
+    /// Only ever touched while running on `queue`, which is what actually
+    /// makes these safe to share; `nonisolated(unsafe)` because that
+    /// discipline is external to what the compiler can see.
+    nonisolated(unsafe) private static var pendingLines: [URL: [String]] = [:]
+    nonisolated(unsafe) private static var flushScheduled: Set<URL> = []
 
     public init(fileURL: URL) {
         self.fileURL = fileURL
@@ -37,13 +56,30 @@ public final class SessionJournal: @unchecked Sendable {
         let clipped = singleLine.count > Self.textLimit ? String(singleLine.prefix(Self.textLimit)) + "…" : singleLine
         let line = "\(String(format: "%.2f", time))\t\(clipped)\n"
         Self.queue.async { [fileURL] in
-            Self.write(line, to: fileURL)
+            Self.pendingLines[fileURL, default: []].append(line)
+            guard !Self.flushScheduled.contains(fileURL) else { return }
+            Self.flushScheduled.insert(fileURL)
+            Self.queue.asyncAfter(deadline: .now() + Self.flushDelay) {
+                Self.flushScheduled.remove(fileURL)
+                Self.flush(fileURL)
+            }
         }
     }
 
-    /// Everything kept, oldest first. Waits for writes already asked for.
+    /// Everything kept, oldest first. Flushes anything buffered first, so
+    /// this always sees every line already asked to be appended.
     public func entries() -> [Entry] {
-        Self.queue.sync { Self.read(fileURL) }
+        Self.queue.sync {
+            Self.flush(fileURL)
+            return Self.read(fileURL)
+        }
+    }
+
+    /// Writes every buffered line for `fileURL` in one batch. Must only be
+    /// called on `queue`.
+    private static func flush(_ fileURL: URL) {
+        guard let lines = pendingLines.removeValue(forKey: fileURL), !lines.isEmpty else { return }
+        write(lines.joined(), to: fileURL)
     }
 
     /// "2026-09-18 14:02:07 listening", oldest first.
@@ -62,8 +98,12 @@ public final class SessionJournal: @unchecked Sendable {
         guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
         defer { try? handle.close() }
         guard let end = try? handle.seekToEnd() else { return }
-        try? handle.write(contentsOf: Data(line.utf8))
-        if end > UInt64(maximumBytes) {
+        let data = Data(line.utf8)
+        try? handle.write(contentsOf: data)
+        // Checked against the size after this write, not before: a
+        // buffered flush can write many lines at once, and a batch alone
+        // can carry the file past the limit in a single call.
+        if end + UInt64(data.count) > UInt64(maximumBytes) {
             try? handle.close()
             // Down to half, not to just under the limit, or every line
             // after the first trim would rewrite the whole file.

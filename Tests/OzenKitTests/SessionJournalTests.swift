@@ -63,4 +63,29 @@ struct SessionJournalTests {
         try Data("garbage\n12.00\tkept\n\tno time\n".utf8).write(to: url)
         #expect(SessionJournal(fileURL: url).entries() == [SessionJournal.Entry(at: 12, text: "kept")])
     }
+
+    @Test("a burst of a thousand appends all still show up, in order, once asked for")
+    func bufferedBurstIsComplete() {
+        let journal = SessionJournal(fileURL: temporaryFile())
+        for index in 0..<1_000 {
+            journal.append("line \(index)", at: TimeInterval(index))
+        }
+        let entries = journal.entries()
+        #expect(entries.count == 1_000)
+        #expect(entries.first?.text == "line 0")
+        #expect(entries.last?.text == "line 999")
+    }
+
+    @Test("a fresh append sits buffered in memory rather than touching disk right away; entries() flushes it and sees it immediately regardless")
+    func bufferedUntilAskedFor() {
+        let url = temporaryFile()
+        let journal = SessionJournal(fileURL: url)
+        journal.append("not on disk yet", at: 1)
+        // Comfortably shorter than SessionJournal.flushDelay: the file
+        // must not have been written this soon after a single append.
+        Thread.sleep(forTimeInterval: 0.05)
+        let onDiskAlready = (try? Data(contentsOf: url)).map { String(decoding: $0, as: UTF8.self) } ?? ""
+        #expect(!onDiskAlready.contains("not on disk yet"), "a single fresh append should be buffered, not hit disk immediately")
+        #expect(journal.entries().map(\.text) == ["not on disk yet"], "entries() must flush and see it right away regardless of the buffering delay")
+    }
 }
