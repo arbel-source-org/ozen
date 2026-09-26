@@ -253,6 +253,9 @@ class Session:
         self.utterance = 0
         self.previous_text = ""
         self.changed = asyncio.Event()
+        self.lines = 0
+        self.empty_finals = 0
+        self.final_seconds = []
 
     def add_audio(self, pcm16: bytes):
         chunk = np.frombuffer(pcm16, dtype="<i2").astype(np.float32) / 32768.0
@@ -308,7 +311,14 @@ class Session:
                     cut = quietest_point(window, len(window), int(self.cut_look_back * R), int(self.cut_frame * R))
                     window = window[:cut]
             self.samples_at_last_pass = total
+            started = time.monotonic()
             text, confidence, pieces = await self.t.transcribe(window.copy(), self.language, self.prompt(), final)
+            if final:
+                self.final_seconds.append(time.monotonic() - started)
+                if text:
+                    self.lines += 1
+                else:
+                    self.empty_finals += 1
             if text or final:
                 await self.ws.send(json.dumps({
                     "type": "text", "utterance": self.utterance, "text": text,
@@ -326,6 +336,14 @@ class Session:
                 self.samples_at_last_pass = 0
                 if self.finished and len(self.buf) == 0:
                     return
+
+    def summary(self):
+        minutes = (self.offset + len(self.buf)) / RATE / 60
+        if not self.final_seconds:
+            return f"{minutes:.1f} min of audio, no lines"
+        median = sorted(self.final_seconds)[len(self.final_seconds) // 2]
+        return (f"{minutes:.1f} min of audio, {self.lines} lines, {self.empty_finals} finished empty, "
+                f"finished-line pass median {median:.2f} s, worst {max(self.final_seconds):.2f} s")
 
     async def _wait(self):
         try:
@@ -391,7 +409,7 @@ async def handle(ws, transcriber, token, live_interval):
         log.error("session from %s ended with %r", peer, error)
     finally:
         worker.cancel()
-        log.info("session from %s ended", peer)
+        log.info("session from %s ended: %s", peer, session.summary())
 
 
 async def main():
