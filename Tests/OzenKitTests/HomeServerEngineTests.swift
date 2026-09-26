@@ -79,6 +79,20 @@ private func engine(_ socket: ScriptedSocket?, address: String = "10.0.0.5", tok
 
 @Suite("Home server")
 struct HomeServerEngineTests {
+    @Test("the setup link in the app is a file every release publishes, and that file fetches the server zip the release makes")
+    func setupDownloadIsPublished() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let release = try String(contentsOf: root.appendingPathComponent(".github/workflows/release.yml"), encoding: .utf8)
+        let launcher = try String(contentsOf: root.appendingPathComponent("server").appendingPathComponent(HomeServer.setupFileName), encoding: .utf8)
+        #expect(HomeServer.setupDownload.lastPathComponent == HomeServer.setupFileName)
+        #expect(HomeServer.setupDownload.absoluteString.contains("/releases/latest/download/"))
+        #expect(release.contains("cp server/\(HomeServer.setupFileName) ."))
+        #expect(release.contains("gh release create \"$TAG\" Ozen.ipa ozen-home-server.zip \(HomeServer.setupFileName)"))
+        #expect(release.contains("zip -q ../ozen-home-server.zip") && release.contains("setup-windows.ps1"))
+        #expect(launcher.contains("/releases/latest/download/ozen-home-server.zip"))
+        #expect(launcher.contains("setup-windows.ps1"))
+    }
+
     @Test("an address without a scheme gets ws and the default port; a given port or wss is kept; nonsense is refused")
     func addresses() {
         #expect(HomeServer.url(from: "10.0.0.5")?.absoluteString == "ws://10.0.0.5:8765")

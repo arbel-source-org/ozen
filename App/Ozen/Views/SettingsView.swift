@@ -307,6 +307,12 @@ struct SettingsView: View {
 
     private var homeServerSection: some View {
         Section {
+            NavigationLink {
+                HomeServerGuideView()
+            } label: {
+                Label(tr("איך מכינים את המחשב בבית", "How to set up the home computer"), systemImage: "questionmark.circle")
+            }
+            .accessibilityIdentifier("homeServerGuideRow")
             TextField(tr("כתובת המחשב", "Computer address"), text: $homeServerAddressDraft)
                 .keyboardType(.URL)
                 .textContentType(.URL)

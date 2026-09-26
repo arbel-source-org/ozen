@@ -240,6 +240,15 @@ struct ScreenWordingTests {
         #expect(HistoryView.expiryWarning(count: 12) == "12 שיחות ישנות יימחקו עכשיו")
     }
 
+    @Test("the home-computer guide walks through four distinct steps and names the graphics card it needs")
+    func homeServerGuide() {
+        let steps = HomeServerGuideView.steps
+        #expect(steps.map(\.id) == [1, 2, 3, 4])
+        #expect(Set(steps.map(\.title)).count == 4)
+        #expect(steps.allSatisfy { !$0.text.isEmpty })
+        #expect(steps[0].text.contains("NVIDIA") && steps[0].text.contains("6GB"))
+    }
+
     @Test("every auto-delete choice has its own name")
     func retentionNames() {
         let names = HistoryRetention.allCases.map(HistoryView.name(for:))
