@@ -840,6 +840,28 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    /// A pairing link from a home computer's QR code, waiting for someone
+    /// to confirm it (see `HomeServerPairing`).
+    public var pendingPairing: HomeServerPairing?
+
+    public func openURL(_ url: URL) {
+        pendingPairing = HomeServerPairing(url: url)
+    }
+
+    /// Saves the confirmed pairing and switches captions to that computer.
+    /// False when the phone refused to keep the code.
+    @discardableResult
+    public func acceptPendingPairing() async -> Bool {
+        guard let pairing = pendingPairing else { return false }
+        pendingPairing = nil
+        guard HomeServerCodeStore.save(pairing.code) else { return false }
+        settings.homeServerAddress = pairing.address
+        settings.engine = .homeServer
+        persist()
+        await restartIfRunning()
+        return true
+    }
+
     /// The home server's pairing code was saved or removed in Settings.
     public func homeServerCodeChanged() async {
         if settings.engine == .homeServer {

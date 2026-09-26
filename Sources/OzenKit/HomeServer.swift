@@ -66,6 +66,48 @@ public enum HomeServer {
     }
 }
 
+/// The link a home server's pairing page shows as a QR code:
+/// `ozen://pair?address=wss://…&code=…`. The phone's camera opens it in
+/// the app, which asks before using it: a link like this points the
+/// microphone at whatever computer it names.
+public struct HomeServerPairing: Sendable, Equatable {
+    public static let scheme = "ozen"
+    public let address: String
+    public let code: String
+
+    public init?(address: String, code: String) {
+        let address = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        let code = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard HomeServer.url(from: address) != nil,
+              !code.isEmpty, code.count <= 200, !code.contains(where: \.isWhitespace)
+        else { return nil }
+        self.address = address
+        self.code = code
+    }
+
+    public init?(url: URL) {
+        guard let parts = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              parts.scheme?.lowercased() == Self.scheme, parts.host?.lowercased() == "pair",
+              let address = parts.queryItems?.first(where: { $0.name == "address" })?.value,
+              let code = parts.queryItems?.first(where: { $0.name == "code" })?.value
+        else { return nil }
+        self.init(address: address, code: code)
+    }
+
+    /// The computer's name as a person would recognise it: its host.
+    public var computerName: String {
+        HomeServer.url(from: address)?.host ?? address
+    }
+
+    public var url: URL {
+        var parts = URLComponents()
+        parts.scheme = Self.scheme
+        parts.host = "pair"
+        parts.queryItems = [URLQueryItem(name: "address", value: address), URLQueryItem(name: "code", value: code)]
+        return parts.url!
+    }
+}
+
 public enum HomeServerMessage: Sendable, Equatable {
     case ready(model: String)
     case refused(code: String, detail: String)

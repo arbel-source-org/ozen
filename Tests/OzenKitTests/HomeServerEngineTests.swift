@@ -85,6 +85,32 @@ struct HomeServerEngineTests {
         #expect(HomeServer.url(from: "two words") == nil)
     }
 
+    @Test("a pairing link from the QR code gives the address and code; anything else is refused")
+    func pairingLinks() throws {
+        let link = try #require(URL(string: "ozen://pair?address=wss://desktop.tail.ts.net&code=xmr60RT8pjNyeTT_"))
+        let pairing = try #require(HomeServerPairing(url: link))
+        #expect(pairing.address == "wss://desktop.tail.ts.net")
+        #expect(pairing.code == "xmr60RT8pjNyeTT_")
+        #expect(pairing.computerName == "desktop.tail.ts.net")
+        #expect(HomeServerPairing(url: pairing.url) == pairing)
+
+        let encoded = try #require(URL(string: "ozen://pair?address=wss%3A%2F%2Fdesktop.tail.ts.net%3A8765&code=a%2Bb"))
+        #expect(HomeServerPairing(url: encoded)?.address == "wss://desktop.tail.ts.net:8765")
+        #expect(HomeServerPairing(url: encoded)?.code == "a+b")
+
+        for bad in [
+            "https://pair?address=wss://x.net&code=abc",
+            "ozen://settings?address=wss://x.net&code=abc",
+            "ozen://pair?address=http://x.net&code=abc",
+            "ozen://pair?address=wss://x.net",
+            "ozen://pair?address=wss://x.net&code=",
+            "ozen://pair?code=abc",
+        ] {
+            #expect(HomeServerPairing(url: try #require(URL(string: bad))) == nil, "\(bad)")
+        }
+        #expect(HomeServerPairing(address: "10.0.0.5", code: "two words") == nil)
+    }
+
     @Test("audio goes out as little-endian 16-bit samples, clipped, with a broken sample sent as silence")
     func pcm() {
         let bytes = [UInt8](HomeServer.pcm16([0, 1, -1, 2, .nan]))

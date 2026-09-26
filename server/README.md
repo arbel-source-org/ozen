@@ -42,6 +42,13 @@ it. Running it again updates the server and keeps the code. `bash setup.sh
 The first start downloads the model (about 1.6 GB). The pairing code goes
 into the phone: Settings, Engine, Home computer.
 
+## Pairing the phone
+
+Both setup scripts end by making `pairing.html` next to the server: a QR code
+with the address and code in it. Open the iPhone's Camera, point it at the
+code, tap the Ozen link, and confirm. To make it again, or for a different
+address: `python pairing.py --address wss://<computer>.<tailnet>.ts.net`.
+
 ## Reaching it from the phone
 
 - **Same Wi-Fi:** the computer's address, for example `192.168.1.20`.

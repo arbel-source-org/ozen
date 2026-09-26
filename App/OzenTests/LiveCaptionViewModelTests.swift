@@ -1,6 +1,7 @@
 import Testing
 @testable import Ozen
 @testable import OzenKit
+import OzenPlatform
 import Foundation
 
 // Runs only via `xcodebuild test` on a macOS CI runner (needs the real app
@@ -32,6 +33,24 @@ struct LiveCaptionViewModelTests {
         #expect(viewModel.segments.isEmpty)
         #expect(!viewModel.isListening)
         #expect(viewModel.phase == .idle)
+    }
+
+    @Test("a home computer's pairing link waits for a yes, then saves the address and code and switches to it; other links do nothing")
+    func pairingLink() async throws {
+        let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())
+        viewModel.openURL(try #require(URL(string: "https://example.com/pair?address=wss://x.net&code=abc")))
+        #expect(viewModel.pendingPairing == nil)
+
+        viewModel.openURL(try #require(URL(string: "ozen://pair?address=wss://desktop.tail.ts.net&code=testcode123")))
+        #expect(viewModel.pendingPairing?.computerName == "desktop.tail.ts.net")
+        #expect(viewModel.settings.engine == .whisperKit, "nothing changes before someone confirms")
+
+        defer { HomeServerCodeStore.remove() }
+        #expect(await viewModel.acceptPendingPairing())
+        #expect(viewModel.pendingPairing == nil)
+        #expect(viewModel.settings.engine == .homeServer)
+        #expect(viewModel.settings.homeServerAddress == "wss://desktop.tail.ts.net")
+        #expect(HomeServerCodeStore.read() == "testcode123")
     }
 
     @Test("start() drives the pipeline to listening")

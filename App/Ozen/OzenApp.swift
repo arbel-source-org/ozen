@@ -57,6 +57,26 @@ struct OzenApp: App {
                 }
             }
             .animation(.default, value: viewModel.hasCompletedOnboarding)
+            // A home computer's pairing QR code, scanned with the Camera.
+            .onOpenURL { viewModel.openURL($0) }
+            .alert(
+                tr("להתחבר למחשב בבית?", "Connect to the home computer?"),
+                isPresented: Binding(
+                    get: { viewModel.pendingPairing != nil },
+                    set: { if !$0 { viewModel.pendingPairing = nil } }
+                ),
+                presenting: viewModel.pendingPairing
+            ) { _ in
+                Button(tr("להתחבר", "Connect")) {
+                    Task { await viewModel.acceptPendingPairing() }
+                }
+                Button(tr("ביטול", "Cancel"), role: .cancel) {}
+            } message: { pairing in
+                Text(tr(
+                    "הקול ישלח לכתוביות אל \(pairing.computerName). אשרו רק אם זה המחשב של המשפחה.",
+                    "The audio will go to \(pairing.computerName) for captions. Only connect if this is the family’s computer."
+                ))
+            }
             // When a free Apple ID install stops opening, and a reminder
             // the day before.
             .task { await InstallExpiryStatus.shared.load() }

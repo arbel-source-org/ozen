@@ -16,7 +16,7 @@ if (-not (Test-Path $venvPython)) { & $python -m venv (Join-Path $Dir 'venv') }
 & $venvPython -m pip install --quiet --upgrade pip
 & $venvPython -m pip install --quiet -r (Join-Path $here 'requirements.txt') nvidia-cublas-cu12 'nvidia-cudnn-cu12==9.*'
 if ($LASTEXITCODE -ne 0) { throw 'pip install failed' }
-Copy-Item (Join-Path $here 'ozen_server.py'), (Join-Path $here 'try_server.py') $Dir -Force
+Copy-Item (Join-Path $here 'ozen_server.py'), (Join-Path $here 'try_server.py'), (Join-Path $here 'pairing.py') $Dir -Force
 
 $codeFile = Join-Path $Dir 'pairing-code'
 if (-not (Test-Path $codeFile)) {
@@ -55,3 +55,4 @@ Write-Output ''
 Write-Output "Set up in $Dir. The server starts with Windows and restarts itself if it stops."
 Write-Output "Pairing code: $(Get-Content $codeFile)"
 Write-Output ('Log: ' + (Join-Path $Dir 'server.log'))
+& $venvPython (Join-Path $Dir 'pairing.py') --code-file $codeFile --out (Join-Path $Dir 'pairing.html')

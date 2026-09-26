@@ -34,6 +34,10 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UILaunchScreen: {}
+        # ozen://pair?address=…&code=… from a home computer's QR code.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.arbelonson.ozen.pair
+            CFBundleURLSchemes: [ozen]
         CFBundleDevelopmentRegion: he
         CFBundleDisplayName: "Ozen"
         # The home screen shows the English name; Siri still answers to the
