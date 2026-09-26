@@ -59,7 +59,7 @@ struct HistoryView: View {
                         sessionLink(session)
                     }
                 } header: {
-                    Text(tr("לפני שנה בתאריך הזה", "On this day"))
+                    Text(tr("בתאריך הזה בשנים קודמות", "On this date in earlier years"))
                 }
             }
         }

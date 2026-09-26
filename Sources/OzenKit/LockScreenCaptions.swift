@@ -167,20 +167,26 @@ extension LockScreenCaptions {
 
 /// Times said the way Hebrew says them.
 public enum HebrewTime {
-    /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago".
+    /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago";
+    /// from an hour on, whole hours ("two hours ago", not "130 minutes ago").
     public static func minutesAgo(_ minutes: Int) -> String {
         if Localization.language == .english { return englishMinutesAgo(minutes) }
         switch minutes {
         case ...1: return "לפני דקה"
         case 2: return "לפני שתי דקות"
-        default: return "לפני \(minutes) דקות"
+        case 3..<60: return "לפני \(minutes) דקות"
+        case 60..<120: return "לפני שעה"
+        case 120..<180: return "לפני שעתיים"
+        default: return "לפני \(minutes / 60) שעות"
         }
     }
 
     private static func englishMinutesAgo(_ minutes: Int) -> String {
         switch minutes {
         case ...1: return "a minute ago"
-        default: return "\(minutes) minutes ago"
+        case 2..<60: return "\(minutes) minutes ago"
+        case 60..<120: return "an hour ago"
+        default: return "\(minutes / 60) hours ago"
         }
     }
 }

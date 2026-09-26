@@ -107,6 +107,14 @@ struct LockScreenCaptionsTests {
         #expect(LockScreenCaptions.ageNote(minutes: 2) == "נאמר לפני שתי דקות")
         #expect(HebrewTime.minutesAgo(0) == "לפני דקה")
         #expect(HebrewTime.minutesAgo(7) == "לפני 7 דקות")
+        #expect(HebrewTime.minutesAgo(59) == "לפני 59 דקות")
+        #expect(HebrewTime.minutesAgo(75) == "לפני שעה")
+        #expect(HebrewTime.minutesAgo(130) == "לפני שעתיים")
+        #expect(HebrewTime.minutesAgo(200) == "לפני 3 שעות")
+        Localization.$override.withValue(.english) {
+            #expect(HebrewTime.minutesAgo(75) == "an hour ago")
+            #expect(HebrewTime.minutesAgo(200) == "3 hours ago")
+        }
     }
 
     @Test("English wording for how long ago a line was said")
