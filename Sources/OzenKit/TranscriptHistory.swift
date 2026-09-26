@@ -464,8 +464,15 @@ public struct TranscriptHistoryStore: Sendable {
         return lines.joined(separator: "\n")
     }
 
+    /// Turns saved or typed text into the form both sides of a search are
+    /// compared in. A hyphen or Hebrew Maqaf joining two halves of a word
+    /// is turned into a space before niqqud is stripped, so "tel-aviv" and
+    /// a Maqaf'd "תל־אביב" both split into two words the same way a plain
+    /// "tel aviv" does, instead of fusing into one word neither half of a
+    /// two-word search can find.
     private static func normalizedForSearch(_ text: String) -> String {
-        strippingNiqqud(text.replacingOccurrences(of: "\n", with: " ")).lowercased()
+        let separated = HebrewText.separatingJoiners(text.replacingOccurrences(of: "\n", with: " "))
+        return strippingNiqqud(separated).lowercased()
     }
 
     /// The words of a search, compared the way saved text is: without

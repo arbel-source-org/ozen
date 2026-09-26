@@ -62,9 +62,18 @@ public enum HebrewText {
     /// recognizer never emit them, but a keyword phrase typed or pasted by
     /// the user might carry them, so both sides of a comparison are
     /// stripped down to consonants before anything else happens.
+    ///
+    /// The same block also holds four Hebrew *punctuation* marks that are
+    /// not vowels at all: Maqaf (U+05BE, the Hebrew hyphen), Paseq
+    /// (U+05C0), Sof Pasuq (U+05C3) and Nun Hafukha (U+05C6). Only the
+    /// scalars in this block that are actually a nonspacing mark
+    /// (Unicode general category Mn — the niqqud points and cantillation
+    /// accents) are removed, so a word joined by a Maqaf is left for
+    /// `separatingJoiners` to turn into a space rather than silently
+    /// vanishing and fusing the two halves together.
     public static func stripNiqqud(_ text: String) -> String {
         let withoutNiqqud = text.unicodeScalars.filter { scalar in
-            !(0x0591...0x05C7).contains(scalar.value)
+            !((0x0591...0x05C7).contains(scalar.value) && scalar.properties.generalCategory == .nonspacingMark)
         }
         return String(String.UnicodeScalarView(withoutNiqqud))
     }

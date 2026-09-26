@@ -310,6 +310,23 @@ struct KeywordAlertDecodingTests {
     }
 }
 
+@Suite("HebrewText.stripNiqqud")
+struct HebrewTextStripNiqqudTests {
+    @Test("niqqud vowel points and cantillation accents are stripped, but Hebrew punctuation in the same Unicode block is not")
+    func preservesHebrewPunctuation() {
+        // Niqqud actually comes off.
+        #expect(HebrewText.stripNiqqud("שָׁלוֹם") == "שלום")
+        // Maqaf (the Hebrew hyphen), Paseq, Sof Pasuq and Nun Hafukha are
+        // punctuation, not vowels, and sit in the same Unicode block
+        // (U+0591...U+05C7); stripping them outright would silently fuse
+        // the words on either side together.
+        #expect(HebrewText.stripNiqqud("תל\u{05BE}אביב") == "תל\u{05BE}אביב")
+        #expect(HebrewText.stripNiqqud("א\u{05C0}ב") == "א\u{05C0}ב")
+        #expect(HebrewText.stripNiqqud("א\u{05C3}") == "א\u{05C3}")
+        #expect(HebrewText.stripNiqqud("א\u{05C6}ב") == "א\u{05C6}ב")
+    }
+}
+
 @Suite("KeywordAttentionPolicy")
 struct KeywordAttentionPolicyTests {
     private func hit(_ alertID: UUID, at timestamp: TimeInterval) -> KeywordHit {

@@ -220,6 +220,23 @@ struct TranscriptHistoryTests {
         #expect(store.search("שלום").count == 1)
     }
 
+    @Test("a Maqaf-joined word is found whether the query types it with a space or a plain hyphen")
+    func searchAcrossMaqafJoinedWords() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "ביקור בבית\u{05BE}חולים בתל\u{05BE}אביב")]))
+
+        #expect(store.search("תל אביב").count == 1)
+        #expect(store.search("בית חולים").count == 1)
+        // The real regression: a query typed with a plain hyphen instead of
+        // a space ("tel-aviv") used to fail, because the Maqaf in the saved
+        // text was deleted outright rather than turned into a space, fusing
+        // the two halves into one word the hyphenated query never matched.
+        #expect(store.search("תל-אביב").count == 1)
+    }
+
     @Test("an empty or whitespace-only search query returns every session")
     func emptySearchQueryReturnsAll() throws {
         let dir = makeTempDirectory()
