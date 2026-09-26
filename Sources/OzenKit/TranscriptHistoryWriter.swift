@@ -68,6 +68,19 @@ public final class TranscriptHistoryWriter: Sendable {
         }
     }
 
+    /// Stars or unstars a line of a saved conversation, in order with the
+    /// saves already queued. Nil when the line wasn't found or couldn't be
+    /// saved.
+    @discardableResult
+    public func toggleStarNow(sessionID: UUID, segmentID: UUID) -> Bool? {
+        queue.sync { [store, failure, lastWritten] in
+            lastWritten.record = nil
+            var result: Bool?
+            failure.capture { result = try store.toggleStar(segmentID: segmentID, inSession: sessionID) }
+            return result
+        }
+    }
+
     /// Deletes a conversation after any autosave of it already queued, so
     /// that autosave can't write it back a moment after it was deleted.
     public func deleteNow(id: UUID) throws {

@@ -248,6 +248,32 @@ struct TranscriptHistoryWriterTests {
         #expect(store.load(id: conversation.id) != nil)
     }
 
+    @Test("a line starred after the conversation ended is saved, counted, and keeps the conversation from being cleared out")
+    func starAfterwards() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.star"))
+        let conversation = record(id: UUID(), lines: 3, ended: true)
+        writer.saveInBackground(conversation)
+        writer.waitUntilIdle()
+        let line = conversation.segments[1].id
+
+        #expect(writer.toggleStarNow(sessionID: conversation.id, segmentID: line) == true)
+        #expect(store.load(id: conversation.id)?.segments.map(\.isStarred) == [false, true, false])
+        let summary = try #require(store.listSummaries().first { $0.id == conversation.id })
+        #expect(summary.starredCount == 1)
+        #expect(summary.isKeptByChoice)
+
+        writer.saveInBackground(conversation)
+        writer.waitUntilIdle()
+        #expect(store.load(id: conversation.id)?.segments.map(\.isStarred) == [false, false, false])
+        #expect(writer.toggleStarNow(sessionID: conversation.id, segmentID: line) == true)
+        #expect(writer.toggleStarNow(sessionID: conversation.id, segmentID: line) == false)
+        #expect(try #require(store.listSummaries().first { $0.id == conversation.id }).starredCount == 0)
+        #expect(writer.toggleStarNow(sessionID: conversation.id, segmentID: UUID()) == nil)
+        #expect(writer.toggleStarNow(sessionID: UUID(), segmentID: line) == nil)
+    }
+
     @Test("a save that can't reach the disk is reported, and the next one that does clears it")
     func saveFailureIsReported() throws {
         let base = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-writer-fail-\(UUID())", isDirectory: true)

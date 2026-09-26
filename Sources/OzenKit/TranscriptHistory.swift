@@ -673,6 +673,23 @@ public struct TranscriptHistoryStore: Sendable {
         writeSearchText(Self.searchableText(of: record), forRecordFile: url)
     }
 
+    /// Stars a saved line, or takes its star away, after the conversation
+    /// ended: a line starred later protects its conversation from being
+    /// cleared out just as one starred while it was said does. Returns the
+    /// line's new state, or nil when the conversation or line is gone.
+    @discardableResult
+    public func toggleStar(segmentID: UUID, inSession id: UUID) throws -> Bool? {
+        guard var record = load(id: id),
+              let index = record.segments.firstIndex(where: { $0.id == segmentID })
+        else { return nil }
+        record.segments[index].isStarred.toggle()
+        let url = fileURL(for: id)
+        let data = try JSONEncoder().encode(record)
+        try data.write(to: url, options: .atomic)
+        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
+        return record.segments[index].isStarred
+    }
+
     public func delete(id: UUID) throws {
         let url = fileURL(for: id)
         try? FileManager.default.removeItem(at: summaryURL(forRecordFile: url))

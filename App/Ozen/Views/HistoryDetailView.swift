@@ -90,8 +90,14 @@ struct HistoryDetailView: View {
                         )
                         .listRowBackground(isMatch || segment.id == arrivedLineID ? Color.yellow.opacity(0.3) : nil)
                         .id(segment.id)
-                        .contextMenu { copyButton(segment.text) }
-                        .accessibilityActions { copyButton(segment.text) }
+                        .contextMenu {
+                            starButton(segment)
+                            copyButton(segment.text)
+                        }
+                        .accessibilityActions {
+                            starButton(segment)
+                            copyButton(segment.text)
+                        }
                     }
                 } header: {
                     Text(HistoryDays.heading(startedAt: record.startedAt))
@@ -113,6 +119,22 @@ struct HistoryDetailView: View {
             .onChange(of: scrollRequest) { _, _ in
                 guard matches.indices.contains(currentMatch) else { return }
                 withAnimation { proxy.scrollTo(matches[currentMatch], anchor: .center) }
+            }
+        }
+    }
+
+    /// Marks a line as important after the conversation, which also keeps
+    /// the conversation from being cleared out automatically.
+    private func starButton(_ segment: SavedSegment) -> some View {
+        Button {
+            viewModel.toggleStarInHistory(sessionID: sessionID, segmentID: segment.id)
+            onHistoryChanged()
+            Task { await refresh() }
+        } label: {
+            if segment.isStarred {
+                Label(tr("הסרת הסימון", "Remove the star"), systemImage: "star.slash")
+            } else {
+                Label(tr("סימון כחשובה", "Mark as important"), systemImage: "star")
             }
         }
     }

@@ -319,6 +319,38 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.listSummaries().count == 2)
     }
 
+    @Test("a line starred from history sticks, whether its conversation is still on screen or long gone")
+    func starFromHistory() async throws {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: 1))
+        await eventually { !viewModel.segments.isEmpty }
+        viewModel.persistHistory(ended: true)
+        let first = try #require(history.listSummaries().first)
+        let firstLine = try #require(history.load(id: first.id)?.segments.first)
+        viewModel.clearTranscript()
+
+        viewModel.toggleStarInHistory(sessionID: first.id, segmentID: firstLine.id)
+        #expect(history.load(id: first.id)?.segments.first?.isStarred == true)
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: 2))
+        await eventually { !viewModel.segments.isEmpty }
+        viewModel.persistHistory(ended: false)
+        viewModel.waitForHistorySaves()
+        let second = try #require(history.listSummaries().first { $0.id != first.id })
+        let secondLine = try #require(viewModel.segments.last)
+        viewModel.toggleStarInHistory(sessionID: second.id, segmentID: secondLine.id)
+        #expect(viewModel.starredSegmentIDs.contains(secondLine.id))
+        viewModel.persistHistory(ended: true)
+        viewModel.waitForHistorySaves()
+        #expect(history.load(id: second.id)?.segments.last?.isStarred == true)
+        #expect(history.load(id: first.id)?.segments.first?.isStarred == true)
+    }
+
     @Test("an autosave still being written never lands on top of the final save")
     func autosaveThenFinalSave() async {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))

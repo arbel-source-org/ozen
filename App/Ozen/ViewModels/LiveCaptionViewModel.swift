@@ -1502,6 +1502,18 @@ public final class LiveCaptionViewModel {
     /// did. Read when a screen draws; it isn't observed.
     public var historySaveFailure: String? { historyWriter.lastFailure }
 
+    /// Stars or unstars a line of a saved conversation. A line still on
+    /// the caption screen goes through `toggleStar`, whose starred set the
+    /// next autosave writes; one gone from the screen is changed on disk.
+    public func toggleStarInHistory(sessionID: UUID, segmentID: UUID) {
+        if let segment = pipeline.segments.first(where: { $0.id == segmentID }) {
+            toggleStar(segment)
+        } else {
+            historyWriter.toggleStarNow(sessionID: sessionID, segmentID: segmentID)
+        }
+        refreshSavingTrouble()
+    }
+
     /// Names a saved conversation, in order with any autosave in flight.
     public func renameConversation(id: UUID, title: String) {
         historyWriter.renameNow(id: id, title: title)
