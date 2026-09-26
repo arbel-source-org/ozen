@@ -1774,7 +1774,7 @@ struct LiveCaptionViewModelLockScreenTests {
         // Out of sight, where the lock screen is what she reads.
         viewModel.sceneActivityChanged(isActive: false)
         engine.emit(TranscriptToken(utteranceID: UUID(), text: "the pills at eight", isFinal: true, timestamp: Date().timeIntervalSince1970))
-        #expect(await eventually { lockScreen.shown.last?.lines.last?.text == "the pills at eight" })
+        #expect(await eventually { lockScreen.shown.last?.lines.last?.text == CaptionLayout.directed("the pills at eight") })
         #expect(lockScreen.shown.last?.status == nil)
         viewModel.sceneActivityChanged(isActive: true)
 
@@ -1804,7 +1804,7 @@ struct LiveCaptionViewModelLockScreenTests {
         #expect(lockScreen.shown.count == sentBefore)
 
         viewModel.sceneActivityChanged(isActive: false)
-        #expect(await eventually { lockScreen.shown.last?.lines.last?.text == "coffee is ready" })
+        #expect(await eventually { lockScreen.shown.last?.lines.last?.text == CaptionLayout.directed("coffee is ready") })
     }
 
     @Test("with the app in the background none can be started; back in front it starts")
