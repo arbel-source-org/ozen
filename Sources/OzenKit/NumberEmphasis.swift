@@ -29,6 +29,18 @@ public enum NumberEmphasis {
             var end = found.upperBound
             var last = position
             var endsWord = found.upperBound == word.text.endIndex && !isImmediatelyFollowedByComma(end, in: text)
+            // Spoken numbers above ten are compound words: teens ("chamesh
+            // esreh" — "fifteen"), tens and units ("esrim u-shlosha" —
+            // "twenty-three"), and a following "va-chatzi" ("and a half") in
+            // a time expression ("eser va-chatzi" — "half past ten"). Chain
+            // every consecutive number word before looking for a unit, so
+            // the whole compound stands out as one span instead of
+            // fragmenting into disconnected pieces.
+            while endsWord, last + 1 < words.count, let chained = chainedNumberRange(words[last + 1]) {
+                last += 1
+                end = chained.upperBound
+                endsWord = end == words[last].text.endIndex && !isImmediatelyFollowedByComma(end, in: text)
+            }
             while endsWord, last + 1 < words.count,
                   let joined = joinedWord(words[last + 1], allowingFraction: last == position) {
                 last += 1
@@ -56,6 +68,17 @@ public enum NumberEmphasis {
         let withoutArticle = core.hasPrefix("ה") && core.count > 2 ? String(core.dropFirst()) : core
         guard units.contains(core) || units.contains(withoutArticle) else { return nil }
         return (range, false)
+    }
+
+    /// Whether `word` continues a compound number or time expression started
+    /// by the word before it: another number word on its own ("esreh" in
+    /// "chamesh esreh" — "fifteen"), or one with the "ו" ("and") conjunction
+    /// ("u-shlosha", "va-chatzi"). Any other prefix ("ba-shlosha" — "at
+    /// three") means a new, unrelated word, not a continuation.
+    private static func chainedNumberRange(_ word: Word) -> Range<String.Index>? {
+        guard let range = word.coreRange, let core = word.core, let reading = numberReading(of: core) else { return nil }
+        guard reading.prefixes.isEmpty || reading.prefixes == "ו" else { return nil }
+        return range
     }
 
     private static func numberRange(of word: Word, at position: Int, in words: [Word]) -> Range<String.Index>? {

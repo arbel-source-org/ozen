@@ -33,8 +33,20 @@ struct NumberEmphasisTests {
     @Test("numbers in words, with Hebrew's attached prefixes and around punctuation")
     func words() {
         #expect(emphasized("לקחת שלושה כדורים, ובשש בערב עוד חצי.") == ["שלושה כדורים", "ובשש", "חצי"])
-        #expect(emphasized("שלושה-עשר אנשים") == ["שלושה", "עשר"])
+        #expect(emphasized("שלושה-עשר אנשים") == ["שלושה-עשר"])
         #expect(emphasized("\u{200F}\"לשניים\"") == ["לשניים"])
+    }
+
+    @Test("compound teens, tens-and-units, hundreds and time expressions chain into one span")
+    func compoundNumbers() {
+        #expect(emphasized("לקחת עשרים ושלושה כדורים") == ["עשרים ושלושה כדורים"])
+        #expect(emphasized("חמש עשרה דקות") == ["חמש עשרה דקות"])
+        #expect(emphasized("ניפגש בעשר וחצי") == ["בעשר וחצי"])
+        #expect(emphasized("מאה ועשרים שקל") == ["מאה ועשרים שקל"])
+        #expect(emphasized("אלפיים וחמש מאות שקל") == ["אלפיים וחמש מאות שקל"])
+        // "ביום שני בשלוש" ("on Monday at three") is two unrelated times, not
+        // a compound: a prefix other than "and" never chains.
+        #expect(emphasized("ביום שני בשלוש") == ["שני", "בשלוש"])
     }
 
     @Test("the unit right after an amount stands out with it")
