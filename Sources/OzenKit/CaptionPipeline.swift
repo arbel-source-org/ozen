@@ -337,6 +337,11 @@ public final class CaptionPipeline {
                 return
             }
         }
+        // Taking over mid-conversation (the home computer or the cloud
+        // dropped out), the phone's model can take seconds to load; the
+        // microphone listens from now, and what is said meanwhile waits in
+        // its stream for the model instead of being lost.
+        let earlySource = isCoveringForCloud ? try? audio.startCapture() : nil
         isPreparingEngine = true
         let availability = await engine.prepare(languageCode: settings.languageCode) { [weak self] progress in
             Task { @MainActor [weak self] in
@@ -363,11 +368,15 @@ public final class CaptionPipeline {
 
         phase = .startingAudio
         let source: AsyncStream<[Float]>
-        do {
-            source = try audio.startCapture()
-        } catch {
-            fail(.audioSessionFailed, detail: String(describing: error))
-            return
+        if let earlySource {
+            source = earlySource
+        } else {
+            do {
+                source = try audio.startCapture()
+            } catch {
+                fail(.audioSessionFailed, detail: String(describing: error))
+                return
+            }
         }
 
         let fan = AudioFanOut(source: source, count: soundDetector == nil ? 2 : 3) { [weak self] in

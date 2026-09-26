@@ -147,4 +147,27 @@ struct CloudCoverTests {
             #expect(captions.activeEngineKind == .whisperKit, "\(kind)")
         }
     }
+
+    @Test("what is said while the phone's model loads to take over is kept for it, not lost")
+    func wordsDuringTakeoverAreKept() async {
+        let audio = FakeAudioCapturer()
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let gate = PrepareGate()
+        phone.prepareGate = gate
+        let captions = CaptionPipeline(
+            audio: audio,
+            engineFactory: { $0.engine == .cloud ? cloud : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { phone.prepareCount == 1 })
+        for _ in 0..<20 { audio.push([Float](repeating: 0.1, count: 256)) }
+        await gate.open()
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        #expect(await eventually { phone.chunksSeen >= 20 })
+    }
 }
