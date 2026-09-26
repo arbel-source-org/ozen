@@ -57,6 +57,14 @@ struct OnboardingView: View {
             .background(Color(.systemBackground))
         }
         .background(Color(.systemBackground))
+        // Six pages to read, a permission to grant, a name to type: long
+        // enough that the phone's own lock timeout can end onboarding
+        // partway through. The caption screen manages this on its own
+        // once it's showing (see `ScreenAwakePolicy`); onboarding has no
+        // pipeline phase to key that off, so it simply holds the screen
+        // awake for as long as it's on screen at all.
+        .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
     }
 
     // MARK: - Pages
