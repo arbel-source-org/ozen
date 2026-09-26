@@ -945,6 +945,11 @@ struct LiveCaptionView: View {
                 .padding(.vertical, 10)
                 // A target a shaky finger finds at any text size.
                 .frame(minHeight: 48)
+                // The glass material alone has no floor: whatever scrolls
+                // behind it under high-contrast text could still read as
+                // low contrast. A themed tint behind the glass keeps a
+                // reliable contrast no matter what's passing underneath.
+                .background(theme.background.opacity(0.75), in: Capsule())
                 .ozenGlass(in: Capsule(), interactive: true, fallback: .thinMaterial)
         }
         .buttonStyle(.plain)
