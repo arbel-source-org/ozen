@@ -7,16 +7,21 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
+[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 Add-Type -AssemblyName System.Windows.Forms
+
+# Dialogs from a process Windows elevated can open behind other windows,
+# and the setup then looks frozen; a topmost owner keeps them in front.
+$dialogOwner = New-Object System.Windows.Forms.Form -Property @{ TopMost = $true }
 
 function Tell([string]$text, [string]$icon = 'Information') {
     if ($Quiet) { Write-Output $text; return }
-    [System.Windows.Forms.MessageBox]::Show($text, 'Ozen', 'OK', $icon) | Out-Null
+    [System.Windows.Forms.MessageBox]::Show($dialogOwner, $text, 'Ozen', 'OK', $icon) | Out-Null
 }
 
 function Ask([string]$text) {
     if ($Quiet) { return $false }
-    [System.Windows.Forms.MessageBox]::Show($text, 'Ozen', 'YesNo', 'Question') -eq 'Yes'
+    [System.Windows.Forms.MessageBox]::Show($dialogOwner, $text, 'Ozen', 'YesNo', 'Question') -eq 'Yes'
 }
 
 # The graphics card decides everything else: without an NVIDIA card the
@@ -25,14 +30,19 @@ function Ask([string]$text) {
 # about 7 GB together on an RTX 2080 Ti). Checked before anything is
 # downloaded, so a computer that can't do it is told so in a minute, not
 # after 5 GB.
+# Some drivers don't put nvidia-smi where Windows looks for programs.
 $gpu = $null
-try {
-    $line = & nvidia-smi --query-gpu=name,memory.total --format=csv,noheader,nounits 2>$null | Select-Object -First 1
-    if ($line) {
-        $name, $mib = $line -split ',\s*'
-        $gpu = @{ Name = $name.Trim(); GB = [math]::Round([double]$mib / 1024, 1) }
-    }
-} catch { }
+$smiCandidates = @('nvidia-smi', "$env:SystemRoot\System32\nvidia-smi.exe", "$env:ProgramFiles\NVIDIA Corporation\NVSMI\nvidia-smi.exe")
+foreach ($smi in $smiCandidates) {
+    if ($gpu) { break }
+    try {
+        $line = & $smi --query-gpu=name,memory.total --format=csv,noheader,nounits 2>$null | Select-Object -First 1
+        if ($line) {
+            $name, $mib = $line -split ',\s*'
+            $gpu = @{ Name = $name.Trim(); GB = [math]::Round([double]$mib / 1024, 1) }
+        }
+    } catch { }
+}
 if (-not $gpu) {
     Tell ("This computer has no NVIDIA graphics card that Windows can use, so it can't write captions for Ozen.`n`n" +
         "Ozen needs an NVIDIA card with at least 6 GB of memory (for example an RTX 2060 or 3060) and its normal NVIDIA driver.`n`n" +
@@ -59,8 +69,9 @@ $python = Join-Path $Dir 'python\python.exe'
 if (-not (Test-Path $python)) {
     $installer = Join-Path $Dir 'python-installer.exe'
     Invoke-WebRequest -UseBasicParsing 'https://www.python.org/ftp/python/3.12.10/python-3.12.10-amd64.exe' -OutFile $installer
-    Start-Process -Wait $installer -ArgumentList '/quiet', 'InstallAllUsers=0', 'PrependPath=0', 'Include_launcher=0', 'Include_test=0', 'Include_doc=0', 'Include_tcltk=0', 'Shortcuts=0', "TargetDir=$Dir\python"
+    $setup = Start-Process -Wait -PassThru $installer -ArgumentList '/quiet', 'InstallAllUsers=0', 'PrependPath=0', 'Include_launcher=0', 'Include_test=0', 'Include_doc=0', 'Include_tcltk=0', 'Shortcuts=0', "TargetDir=$Dir\python"
     Remove-Item $installer
+    if ($setup.ExitCode -ne 0 -or -not (Test-Path $python)) { throw "installing Python failed (code $($setup.ExitCode))" }
 }
 
 $venvPython = Join-Path $Dir 'venv\Scripts\python.exe'
@@ -120,6 +131,26 @@ if ((Get-ScheduledTask -TaskName $TaskName).State -ne 'Running') { throw 'the Oz
 $tailscale = Join-Path $env:ProgramFiles 'Tailscale\tailscale.exe'
 $pairArgs = @('--lan')
 $awayReady = $false
+# Signing in and turning Funnel on each wait on a page in the browser,
+# and Tailscale may only print that page's address: it is opened here.
+# Neither waits for ever, so a closed browser tab can't hang the setup.
+function RunTailscale([string[]]$arguments) {
+    $out = Join-Path $env:TEMP "ozen-tailscale-$($arguments[0]).txt"
+    $proc = Start-Process $tailscale -ArgumentList $arguments -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError "$out.err"
+    $opened = $false
+    for ($i = 0; $i -lt 300 -and -not $proc.HasExited; $i++) {
+        Start-Sleep 1
+        if (-not $opened) {
+            $text = (Get-Content $out, "$out.err" -Raw -ErrorAction SilentlyContinue) -join ' '
+            if ($text -match 'https://login\.tailscale\.com/\S+') {
+                Start-Process $Matches[0]
+                $opened = $true
+            }
+        }
+    }
+    if (-not $proc.HasExited) { $proc.Kill() }
+}
+
 function FunnelIsOn {
     $status = (& $tailscale funnel status 2>$null) -join "`n"
     $status -match '\(Funnel on\)' -and $status -match '127\.0\.0\.1:8765'
@@ -129,15 +160,21 @@ if (-not $awayReady -and (Ask ("Should the phone also get captions from this com
         "This installs Tailscale, a free service that gives the computer a safe address on the internet. " +
         "A browser window will open once to sign in or make a free account (Google, Microsoft or Apple sign-in works).`n`n" +
         "Choose No to use it only on this home's Wi-Fi. You can run this setup again later to add it."))) {
-    if (-not (Test-Path $tailscale)) {
-        winget install --id Tailscale.Tailscale -e --silent --accept-package-agreements --accept-source-agreements | Out-Null
-    }
-    if (Test-Path $tailscale) {
-        Tell "Next, a browser window opens to sign in to Tailscale. Come back here when it says you are connected."
-        & $tailscale up | Out-Null
-        Tell ("If the browser now asks to turn on 'Funnel' for this computer, allow it: that is what lets the phone reach it from outside.")
-        & $tailscale funnel --bg 8765 | Out-Null
-        $awayReady = FunnelIsOn
+    # Captions at home already work by now: nothing here may stop the
+    # setup before the pairing code is shown.
+    try {
+        if (-not (Test-Path $tailscale) -and (Get-Command winget -ErrorAction SilentlyContinue)) {
+            winget install --id Tailscale.Tailscale -e --silent --accept-package-agreements --accept-source-agreements | Out-Null
+        }
+        if (Test-Path $tailscale) {
+            Tell "Next, a browser window opens to sign in to Tailscale. Come back here when it says you are connected."
+            RunTailscale @('up')
+            Tell ("If the browser now asks to turn on 'Funnel' for this computer, allow it: that is what lets the phone reach it from outside.")
+            RunTailscale @('funnel', '--bg', '8765')
+            $awayReady = FunnelIsOn
+        }
+    } catch {
+        $awayReady = $false
     }
     if (-not $awayReady) {
         Tell "Setting up the away-from-home address didn't finish. Captions work on this home's Wi-Fi; run this setup again to try once more." 'Warning'
