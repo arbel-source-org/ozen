@@ -178,7 +178,7 @@ struct PhasePresentation {
         case .appleSpeech: engineName = tr("זיהוי הדיבור של אפל", "Apple’s speech recognition")
         case .cloud: engineName = tr("התמלול בענן", "Cloud transcription")
         case .homeServer: engineName = tr("המחשב בבית", "The home computer")
-        case .whisperKit, .none: engineName = "Whisper"
+        case .whisperKit, .none: engineName = tr("זיהוי הדיבור בטלפון", "The phone’s speech recognition")
         }
         switch engineFailure?.kind {
         case .permissionDenied:
@@ -234,7 +234,7 @@ struct PhasePresentation {
         case .cloudKeyNeeded:
             self.init(
                 title: tr("התמלול בענן צריך מפתח OpenRouter תקין", "Cloud transcription needs a valid OpenRouter key"),
-                detail: tr("הקישו כדי להזין מפתח בהגדרות", "Tap to enter a key in Settings"),
+                detail: tr("בקשו ממי שהתקין את הטלפון לתקן · הקישו להגדרות", "Ask whoever set up the phone to fix it · Tap for Settings"),
                 systemImage: "key",
                 tint: .orange,
                 action: .openEngineSettings
@@ -242,7 +242,7 @@ struct PhasePresentation {
         case .cloudOutOfCredit:
             self.init(
                 title: tr("נגמר הקרדיט של מפתח OpenRouter", "The OpenRouter key’s credit ran out"),
-                detail: tr("הוסיפו קרדיט באתר OpenRouter, או הקישו לעבור ל‑Whisper שבטלפון", "Add credit on the OpenRouter site, or tap to switch to Whisper on the phone"),
+                detail: tr("בקשו ממי שהתקין את הטלפון להוסיף קרדיט · הקישו להגדרות", "Ask whoever set up the phone to add credit · Tap for Settings"),
                 systemImage: "creditcard",
                 tint: .orange,
                 action: .openEngineSettings
@@ -266,7 +266,7 @@ struct PhasePresentation {
         case .homeServerRejected:
             self.init(
                 title: tr("המחשב בבית לא קיבל את קוד הצימוד", "The home computer didn’t accept the pairing code"),
-                detail: tr("הקישו כדי להזין את הקוד בהגדרות", "Tap to enter the code in Settings"),
+                detail: tr("בקשו ממי שהתקין את הטלפון לסרוק שוב את קוד ה‑QR · הקישו להגדרות", "Ask whoever set up the phone to scan the QR code again · Tap for Settings"),
                 systemImage: "key",
                 tint: .orange,
                 action: .openEngineSettings

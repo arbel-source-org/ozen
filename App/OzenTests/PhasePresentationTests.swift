@@ -57,6 +57,17 @@ struct PhasePresentationTests {
         #expect(key.isBusy == false)
     }
 
+    @Test("what only the person who set up the phone can fix tells her to ask them, and no engine name reaches her in English")
+    func familyOnlyFailures() {
+        for kind in [EngineUnavailability.Kind.cloudKeyNeeded, .cloudOutOfCredit, .homeServerRejected] {
+            let shown = PhasePresentation(phase: failure(EngineUnavailability(kind: kind, detail: "")), engine: .cloud, interruptedBySystem: false)
+            #expect(shown.detail?.contains("ממי שהתקין את הטלפון") == true, "\(kind)")
+            #expect(shown.action == .openEngineSettings)
+        }
+        let phone = PhasePresentation(phase: failure(EngineUnavailability(kind: .other, detail: "")), engine: .whisperKit, interruptedBySystem: false)
+        #expect(!phone.title.contains("Whisper"))
+    }
+
     @Test("the phone's own model covering for the cloud still reads as listening, and says why")
     func coveringForCloud() {
         let covering = PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: false, coveringForCloud: true)
