@@ -168,6 +168,68 @@ public enum HebrewText {
         }
         return false
     }
+
+    /// The Hebrew geresh, and the plain and typographic apostrophes a
+    /// transcript sometimes uses in its place, when they mark a diminutive
+    /// nickname ending glued straight onto a word with no space — "savta'le"
+    /// ("grandma," affectionately), written "סבתא'לה". `normalize` treats
+    /// this the same as any other punctuation and drops it, which would
+    /// make "סבתא'לה" indistinguishable from a genuine suffix change like
+    /// "סבתאות" ("grandmas") once every letter after the stem is kept; a
+    /// diminutive ending must instead be told apart by the marker actually
+    /// being there in the caption.
+    static let diminutiveMarkers: Set<Unicode.Scalar> = ["\u{05F3}", "'", "\u{2019}"]
+
+    /// `normalize`, but cut at the first diminutive marker instead of
+    /// dropping it, so "סבתא'לה" produces "סבתא" (the stem alone, with
+    /// whatever nickname ending followed the marker discarded) rather than
+    /// the un-tellable-apart "סבתאלה". Nil when `word` carries no such
+    /// marker at all.
+    static func diminutiveCore(_ word: String) -> String? {
+        guard let markerIndex = word.unicodeScalars.firstIndex(where: diminutiveMarkers.contains) else {
+            return nil
+        }
+        return normalize(String(String.UnicodeScalarView(word.unicodeScalars[..<markerIndex])))
+    }
+
+    /// A short, closed list of affectionate nicknames and alternate
+    /// spellings for the everyday address words a reader's alerts are
+    /// mostly built from — "savta" ("grandma") and "ima"/"ama" ("mom") —
+    /// that do not decompose into the stem plus a marked ending at all, so
+    /// the geresh rule above cannot catch them. Kept as an explicit
+    /// word-to-word list, never a general suffix or phonetic rule: a
+    /// general rule would risk matching an unrelated short configured word
+    /// (a name like "דן") against some other short word that happens to
+    /// share an ending, which a fixed list tied to the specific
+    /// configured word cannot do.
+    public static let affectionateVariants: [String: Set<String>] = [
+        "סבתא": ["סבתוש", "סבתושה"],
+        "אמא": ["אימא"],
+        "אימא": ["אמא"],
+    ]
+
+    /// True if `normalizedWord` is a recognized affectionate form of
+    /// `stem`: `stem` itself, `rawWord` with a diminutive marker glued onto
+    /// it (see `diminutiveCore`), or one of `affectionateVariants`' fixed
+    /// alternate spellings/nicknames for `stem`. `rawWord` is the same
+    /// caption word before `normalize` stripped the marker that
+    /// distinguishes a nickname ending from a real suffix change.
+    public static func isAffectionateVariant(rawWord: String, normalizedWord: String, of stem: String) -> Bool {
+        if normalizedWord == stem { return true }
+        if diminutiveCore(rawWord) == stem { return true }
+        return affectionateVariants[stem]?.contains(normalizedWord) ?? false
+    }
+
+    /// `stripAttachedPrefix`, extended to also accept an affectionate
+    /// diminutive or alternate-spelling form of `stem` — bare, or behind
+    /// one of the attached prepositions ("le-savta'le", "to grandma'le").
+    public static func stripAttachedPrefixOrVariant(rawWord: String, normalizedWord: String, leaving stem: String) -> Bool {
+        if stripAttachedPrefix(from: normalizedWord, leaving: stem) { return true }
+        if let core = diminutiveCore(rawWord) {
+            return stripAttachedPrefix(from: core, leaving: stem)
+        }
+        return affectionateVariants[stem]?.contains(normalizedWord) ?? false
+    }
 }
 
 /// Finds every place a caption mentions a keyword the reader cares about.
@@ -177,7 +239,10 @@ public enum HebrewText {
 /// a prefix to the word right after a preposition than in the middle of a
 /// fixed phrase. A caption word that is standalone punctuation ("," set
 /// off by spaces on both sides) does not break a phrase's consecutive
-/// words apart; a real word in between still does.
+/// words apart; a real word in between still does. A word said as an
+/// affectionate nickname or alternate spelling of a phrase's word ("סבתא'לה",
+/// "סבתוש" or "אימא" for "סבתא"/"אמא") still matches; see
+/// `HebrewText.isAffectionateVariant`.
 public struct KeywordAlertMatcher: Sendable, Equatable {
     public var alerts: [KeywordAlert]
 
@@ -203,9 +268,9 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
             guard !phraseWords.isEmpty, phraseWords.count <= normalizedWords.count else { continue }
 
             for start in 0..<normalizedWords.count {
-                guard HebrewText.stripAttachedPrefix(from: normalizedWords[start], leaving: phraseWords[0]) else {
-                    continue
-                }
+                guard HebrewText.stripAttachedPrefixOrVariant(
+                    rawWord: rawWords[start], normalizedWord: normalizedWords[start], leaving: phraseWords[0]
+                ) else { continue }
                 // A caption word that is pure punctuation ("," on its own,
                 // surrounded by spaces) normalizes to the empty string; a
                 // phrase's later words must still be found consecutively
@@ -219,7 +284,11 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
                     while cursor < normalizedWords.count && normalizedWords[cursor].isEmpty {
                         cursor += 1
                     }
-                    guard cursor < normalizedWords.count, normalizedWords[cursor] == phraseWords[offset] else {
+                    guard cursor < normalizedWords.count,
+                          HebrewText.isAffectionateVariant(
+                              rawWord: rawWords[cursor], normalizedWord: normalizedWords[cursor], of: phraseWords[offset]
+                          )
+                    else {
                         isFullMatch = false
                         break
                     }

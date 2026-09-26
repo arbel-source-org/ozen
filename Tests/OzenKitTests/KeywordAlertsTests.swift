@@ -80,6 +80,52 @@ struct KeywordAlertMatcherTests {
         #expect(matcher.matches(in: "דנה הגיעה הביתה").isEmpty)
     }
 
+    @Test("a geresh-marked affectionate nickname ending on the configured word matches")
+    func gereshNicknameEndingMatches() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
+        let matches = matcher.matches(in: "היום סבתא'לה הגיעה")
+        #expect(matches.count == 1)
+        #expect(matches[0].matchedText == "סבתא'לה")
+    }
+
+    @Test("a plain apostrophe marks the same affectionate nickname ending")
+    func apostropheNicknameEndingMatches() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
+        #expect(matcher.matches(in: "היום סבתא'לה הגיעה").count == 1)
+    }
+
+    @Test("an attached preposition still applies before a nickname ending")
+    func prefixBeforeNicknameEndingMatches() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
+        let matches = matcher.matches(in: "דיברתי לסבתא'לה אתמול")
+        #expect(matches.count == 1)
+        #expect(matches[0].matchedText == "לסבתא'לה")
+    }
+
+    @Test("a genuine suffix change is still not a match, unlike a marked nickname ending")
+    func suffixChangeStillDoesNotMatchNicknameRule() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
+        #expect(matcher.matches(in: "כל הסבתאות באו").isEmpty)
+    }
+
+    @Test("a curated nickname unrelated in spelling to the configured word still matches")
+    func curatedNicknameMatches() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
+        #expect(matcher.matches(in: "היי סבתוש מה נשמע").count == 1)
+    }
+
+    @Test("the alternate spelling ima/ama matches in either direction")
+    func amaImaSpellingVariantsMatchBothWays() {
+        #expect(KeywordAlertMatcher(alerts: [alert("אמא")]).matches(in: "איפה אימא שלי").count == 1)
+        #expect(KeywordAlertMatcher(alerts: [alert("אימא")]).matches(in: "איפה אמא שלי").count == 1)
+    }
+
+    @Test("an unrelated short configured word does not gain a nickname match from another word's ending")
+    func unrelatedShortWordDoesNotGainNicknameMatch() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("דן")])
+        #expect(matcher.matches(in: "סבתא'לה הגיעה").isEmpty)
+    }
+
     @Test("niqqud on the caption does not block a match against a plain phrase")
     func niqqudOnCaptionMatches() {
         let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
