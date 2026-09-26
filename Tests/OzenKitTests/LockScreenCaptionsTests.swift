@@ -71,6 +71,16 @@ struct LockScreenCaptionsTests {
         #expect(crowded[0].text == CaptionLayout.directed(LockScreenCaptions.tail(of: long, maximumCharacters: LockScreenCaptions.minimumCharacters)))
     }
 
+    @Test("a short earlier line hands its unused room to the newest line instead of going to waste")
+    func shortEarlierLineFreesRoomForNewest() {
+        let long = (1...40).map { "word\($0)" }.joined(separator: " ")
+        let short = LockScreenCaptions.lines(from: [line("hi"), line(long)]) { _ in nil }
+        #expect(plain(short[1].text).count > LockScreenTextSize.regular.newestLineMaximumCharacters)
+
+        let full = LockScreenCaptions.lines(from: [line(long), line(long)]) { _ in nil }
+        #expect(plain(short[1].text).count > plain(full[1].text).count)
+    }
+
     @Test("large lock screen text keeps fewer characters, and follows the caption size in the app")
     func largeText() {
         let long = (1...40).map { "word\($0)" }.joined(separator: " ")

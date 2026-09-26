@@ -33,7 +33,9 @@ public enum LockScreenCaptions {
     /// line's speaker, or nil to show none. The first line shown always
     /// carries its name, since on the lock screen there is nothing above
     /// it to say who is talking; after that a name is kept only where the
-    /// speaker changes.
+    /// speaker changes. An earlier line short enough to leave its own
+    /// budget unused hands the rest to the newest line, which grows past
+    /// `textSize`'s usual maximum.
     public static func lines(
         from segments: [TranscriptSegment],
         count: Int = lineCount,
@@ -49,13 +51,26 @@ public enum LockScreenCaptions {
             picked.insert(segment, at: 0)
         }
         var previousName: String?
-        return picked.enumerated().map { offset, segment in
+        let speakers: [String?] = picked.enumerated().map { offset, segment in
             let name = name(segment)
             defer { previousName = name }
-            let speaker = offset == 0 || name != previousName ? name : nil
-            let budget = offset == picked.count - 1 ? textSize.newestLineMaximumCharacters : textSize.earlierLineMaximumCharacters
-            // The name shares the line's room ("Speaker 2: ").
-            let room = max(minimumCharacters, budget - (speaker.map { $0.count + 2 } ?? 0))
+            return offset == 0 || name != previousName ? name : nil
+        }
+        // An earlier line that fits comfortably under its own budget leaves
+        // room nobody reads; the newest line, where the words she needs are,
+        // gets it added to its own instead of leaving blank space above a
+        // short one.
+        var bonus = 0
+        for offset in picked.indices where offset != picked.count - 1 {
+            let room = lineRoom(budget: textSize.earlierLineMaximumCharacters, speaker: speakers[offset])
+            let used = picked[offset].text.trimmingCharacters(in: .whitespacesAndNewlines).count
+            bonus += max(0, room - used)
+        }
+        return picked.enumerated().map { offset, segment in
+            let speaker = speakers[offset]
+            let isNewest = offset == picked.count - 1
+            let budget = (isNewest ? textSize.newestLineMaximumCharacters + bonus : textSize.earlierLineMaximumCharacters)
+            let room = lineRoom(budget: budget, speaker: speaker)
             return LockScreenCaptionLine(
                 speaker: speaker,
                 // The widget draws this on its own line, the same as any
@@ -68,6 +83,12 @@ public enum LockScreenCaptions {
                 lastUpdate: segment.lastUpdateTimestamp
             )
         }
+    }
+
+    /// A line's character budget once its speaker's name ("Speaker 2: ")
+    /// has taken its share of the room.
+    private static func lineRoom(budget: Int, speaker: String?) -> Int {
+        max(minimumCharacters, budget - (speaker.map { $0.count + 2 } ?? 0))
     }
 
     /// The end of `text`, at most `maximumCharacters` long, starting at a
