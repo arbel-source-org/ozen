@@ -19,7 +19,7 @@ struct CaptionTheme {
         case .dark:
             background = .black
             text = .white
-            pendingText = .white.opacity(0.62)
+            pendingText = .white.opacity(0.78)
             // About 15:1 on black, like the yellow-on-black theme's text.
             numberText = Color(red: 1.0, green: 0.88, blue: 0.2)
             chrome = .white
@@ -27,7 +27,7 @@ struct CaptionTheme {
         case .highContrast:
             background = .black
             text = Color(red: 1.0, green: 0.88, blue: 0.2)
-            pendingText = Color(red: 1.0, green: 0.88, blue: 0.2).opacity(0.6)
+            pendingText = Color(red: 1.0, green: 0.88, blue: 0.2).opacity(0.78)
             // White is the one colour brighter than this yellow on black.
             numberText = .white
             chrome = Color(red: 1.0, green: 0.88, blue: 0.2)
@@ -35,7 +35,7 @@ struct CaptionTheme {
         case .light:
             background = .white
             text = .black
-            pendingText = .black.opacity(0.55)
+            pendingText = .black.opacity(0.7)
             // A deep blue, close to 9:1 on white.
             numberText = Color(red: 0, green: 0.25, blue: 0.7)
             chrome = .black
