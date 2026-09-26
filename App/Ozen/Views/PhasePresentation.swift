@@ -24,6 +24,17 @@ struct PhasePresentation {
 
     let title: String
     let detail: String?
+
+    /// About what two lines of the status button hold on an ordinary
+    /// iPhone: the button gets roughly 100 pt between the four side
+    /// buttons, 17-18 Hebrew letters a line. A longer detail was cut off
+    /// with "…", losing exactly its last part ("ask whoever set up the
+    /// phone"), so it goes on its own full-width line under the buttons.
+    static let statusDetailCapacity = 36
+
+    var detailFitsInStatus: Bool {
+        (detail?.count ?? 0) <= Self.statusDetailCapacity
+    }
     let systemImage: String
     let tint: Color
     let progress: Double?

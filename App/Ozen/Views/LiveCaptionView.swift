@@ -602,6 +602,19 @@ struct LiveCaptionView: View {
             Button(tr("תיקון מילה למילון", "Fix a word for next time")) {
                 fixingWordFromSegment = segment
             }
+            Button(tr("העתקה", "Copy")) {
+                UIPasteboard.general.string = segment.text
+            }
+            if let saved = viewModel.savedConversationID(holdingLineAt: index) {
+                Button(tr("פתיחת השיחה כולה, לשיתוף או לחיפוש", "Open the whole conversation, to share or search")) {
+                    viewModel.persistHistory(ended: false)
+                    openedConversation = OpenedConversation(id: saved, lineID: segment.id)
+                }
+            }
+            Button(tr("הכתוביות לא טובות? לסמן בעיה", "Captions not good? Mark a problem")) {
+                viewModel.markProblem()
+                showingProblemMarked = true
+            }
         }
     }
 
@@ -1040,15 +1053,18 @@ struct LiveCaptionView: View {
     // MARK: - Control bar
 
     private var controlBar: some View {
-        HStack(alignment: .center, spacing: 8) {
-            micButton
-            statusControl
-                .frame(maxWidth: .infinity)
-            typeToSpeakButton
-            if !viewModel.segments.isEmpty {
-                clearButton
+        VStack(spacing: 6) {
+            HStack(alignment: .center, spacing: 8) {
+                micButton
+                statusControl
+                    .frame(maxWidth: .infinity)
+                typeToSpeakButton
+                if !viewModel.segments.isEmpty {
+                    clearButton
+                }
+                settingsButton
             }
-            settingsButton
+            statusDetailLine
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
@@ -1170,7 +1186,7 @@ struct LiveCaptionView: View {
                 // on the white theme.
                 .foregroundStyle(current.tint.readable(on: theme.colorScheme))
 
-                if let detail = current.detail {
+                if let detail = current.detail, current.detailFitsInStatus {
                     Text(detail)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -1192,6 +1208,29 @@ struct LiveCaptionView: View {
         .disabled(current.action == .none)
         .accessibilityLabel(current.title)
         .accessibilityHint(current.detail ?? "")
+    }
+
+    /// A detail too long for the status button, in full, across the bar.
+    /// VoiceOver already reads it as the status button's hint.
+    @ViewBuilder
+    private var statusDetailLine: some View {
+        let current = presentation
+        if let detail = current.detail, !current.detailFitsInStatus {
+            Button {
+                perform(current.action)
+            } label: {
+                Text(detail)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(current.action == .none)
+            .accessibilityHidden(true)
+        }
     }
 
     /// A screen with its own `alertOverlay` is over the captions. The

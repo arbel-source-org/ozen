@@ -90,6 +90,18 @@ struct PhasePresentationTests {
         #expect(refused.detail?.contains("קוד הצימוד") == true)
         #expect(refused.action == .openEngineSettings && refused.tint == .green)
         #expect(refused.detail?.contains("ממי שהתקין את הטלפון") == true)
+        #expect(!refused.detailFitsInStatus && !unreachable.detailFitsInStatus)
+    }
+
+    @Test("a short hint stays in the status button; a long one gets its own line rather than being cut off")
+    func longDetailsLeaveTheButton() {
+        let listening = PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: false)
+        let paused = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false)
+        let setUp = PhasePresentation(phase: failure(EngineUnavailability(kind: .homeServerRejected, detail: "")), engine: .homeServer, interruptedBySystem: false)
+        #expect(listening.detailFitsInStatus && paused.detailFitsInStatus)
+        #expect(!setUp.detailFitsInStatus)
+        let nothing = PhasePresentation(phase: .startingAudio, engine: .whisperKit, interruptedBySystem: false)
+        #expect(nothing.detail == nil && nothing.detailFitsInStatus)
     }
 
     @Test("covering for the cloud sends the family to Settings when only they can fix it, and offers nothing to fix for no internet")
