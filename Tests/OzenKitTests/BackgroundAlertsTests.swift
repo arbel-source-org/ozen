@@ -111,4 +111,12 @@ struct BackgroundAlertPolicyTests {
             #expect(BackgroundAlertPolicy.testNotification.title == "Test: doorbell")
         }
     }
+
+    @Test("permission is asked only while alerts are on and nobody has answered; a no is never asked again")
+    func askPermissionOnlyWhenUndecided() {
+        #expect(BackgroundAlertPolicy.shouldAskPermission(alertsWhenScreenOff: true, allowed: nil))
+        #expect(!BackgroundAlertPolicy.shouldAskPermission(alertsWhenScreenOff: true, allowed: false))
+        #expect(!BackgroundAlertPolicy.shouldAskPermission(alertsWhenScreenOff: true, allowed: true))
+        #expect(!BackgroundAlertPolicy.shouldAskPermission(alertsWhenScreenOff: false, allowed: nil))
+    }
 }

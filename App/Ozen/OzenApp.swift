@@ -33,6 +33,11 @@ struct OzenApp: App {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     }
 
+    /// UI tests would otherwise meet the system's notification prompt.
+    private static var isScreenshotRun: Bool {
+        ProcessInfo.processInfo.arguments.contains("-uiTestScreenshots")
+    }
+
     #if DEBUG
     /// `-uiTestScreenshots <variant>`: the UI test target launches with
     /// this to get a canned conversation instead of the real pipeline. See
@@ -104,6 +109,18 @@ struct OzenApp: App {
                     "חלק מהקישור חסר או השתבש. סרקו שוב את הריבוע במחשב עם מצלמת האייפון, ממש מקרוב.",
                     "Part of the link is missing or garbled. Scan the square on the computer again with the iPhone camera, up close."
                 ))
+            }
+            // Asked once, the first time captions run, if nobody answered
+            // during onboarding (see shouldAskPermission).
+            .onChange(of: viewModel.phase.isListening) { _, listening in
+                guard listening, !Self.isRunningTests, !Self.isScreenshotRun else { return }
+                let enabled = viewModel.notifyWhenInBackground
+                Task {
+                    let allowed = await AlertNotifier.shared.isAllowed()
+                    if BackgroundAlertPolicy.shouldAskPermission(alertsWhenScreenOff: enabled, allowed: allowed) {
+                        _ = await AlertNotifier.shared.requestAuthorization()
+                    }
+                }
             }
             // When a free Apple ID install stops opening, and a reminder
             // the day before.

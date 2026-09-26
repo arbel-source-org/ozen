@@ -29,6 +29,15 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
     public var quietHours: QuietHours
     private var lastNotified: [String: TimeInterval] = [:]
 
+    /// Whether to ask iOS for notification permission now. Alerts with the
+    /// screen off are on by default, but the only ask was a skippable
+    /// onboarding button: skipped, iOS never asked, and every locked-phone
+    /// alert was dropped while Settings showed nothing wrong. `allowed` is
+    /// nil while nobody has answered; a "no" is never asked again.
+    public static func shouldAskPermission(alertsWhenScreenOff: Bool, allowed: Bool?) -> Bool {
+        alertsWhenScreenOff && allowed == nil
+    }
+
     public init(isEnabled: Bool = true, cooldownSeconds: Double = 30, quietHours: QuietHours = .default) {
         self.isEnabled = isEnabled
         self.cooldownSeconds = cooldownSeconds
