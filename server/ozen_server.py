@@ -200,11 +200,12 @@ class Session:
         # The phone sends whatever it has; the detector sees chunks of the
         # size it was tuned on (about 43 ms).
         step = 688
+        start = len(self.buf)
+        self.buf = np.concatenate([self.buf, chunk])
         for i in range(0, len(chunk), step):
             piece = chunk[i:i + step]
-            self.buf = np.concatenate([self.buf, piece])
             if self.detector.is_speech(piece):
-                self.last_speech_end = len(self.buf)
+                self.last_speech_end = start + i + len(piece)
         self.changed.set()
 
     def prompt(self):
@@ -277,6 +278,8 @@ async def handle(ws, transcriber, token, live_interval):
     try:
         hello = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
     except Exception:
+        hello = None
+    if not isinstance(hello, dict):
         await ws.send(json.dumps({"type": "error", "code": "bad_request", "detail": "hello expected"}))
         return
     if hello.get("type") != "hello" or not hmac.compare_digest(str(hello.get("token", "")), token):
@@ -288,12 +291,27 @@ async def handle(ws, transcriber, token, live_interval):
     await ws.send(json.dumps({"type": "ready", "model": transcriber.name, "version": PROTOCOL_VERSION}))
     log.info("session from %s", peer)
     worker = asyncio.create_task(session.run())
+
+    # A pass that fails (a CUDA error, say) must end the connection: an
+    # open socket that never sends text again would keep the phone waiting
+    # instead of switching to its own model.
+    def worker_done(task):
+        if not task.cancelled() and task.exception() is not None:
+            log.error("session from %s failed: %r", peer, task.exception())
+            asyncio.ensure_future(ws.close(code=1011, reason="transcription failed"))
+
+    worker.add_done_callback(worker_done)
     try:
         async for message in ws:
             if isinstance(message, bytes):
                 session.add_audio(message)
                 continue
-            msg = json.loads(message)
+            try:
+                msg = json.loads(message)
+            except ValueError:
+                continue
+            if not isinstance(msg, dict):
+                continue
             if msg.get("type") == "vocabulary":
                 session.vocabulary = [str(v) for v in msg.get("terms", [])][:200]
             elif msg.get("type") == "end":
@@ -303,6 +321,8 @@ async def handle(ws, transcriber, token, live_interval):
         await worker
     except websockets.ConnectionClosed:
         pass
+    except Exception as error:
+        log.error("session from %s ended with %r", peer, error)
     finally:
         worker.cancel()
         log.info("session from %s ended", peer)
