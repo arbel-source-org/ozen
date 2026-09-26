@@ -89,7 +89,7 @@ final class FakeAudioCapturer: AudioCapturing {
 /// so engine caching across restarts is observable.
 final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
     let kind: TranscriptionEngineKind
-    let availability: EngineAvailability
+    var availability: EngineAvailability
     let progressUpdates: [EnginePreparationProgress]
     /// Runs on the main actor in the middle of `prepare`, so a test can
     /// inspect pipeline state at that exact moment.
@@ -1806,6 +1806,31 @@ struct CaptionPipelineDownloadNetworkTests {
         network.change(to: .wifi)
         try? await Task.sleep(for: .milliseconds(50))
         #expect(engine.prepareCount == 1)
+    }
+
+    @Test("captions that stopped for want of the internet come back when it does, over cellular too", arguments: [EngineUnavailability.Kind.noInternet, .homeServerUnreachable])
+    func streamingReturnsWithConnection(kind: EngineUnavailability.Kind) async {
+        let network = FakeNetworkMonitor(.offline)
+        let engine = FakeEngine(availability: .unavailable(kind, "offline"))
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in engine },
+            embedder: FakeEmbedder(),
+            recovery: .disabled,
+            network: network
+        )
+        await pipeline.start(settings: settings())
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == kind)
+        #expect(engine.prepareCount == 1)
+
+        network.change(to: .offline)
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(engine.prepareCount == 1)
+
+        engine.availability = .available
+        network.change(to: .cellular)
+        #expect(await eventually { pipeline.phase.isListening })
+        #expect(engine.prepareCount == 2)
     }
 
     @Test("a connection change doesn't touch captions that are running or failed for other reasons")

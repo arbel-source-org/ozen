@@ -1254,17 +1254,25 @@ public final class CaptionPipeline {
 
     /// A download that was waiting for Wi-Fi, or failed for want of a
     /// connection, starts as soon as the connection allows it, without
-    /// waiting out the retry timer.
+    /// waiting out the retry timer. So do captions from the cloud or the
+    /// home computer that stopped when the internet went: the timer gives
+    /// up after about half a minute, and a router takes longer to restart.
     private func networkConditionsChanged(_ conditions: NetworkConditions) {
         let allowCellular = (activeSettings?.allowCellularModelDownload ?? false) || cellularDownloadApproved
-        let wasUsable = lastNetwork.map { ModelDownloadGate.canRetryDownload(on: $0, allowCellular: allowCellular) } ?? false
+        let previous = lastNetwork
         lastNetwork = conditions
-        guard !wasUsable,
-              ModelDownloadGate.canRetryDownload(on: conditions, allowCellular: allowCellular),
-              networkRetryTask == nil,
-              let kind = phase.failure?.engineUnavailability?.kind,
-              kind == .waitingForWiFi || kind == .modelDownloadFailed
-        else { return }
+        guard networkRetryTask == nil, let kind = phase.failure?.engineUnavailability?.kind else { return }
+        let returned: Bool
+        switch kind {
+        case .waitingForWiFi, .modelDownloadFailed:
+            let wasUsable = previous.map { ModelDownloadGate.canRetryDownload(on: $0, allowCellular: allowCellular) } ?? false
+            returned = !wasUsable && ModelDownloadGate.canRetryDownload(on: conditions, allowCellular: allowCellular)
+        case .noInternet, .homeServerUnreachable:
+            returned = !(previous?.isConnected ?? false) && conditions.isConnected
+        default:
+            returned = false
+        }
+        guard returned else { return }
         recovery.reset()
         networkRetryTask = Task { [weak self] in
             await self?.retry()
