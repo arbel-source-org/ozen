@@ -56,7 +56,11 @@ struct TypeToSpeakView: View {
                         HStack {
                             Text(tr("משפטים מוכנים", "Quick phrases"))
                             Spacer()
-                            Button(editingPhrases ? tr("סיום", "Done") : tr("עריכה", "Edit")) { editingPhrases.toggle() }
+                            Button(editingPhrases ? tr("סיום", "Done") : tr("עריכה", "Edit")) {
+                                editingPhrases.toggle()
+                                // The keyboard covered the editor that just opened.
+                                if editingPhrases { isTyping = false }
+                            }
                                 .font(.subheadline.weight(.semibold))
                                 .frame(minWidth: 44, minHeight: 44)
                                 .contentShape(Rectangle())

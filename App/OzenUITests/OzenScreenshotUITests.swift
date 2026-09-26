@@ -245,7 +245,16 @@ final class OzenScreenshotUITests: XCTestCase {
 
         let handles = NSPredicate(format: "label BEGINSWITH[c] 'Delete' OR label BEGINSWITH[c] 'Remove' OR label BEGINSWITH 'מחיקה' OR label BEGINSWITH 'מחק' OR label BEGINSWITH 'הסר' OR label BEGINSWITH[c] 'Reorder' OR label BEGINSWITH 'סידור'")
         let handle = app.buttons.matching(handles).firstMatch
-        let found = handle.waitForExistence(timeout: 10)
+        // The keyboard (and its first-run typing tip) covers the lower half
+        // of the sheet, where the editor rows are: close both, then scroll.
+        let tip = app.buttons["Continue"]
+        if tip.exists { tip.tap() }
+        let list = app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch : app.tables.firstMatch
+        var found = handle.waitForExistence(timeout: 3)
+        for _ in 0..<6 where !found {
+            list.swipeUp()
+            found = handle.waitForExistence(timeout: 2)
+        }
         capture(app, name: "quick-phrases-editing")
         XCTAssertTrue(found, "quick phrases: Edit showed no delete or move handles; buttons: \(app.buttons.allElementsBoundByIndex.prefix(40).map(\.label))")
     }
