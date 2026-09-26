@@ -57,6 +57,10 @@ struct LiveCaptionView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// With Reduce Motion on, new lines jump into view instead of sliding.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// On an iPad, keeps caption lines and the control bar from stretching
+    /// edge to edge, which otherwise makes lines too long to track by eye
+    /// and pushes the buttons into the screen's far corners.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     private var theme: CaptionTheme { CaptionTheme(viewModel.display.theme) }
 
@@ -496,6 +500,8 @@ struct LiveCaptionView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
+                .frame(maxWidth: horizontalSizeClass == .regular ? 800 : .infinity)
+                .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("transcriptScroll")
             }
             .scrollIndicators(.hidden)
@@ -1040,6 +1046,7 @@ struct LiveCaptionView: View {
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 8)
+        .frame(maxWidth: horizontalSizeClass == .regular ? 720 : .infinity)
         .ozenGlassBar()
         .foregroundStyle(theme.chrome)
     }
