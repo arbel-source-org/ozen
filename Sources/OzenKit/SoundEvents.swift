@@ -25,14 +25,19 @@ public struct SoundEvent: Sendable, Equatable, Identifiable, Hashable {
     public let name: String
     public let importance: Importance
     public let systemImage: String
+    /// Two labels for one physical sound ("ringtone" and
+    /// "telephone_bell_ringing") share this, and with it one cooldown. The
+    /// shown name can't serve: in English the two read differently.
+    public let cooldownKey: String
 
     public var id: String { identifier }
 
-    public init(identifier: String, name: String, importance: Importance, systemImage: String) {
+    public init(identifier: String, name: String, importance: Importance, systemImage: String, sameSoundAs: String? = nil) {
         self.identifier = identifier
         self.name = name
         self.importance = importance
         self.systemImage = systemImage
+        self.cooldownKey = sameSoundAs ?? identifier
     }
 }
 
@@ -58,14 +63,14 @@ public enum SoundEventCatalog {
             SoundEvent(identifier: "car_horn", name: tr("צפירת רכב", "Car horn"), importance: .high, systemImage: "car.fill"),
             SoundEvent(identifier: "reverse_beeps", name: tr("רכב ברוורס", "Car reversing"), importance: .high, systemImage: "car"),
             SoundEvent(identifier: "shout", name: tr("צעקה", "Shout"), importance: .high, systemImage: "person.wave.2"),
-            SoundEvent(identifier: "yell", name: tr("צעקה", "Yell"), importance: .high, systemImage: "person.wave.2"),
+            SoundEvent(identifier: "yell", name: tr("צעקה", "Yell"), importance: .high, systemImage: "person.wave.2", sameSoundAs: "shout"),
             SoundEvent(identifier: "children_shouting", name: tr("ילדים צועקים", "Children shouting"), importance: .high, systemImage: "figure.and.child.holdinghands"),
             SoundEvent(identifier: "crying_sobbing", name: tr("בכי", "Crying"), importance: .high, systemImage: "drop.fill"),
             SoundEvent(identifier: "baby_crying", name: tr("תינוק בוכה", "Baby crying"), importance: .high, systemImage: "figure.child"),
             SoundEvent(identifier: "door_bell", name: tr("פעמון דלת", "Doorbell"), importance: .high, systemImage: "bell.fill"),
             SoundEvent(identifier: "knock", name: tr("דפיקה בדלת", "Knock at the door"), importance: .high, systemImage: "hand.raised.fill"),
             SoundEvent(identifier: "telephone_bell_ringing", name: tr("טלפון מצלצל", "Phone ringing"), importance: .high, systemImage: "phone.fill"),
-            SoundEvent(identifier: "ringtone", name: tr("טלפון מצלצל", "Ringtone"), importance: .high, systemImage: "phone.fill"),
+            SoundEvent(identifier: "ringtone", name: tr("טלפון מצלצל", "Ringtone"), importance: .high, systemImage: "phone.fill", sameSoundAs: "telephone_bell_ringing"),
             SoundEvent(identifier: "alarm_clock", name: tr("שעון מעורר", "Alarm clock"), importance: .high, systemImage: "alarm.fill"),
             SoundEvent(identifier: "dog_bark", name: tr("כלב נובח", "Dog barking"), importance: .high, systemImage: "dog.fill"),
             SoundEvent(identifier: "dog_growl", name: tr("כלב נוהם", "Dog growling"), importance: .high, systemImage: "dog"),
@@ -76,7 +81,7 @@ public enum SoundEventCatalog {
             // Left at `.medium` this was silenced under "Important and
             // above", the default a family is likely to pick.
             SoundEvent(identifier: "boiling", name: tr("מים רותחים", "Boiling water"), importance: .high, systemImage: "drop.triangle.fill"),
-            SoundEvent(identifier: "whistling", name: tr("מים רותחים", "Kettle whistling"), importance: .high, systemImage: "drop.triangle.fill"),
+            SoundEvent(identifier: "whistling", name: tr("מים רותחים", "Kettle whistling"), importance: .high, systemImage: "drop.triangle.fill", sameSoundAs: "boiling"),
             SoundEvent(identifier: "dog_howl", name: tr("כלב מיילל", "Dog howling"), importance: .medium, systemImage: "dog"),
             SoundEvent(identifier: "thunder", name: tr("רעם", "Thunder"), importance: .medium, systemImage: "cloud.bolt.fill"),
             SoundEvent(identifier: "thunderstorm", name: tr("סופת רעמים", "Thunderstorm"), importance: .medium, systemImage: "cloud.bolt.rain.fill"),
@@ -326,10 +331,10 @@ public struct SoundEventPolicy: Sendable, Equatable {
         // Wall-clock time can go backward (daylight saving ending, an NTP
         // sync); `>= last` keeps a jump from holding back a new siren for
         // as long as the jump, as in `BackgroundAlertPolicy`.
-        if let last = lastAlertAt[event.name], observation.timestamp >= last, observation.timestamp - last < cooldownSeconds {
+        if let last = lastAlertAt[event.cooldownKey], observation.timestamp >= last, observation.timestamp - last < cooldownSeconds {
             return nil
         }
-        lastAlertAt[event.name] = observation.timestamp
+        lastAlertAt[event.cooldownKey] = observation.timestamp
         return SoundAlert(event: event, confidence: observation.confidence, timestamp: observation.timestamp)
     }
 

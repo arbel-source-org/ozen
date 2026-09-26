@@ -87,6 +87,18 @@ struct SoundEventsTests {
         #expect(bell.bannerSeconds == 8)
     }
 
+    @Test("two labels for one sound share a cooldown in English too, where their names differ")
+    func sameSoundInEnglish() {
+        Localization.$override.withValue(.english) {
+            for (first, second) in [("telephone_bell_ringing", "ringtone"), ("boiling", "whistling"), ("shout", "yell")] {
+                var policy = SoundEventPolicy(persistenceWindowSeconds: 0)
+                #expect(policy.evaluate(reading(first, at: 100)) != nil)
+                #expect(policy.evaluate(reading(second, at: 105)) == nil)
+                #expect(policy.evaluate(reading(second, at: 125)) != nil)
+            }
+        }
+    }
+
     @Test("a confident, listed, important sound becomes an alert")
     func basicAlert() {
         var policy = SoundEventPolicy()
