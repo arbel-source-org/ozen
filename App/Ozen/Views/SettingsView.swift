@@ -412,6 +412,7 @@ struct SettingsView: View {
     private func saveHomeServerAddress() {
         let address = homeServerAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         homeServerAddressDraft = address
+        homeServerCheck = nil
         Task { await viewModel.setHomeServerAddress(address) }
     }
 
@@ -422,6 +423,7 @@ struct SettingsView: View {
         homeServerCodeSaveFailed = !saved
         guard saved else { return }
         homeServerCodeDraft = ""
+        homeServerCheck = nil
         hasHomeServerCode = true
         Task { await viewModel.homeServerCodeChanged() }
     }
