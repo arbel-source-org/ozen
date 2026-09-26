@@ -3,6 +3,7 @@ import html
 import io
 import json
 import os
+import socket
 import subprocess
 import sys
 import urllib.parse
@@ -21,6 +22,17 @@ def tailscale_address():
     return f"wss://{name}" if name else None
 
 
+def lan_address():
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("192.0.2.1", 9))
+        return probe.getsockname()[0]
+    except OSError:
+        return None
+    finally:
+        probe.close()
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     p = argparse.ArgumentParser(description="Makes the QR code the phone scans to pair with this computer.")
@@ -28,9 +40,10 @@ def main():
     p.add_argument("--code-file", default=os.path.join(here, "pairing-code"))
     p.add_argument("--out", default=os.path.join(here, "pairing.html"))
     p.add_argument("--no-open", action="store_true")
+    p.add_argument("--lan", action="store_true", help="use this computer's address on the home network")
     args = p.parse_args()
 
-    address = args.address or tailscale_address()
+    address = args.address or (lan_address() if args.lan else tailscale_address())
     if not address:
         sys.exit("Couldn't work out this computer's address; pass --address wss://... or --address 192.168.1.20")
     with open(args.code_file, encoding="utf-8") as f:

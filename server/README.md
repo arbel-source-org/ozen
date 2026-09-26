@@ -12,17 +12,31 @@ line finished).
 
 ## Running it on Windows
 
-No WSL needed. In PowerShell as administrator, from this folder:
+Needs an NVIDIA graphics card with at least 6 GB (8 GB or more for the
+accurate finished lines; measured only on an RTX 2080 Ti so far).
+
+The easy way: download `Ozen-Home-Setup.cmd` from the newest release and
+double-click it. It asks Windows for permission, checks the graphics card
+before downloading anything (and says plainly when it isn't enough),
+installs everything into `C:\ozen`, asks whether to use the computer away
+from home too (Tailscale, one browser sign-in), and ends by showing the QR
+code for the phone. The Start menu then has "Ozen - pair a phone" to show
+the code again.
+
+By hand, in PowerShell as administrator, from this folder:
 
 ```
 powershell -ExecutionPolicy Bypass -File setup-windows.ps1
 ```
 
-It installs its own Python and everything else into `C:\ozen`, makes a
-pairing code once (`C:\ozen\pairing-code`), and registers a task that starts
+`-Quiet` skips the questions (a re-run that only updates the server).
+
+It makes a pairing code once (`C:\ozen\pairing-code`), lets the phone in
+through the firewall on home networks, and registers a task that starts
 the server when Windows starts, before anyone logs in, and restarts it if it
 stops (also when three passes in a row fail, as after a graphics-driver
-fault). Running it again updates the server and keeps the code. The log is
+fault). With 8 GB or more it also runs the accurate model for finished
+lines. Running it again updates the server and keeps the code. The log is
 `C:\ozen\server.log`.
 
 ## Running it on Linux

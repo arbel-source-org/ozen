@@ -110,7 +110,11 @@ jobs:
           } > release-notes.md
           # --target: without it the tag lands on the default branch's
           # newest commit, not the commit this IPA was built from.
-          gh release create "$TAG" Ozen.ipa \
+          # The home computer's setup: one file to double-click, which
+          # fetches the server from the newest release's zip.
+          (cd server && zip -q ../ozen-home-server.zip ozen_server.py pairing.py try_server.py requirements.txt setup-windows.ps1)
+          cp server/Ozen-Home-Setup.cmd .
+          gh release create "$TAG" Ozen.ipa ozen-home-server.zip Ozen-Home-Setup.cmd \
             --target "${{ github.sha }}" \
             --title "Ozen build ${{ github.run_number }}" \
             --notes-file release-notes.md \
