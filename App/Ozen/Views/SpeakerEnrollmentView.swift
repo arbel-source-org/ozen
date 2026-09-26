@@ -27,6 +27,9 @@ struct SpeakerEnrollmentView: View {
                         ProgressView(value: progress) {
                             Text(tr("מקליט… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) שניות", "Recording… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) seconds"))
                         }
+                        // Otherwise VoiceOver reads a raw percentage as the
+                        // value, on top of the elapsed time already in the label.
+                        .accessibilityValue(tr("\(Int(progress * targetSeconds)) שניות", "\(Int(progress * targetSeconds)) seconds"))
                         LevelMeter(level: viewModel.inputLevel, isActive: true)
                         Text(tr("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.", "Ask the person to speak naturally, at a normal distance from the selected microphone. If the bar doesn’t move while speaking, the microphone isn’t hearing anything. Captions are paused during recording."))
                             .font(.footnote)
