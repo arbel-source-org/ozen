@@ -489,6 +489,64 @@ struct HomeServerCoverTests {
         #expect(server.prepareCount - before >= 3)
     }
 
+    @Test("pausing and resuming with her home-computer settings keeps the phone's model on while the computer is down")
+    func resumeKeepsCover() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "test"))
+        let built = BuiltEngines()
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                built.add(settings.engine == .homeServer ? server : phone)
+                return settings.engine == .homeServer ? server : phone
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.isCoveringForCloud && captions.phase == .listening })
+        let tries = server.prepareCount
+        let builtBefore = built.count
+        captions.pause()
+        await captions.resume(settings: serverSettings)
+        #expect(captions.phase == .listening)
+        #expect(captions.isCoveringForCloud)
+        #expect(captions.activeEngineKind == .whisperKit)
+        #expect(server.prepareCount == tries)
+        #expect(built.count == builtBefore)
+        captions.stop()
+    }
+
+    @Test("a computer that keeps dropping right after captions go back to it is tried less and less often; a drop after a good stretch starts over")
+    func flappingServerBacksOff() async throws {
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 0.02
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: serverSettings)
+        var waits: [Double] = []
+        for _ in 0..<4 {
+            #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+            server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "no reply for 35 s of speech"))
+            #expect(await eventually { captions.activeEngineKind == .whisperKit })
+            waits.append(captions.currentHomeServerRecheckSeconds)
+        }
+        #expect(waits == [0.02, 0.04, 0.08, 0.16])
+
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        captions.homeServerFlapWindowSeconds = 0
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
+        #expect(await eventually { captions.activeEngineKind == .whisperKit })
+        #expect(captions.currentHomeServerRecheckSeconds == 0.02)
+        captions.stop()
+    }
+
     @Test("a computer still out of reach is asked again and again; a refused code is left for a person")
     func keepsAskingOnlyWhenUnreachable() async throws {
         for (kind, asksAgain) in [(EngineUnavailability.Kind.homeServerUnreachable, true), (.homeServerRejected, false)] {

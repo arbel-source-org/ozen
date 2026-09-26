@@ -97,6 +97,18 @@ public final class CaptionPipeline {
     /// may never go quiet for long, and every minute on the phone's own
     /// model is a minute of weaker captions.
     public var switchBackAfterAnsweredChecks = 3
+    /// A computer that answers the check but drops again soon after
+    /// captions went back to it (one that hangs on audio stalls for 35 s
+    /// first) would otherwise be switched to every minute, each time
+    /// costing her half a minute of captions. Every drop within this long
+    /// of switching back doubles the wait before the next try, up to 16
+    /// times; a drop after a good stretch starts over.
+    public var homeServerFlapWindowSeconds: Double = 300
+    private var homeServerSwitchedBackAt: ContinuousClock.Instant?
+    private var homeServerFlaps = 0
+    public var currentHomeServerRecheckSeconds: Double {
+        homeServerRecheckSeconds * Double(1 << homeServerFlaps)
+    }
     private var coveredSettings: AppSettings?
     /// The last half-minute of microphone sound, in memory only, so that
     /// "mark a problem" can keep what was actually heard. Cleared when
@@ -511,9 +523,11 @@ public final class CaptionPipeline {
     public func resume(settings: AppSettings? = nil) async {
         guard phase == .paused, var effective = settings ?? activeSettings else { return }
         // A pause is not a new start: the phone's model that was covering
-        // for the cloud (the caller's settings still say cloud) carries on,
-        // rather than trying the cloud again and reloading the model.
-        if isCoveringForCloud, effective.engine == .cloud {
+        // for the cloud or the home computer (the caller's settings still
+        // say so) carries on, rather than trying it again with nothing
+        // buffered and then reloading the model. The recheck brings it
+        // back once it answers.
+        if isCoveringForCloud, effective.engine == .cloud || effective.engine == .homeServer {
             effective.engine = .whisperKit
             nextStartCoversCloud = true
         }
@@ -1240,6 +1254,12 @@ public final class CaptionPipeline {
         coveredSettings = activeSettings
         await start(settings: settings)
         if coverReason == .homeServerUnreachable, coveredSettings?.engine == .homeServer {
+            if let back = homeServerSwitchedBackAt, back.duration(to: .now) < .seconds(homeServerFlapWindowSeconds) {
+                homeServerFlaps = min(homeServerFlaps + 1, 4)
+            } else {
+                homeServerFlaps = 0
+            }
+            homeServerSwitchedBackAt = nil
             recheckHomeServer()
         }
         if coverReason == .noInternet, coveredSettings?.engine == .cloud {
@@ -1254,7 +1274,7 @@ public final class CaptionPipeline {
         homeServerRecheck = Task { [weak self] in
             var answered = 0
             while !Task.isCancelled {
-                guard let seconds = self?.homeServerRecheckSeconds else { return }
+                guard let seconds = self?.currentHomeServerRecheckSeconds else { return }
                 try? await Task.sleep(for: .seconds(seconds))
                 guard !Task.isCancelled, let self, self.isCoveringForCloud,
                       let chosen = self.coveredSettings, chosen.engine == .homeServer
@@ -1271,6 +1291,7 @@ public final class CaptionPipeline {
                 guard self.canSwitchBack(answeredChecks: answered) else { continue }
                 self.logEvent(.note("the home computer answers again, switching back to it"))
                 self.homeServerRecheck = nil
+                self.homeServerSwitchedBackAt = .now
                 await self.restart(settings: chosen)
                 return
             }
