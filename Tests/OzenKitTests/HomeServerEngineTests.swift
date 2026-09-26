@@ -204,6 +204,22 @@ struct HomeServerEngineTests {
         #expect(none == nil)
     }
 
+    @Test("ready and error messages missing their optional fields fall back to empty strings instead of failing to parse")
+    func missingTopLevelFieldsFallBack() {
+        #expect(HomeServerMessage(json: #"{"type":"ready"}"#) == .ready(model: ""))
+        #expect(HomeServerMessage(json: #"{"type":"error"}"#) == .refused(code: "", detail: ""))
+    }
+
+    @Test("a segment missing no_speech, logprob or compression falls back to defaults instead of being dropped")
+    func segmentMissingNumbersFallBack() {
+        let frame = #"{"type":"text","utterance":0,"text":"כן","final":true,"segments":[{"text":"כן"}]}"#
+        guard case .text(_, _, _, _, let segments)? = HomeServerMessage(json: frame) else {
+            Issue.record("not a text frame")
+            return
+        }
+        #expect(segments == [WhisperSegmentSummary(text: "כן", noSpeechProb: 0, avgLogprob: 0, compressionRatio: 1)])
+    }
+
     @Test("the server's text gets the phone's own checks: the names list read back, a TV sign-off and a thanks the model barely heard are dropped, real words stay")
     func serverTextIsFiltered() async throws {
         let socket = ScriptedSocket(helloReply: ready)

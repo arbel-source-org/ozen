@@ -27,6 +27,14 @@ struct RecentAudioTests {
         #expect(recent.samples() == [10, 20, 30, 40])
     }
 
+    @Test("a single chunk bigger than capacity is truncated to its newest samples, without upsetting count")
+    func truncatesAChunkBiggerThanCapacity() {
+        var recent = RecentAudio(seconds: 1, sampleRate: 100)
+        recent.append((1...150).map(Float.init))
+        #expect(recent.count == 100)
+        #expect(recent.samples() == (51...150).map(Float.init))
+    }
+
     @Test("a saved clip is a WAV file; only the newest few are kept; nothing is saved from silence never heard")
     func store() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-problem-audio-\(UUID())")

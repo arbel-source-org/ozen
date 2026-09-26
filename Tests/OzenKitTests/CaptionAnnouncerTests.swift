@@ -137,6 +137,25 @@ struct CaptionAnnouncerTests {
         #expect(announcer.announcement(for: lines, speakerName: { _ in nil }) == "הרופא אמר כדור אחד")
     }
 
+    @Test("once enough unrelated lines have replaced it, a rolled-off line's entry is forgotten, so reusing its id later announces it fresh instead of assuming it was already read")
+    func forgetsLinesThatRolledOff() {
+        var announcer = CaptionAnnouncer()
+        let staleID = UUID()
+        let stale = TranscriptSegment(id: staleID, text: "ישן מאוד", isCommitted: true, speakerClusterID: nil, startTimestamp: 0, lastUpdateTimestamp: 0)
+        #expect(announcer.announcement(for: [stale], speakerName: { _ in nil }) == "ישן מאוד")
+
+        // Two rounds of a small, entirely unrelated segments array (as a
+        // fresh conversation after a restart would look): `announced`
+        // keeps what it saw before while the array handed in shrinks back
+        // down each time, which is exactly what should sweep it out.
+        for _ in 0..<2 {
+            _ = announcer.announcement(for: [line("א"), line("ב")], speakerName: { _ in nil })
+        }
+
+        let reused = TranscriptSegment(id: staleID, text: "ישן מאוד", isCommitted: true, speakerClusterID: nil, startTimestamp: 100, lastUpdateTimestamp: 100)
+        #expect(announcer.announcement(for: [reused], speakerName: { _ in nil }) == "ישן מאוד")
+    }
+
     @Test("a line corrected after it was read out is read again; unchanged lines are not")
     func correctedLineReadAgain() {
         var announcer = CaptionAnnouncer()
