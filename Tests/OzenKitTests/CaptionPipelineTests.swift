@@ -2175,7 +2175,7 @@ struct CaptionPipelineOpenLineTests {
 
         pipeline.pause()
         #expect(pipeline.segments.first?.isCommitted == true)
-        #expect(pipeline.segments.first?.text == "הרופא אמר ש")
+        #expect(pipeline.segments.first?.text == "הרופא אמר ש" + CaptionStabilizer.cutOffMark)
         #expect(pipeline.stats.segmentsCommitted == 1)
         #expect(pipeline.stats.hasOpenLine == false)
     }

@@ -216,5 +216,6 @@ struct CaptionStabilizerCommitAllTests {
         let allFinished = stabilizer.segments.allSatisfy { $0.isCommitted }
         #expect(allFinished)
         #expect(stabilizer.commitAll().isEmpty)
+        #expect(stabilizer.segments.map(\.text) == ["שלום", "מה נש" + CaptionStabilizer.cutOffMark])
     }
 }

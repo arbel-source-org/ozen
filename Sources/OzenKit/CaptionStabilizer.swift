@@ -216,13 +216,22 @@ public struct CaptionStabilizer: Sendable {
         return justCommitted
     }
 
+    /// Ends a line whose engine went before its final pass, so a line cut
+    /// off by a dropped connection doesn't read like a complete sentence.
+    public static let cutOffMark = "…"
+
     /// Finalizes every line still being written, for when the engine that
     /// was writing them has gone (pause, stop, a failure). Nothing will
-    /// ever finish them otherwise: a new engine starts new lines.
+    /// ever finish them otherwise: a new engine starts new lines. They end
+    /// in `cutOffMark`, since whatever came after the last pass is lost.
     @discardableResult
     public mutating func commitAll() -> [TranscriptSegment] {
         var justCommitted: [TranscriptSegment] = []
         for index in openIndices.sorted() {
+            let text = segments[index].text.trimmingCharacters(in: .whitespaces)
+            if !text.isEmpty, !text.hasSuffix(Self.cutOffMark) {
+                segments[index].text = text + Self.cutOffMark
+            }
             segments[index].isCommitted = true
             justCommitted.append(segments[index])
         }
