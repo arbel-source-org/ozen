@@ -131,6 +131,25 @@ struct HomeServerEngineTests {
         #expect(bytes == [0, 0, 0xFF, 0x7F, 0x01, 0x80, 0xFF, 0x7F, 0, 0])
     }
 
+    @Test("a name added while captions stream reaches the server at once, as a vocabulary frame")
+    func vocabularyMidStream() async throws {
+        let socket = ScriptedSocket(helloReply: ready)
+        let server = engine(socket)
+        let (audio, feed) = AsyncStream<[Float]>.makeStream()
+        let tokens = server.stream(languageCode: "he", audio: audio)
+        var waited = 0
+        while await socket.sentTexts.isEmpty, waited < 400 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        try await Task.sleep(for: .milliseconds(20))
+        await server.setVocabulary(["Ruti"])
+        #expect(await socket.sentTexts.last == HomeServer.vocabularyUpdate(["Ruti"]))
+        #expect(HomeServer.vocabularyUpdate(["Ruti"]) == #"{"terms":["Ruti"],"type":"vocabulary"}"#)
+        feed.finish()
+        for try await _ in tokens {}
+    }
+
     @Test("a server that answers ready is available, and the hello carries the code, language and names")
     func pairs() async throws {
         let socket = ScriptedSocket(helloReply: ready)
