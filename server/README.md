@@ -10,7 +10,21 @@ it was said (most of that is the second of quiet the server waits for before
 it calls a line finished) and the first words of a line appear about 0.2 s
 behind the speaker.
 
-## Running it
+## Running it on Windows
+
+No WSL needed. In PowerShell as administrator, from this folder:
+
+```
+powershell -ExecutionPolicy Bypass -File setup-windows.ps1
+```
+
+It installs its own Python and everything else into `C:\ozen`, makes a
+pairing code once (`C:\ozen\pairing-code`), and registers a task that starts
+the server when Windows starts, before anyone logs in, and restarts it if it
+stops. Running it again updates the server and keeps the code. The log is
+`C:\ozen\server.log`.
+
+## Running it on Linux
 
 Linux, or Windows through WSL (Ubuntu). On Windows the normal NVIDIA driver
 already gives WSL the graphics card; install nothing else from NVIDIA.
