@@ -46,6 +46,11 @@ writes each finished line. On a 2080 Ti that cut mistakes by about 15% with a
 TV loud in the room or the speaker across it, for about 0.4 s more per
 finished line.
 
+A line in which a voice detector hears almost no voice (under 5% of it) is
+skipped before the model sees it: kitchen clatter and a TV room hum turned
+into about ten invented lines a minute, and none with the check, with no
+change on real speech. `--speech-gate 0` turns it off.
+
 The first start downloads the model (about 1.6 GB, 3 GB more for the full one). The pairing code goes
 into the phone: Settings, Engine, Home computer.
 

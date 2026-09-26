@@ -42,6 +42,7 @@ import time
 import numpy as np
 import websockets
 from faster_whisper import WhisperModel
+from faster_whisper.vad import VadOptions, get_speech_timestamps
 
 RATE = 16_000
 PROTOCOL_VERSION = 1
@@ -127,6 +128,20 @@ def quietest_point(samples, end, look_back, frame):
     return best
 
 
+SPEECH_OPTIONS = VadOptions(min_silence_duration_ms=100, speech_pad_ms=0)
+
+
+def speech_share(audio):
+    """How much of `audio` the Silero voice detector hears as a voice.
+
+    The energy detector that cuts lines passes a pot put down or a
+    running tap as loudly as a word, and the ivrit.ai models turn that
+    into confident Hebrew. A line with almost no voice in it is dropped
+    before the model sees it (measured in accuracy/bench_gate.py)."""
+    stamps = get_speech_timestamps(audio, SPEECH_OPTIONS)
+    return sum(t["end"] - t["start"] for t in stamps) / max(len(audio), 1)
+
+
 class Transcriber:
     """The models on the GPU, shared by every connection, one pass at a time.
 
@@ -137,7 +152,8 @@ class Transcriber:
     the same in a quiet one, at four times the cost: worth it once per
     line, not three times a second."""
 
-    def __init__(self, model, device, compute_type, beam, context, final_model=None):
+    def __init__(self, model, device, compute_type, beam, context, final_model=None, speech_gate=0.0):
+        self.speech_gate = speech_gate
         self.name = model if not final_model else f"{model} + {final_model}"
         self.model = WhisperModel(model, device=device, compute_type=compute_type)
         self.final_model = WhisperModel(final_model, device=device, compute_type=compute_type) if final_model else self.model
@@ -150,6 +166,8 @@ class Transcriber:
             return await asyncio.to_thread(self._run, audio, language, prompt, final)
 
     def _run(self, audio, language, prompt, final):
+        if self.speech_gate and speech_share(audio) < self.speech_gate:
+            return "", None, []
         model = self.final_model if final else self.model
         segments, _ = model.transcribe(
             audio, language=language, task="transcribe",
@@ -351,13 +369,16 @@ async def main():
     p.add_argument("--final-model", default="",
                    help="a stronger model for finished lines only, e.g. ivrit-ai/whisper-large-v3-ct2")
     p.add_argument("--context", action="store_true")
+    p.add_argument("--speech-gate", type=float, default=0.05,
+                   help="skip a line when less than this share of it is a voice; 0 turns it off")
     p.add_argument("--live-interval", type=float, default=0.3)
     args = p.parse_args()
     token = os.environ.get("OZEN_TOKEN")
     if not token:
         raise SystemExit("set OZEN_TOKEN to the pairing code the phone will send")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context, args.final_model or None)
+    transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context, args.final_model or None,
+                              args.speech_gate)
     # Warm the model so the first sentence isn't slow.
     await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, False)
     await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, True)
