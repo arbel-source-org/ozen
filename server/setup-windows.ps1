@@ -96,6 +96,7 @@ $run = @(
     "set HF_HOME=$Dir\hf"
     "set /p OZEN_TOKEN=<`"$codeFile`""
     ':start'
+    "for %%F in (`"$Dir\server.log`") do if %%~zF GTR 5000000 move /y `"$Dir\server.log`" `"$Dir\server.log.1`" >nul"
     "`"$venvPython`" `"$Dir\ozen_server.py`"$options >> `"$Dir\server.log`" 2>&1"
     'ping -n 6 127.0.0.1 >nul'
     'goto start'
