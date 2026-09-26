@@ -149,6 +149,43 @@ struct HomeServerEngineTests {
         #expect(await socket.sentTexts.last == HomeServer.end)
     }
 
+    @Test("a text frame's per-segment numbers are read; a frame without them still parses")
+    func segmentsParse() {
+        let frame = #"{"type":"text","utterance":2,"text":"כן","final":true,"confidence":0.8,"segments":[{"text":"כן","no_speech":0.1,"logprob":-0.3,"compression":1.2}]}"#
+        guard case .text(_, _, _, _, let segments)? = HomeServerMessage(json: frame) else {
+            Issue.record("not a text frame")
+            return
+        }
+        #expect(segments == [WhisperSegmentSummary(text: "כן", noSpeechProb: 0.1, avgLogprob: -0.3, compressionRatio: 1.2)])
+        guard case .text(_, _, _, _, let none)? = HomeServerMessage(json: text(0, "כן", final: true)) else {
+            Issue.record("not a text frame")
+            return
+        }
+        #expect(none == nil)
+    }
+
+    @Test("the server's text gets the phone's own checks: the names list read back, a TV sign-off and a thanks the model barely heard are dropped, real words stay")
+    func serverTextIsFiltered() async throws {
+        let socket = ScriptedSocket(helloReply: ready)
+        let server = engine(socket)
+        await server.setVocabulary(["רותי", "אבי", "דני"])
+        let (audio, feed) = AsyncStream<[Float]>.makeStream()
+        var iterator = server.stream(languageCode: "he", audio: audio).makeAsyncIterator()
+        var waited = 0
+        while await socket.sentTexts.isEmpty, waited < 400 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        await socket.deliver(text(0, "רותי, אבי, דני.", final: true))
+        await socket.deliver(text(1, "תודה שצפיתם", final: true))
+        await socket.deliver(#"{"type":"text","utterance":2,"text":"תודה","final":true,"segments":[{"text":"תודה","no_speech":0.5,"logprob":-0.95,"compression":1.0}]}"#)
+        await socket.deliver(#"{"type":"text","utterance":3,"text":"תודה רבה, אבי","final":true,"segments":[{"text":"תודה רבה, אבי","no_speech":0.02,"logprob":-0.2,"compression":1.1}]}"#)
+        let kept = try #require(try await iterator.next())
+        #expect(kept.text == "תודה רבה, אבי")
+        feed.finish()
+        #expect(try await iterator.next() == nil)
+    }
+
     @Test("a connection that drops while she is still talking ends the stream as unreachable")
     func drops() async {
         let socket = ScriptedSocket(helloReply: ready)

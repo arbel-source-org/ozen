@@ -11,7 +11,9 @@ import Foundation
 /// 16 kHz mono PCM16, little-endian. The phone opens with a hello carrying
 /// the pairing code; the server answers `ready` or `error`, then sends a
 /// `text` frame for every pass over the line being spoken, the last one
-/// marked final.
+/// marked final. A frame may also list the pass's segments with Whisper's
+/// own numbers for each, so the phone can run the same checks on them
+/// (`WhisperResultFilter`) as on its own model's output.
 public enum HomeServer {
     public static let protocolVersion = 1
     public static let defaultPort = 8765
@@ -67,7 +69,7 @@ public enum HomeServer {
 public enum HomeServerMessage: Sendable, Equatable {
     case ready(model: String)
     case refused(code: String, detail: String)
-    case text(utterance: Int, text: String, isFinal: Bool, confidence: Float?)
+    case text(utterance: Int, text: String, isFinal: Bool, confidence: Float?, segments: [WhisperSegmentSummary]?)
 
     public init?(json: String) {
         guard let data = json.data(using: .utf8),
@@ -85,7 +87,21 @@ public enum HomeServerMessage: Sendable, Equatable {
                   let isFinal = object["final"] as? Bool
             else { return nil }
             let confidence = (object["confidence"] as? NSNumber).map { Float(truncating: $0) }
-            self = .text(utterance: utterance, text: text, isFinal: isFinal, confidence: confidence)
+            let segments = (object["segments"] as? [[String: Any]]).map { list in
+                list.compactMap { segment -> WhisperSegmentSummary? in
+                    guard let text = segment["text"] as? String else { return nil }
+                    func number(_ key: String, _ fallback: Float) -> Float {
+                        (segment[key] as? NSNumber).map { Float(truncating: $0) } ?? fallback
+                    }
+                    return WhisperSegmentSummary(
+                        text: text,
+                        noSpeechProb: number("no_speech", 0),
+                        avgLogprob: number("logprob", 0),
+                        compressionRatio: number("compression", 1)
+                    )
+                }
+            }
+            self = .text(utterance: utterance, text: text, isFinal: isFinal, confidence: confidence, segments: segments)
         default:
             return nil
         }

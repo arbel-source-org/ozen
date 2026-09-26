@@ -18,6 +18,8 @@ public actor HomeServerEngine: TranscriptionEngine {
     private let connector: any HomeServerConnecting
     private let handshakeSeconds: Double
     private var vocabulary: [String] = []
+    private var echo: PromptEchoDetector?
+    private let filter = WhisperResultFilter()
     private var liveSocket: (any HomeServerSocket)?
     private var verified: (url: URL, token: String)?
     private var endSent = false
@@ -36,6 +38,8 @@ public actor HomeServerEngine: TranscriptionEngine {
 
     public func setVocabulary(_ terms: [String]) async {
         vocabulary = terms
+        let detector = PromptEchoDetector(terms: terms)
+        echo = detector.isEmpty ? nil : detector
         if let liveSocket {
             try? await liveSocket.send(text: HomeServer.vocabularyUpdate(terms))
         }
@@ -127,9 +131,17 @@ public actor HomeServerEngine: TranscriptionEngine {
                 }
                 return
             }
-            guard case .text(let number, let text, let isFinal, let confidence)? = HomeServerMessage(json: frame) else { continue }
+            guard case .text(let number, let received, let isFinal, let confidence, let segments)? = HomeServerMessage(json: frame) else { continue }
             let id = ids[number] ?? UUID()
             ids[number] = id
+            // The same checks the phone's own model gets: the names list
+            // read back in a quiet moment, a TV sign-off, a "thanks" the
+            // model barely heard. A server that sends no segments gets its
+            // whole text checked as one, without Whisper's numbers.
+            let text = filter.acceptedText(
+                from: segments ?? [WhisperSegmentSummary(text: received, noSpeechProb: 0, avgLogprob: 0, compressionRatio: 1)],
+                echo: echo
+            )
             // A final pass that comes back empty (the model changed its
             // mind about a quiet tail) keeps what was already on screen.
             let words = text.isEmpty ? (shown[number] ?? "") : text

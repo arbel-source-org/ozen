@@ -22,9 +22,12 @@ Protocol, version 1. Text frames are JSON, binary frames are audio.
     {"type": "ready", "model": "...", "version": 1}
     {"type": "error", "code": "unauthorized" | "bad_request" | "busy", "detail": "..."}
     {"type": "text", "utterance": 7, "text": "...", "final": false,
-     "confidence": 0.93, "end_s": 12.4}
+     "confidence": 0.93, "end_s": 12.4,
+     "segments": [{"text": "...", "no_speech": 0.02, "logprob": -0.3, "compression": 1.4}]}
   `end_s` is where in the session's audio the pass ended, in seconds, so
   a client can measure how long after the words were said they arrived.
+  `segments` is every piece of the pass with Whisper's own numbers, so the
+  phone can run its hallucination checks (WhisperResultFilter) on them.
 """
 import argparse
 import asyncio
@@ -147,8 +150,12 @@ class Transcriber:
             initial_prompt=prompt or None, vad_filter=False,
             compression_ratio_threshold=2.4, log_prob_threshold=-1.0,
             no_speech_threshold=0.6)
-        kept, logprobs = [], []
+        kept, logprobs, pieces = [], [], []
         for s in segments:
+            piece = DIRECTION_MARKS.sub("", s.text).strip()
+            if piece:
+                pieces.append({"text": piece, "no_speech": round(s.no_speech_prob, 4),
+                               "logprob": round(s.avg_logprob, 4), "compression": round(s.compression_ratio, 3)})
             if s.no_speech_prob > 0.6 and s.avg_logprob < -1.0:
                 continue
             if s.compression_ratio > 2.4:
@@ -161,7 +168,7 @@ class Transcriber:
         confidence = None
         if logprobs:
             confidence = min(max(math.exp(sum(logprobs) / len(logprobs)), 0.0), 1.0)
-        return text, confidence
+        return text, confidence, pieces
 
 
 class Session:
@@ -238,11 +245,11 @@ class Session:
                     cut = quietest_point(window, len(window), int(self.cut_look_back * R), int(self.cut_frame * R))
                     window = window[:cut]
             self.samples_at_last_pass = total
-            text, confidence = await self.t.transcribe(window.copy(), self.language, self.prompt(), final)
+            text, confidence, pieces = await self.t.transcribe(window.copy(), self.language, self.prompt(), final)
             if text or final:
                 await self.ws.send(json.dumps({
                     "type": "text", "utterance": self.utterance, "text": text,
-                    "final": final, "confidence": confidence,
+                    "final": final, "confidence": confidence, "segments": pieces,
                     "end_s": round((self.offset + len(window)) / R, 3)}, ensure_ascii=False))
             if final:
                 if text:
