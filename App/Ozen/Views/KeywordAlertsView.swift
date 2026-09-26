@@ -90,6 +90,7 @@ struct KeywordAlertsView: View {
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
                         }
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }
