@@ -163,7 +163,15 @@ extension CaptionLayout {
     /// name, so it isn't repeated down the page.
     public static func showsSpeakerLabel(for segment: SavedSegment, after previous: SavedSegment?) -> Bool {
         guard let name = labelName(segment) else { return false }
-        return previous.flatMap(labelName) != name
+        return previous.flatMap(labelName) != name || startsAfterQuiet(for: segment, previous: previous)
+    }
+
+    /// The saved-history version of `startsAfterQuiet(_:previous:)`: a
+    /// `SavedSegment` only ever kept its start time, not the live segment's
+    /// last-update time, so the gap is measured between the two start times.
+    public static func startsAfterQuiet(for segment: SavedSegment, previous: SavedSegment?) -> Bool {
+        guard let previous else { return false }
+        return segment.startTimestamp - previous.startTimestamp >= quietGapSeconds
     }
 
     private static func labelName(_ segment: SavedSegment) -> String? {

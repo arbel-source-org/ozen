@@ -131,6 +131,19 @@ struct CaptionLayoutSavedSpeakerLabelTests {
         #expect(CaptionLayout.showsSpeakerLabel(for: line(nil), after: line("שרה")) == false)
         #expect(CaptionLayout.showsSpeakerLabel(for: line("שרה"), after: line(EmbeddingClusterer.unknownSpeakerName)))
     }
+
+    @Test("six quiet minutes between two saved lines repeats the same speaker's name, like the live view does")
+    func quietGapRepeatsName() {
+        func at(_ start: TimeInterval, name: String? = "שרה") -> SavedSegment {
+            SavedSegment(id: UUID(), text: "שלום", speakerName: name, speakerClusterID: nil, startTimestamp: start, isCommitted: true)
+        }
+        let first = at(0)
+        #expect(!CaptionLayout.startsAfterQuiet(for: at(299), previous: first))
+        #expect(CaptionLayout.startsAfterQuiet(for: at(300), previous: first))
+        #expect(!CaptionLayout.showsSpeakerLabel(for: at(120), after: first))
+        #expect(CaptionLayout.showsSpeakerLabel(for: at(360), after: first))
+        #expect(!CaptionLayout.showsSpeakerLabel(for: at(360, name: nil), after: first))
+    }
 }
 
 @Suite("CaptionLayout time marks in saved conversations")
