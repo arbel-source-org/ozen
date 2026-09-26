@@ -12,6 +12,13 @@ struct DiagnosticsView: View {
     /// Read once, and again after a mark: reading waits for the file.
     @State private var journalLines: [String] = []
     @State private var problemClips: [URL] = []
+    /// Built once on appearing, and again right before it's actually sent
+    /// or copied, rather than on every body evaluation: this screen also
+    /// shows a live `inputLevel` meter that updates ~20 times a second
+    /// while listening, and `report` joins hundreds of lines from
+    /// `eventLog` and the journal, which is wasted work to redo on each of
+    /// those ticks when nobody has asked to see the report itself.
+    @State private var reportText = ""
     /// Whether iOS lets Ozen show notifications at all. The last send's
     /// own result can't say: with permission denied iOS drops every
     /// notification without reporting an error, so it read "OK" while no
@@ -114,6 +121,7 @@ struct DiagnosticsView: View {
                     viewModel.markProblem()
                     journalLines = loadJournalLines()
                     problemClips = viewModel.problemAudio?.clips() ?? []
+                    reportText = report
                 } label: {
                     Label(tr("לסמן בעיה עכשיו", "Mark a problem now"), systemImage: "exclamationmark.bubble")
                 }
@@ -167,11 +175,12 @@ struct DiagnosticsView: View {
             }
 
             Section {
-                ShareLink(item: report, subject: Text(tr("דוח אבחון מאוזן", "Ozen diagnostics report"))) {
+                ShareLink(item: reportText, subject: Text(tr("דוח אבחון מאוזן", "Ozen diagnostics report"))) {
                     Label(tr("שליחת הדוח", "Send report"), systemImage: "square.and.arrow.up")
                 }
                 Button {
-                    UIPasteboard.general.string = report
+                    reportText = report
+                    UIPasteboard.general.string = reportText
                     copied = true
                 } label: {
                     Label(copied ? tr("הועתק", "Copied") : tr("העתקת הדוח", "Copy report"), systemImage: copied ? "checkmark" : "doc.on.doc")
@@ -182,6 +191,7 @@ struct DiagnosticsView: View {
             journalLines = loadJournalLines()
             problemClips = viewModel.problemAudio?.clips() ?? []
             notificationsAllowed = await AlertNotifier.shared.isAllowed()
+            reportText = report
         }
         .accessibilityIdentifier("diagnosticsScreen")
         .navigationTitle(tr("אבחון", "Diagnostics"))
