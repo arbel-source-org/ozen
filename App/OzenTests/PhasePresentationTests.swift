@@ -68,6 +68,18 @@ struct PhasePresentationTests {
         #expect(covering.detail?.contains("בענן") == true)
     }
 
+    @Test("covering for the home computer says whether it couldn't be reached or refused the pairing code")
+    func coveringForHomeServer() {
+        func covering(_ reason: EngineUnavailability.Kind) -> PhasePresentation {
+            PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: false, coveringForCloud: true, coveredEngine: .homeServer, coverReason: reason)
+        }
+        let unreachable = covering(.homeServerUnreachable)
+        let refused = covering(.homeServerRejected)
+        #expect(unreachable.detail?.contains("אין חיבור למחשב בבית") == true)
+        #expect(refused.detail?.contains("קוד הצימוד") == true)
+        #expect(refused.action == .pause && refused.tint == .green)
+    }
+
     @Test("paused while the phone talks says so, and that captions come back by themselves")
     func pausedForSpeech() {
         let speaking = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false, pausedForSpeech: true)

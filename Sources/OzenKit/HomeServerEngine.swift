@@ -115,6 +115,20 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
         defer { sender.cancel() }
 
+        // Stopping captions cancels this task, but a socket's receive
+        // doesn't notice cancellation: without the close the connection
+        // (and this loop) would stay open for as long as the server did.
+        await withTaskCancellationHandler {
+            await receive(from: socket, continuation: continuation)
+        } onCancel: {
+            Task { await socket.close() }
+        }
+    }
+
+    private func receive(
+        from socket: any HomeServerSocket,
+        continuation: AsyncThrowingStream<TranscriptToken, Error>.Continuation
+    ) async {
         var ids: [Int: UUID] = [:]
         var shown: [Int: String] = [:]
         while true {

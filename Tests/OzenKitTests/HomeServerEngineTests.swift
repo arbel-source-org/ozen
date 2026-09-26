@@ -186,6 +186,30 @@ struct HomeServerEngineTests {
         #expect(try await iterator.next() == nil)
     }
 
+    @Test("stopping captions mid-sentence closes the connection, even though the server never hangs up")
+    func stoppingCloses() async throws {
+        let socket = ScriptedSocket(helloReply: ready)
+        let (audio, feed) = AsyncStream<[Float]>.makeStream()
+        let tokens = engine(socket).stream(languageCode: "he", audio: audio)
+        let listening = Task {
+            for try await _ in tokens {}
+        }
+        feed.yield([0.1])
+        var waited = 0
+        while await socket.sentTexts.isEmpty, waited < 400 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        listening.cancel()
+        waited = 0
+        while await !socket.isClosed, waited < 200 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        #expect(await socket.isClosed)
+        feed.finish()
+    }
+
     @Test("a connection that drops while she is still talking ends the stream as unreachable")
     func drops() async {
         let socket = ScriptedSocket(helloReply: ready)
@@ -229,6 +253,7 @@ struct HomeServerCoverTests {
             #expect(await eventually { captions.phase == .listening }, "\(kind)")
             #expect(captions.isCoveringForCloud)
             #expect(captions.activeEngineKind == .whisperKit)
+            #expect(captions.coverReason == kind, "the screen must be able to say which of the two it was")
         }
     }
 

@@ -74,6 +74,10 @@ public final class CaptionPipeline {
     /// downloaded, took over. Lasts until captions are next started with
     /// the chosen settings; the saved choice itself is never changed.
     public private(set) var isCoveringForCloud = false
+    /// Why the phone's model took over, while it covers: a refused home
+    /// server pairing code needs someone to re-enter it, an unreachable
+    /// server doesn't.
+    public private(set) var coverReason: EngineUnavailability.Kind?
     /// The room the last download refused for want of space needed, so a
     /// return to the app only retries once that much is free.
     private var storageNeededMegabytes: Int?
@@ -210,6 +214,7 @@ public final class CaptionPipeline {
         activeSettings = settings
         isCoveringForCloud = nextStartCoversCloud
         nextStartCoversCloud = false
+        if !isCoveringForCloud { coverReason = nil }
         storageNeededMegabytes = nil
         // The stored threshold is the person's own choice once they've
         // touched it, but at the untouched app default it's specifically
@@ -1146,6 +1151,7 @@ public final class CaptionPipeline {
         }
         logEvent(.note("cloud unavailable, the phone's own model took over"))
         nextStartCoversCloud = true
+        coverReason = failure.engineUnavailability?.kind
         await start(settings: settings)
     }
 

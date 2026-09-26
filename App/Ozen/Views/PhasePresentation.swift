@@ -38,7 +38,8 @@ struct PhasePresentation {
         downloadSecondsRemaining: Double? = nil,
         pausedForSpeech: Bool = false,
         coveringForCloud: Bool = false,
-        coveredEngine: TranscriptionEngineKind? = nil
+        coveredEngine: TranscriptionEngineKind? = nil,
+        coverReason: EngineUnavailability.Kind? = nil
     ) {
         if interruptedBySystem {
             self.init(
@@ -63,6 +64,9 @@ struct PhasePresentation {
 
         case .startingAudio:
             self.init(title: tr("מפעיל את המיקרופון", "Starting the microphone"), detail: nil, systemImage: "mic", tint: .yellow, isBusy: true)
+
+        case .listening where coveringForCloud && coveredEngine == .homeServer && coverReason == .homeServerRejected:
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("המחשב בבית לא קיבל את קוד הצימוד, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "The home computer didn’t accept the pairing code, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
         case .listening where coveringForCloud && coveredEngine == .homeServer:
             self.init(title: tr("מקשיב", "Listening"), detail: tr("אין חיבור למחשב בבית, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "Can’t reach the home computer, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
