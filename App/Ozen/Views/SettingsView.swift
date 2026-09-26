@@ -31,6 +31,8 @@ struct SettingsView: View {
     @State private var homeServerCheck: HomeServerCheck?
     @State private var isCheckingHomeServer = false
     @State private var confirmingHomeServerCodeDelete = false
+    @State private var confirmingCloudKeyDelete = false
+    @State private var confirmingWalkthrough = false
     @State private var homeServerCodeSaveFailed = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -280,9 +282,16 @@ struct SettingsView: View {
             }
             if hasCloudKey {
                 Button(tr("מחיקת המפתח", "Delete key"), role: .destructive) {
-                    CloudKeyStore.remove()
-                    hasCloudKey = false
-                    Task { await viewModel.cloudKeyChanged() }
+                    confirmingCloudKeyDelete = true
+                }
+                .confirmationDialog(tr("למחוק את מפתח הענן?", "Delete the cloud key?"), isPresented: $confirmingCloudKeyDelete, titleVisibility: .visible) {
+                    Button(tr("למחוק", "Delete"), role: .destructive) {
+                        CloudKeyStore.remove()
+                        hasCloudKey = false
+                        Task { await viewModel.cloudKeyChanged() }
+                    }
+                } message: {
+                    Text(tr("בלי המפתח הכתוביות לא יגיעו מהענן, עד שיכניסו אותו שוב.", "Without the key, captions can’t come from the cloud until it’s entered again."))
                 }
             }
             Picker(tr("מודל", "Model"), selection: cloudModelBinding) {
@@ -856,9 +865,16 @@ struct SettingsView: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("diagnosticsRow")
             Button {
-                viewModel.showOnboardingAgain()
+                confirmingWalkthrough = true
             } label: {
                 Label(tr("להציג שוב את ההסבר הראשוני", "Show the initial walkthrough again"), systemImage: "questionmark.circle")
+            }
+            .confirmationDialog(tr("להציג שוב את ההסבר הראשוני?", "Show the initial walkthrough again?"), isPresented: $confirmingWalkthrough, titleVisibility: .visible) {
+                Button(tr("להציג", "Show it")) {
+                    viewModel.showOnboardingAgain()
+                }
+            } message: {
+                Text(tr("הכתוביות ייעצרו עד סוף ההסבר.", "Captions stop until the walkthrough ends."))
             }
             Button(role: .destructive) {
                 confirmingClear = true
