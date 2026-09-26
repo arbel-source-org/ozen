@@ -74,7 +74,7 @@ struct ModelManagerView: View {
             Text(tr("הכתוביות ייעצרו עד שההורדה (\(option.sizeLabel)) תסתיים והמודל ייטען. בלי Wi-Fi ההורדה עשויה לחכות לו.", "Captions will stop until the download (\(option.sizeLabel)) finishes and the model loads. Without Wi‑Fi, the download may wait for it."))
         }
         .alert(tr("המחיקה נכשלה", "Delete failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
-            Button(tr("סגור", "Close"), role: .cancel) {}
+            Button(tr("סגירה", "Close"), role: .cancel) {}
         } message: {
             Text(deleteError ?? "")
         }

@@ -212,7 +212,7 @@ struct HistoryDetailView: View {
             Text(tr("השם יופיע ברשימת השיחות, ואפשר יהיה לחפש לפיו.", "The name will appear in the conversations list, and you’ll be able to search by it."))
         }
         .alert(tr("המחיקה נכשלה", "Deletion failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
-            Button(tr("סגור", "Close"), role: .cancel) {}
+            Button(tr("סגירה", "Close"), role: .cancel) {}
         } message: {
             Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")", "What wasn’t deleted is still saved on the phone. You can try again.\n\(deleteError ?? "")"))
         }

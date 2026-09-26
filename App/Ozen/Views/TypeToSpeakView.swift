@@ -68,7 +68,7 @@ struct TypeToSpeakView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(tr("סגור", "Close")) { dismiss() }
+                    Button(tr("סגירה", "Close")) { dismiss() }
                 }
             }
             .onAppear { isTyping = true }

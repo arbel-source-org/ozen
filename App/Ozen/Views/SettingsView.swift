@@ -81,7 +81,7 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(tr("סגור", "Close")) { dismiss() }
+                    Button(tr("סגירה", "Close")) { dismiss() }
                 }
             }
             .sheet(isPresented: $showingEnrollment) {

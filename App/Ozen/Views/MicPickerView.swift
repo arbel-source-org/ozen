@@ -83,7 +83,7 @@ struct MicPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(tr("סגור", "Close")) { dismiss() }
+                    Button(tr("סגירה", "Close")) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {

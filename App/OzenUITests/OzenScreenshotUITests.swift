@@ -280,7 +280,7 @@ final class OzenScreenshotUITests: XCTestCase {
 
         openSettingsRow(app, rowIdentifier: "diagnosticsRow", screenIdentifier: "diagnosticsScreen", captureName: "diagnostics-accessibility-text")
 
-        app.buttons["סגור"].firstMatch.tap()
+        app.buttons["סגירה"].firstMatch.tap()
 
         // A settle delay here didn't help, and the failure this produced
         // was deterministic, not flaky: the same "kAXErrorCannotComplete

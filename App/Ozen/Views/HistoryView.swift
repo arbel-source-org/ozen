@@ -256,7 +256,7 @@ struct HistoryView: View {
             Text(tr("שיחות עם שורה מסומנת או עם שם לא יימחקו.", "Conversations with a starred line or a name won’t be deleted."))
         }
         .alert(tr("המחיקה נכשלה", "Deletion failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
-            Button(tr("סגור", "Close"), role: .cancel) {}
+            Button(tr("סגירה", "Close"), role: .cancel) {}
         } message: {
             Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")", "What wasn’t deleted is still saved on the phone. You can try again.\n\(deleteError ?? "")"))
         }
