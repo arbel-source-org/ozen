@@ -306,7 +306,17 @@ public struct WhisperResultFilter: Sendable, Equatable {
         // survived punctuation/symbol stripping alone and made every
         // known-hallucination and credit-line comparison in this file
         // miss what would otherwise be an exact match.
-        let stripped = text.unicodeScalars.filter { scalar in
+        //
+        // Niqqud (Hebrew vowel points) is stripped the same way
+        // `HebrewText.normalize` strips it, via the same
+        // `HebrewText.separatingJoiners` + `stripNiqqud` pair. Apple's
+        // on-device recognizer and home-server Hebrew models occasionally
+        // emit pointed text; without this, a pointed silence hallucination
+        // ("תּוֹדָה שֶׁצְּפִיתֶם") would never match `knownHallucinations`,
+        // which is stored unpointed, and would reach the screen instead of
+        // being dropped.
+        let withoutNiqqud = HebrewText.stripNiqqud(HebrewText.separatingJoiners(text))
+        let stripped = withoutNiqqud.unicodeScalars.filter { scalar in
             !CharacterSet.punctuationCharacters.contains(scalar)
                 && !CharacterSet.symbols.contains(scalar)
                 && scalar.properties.generalCategory != .format

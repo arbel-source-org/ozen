@@ -130,6 +130,17 @@ struct WhisperResultFilterTests {
         #expect(WhisperResultFilter.normalize("♪ תודה ♪") == "תודה")
     }
 
+    @Test("normalization strips Hebrew niqqud, matching HebrewText")
+    func normalizationStripsNiqqud() {
+        #expect(WhisperResultFilter.normalize("תּוֹדָה רַבָּה!") == "תודה רבה")
+    }
+
+    @Test("a known silence hallucination is caught even when the engine emitted it with niqqud")
+    func pointedKnownHallucinationIsCaught() {
+        let filter = WhisperResultFilter()
+        #expect(filter.isKnownHallucination("תּוֹדָה שֶׁצְּפִיתֶם"))
+    }
+
     @Test("invented credit lines with a name attached are dropped")
     func creditLines() {
         let filter = WhisperResultFilter()
