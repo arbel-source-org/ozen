@@ -6,7 +6,10 @@ import OzenKit
 /// while the phone talks so it doesn't caption itself.
 struct TypeToSpeakView: View {
     @Bindable var viewModel: LiveCaptionViewModel
-    @State private var text = ""
+    /// Kept on the view model, not here: a swipe down, "Close", or a
+    /// Shortcut opening the big-letters pad threw away a reply she had
+    /// typed but not yet said.
+    private var text: String { viewModel.typeToSpeakDraft }
     /// The typed sentence last said, kept after the field clears so it can
     /// be said again when the other person didn't catch it.
     @State private var lastTyped: String?
@@ -76,7 +79,7 @@ struct TypeToSpeakView: View {
         .presentationDetents([.medium, .large])
         .fullScreenCover(isPresented: $showingBigText) {
             BigTextView(
-                text: $text,
+                text: $viewModel.typeToSpeakDraft,
                 display: viewModel.display,
                 canSpeak: viewModel.hasHebrewVoice,
                 // lastTyped drives "Play again", so it has to track whatever
@@ -94,7 +97,7 @@ struct TypeToSpeakView: View {
 
     private var composer: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField(tr("הקלידו מה להגיד…", "Type what to say…"), text: $text, axis: .vertical)
+            TextField(tr("הקלידו מה להגיד…", "Type what to say…"), text: $viewModel.typeToSpeakDraft, axis: .vertical)
                 .font(.title2)
                 .lineLimit(1...4)
                 .focused($isTyping)

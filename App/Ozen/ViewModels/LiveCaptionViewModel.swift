@@ -1319,6 +1319,10 @@ public final class LiveCaptionViewModel {
 
     /// The phrases the Say screen lists, in the app's language while the list
     /// is still the built-in one (see `AppSettings.displayedQuickPhrases`).
+    /// What she has typed on the speaking sheet and not cleared, kept
+    /// while the app runs so closing the sheet doesn't lose it.
+    public var typeToSpeakDraft = ""
+
     public var quickPhrases: [String] {
         AppSettings.displayedQuickPhrases(stored: settings.quickPhrases, language: uiLanguage)
     }

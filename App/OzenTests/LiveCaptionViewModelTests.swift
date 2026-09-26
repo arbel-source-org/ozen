@@ -53,6 +53,19 @@ struct LiveCaptionViewModelTests {
         #expect(HomeServerCodeStore.read() == "testcode123")
     }
 
+    @Test("a reply typed but not yet said outlives the speaking sheet, captions stopping and starting, and is never saved to disk")
+    func typedReplyIsKept() async throws {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-draft-\(UUID()).json")
+        let viewModel = LiveCaptionViewModel(settingsStore: SettingsStore(fileURL: file), pipeline: fakePipeline())
+        #expect(viewModel.typeToSpeakDraft.isEmpty)
+        viewModel.typeToSpeakDraft = "אני באה עוד מעט"
+        await viewModel.start()
+        viewModel.stop()
+        #expect(viewModel.typeToSpeakDraft == "אני באה עוד מעט")
+        viewModel.flushPendingSettingsSave()
+        #expect(!((try? String(contentsOf: file, encoding: .utf8)) ?? "").contains("אני באה"))
+    }
+
     @Test("a pairing code the phone won't keep changes nothing and says so")
     func pairingSaveFails() async throws {
         let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())
