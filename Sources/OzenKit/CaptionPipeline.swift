@@ -168,11 +168,12 @@ public final class CaptionPipeline {
     /// Set for as long as `engine.prepare()` is actually running, even
     /// after `stop()`/`restart()` abandons that run: `prepare()` has no way
     /// to cancel a model download or load already under way, so it keeps
-    /// using memory until it finishes on its own. A new `start()` declines
-    /// to begin a second one alongside it — two multi-hundred-megabyte
-    /// models loading at once is exactly the kind of memory pressure iOS
-    /// kills apps over.
+    /// using memory until it finishes on its own. A new `start()` waits for
+    /// it before beginning its own — two multi-hundred-megabyte models
+    /// loading at once is exactly the kind of memory pressure iOS kills
+    /// apps over — and then goes ahead, so a restart still restarts.
     private var isPreparingEngine = false
+    private var preparationWaiters: [CheckedContinuation<Void, Never>] = []
     private var recovery: AutoRecoveryPolicy
     /// Notices capture that died while the screen still says "listening".
     private var audioWatchdog: AudioStallWatchdog
@@ -237,7 +238,10 @@ public final class CaptionPipeline {
     }
 
     public func start(settings: AppSettings) async {
-        guard !phase.isListening, !phase.isTransitioning, !isPreparingEngine else { return }
+        while isPreparingEngine, !phase.isListening, !phase.isTransitioning {
+            await withCheckedContinuation { preparationWaiters.append($0) }
+        }
+        guard !phase.isListening, !phase.isTransitioning else { return }
         cancelScheduledRetry()
         let run = UUID()
         runID = run
@@ -340,6 +344,9 @@ public final class CaptionPipeline {
             }
         }
         isPreparingEngine = false
+        let waiting = preparationWaiters
+        preparationWaiters = []
+        waiting.forEach { $0.resume() }
         guard runID == run else { return }
         if case .unavailable(let why) = availability {
             fail(.engineUnavailable, detail: why.detail, engineUnavailability: why)

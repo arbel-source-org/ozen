@@ -1013,33 +1013,24 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .listening)
     }
 
-    @Test("a preparation stop() left running is never joined by a second one, so two models are never loading at once")
+    @Test("a restart while an abandoned preparation still runs waits for it, then starts: never two models loading at once")
     func abandonedPreparationIsNeverDoubled() async {
         let slow = FakeEngine()
         let gate = PrepareGate()
         slow.prepareGate = gate
         let (pipeline, _, _) = makePipeline(engines: [.whisperKit: slow])
         let first = Task { await pipeline.start(settings: .default) }
-        // Wait for the first run to genuinely reach the engine's prepare()
-        // call, then abandon it without waiting for it to finish.
         while slow.prepareCount == 0 { await Task.yield() }
         pipeline.stop()
-        // stop() cannot cancel the engine's own preparation (it has no way
-        // to), so it is still parked at the gate here. A second start must
-        // decline to begin its own rather than load the model again
-        // alongside it. The gate stays closed for now, so a second prepare()
-        // call would be stuck right here too, not yet counted -- give it
-        // every chance to reach that point before checking.
         let second = Task { await pipeline.start(settings: .default) }
         for _ in 0..<50 { await Task.yield() }
         #expect(slow.prepareCount == 1)
 
-        // Opening it now (whatever the outcome) lets both tasks finish
-        // instead of leaving one stuck forever.
         await gate.open()
         await first.value
         await second.value
-        #expect(slow.prepareCount == 1)
+        #expect(slow.prepareCount == 2)
+        #expect(pipeline.phase == .listening)
     }
 }
 
