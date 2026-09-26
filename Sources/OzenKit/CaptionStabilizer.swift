@@ -84,6 +84,16 @@ public struct CaptionStabilizer: Sendable {
     /// For each line still being written, which of its words to hold
     /// steady between passes; see `LiveAgreement`.
     private var liveAgreements: [UUID: LiveAgreement] = [:]
+    /// Indices into `segments` that aren't committed, kept in step with
+    /// every place below that changes `isCommitted`, so `hasOpenLine` and
+    /// `commitStale` don't have to scan the whole transcript — a phone
+    /// left listening for days holds thousands of lines, and both are
+    /// checked on every incoming token and once a second besides.
+    private var openIndices: Set<Int> = []
+
+    /// Whether any line is still being written, without scanning every
+    /// segment to find out.
+    public var hasOpenLine: Bool { !openIndices.isEmpty }
 
     public init(silenceCommitThreshold: TimeInterval = CaptionStabilizer.defaultSilenceCommitThreshold) {
         self.silenceCommitThreshold = silenceCommitThreshold
@@ -118,6 +128,7 @@ public struct CaptionStabilizer: Sendable {
                     // update also finalizes the line below, that only
                     // clears once the finality is real, not another guess.
                     segments[index].isCommitted = false
+                    openIndices.insert(index)
                 } else {
                     // Final is final. Both engines start a new utterance
                     // after a final, so anything more for this one is a
@@ -148,6 +159,7 @@ public struct CaptionStabilizer: Sendable {
             if token.isFinal {
                 segments[index].isCommitted = true
                 segments[index].isProvisionalCommit = false
+                openIndices.remove(index)
             }
             return segments[index]
         }
@@ -163,6 +175,9 @@ public struct CaptionStabilizer: Sendable {
             uncertainWords: token.uncertainWords
         )
         segments.append(segment)
+        if !segment.isCommitted {
+            openIndices.insert(segments.count - 1)
+        }
         return segment
     }
 
@@ -177,22 +192,25 @@ public struct CaptionStabilizer: Sendable {
         guard let index = segments.lastIndex(where: { $0.id == id }), !segments[index].isCommitted else { return nil }
         segments[index].isCommitted = true
         segments[index].isProvisionalCommit = false
+        openIndices.remove(index)
         return segments[index]
     }
 
     /// Call periodically (e.g. once per incoming audio chunk) with the
     /// current stream time. Returns whichever segments just became
     /// committed as a result, so a caller can react (stop animating them)
-    /// without re-scanning the whole transcript.
+    /// without re-scanning the whole transcript. Only ever looks at lines
+    /// that are still open, not every line ever said.
     @discardableResult
     public mutating func commitStale(now: TimeInterval) -> [TranscriptSegment] {
         var justCommitted: [TranscriptSegment] = []
-        for index in segments.indices where !segments[index].isCommitted {
+        for index in openIndices.sorted() {
             if now - segments[index].lastUpdateTimestamp >= silenceCommitThreshold {
                 segments[index].isCommitted = true
                 segments[index].isProvisionalCommit = true
                 provisionalCommits.insert(segments[index].id)
                 justCommitted.append(segments[index])
+                openIndices.remove(index)
             }
         }
         return justCommitted
@@ -204,10 +222,11 @@ public struct CaptionStabilizer: Sendable {
     @discardableResult
     public mutating func commitAll() -> [TranscriptSegment] {
         var justCommitted: [TranscriptSegment] = []
-        for index in segments.indices where !segments[index].isCommitted {
+        for index in openIndices.sorted() {
             segments[index].isCommitted = true
             justCommitted.append(segments[index])
         }
+        openIndices.removeAll()
         // The engine that could have continued them is gone.
         provisionalCommits = []
         return justCommitted

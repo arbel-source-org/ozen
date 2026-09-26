@@ -981,7 +981,7 @@ public final class CaptionPipeline {
             countCommittedLine()
         }
         if !committed.isEmpty {
-            stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
+            stats.hasOpenLine = stabilizer.hasOpenLine
         }
     }
 
@@ -1018,7 +1018,7 @@ public final class CaptionPipeline {
             if token.isFinal, let segment = stabilizer.commit(id: token.utteranceID) {
                 upsert(segment)
                 countCommittedLine()
-                stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
+                stats.hasOpenLine = stabilizer.hasOpenLine
             }
             return
         }
@@ -1037,7 +1037,7 @@ public final class CaptionPipeline {
             countCommittedLine()
         }
         upsert(segment)
-        stats.hasOpenLine = stabilizer.segments.contains { !$0.isCommitted }
+        stats.hasOpenLine = stabilizer.hasOpenLine
         scanForKeywords(in: segment)
     }
 
