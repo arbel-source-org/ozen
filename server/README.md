@@ -39,7 +39,14 @@ once (kept in `~/ozen-server/pairing-code`, readable only by you) and prints
 it. Running it again updates the server and keeps the code. `bash setup.sh
 --cpu` sets up a copy without a graphics card, for trying it out only.
 
-The first start downloads the model (about 1.6 GB). The pairing code goes
+With a graphics card of 8 GB or more, add `--final-model
+ivrit-ai/whisper-large-v3-ct2` to the start command (in `run.sh`, or `run.cmd`
+on Windows): the fast model keeps writing the live words and the full one
+writes each finished line. On a 2080 Ti that cut mistakes by about 15% with a
+TV loud in the room or the speaker across it, and put finished lines on the
+phone about 1.4 s after they were said instead of 0.9 s.
+
+The first start downloads the model (about 1.6 GB, 3 GB more for the full one). The pairing code goes
 into the phone: Settings, Engine, Home computer.
 
 ## Pairing the phone

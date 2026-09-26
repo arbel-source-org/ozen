@@ -128,11 +128,19 @@ def quietest_point(samples, end, look_back, frame):
 
 
 class Transcriber:
-    """One model on the GPU, shared by every connection, one pass at a time."""
+    """The models on the GPU, shared by every connection, one pass at a time.
 
-    def __init__(self, model, device, compute_type, beam, context):
-        self.name = model
+    `final_model`, when given, writes each finished line while `model`
+    keeps up with the live ones. On the owner's 2080 Ti the full
+    large-v3 made ~15% fewer mistakes than Turbo with a TV loud in the
+    room or the speaker across it (36.7% -> 31.1%, 49.3% -> 45.9%) and
+    the same in a quiet one, at four times the cost: worth it once per
+    line, not three times a second."""
+
+    def __init__(self, model, device, compute_type, beam, context, final_model=None):
+        self.name = model if not final_model else f"{model} + {final_model}"
         self.model = WhisperModel(model, device=device, compute_type=compute_type)
+        self.final_model = WhisperModel(final_model, device=device, compute_type=compute_type) if final_model else self.model
         self.beam = beam
         self.context = context
         self.lock = asyncio.Lock()
@@ -142,7 +150,8 @@ class Transcriber:
             return await asyncio.to_thread(self._run, audio, language, prompt, final)
 
     def _run(self, audio, language, prompt, final):
-        segments, _ = self.model.transcribe(
+        model = self.final_model if final else self.model
+        segments, _ = model.transcribe(
             audio, language=language, task="transcribe",
             beam_size=self.beam if final else 1,
             temperature=[0.0, 0.2, 0.4] if final else 0.0,
@@ -339,6 +348,8 @@ async def main():
     p.add_argument("--device", default="cuda")
     p.add_argument("--compute-type", default="float16")
     p.add_argument("--beam", type=int, default=1)
+    p.add_argument("--final-model", default="",
+                   help="a stronger model for finished lines only, e.g. ivrit-ai/whisper-large-v3-ct2")
     p.add_argument("--context", action="store_true")
     p.add_argument("--live-interval", type=float, default=0.3)
     args = p.parse_args()
@@ -346,12 +357,13 @@ async def main():
     if not token:
         raise SystemExit("set OZEN_TOKEN to the pairing code the phone will send")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context)
+    transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context, args.final_model or None)
     # Warm the model so the first sentence isn't slow.
+    await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, False)
     await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, True)
     async with websockets.serve(lambda ws: handle(ws, transcriber, token, args.live_interval),
                                 args.host, args.port, max_size=2**22, ping_interval=10, ping_timeout=20):
-        log.info("listening on %s:%d with %s", args.host, args.port, args.model)
+        log.info("listening on %s:%d with %s", args.host, args.port, transcriber.name)
         await asyncio.Future()
 
 
