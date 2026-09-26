@@ -92,6 +92,11 @@ public final class CaptionPipeline {
     /// Only switch back after this long without new words, so a sentence
     /// isn't cut in half.
     public var homeServerSwitchBackQuietSeconds: Double = 2
+    /// After this many checks in a row found it back, switch at the next
+    /// finished line even without a quiet moment: a TV or a lively table
+    /// may never go quiet for long, and every minute on the phone's own
+    /// model is a minute of weaker captions.
+    public var switchBackAfterAnsweredChecks = 3
     private var coveredSettings: AppSettings?
     /// The last half-minute of microphone sound, in memory only, so that
     /// "mark a problem" can keep what was actually heard. Cleared when
@@ -1238,6 +1243,7 @@ public final class CaptionPipeline {
     private func recheckHomeServer() {
         homeServerRecheck?.cancel()
         homeServerRecheck = Task { [weak self] in
+            var answered = 0
             while !Task.isCancelled {
                 guard let seconds = self?.homeServerRecheckSeconds else { return }
                 try? await Task.sleep(for: .seconds(seconds))
@@ -1247,9 +1253,13 @@ public final class CaptionPipeline {
                 guard self.phase == .listening else { continue }
                 let server = self.cachedEngine(for: chosen)
                 guard await server.checkAvailability(languageCode: chosen.languageCode) == .available,
-                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening,
-                      self.isBetweenSentences
-                else { continue }
+                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening
+                else {
+                    answered = 0
+                    continue
+                }
+                answered += 1
+                guard self.canSwitchBack(answeredChecks: answered) else { continue }
                 self.logEvent(.note("the home computer answers again, switching back to it"))
                 self.homeServerRecheck = nil
                 await self.restart(settings: chosen)
@@ -1266,6 +1276,7 @@ public final class CaptionPipeline {
     private func recheckCloud() {
         cloudRecheck?.cancel()
         cloudRecheck = Task { [weak self] in
+            var answered = 0
             while !Task.isCancelled {
                 guard let seconds = self?.cloudRecheckSeconds else { return }
                 try? await Task.sleep(for: .seconds(seconds))
@@ -1275,15 +1286,25 @@ public final class CaptionPipeline {
                 guard self.phase == .listening else { continue }
                 let cloud = self.cachedEngine(for: chosen)
                 guard await cloud.checkAvailability(languageCode: chosen.languageCode) == .available,
-                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening,
-                      self.isBetweenSentences
-                else { continue }
+                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening
+                else {
+                    answered = 0
+                    continue
+                }
+                answered += 1
+                guard self.canSwitchBack(answeredChecks: answered) else { continue }
                 self.logEvent(.note("the cloud answers again, switching back to it"))
                 self.cloudRecheck = nil
                 await self.restart(settings: chosen)
                 return
             }
         }
+    }
+
+    private func canSwitchBack(answeredChecks: Int) -> Bool {
+        if isBetweenSentences { return true }
+        let lineOpen = stabilizer.segments.last.map { !$0.isCommitted } ?? false
+        return answeredChecks >= switchBackAfterAnsweredChecks && !lineOpen
     }
 
     private var isBetweenSentences: Bool {

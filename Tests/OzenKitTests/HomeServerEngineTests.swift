@@ -412,6 +412,34 @@ struct HomeServerCoverTests {
         #expect(await eventually { captions.activeEngineKind == .homeServer })
     }
 
+    @Test("with talk that never goes quiet, captions still go back after a few answered checks, between two lines")
+    func switchesBackWithoutSilence() async throws {
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        captions.homeServerSwitchBackQuietSeconds = 1000
+        captions.switchBackAfterAnsweredChecks = 3
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        let before = server.prepareCount
+        var spoken = 0
+        while captions.activeEngineKind == .whisperKit, spoken < 60 {
+            phone.emit(TranscriptToken(utteranceID: UUID(), text: "הטלוויזיה מדברת \(spoken)", isFinal: true, timestamp: Date().timeIntervalSince1970))
+            spoken += 1
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(captions.activeEngineKind == .homeServer)
+        #expect(server.prepareCount - before >= 3)
+    }
+
     @Test("a computer still out of reach is asked again and again; a refused code is left for a person")
     func keepsAskingOnlyWhenUnreachable() async throws {
         for (kind, asksAgain) in [(EngineUnavailability.Kind.homeServerUnreachable, true), (.homeServerRejected, false)] {
