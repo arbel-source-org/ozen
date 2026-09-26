@@ -77,9 +77,16 @@ final class OzenScreenshotUITests: XCTestCase {
         let transcript = app.descendants(matching: .any)["transcriptScroll"]
         XCTAssertTrue(transcript.waitForExistence(timeout: 10), "caption screen: the transcript never appeared")
         capture(app, name: "caption-screen-accessibility-text")
+        let reveal = app.descendants(matching: .any)["showControlsButton"]
+        if reveal.exists { reveal.tap() }
+        let settings = app.descendants(matching: .any)["settingsButton"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5), "caption screen: the control bar never showed")
+        capture(app, name: "caption-screen-accessibility-text-controls")
         let screen = app.windows.firstMatch.frame
         for identifier in ["settingsButton", "micPickerButton", "transcriptScroll"] {
-            let frame = app.descendants(matching: .any)[identifier].firstMatch.frame
+            let element = app.descendants(matching: .any)[identifier].firstMatch
+            XCTAssertTrue(element.exists, "caption screen: \(identifier) is missing")
+            let frame = element.frame
             XCTAssertTrue(frame.minX >= screen.minX - 1 && frame.maxX <= screen.maxX + 1, "caption screen: \(identifier) runs off the screen at this text size (\(frame) in \(screen))")
         }
     }
@@ -290,6 +297,7 @@ final class OzenScreenshotUITests: XCTestCase {
 
         let addSpeaker = scrollDownUntilVisible(app, identifier: "addSpeakerButton")
         XCTAssertTrue(addSpeaker.exists, "secondary screens: the add-speaker button never appeared")
+        bringOffBottomEdge(app, addSpeaker)
         addSpeaker.tap()
         let enrollmentScreen = app.descendants(matching: .any)["speakerEnrollmentScreen"]
         XCTAssertTrue(enrollmentScreen.waitForExistence(timeout: 10), "secondary screens: speaker enrollment never appeared")
@@ -347,6 +355,13 @@ final class OzenScreenshotUITests: XCTestCase {
         return element
     }
 
+    private func bringOffBottomEdge(_ app: XCUIApplication, _ element: XCUIElement) {
+        if element.frame.midY > app.windows.firstMatch.frame.maxY - 200 {
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
+            from.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
+        }
+    }
+
     /// Taps a Settings row by its own accessibility identifier, scrolling
     /// down until it exists first (see `scrollDownUntilVisible`).
     private func openSettingsRow(_ app: XCUIApplication, rowIdentifier: String, screenIdentifier: String, captureName: String) {
@@ -355,10 +370,7 @@ final class OzenScreenshotUITests: XCTestCase {
         // At the largest text size a row counts as hittable while only its
         // top edge shows above the home indicator, and a tap at its middle
         // lands on nothing. A slow drag (no coasting) brings it up first.
-        if row.frame.midY > app.windows.firstMatch.frame.maxY - 200 {
-            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7))
-            from.press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)))
-        }
+        bringOffBottomEdge(app, row)
         row.tap()
         let screen = app.descendants(matching: .any)[screenIdentifier]
         // A tap that lands while the swipe that brought the row up is
