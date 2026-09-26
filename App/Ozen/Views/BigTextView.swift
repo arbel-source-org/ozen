@@ -58,6 +58,9 @@ struct BigTextView: View {
             }
             .rotationEffect(.degrees(180))
             .accessibilityLabel(text)
+            // Otherwise VoiceOver reads this label and then drills into the
+            // child Text with the same content, saying it twice.
+            .accessibilityElement(children: .ignore)
         } else {
             ZStack(alignment: .topLeading) {
                 if isEmpty {
