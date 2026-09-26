@@ -66,6 +66,21 @@ final class OzenScreenshotUITests: XCTestCase {
         try run(variant: "english", name: "english")
     }
 
+    /// The caption screen's own control bar at the largest system text
+    /// size: every other screen was checked this way, not the one she
+    /// spends her time on.
+    func testCaptionScreenAccessibilityText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "hebrewDefault", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let transcript = app.descendants(matching: .any)["transcriptScroll"]
+        XCTAssertTrue(transcript.waitForExistence(timeout: 10), "caption screen: the transcript never appeared")
+        capture(app, name: "caption-screen-accessibility-text")
+        let settingsButton = app.descendants(matching: .any)["settingsButton"]
+        XCTAssertTrue(settingsButton.isHittable, "caption screen: the settings button is off screen at this text size")
+    }
+
     /// Onboarding at the largest accessibility text size iOS offers: a
     /// real setting for exactly the low-vision reader this app is built
     /// for, and a screen no earlier screenshot pass has ever looked at.
