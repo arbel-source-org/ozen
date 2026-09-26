@@ -9,6 +9,7 @@ private struct Closed: Error {}
 private actor ScriptedSocket: HomeServerSocket {
     var helloReply: String?
     var afterEnd: [String] = []
+    var reportReply: String?
     private(set) var sentTexts: [String] = []
     private(set) var sentBytes = 0
     private(set) var isClosed = false
@@ -35,6 +36,7 @@ private actor ScriptedSocket: HomeServerSocket {
         if isClosed { throw Closed() }
         sentTexts.append(text)
         if text.contains(#""type":"hello""#), let helloReply { deliver(helloReply) }
+        if text.contains(#""type":"report""#), let reportReply { deliver(reportReply) }
         if text == HomeServer.end {
             afterEnd.forEach(deliver)
             drop()
@@ -53,6 +55,8 @@ private actor ScriptedSocket: HomeServerSocket {
     }
 
     func close() async { drop() }
+
+    func setReportReply(_ reply: String?) { reportReply = reply }
 }
 
 private struct Connector: HomeServerConnecting {
@@ -161,6 +165,19 @@ struct HomeServerEngineTests {
         #expect((stuck as? EngineUnavailability)?.kind == .homeServerUnreachable)
         #expect(try await run(quiet, replyEvery: nil) == nil)
         #expect(try await run(loud, replyEvery: 5) == nil)
+    }
+
+    @Test("a diagnostics report goes to the server, which says it kept it; a server that doesn't answer is a failure")
+    func sendsReport() async {
+        let saving = ScriptedSocket(helloReply: ready)
+        await saving.setReportReply(#"{"type":"report_saved","name":"20260926-2100.txt"}"#)
+        #expect(await engine(saving).sendReport("levels -40 dB", languageCode: "he"))
+        let sent = await saving.sentTexts
+        #expect(sent.first?.contains(#""purpose":"report""#) == true)
+        #expect(sent.contains(HomeServer.report("levels -40 dB")))
+
+        #expect(await engine(ScriptedSocket(helloReply: ready)).sendReport("x", languageCode: "he") == false)
+        #expect(await engine(ScriptedSocket(helloReply: ready), token: nil).sendReport("x", languageCode: "he") == false)
     }
 
     @Test("a name added while captions stream reaches the server at once, as a vocabulary frame")

@@ -88,6 +88,20 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
     }
 
+    /// Sends a diagnostics report to the server, which keeps it in its
+    /// reports folder. True once the server says it was saved.
+    public func sendReport(_ text: String, languageCode: String) async -> Bool {
+        guard case .success(let target) = destination(),
+              let socket = try? await handshake(target, languageCode: languageCode, purpose: "report")
+        else { return false }
+        defer { Task { await socket.close() } }
+        guard (try? await socket.send(text: HomeServer.report(text))) != nil,
+              let reply = try? await Self.firstReply(from: socket, within: handshakeSeconds),
+              case .reportSaved? = HomeServerMessage(json: reply)
+        else { return false }
+        return true
+    }
+
     public func diagnosticsSummary() async -> String? {
         "home server \(address)"
     }

@@ -19,6 +19,8 @@ struct DiagnosticsView: View {
     /// `eventLog` and the journal, which is wasted work to redo on each of
     /// those ticks when nobody has asked to see the report itself.
     @State private var reportText = ""
+    @State private var reportSentHome: Bool?
+    @State private var sendingHome = false
     /// Whether iOS lets Ozen show notifications at all. The last send's
     /// own result can't say: with permission denied iOS drops every
     /// notification without reporting an error, so it read "OK" while no
@@ -184,6 +186,26 @@ struct DiagnosticsView: View {
                     copied = true
                 } label: {
                     Label(copied ? tr("הועתק", "Copied") : tr("העתקת הדוח", "Copy report"), systemImage: copied ? "checkmark" : "doc.on.doc")
+                }
+                if viewModel.canSendReportToHomeServer {
+                    Button {
+                        reportText = report
+                        sendingHome = true
+                        Task {
+                            reportSentHome = await viewModel.sendReportToHomeServer(reportText)
+                            sendingHome = false
+                        }
+                    } label: {
+                        switch reportSentHome {
+                        case true?:
+                            Label(tr("הדוח נשמר במחשב בבית", "Saved on the home computer"), systemImage: "checkmark")
+                        case false?:
+                            Label(tr("המחשב בבית לא קיבל את הדוח. נסו שוב", "The home computer didn’t get it. Try again"), systemImage: "exclamationmark.triangle")
+                        case nil:
+                            Label(tr("שליחת הדוח למחשב בבית", "Send the report to the home computer"), systemImage: "desktopcomputer")
+                        }
+                    }
+                    .disabled(sendingHome)
                 }
             }
         }

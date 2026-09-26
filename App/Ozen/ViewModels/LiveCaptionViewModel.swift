@@ -907,6 +907,23 @@ public final class LiveCaptionViewModel {
         return "Ozen \(version), iOS \(ProcessInfo.processInfo.operatingSystemVersionString)"
     }
 
+    /// Whether a report can go straight to the home computer: it is set up.
+    public var canSendReportToHomeServer: Bool {
+        HomeServer.url(from: settings.homeServerAddress) != nil && HomeServerCodeStore.read() != nil
+    }
+
+    /// Sends the diagnostics report to the home computer, which keeps it
+    /// in its reports folder. True once the computer says it was saved.
+    public func sendReportToHomeServer(_ text: String) async -> Bool {
+        let engine = HomeServerEngine(
+            address: settings.homeServerAddress,
+            token: { HomeServerCodeStore.read() },
+            connector: URLSessionHomeServerConnector(),
+            client: Self.homeServerClient
+        )
+        return await engine.sendReport(text, languageCode: settings.languageCode)
+    }
+
     /// "Test connection": says hello to the saved address with the saved
     /// code, the way captions would, and times the answer.
     public func checkHomeServer() async -> HomeServerCheck {

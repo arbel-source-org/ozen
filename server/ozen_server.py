@@ -19,6 +19,9 @@ Protocol, version 1. Text frames are JSON, binary frames are audio.
     <binary>                                  PCM16 little-endian, 16 kHz, mono
     {"type": "vocabulary", "terms": [...]}    the names list changed
     {"type": "end"}                           no more audio; finish the line
+    {"type": "report", "text": "..."}         a diagnostics report to keep
+                                              in reports/ (answered with
+                                              {"type": "report_saved"})
   server -> phone
     {"type": "ready", "model": "...", "version": 1}
     {"type": "error", "code": "unauthorized" | "bad_request" | "busy", "detail": "..."}
@@ -367,6 +370,29 @@ class Session:
             pass
 
 
+REPORTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reports")
+MAX_REPORT_CHARS = 1_000_000
+
+
+def save_report(text, client):
+    """A diagnostics report the phone sent (Settings, Diagnostics), kept
+    next to the server for whoever looks after the phone. Older ones stay;
+    only the newest 50 are kept."""
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    name, n = stamp + ".txt", 1
+    while os.path.exists(os.path.join(REPORTS_DIR, name)):
+        n += 1
+        name = f"{stamp}-{n}.txt"
+    with open(os.path.join(REPORTS_DIR, name), "w", encoding="utf-8") as f:
+        f.write(f"from: {client or 'unknown app'}\n\n")
+        f.write(text[:MAX_REPORT_CHARS])
+    reports = sorted(n for n in os.listdir(REPORTS_DIR) if n.endswith(".txt"))
+    for old in reports[:-50]:
+        os.remove(os.path.join(REPORTS_DIR, old))
+    return name
+
+
 async def handle(ws, transcriber, token, live_interval):
     peer = ws.remote_address
     try:
@@ -410,6 +436,10 @@ async def handle(ws, transcriber, token, live_interval):
                 continue
             if msg.get("type") == "vocabulary":
                 session.vocabulary = [str(v) for v in msg.get("terms", [])][:200]
+            elif msg.get("type") == "report":
+                name = save_report(str(msg.get("text", "")), client)
+                log.info("report from %s saved as %s", peer, name)
+                await ws.send(json.dumps({"type": "report_saved", "name": name}))
             elif msg.get("type") == "end":
                 session.finished = True
                 session.changed.set()

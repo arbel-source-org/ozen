@@ -61,6 +61,12 @@ public enum HomeServer {
 
     public static let end = #"{"type":"end"}"#
 
+    /// A diagnostics report for the server to keep, so whoever looks after
+    /// the phone can read it on the computer without her sharing anything.
+    public static func report(_ text: String) -> String {
+        encode(["type": "report", "text": text])
+    }
+
     /// Clipped to the 16-bit range; the server wants the raw level, since
     /// its speech detector is tuned on the same quiet measurement-mode
     /// audio the phone's is.
@@ -145,6 +151,7 @@ public enum HomeServerCheck: Sendable, Equatable {
 public enum HomeServerMessage: Sendable, Equatable {
     case ready(model: String)
     case refused(code: String, detail: String)
+    case reportSaved(name: String)
     case text(utterance: Int, text: String, isFinal: Bool, confidence: Float?, segments: [WhisperSegmentSummary]?)
 
     public init?(json: String) {
@@ -157,6 +164,8 @@ public enum HomeServerMessage: Sendable, Equatable {
             self = .ready(model: object["model"] as? String ?? "")
         case "error":
             self = .refused(code: object["code"] as? String ?? "", detail: object["detail"] as? String ?? "")
+        case "report_saved":
+            self = .reportSaved(name: object["name"] as? String ?? "")
         case "text":
             guard let utterance = object["utterance"] as? Int,
                   let text = object["text"] as? String,
