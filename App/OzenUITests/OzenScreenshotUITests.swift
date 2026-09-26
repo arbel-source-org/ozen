@@ -227,6 +227,25 @@ final class OzenScreenshotUITests: XCTestCase {
         }
     }
 
+    /// The home computer setup guide, reached from Settings, at the
+    /// largest text size: four steps of long Hebrew text and a share
+    /// button, never screenshotted before.
+    func testHomeServerGuideAccessibilityText() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "homeServer", "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"]
+        app.launch()
+
+        let settingsButton = app.descendants(matching: .any)["settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "home server guide: the settings button never appeared")
+        settingsButton.tap()
+
+        openSettingsRow(app, rowIdentifier: "homeServerGuideRow", screenIdentifier: "homeServerGuideScreen", captureName: "home-server-guide-accessibility-text-top")
+        app.descendants(matching: .any)["homeServerGuideRow"].tap()
+        let share = scrollDownUntilVisible(app, identifier: "shareSetupLink")
+        capture(app, name: "home-server-guide-accessibility-text-bottom")
+        XCTAssertTrue(share.exists, "home server guide: the share button never appeared")
+    }
+
     /// "Edit" on the quick phrases must show real delete and move handles.
     /// Before, it only listed the phrases: moving one needed a hidden
     /// long-press drag and VoiceOver could not move them at all.

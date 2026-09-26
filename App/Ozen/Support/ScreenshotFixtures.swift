@@ -23,6 +23,9 @@ enum ScreenshotFixtures {
         /// Quiet hours already on, so the toggle's revealed steppers can
         /// be screenshotted without a UI test having to flip it live.
         case quietHoursEnabled
+        /// Captions set to come from a home computer, so Settings shows
+        /// the home computer section and its setup guide row.
+        case homeServer
     }
 
     @MainActor
@@ -79,6 +82,9 @@ enum ScreenshotFixtures {
         case .quietHoursEnabled:
             viewModel.setAppLanguage(.hebrew)
             viewModel.quietHours = QuietHours(isEnabled: true, startHour: 22, endHour: 7)
+        case .homeServer:
+            viewModel.setAppLanguage(.hebrew)
+            Task { await viewModel.setEngine(.homeServer) }
         }
 
         return viewModel
