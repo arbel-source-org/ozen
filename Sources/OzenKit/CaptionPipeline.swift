@@ -435,14 +435,16 @@ public final class CaptionPipeline {
     /// iOS is short of memory and ends the biggest apps first; a loaded
     /// speech model makes this one of the biggest. The warning goes in the
     /// diagnostics timeline, since an app iOS ended leaves no other trace.
-    /// With captions not running, the engine kept loaded for a quick start
-    /// is let go too: the next start spends a few seconds loading the model
-    /// again, where iOS ending the app would lose the conversation on
-    /// screen. While captions run, or are paused to be resumed, it stays.
+    /// With captions not actually running -- idle, paused waiting to be
+    /// resumed, or failed with no retry coming -- the engine kept loaded
+    /// for a quick start or resume is let go too: the next one spends a
+    /// few seconds loading the model again, where iOS ending the app
+    /// instead would lose the conversation already on screen. Only while
+    /// captions are running does it stay.
     public func handleMemoryWarning(footprintBytes: Int64? = nil) {
         logEvent(.memoryWarning(footprintMegabytes: footprintBytes.map { Int($0 / 1_048_576) }))
         switch phase {
-        case .idle:
+        case .idle, .paused:
             engineCache.removeAll()
         case .failed where scheduledRetry == nil:
             engineCache.removeAll()

@@ -838,7 +838,7 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .listening)
     }
 
-    @Test("a memory warning while captions run or are paused keeps the engine, so resuming is instant")
+    @Test("a memory warning while captions run keeps the engine, so pausing right after is instant")
     func memoryWarningWhileRunningKeepsEngine() async {
         let built = BuiltEngines()
         let pipeline = CaptionPipeline(
@@ -854,12 +854,31 @@ struct CaptionPipelineLifecycleTests {
         await pipeline.start(settings: .default)
         pipeline.handleMemoryWarning()
         #expect(pipeline.phase == .listening)
+        #expect(built.count == 1)
+        #expect(built.aliveCount == 1)
+    }
 
+    @Test("a memory warning while paused lets go of the engine too; resuming builds it again rather than risk iOS ending the app")
+    func memoryWarningWhilePausedReleasesEngine() async {
+        let built = BuiltEngines()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                let engine = FakeEngine(kind: settings.engine)
+                built.add(engine)
+                return engine
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await pipeline.start(settings: .default)
         pipeline.pause()
         pipeline.handleMemoryWarning()
+        #expect(await eventually { built.aliveCount == 0 })
+
         await pipeline.resume()
         #expect(pipeline.phase == .listening)
-        #expect(built.count == 1)
+        #expect(built.count == 2)
         #expect(built.aliveCount == 1)
     }
 
