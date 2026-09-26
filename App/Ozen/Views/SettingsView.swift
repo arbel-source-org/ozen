@@ -799,6 +799,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+                .accessibilityHidden(true)
                 Slider(value: $viewModel.speakerSimilarityThreshold, in: 0.2...0.95, step: 0.01)
                     .accessibilityLabel(tr("רגישות הפרדת דוברים", "Speaker separation sensitivity"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
@@ -809,6 +810,7 @@ struct SettingsView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             }
         } header: {
             Text(tr("התנהגות", "Behavior"))
