@@ -22,17 +22,26 @@ struct SilencePhraseGuardTests {
         ]) == [false, false, false])
     }
 
-    @Test("a lone thanks shows once; the same again within a minute with nothing said between does not")
+    @Test("a lone thanks shows once; the same again within seconds with nothing said between does not, and a run of them stays hidden")
     func loneThanksComesBack() {
         let first = UUID()
         #expect(admitted([
             line("תודה.", id: first, final: false, at: 0),
             line("תודה.", id: first, at: 1),
-            line(" ... ", at: 10),
-            line("תודה.", at: 20),
-            line("תודה רבה", at: 70),
-            line("תודה.", at: 140),
-        ]) == [true, true, true, false, false, true])
+            line(" ... ", at: 5),
+            line("תודה.", at: 12),
+            line("תודה רבה", at: 24),
+            line("תודה.", at: 36),
+            line("תודה.", at: 60),
+        ]) == [true, true, true, false, false, false, true])
+    }
+
+    @Test("two real thank-yous half a minute apart both show")
+    func twoRealThanks() {
+        #expect(admitted([
+            line("תודה", at: 0),
+            line("תודה רבה", at: 30),
+        ]) == [true, true])
     }
 
     @Test("real words in between, or grown into a sentence, show as usual")

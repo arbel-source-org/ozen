@@ -1,7 +1,7 @@
 import Foundation
 
 public struct SilencePhraseGuard: Sendable {
-    public static let quietSeconds: TimeInterval = 60
+    public static let quietSeconds: TimeInterval = 15
 
     private let phrases: [[Substring]]
     private var lastPhraseAt: TimeInterval?
