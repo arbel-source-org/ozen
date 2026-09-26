@@ -3,6 +3,8 @@ $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 New-Item -Force -ItemType Directory $Dir | Out-Null
+icacls $Dir /inheritance:r /grant:r "${env:USERNAME}:(OI)(CI)F" '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "could not limit $Dir to $env:USERNAME" }
 $python = Join-Path $Dir 'python\python.exe'
 if (-not (Test-Path $python)) {
     $installer = Join-Path $Dir 'python-installer.exe'
@@ -27,15 +29,15 @@ if (-not (Test-Path $codeFile)) {
 $site = Join-Path $Dir 'venv\Lib\site-packages\nvidia'
 $run = @(
     '@echo off'
-    "cd /d $Dir"
+    "cd /d `"$Dir`""
     "set PATH=$site\cublas\bin;$site\cudnn\bin;%PATH%"
     "set HF_HOME=$Dir\hf"
-    "set /p OZEN_TOKEN=<$codeFile"
-    "$venvPython $Dir\ozen_server.py >> $Dir\server.log 2>&1"
+    "set /p OZEN_TOKEN=<`"$codeFile`""
+    "`"$venvPython`" `"$Dir\ozen_server.py`" >> `"$Dir\server.log`" 2>&1"
 ) -join "`r`n"
 [IO.File]::WriteAllText((Join-Path $Dir 'run.cmd'), $run + "`r`n")
 
-$action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\cmd.exe" -Argument "/c $Dir\run.cmd"
+$action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\cmd.exe" -Argument "/c `"$Dir\run.cmd`""
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
