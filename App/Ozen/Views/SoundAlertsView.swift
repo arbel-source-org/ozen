@@ -99,7 +99,7 @@ struct SoundAlertsView: View {
         switch importance {
         case .critical: return tr("רק חירום", "Emergency only")
         case .high: return tr("חשוב ומעלה", "Important and above")
-        case .medium: return tr("בית ומעלה", "Home and above")
+        case .medium: return tr("צלילי בית ומעלה", "Home sounds and above")
         case .low: return tr("הכול", "Everything")
         }
     }
