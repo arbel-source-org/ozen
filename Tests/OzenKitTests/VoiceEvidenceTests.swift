@@ -54,6 +54,17 @@ struct VoiceEvidenceTests {
         #expect(evidence.hasVoice(inFirst: chunk * 2) == false)
     }
 
+    @Test("a quiet voice is brought up to a common level before it is scored, and only a sure score counts")
+    func quietVoiceIsLevelled() {
+        let recorder = Recorder([0.85, 0.95])
+        var evidence = VoiceEvidence(score: recorder.score)
+        evidence.append([Float](repeating: 0.01, count: chunk * 2))
+        let loudest = recorder.inputs[0].map(abs).max() ?? 0
+        #expect(loudest > 0.45 && loudest <= 0.5)
+        #expect(evidence.hasVoice(inFirst: chunk) == false)
+        #expect(evidence.hasVoice(inFirst: chunk * 2) == true)
+    }
+
     @Test("follows the caller dropping the start of its buffer")
     func drop() {
         let recorder = Recorder([0.9, 0.1, 0.1])
