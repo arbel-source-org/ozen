@@ -139,12 +139,14 @@ private final class ClassificationObserver: NSObject, SNResultsObserving, @unche
     func request(_ request: SNRequest, didProduce result: SNResult) {
         guard let classification = result as? SNClassificationResult else { return }
         let timestamp = Date().timeIntervalSince1970
-        for candidate in classification.classifications.prefix(3) where candidate.confidence >= minimumConfidence {
-            continuation.yield(SoundObservation(
-                identifier: candidate.identifier,
-                confidence: candidate.confidence,
-                timestamp: timestamp
-            ))
+        // Not `.prefix(3)`: with ~300 possible labels, speech, music or
+        // chatter can occupy the top ranks whenever family is talking or the
+        // TV is on, pushing a doorbell or kettle further down and dropping
+        // it before it ever reaches `SoundEventPolicy`. Filtering by catalog
+        // membership instead keeps every sound this app tracks.
+        let candidates = classification.classifications.map { (identifier: $0.identifier, confidence: $0.confidence) }
+        for observation in SoundEventCatalog.matchingObservations(from: candidates, minimumConfidence: minimumConfidence, timestamp: timestamp) {
+            continuation.yield(observation)
         }
     }
 

@@ -111,6 +111,24 @@ public enum SoundEventCatalog {
     public static var identifiers: Set<String> {
         Set(events.map(\.identifier))
     }
+
+    /// Turns one classifier window's raw candidates into `SoundObservation`s,
+    /// keeping every one this app tracks regardless of where it landed in
+    /// the window's ranking. Apple's classifier reports ~300 labels; when
+    /// family is talking or the TV is on, speech, music and chatter occupy
+    /// the top of that ranking, and a doorbell or kettle heard at the same
+    /// time can fall to rank four or lower. Filtering by catalog membership
+    /// instead of by rank means it is still reported.
+    public static func matchingObservations(
+        from candidates: some Sequence<(identifier: String, confidence: Double)>,
+        minimumConfidence: Double,
+        timestamp: TimeInterval
+    ) -> [SoundObservation] {
+        let known = identifiers
+        return candidates
+            .filter { known.contains($0.identifier) && $0.confidence >= minimumConfidence }
+            .map { SoundObservation(identifier: $0.identifier, confidence: $0.confidence, timestamp: timestamp) }
+    }
 }
 
 /// One classifier reading: "this window sounds like X with confidence c".

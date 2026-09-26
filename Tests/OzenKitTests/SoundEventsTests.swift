@@ -28,6 +28,32 @@ struct SoundEventsTests {
         #expect(SoundEventCatalog.event(for: "door_bell")?.name == "פעמון דלת")
     }
 
+    @Test("a classifier window's candidates are kept by catalog membership, not by rank, so a doorbell buried under speech and chatter still gets through")
+    func matchingObservationsIgnoresRank() {
+        let candidates: [(identifier: String, confidence: Double)] = [
+            ("speech", 0.95),
+            ("chatter", 0.85),
+            ("singing", 0.7),
+            ("whispering", 0.65),
+            ("door_bell", 0.62),
+        ]
+        let observations = SoundEventCatalog.matchingObservations(from: candidates, minimumConfidence: 0.6, timestamp: 42)
+        #expect(observations.map(\.identifier) == ["door_bell"])
+        #expect(observations.first?.confidence == 0.62)
+        #expect(observations.first?.timestamp == 42)
+    }
+
+    @Test("several catalog sounds in the same window are all kept, and a candidate below the floor is dropped even if it's a catalog sound")
+    func matchingObservationsRespectsConfidenceFloor() {
+        let candidates: [(identifier: String, confidence: Double)] = [
+            ("door_bell", 0.7),
+            ("smoke_detector", 0.61),
+            ("cat", 0.2),
+        ]
+        let observations = SoundEventCatalog.matchingObservations(from: candidates, minimumConfidence: 0.6, timestamp: 1)
+        #expect(Set(observations.map(\.identifier)) == ["door_bell", "smoke_detector"])
+    }
+
     @Test("importance orders critical above high above medium above low")
     func importanceOrdering() {
         #expect(SoundEvent.Importance.critical > .high)
