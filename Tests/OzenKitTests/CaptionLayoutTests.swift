@@ -48,6 +48,18 @@ struct CaptionLayoutTests {
         #expect(shown.replacingOccurrences(of: mark, with: "") == CaptionLayout.readableText(long))
     }
 
+    @Test("trailing punctuation after a Latin word or a digit gets a mark of its own, anchoring it at the line's end")
+    func trailingPunctuationAnchored() {
+        let mark = "\u{200F}"
+        #expect(CaptionLayout.displayText("תתקשר ב-WhatsApp.").hasSuffix(mark))
+        #expect(CaptionLayout.displayText("התרופה היא Acamol!").hasSuffix(mark))
+        #expect(CaptionLayout.displayText("בדקו ב-WhatsApp)").hasSuffix(mark))
+        // Punctuation after a Hebrew word needs no trailing mark: it's
+        // already anchored by the paragraph's own right-to-left context.
+        #expect(!CaptionLayout.displayText("מה שלומך?").hasSuffix(mark))
+        #expect(!CaptionLayout.displayText("שלום").hasSuffix(mark))
+    }
+
     @Test("a left-to-right language is shown exactly as laid out")
     func leftToRightUntouched() {
         #expect(CaptionLayout.displayText("OK, see you tomorrow.", languageCode: "en") == "OK, see you tomorrow.")

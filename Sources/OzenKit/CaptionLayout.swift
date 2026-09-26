@@ -52,11 +52,33 @@ public enum CaptionLayout {
         guard isRightToLeft(languageCode: languageCode) else { return text }
         return text
             .split(separator: "\n", omittingEmptySubsequences: false)
-            .map { rightToLeftMark + $0 }
+            .map { rightToLeftMark + anchorTrailingPunctuation(String($0)) }
             .joined(separator: "\n")
     }
 
     static let rightToLeftMark = "\u{200F}"
+
+    /// Neutral punctuation ending a right-to-left paragraph (UAX #9) takes
+    /// its direction from the run before it. After a Latin word or a
+    /// digit ("WhatsApp.", "Acamol!") that resolves left to right, so the
+    /// mark visually jumps to the wrong side of those characters instead
+    /// of staying at the line's true end. A trailing mark, flanking the
+    /// punctuation with right-to-left context on both sides, anchors it
+    /// where it belongs.
+    private static func anchorTrailingPunctuation(_ line: String) -> String {
+        let neutralEnders: Set<Character> = [".", "!", "?", ")", ":"]
+        guard let last = line.last, neutralEnders.contains(last) else { return line }
+        var beforeMarks = line.endIndex
+        while beforeMarks > line.startIndex, neutralEnders.contains(line[line.index(before: beforeMarks)]) {
+            beforeMarks = line.index(before: beforeMarks)
+        }
+        guard beforeMarks > line.startIndex else { return line }
+        let character = line[line.index(before: beforeMarks)]
+        guard character.isLetter || character.isNumber,
+              let scalar = character.unicodeScalars.first, !isRightToLeftLetter(scalar)
+        else { return line }
+        return line + rightToLeftMark
+    }
 
     /// Whether `text` would be laid out left to right on its own: its first
     /// letter (skipping digits, spaces and punctuation, which have no
