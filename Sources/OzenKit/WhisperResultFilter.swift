@@ -88,7 +88,7 @@ public struct WhisperResultFilter: Sendable, Equatable {
     public static let defaultKnownHallucinations: Set<String> = [
         "תודה שצפיתם", "תודה על הצפייה", "תודה על הצפיה", "תודה שהאזנתם",
         "כתוביות", "תרגום", "תרגום וכתוביות", "כתוביות על ידי", "תרגום על ידי",
-        "מוזיקה", "שירה", "צחוק", "מחיאות כפיים",
+        "מחיאות כפיים",
         // English leaks through even with the language forced to Hebrew.
         "thanks for watching", "thank you for watching",
         "subtitles by the amara.org community", "subtitles by", "you",
@@ -103,6 +103,11 @@ public struct WhisperResultFilter: Sendable, Equatable {
 
     public static let defaultAmbiguousHallucinations: Set<String> = [
         "תודה", "תודה רבה", "תודה לכם", "thank you",
+        // The sound tags Whisper writes on music and laughter, but also
+        // words people say, and Shira is a common girl's name: "שירה!"
+        // called across the room was dropped however clearly it was heard.
+        // In brackets they are still always tags (see `isBracketed`).
+        "מוזיקה", "שירה", "צחוק",
         // Unlike the subscribe lines above, a real farewell could
         // plausibly sound like this, so it only drops when the model was
         // also unsure of itself.
@@ -215,7 +220,7 @@ public struct WhisperResultFilter: Sendable, Equatable {
         if Self.normalize(text).isEmpty { return false }
         if isKnownHallucination(text) { return false }
         if ambiguousHallucinations.contains(Self.normalize(text)),
-           segment.noSpeechProb > ambiguousNoSpeechThreshold || segment.avgLogprob < ambiguousLogprobThreshold {
+           Self.isBracketed(text) || segment.noSpeechProb > ambiguousNoSpeechThreshold || segment.avgLogprob < ambiguousLogprobThreshold {
             return false
         }
         // The reference implementation only treats "no speech" as decisive
@@ -226,6 +231,13 @@ public struct WhisperResultFilter: Sendable, Equatable {
         }
         if segment.compressionRatio > compressionRatioThreshold { return false }
         return true
+    }
+
+    /// "[מוזיקה]", "(צחוק)": Whisper's way of labelling a sound. Nobody's
+    /// speech comes out in brackets.
+    static func isBracketed(_ text: String) -> Bool {
+        guard let first = text.first, let last = text.last else { return false }
+        return (first == "[" && last == "]") || (first == "(" && last == ")")
     }
 
     /// Case-, punctuation- and bracket-insensitive lookup, so "[toda raba]",

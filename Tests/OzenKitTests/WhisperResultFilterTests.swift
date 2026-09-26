@@ -188,6 +188,17 @@ struct WhisperResultFilterTests {
         #expect(filter.accepts(segment("תודה!", noSpeech: 0.1, logprob: -0.5)))
     }
 
+    @Test("'Shira' called across the room, or 'music' and 'laughter' said aloud, are kept when heard clearly; as bracketed sound tags or barely heard they go")
+    func soundTagWordsSaidAloud() {
+        #expect(filter.accepts(segment("שירה!")))
+        #expect(filter.accepts(segment("מוזיקה.")))
+        #expect(filter.accepts(segment("צחוק")))
+        #expect(!filter.accepts(segment("(צחוק)")))
+        #expect(!filter.accepts(segment("[שירה]")))
+        #expect(!filter.accepts(segment("שירה", noSpeech: 0.5, logprob: -0.4)))
+        #expect(!filter.accepts(segment("מוזיקה", noSpeech: 0.1, logprob: -1.2)))
+    }
+
     @Test("'toda raba' (thank you very much) that the model barely heard or guessed at is dropped as invented")
     func doubtfulThanksDropped() {
         #expect(!filter.accepts(segment("תודה רבה.", noSpeech: 0.45, logprob: -0.4)))

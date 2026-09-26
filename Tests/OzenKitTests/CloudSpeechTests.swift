@@ -49,7 +49,8 @@ struct CloudSpeechTests {
     @Test("lines speech models are known to invent are dropped")
     func inventedLines() {
         #expect(CloudSpeech.turns(in: "A: תודה שצפיתם").isEmpty)
-        #expect(CloudSpeech.turns(in: "A: מוזיקה\nB: בואו נאכל") == ["בואו נאכל"])
+        #expect(CloudSpeech.turns(in: "A: תודה על הצפייה\nB: בואו נאכל") == ["בואו נאכל"])
+        #expect(CloudSpeech.turns(in: "A: שירה!\nB: בואו נאכל") == ["שירה!", "בואו נאכל"])
     }
 
     @Test("a phrase said over and over is shortened")
