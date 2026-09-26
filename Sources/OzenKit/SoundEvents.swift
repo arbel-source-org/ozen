@@ -69,6 +69,14 @@ public enum SoundEventCatalog {
             SoundEvent(identifier: "alarm_clock", name: tr("שעון מעורר", "Alarm clock"), importance: .high, systemImage: "alarm.fill"),
             SoundEvent(identifier: "dog_bark", name: tr("כלב נובח", "Dog barking"), importance: .high, systemImage: "dog.fill"),
             SoundEvent(identifier: "dog_growl", name: tr("כלב נוהם", "Dog growling"), importance: .high, systemImage: "dog"),
+            // A kettle can rumble ("boiling") or whistle ("whistling") --
+            // two different classifier labels for the same stove hazard, so
+            // they share a name and, in `SoundEventPolicy`, a cooldown, the
+            // same way "telephone_bell_ringing" and "ringtone" do above.
+            // Left at `.medium` this was silenced under "Important and
+            // above", the default a family is likely to pick.
+            SoundEvent(identifier: "boiling", name: tr("מים רותחים", "Boiling water"), importance: .high, systemImage: "drop.triangle.fill"),
+            SoundEvent(identifier: "whistling", name: tr("מים רותחים", "Kettle whistling"), importance: .high, systemImage: "drop.triangle.fill"),
             SoundEvent(identifier: "dog_howl", name: tr("כלב מיילל", "Dog howling"), importance: .medium, systemImage: "dog"),
             SoundEvent(identifier: "thunder", name: tr("רעם", "Thunder"), importance: .medium, systemImage: "cloud.bolt.fill"),
             SoundEvent(identifier: "thunderstorm", name: tr("סופת רעמים", "Thunderstorm"), importance: .medium, systemImage: "cloud.bolt.rain.fill"),
@@ -79,7 +87,6 @@ public enum SoundEventCatalog {
             SoundEvent(identifier: "telephone", name: tr("טלפון", "Phone"), importance: .medium, systemImage: "phone"),
             SoundEvent(identifier: "beep", name: tr("צפצוף", "Beep"), importance: .medium, systemImage: "waveform.path"),
             SoundEvent(identifier: "microwave_oven", name: tr("מיקרוגל", "Microwave"), importance: .medium, systemImage: "microwave.fill"),
-            SoundEvent(identifier: "boiling", name: tr("מים רותחים", "Boiling water"), importance: .medium, systemImage: "drop.triangle.fill"),
             SoundEvent(identifier: "water_tap_faucet", name: tr("ברז פתוח", "Running tap"), importance: .medium, systemImage: "drop"),
             SoundEvent(identifier: "dog_whimper", name: tr("כלב מייבב", "Dog whimpering"), importance: .low, systemImage: "dog"),
             SoundEvent(identifier: "door_sliding", name: tr("דלת הזזה", "Sliding door"), importance: .low, systemImage: "door.sliding.left.hand.open"),
@@ -251,7 +258,7 @@ public struct SoundEventPolicy: Sendable, Equatable {
     /// other identifier, including `smoke_detector`, alerts on its first
     /// window as before.
     static let sustainedIdentifiers: Set<String> = [
-        "civil_defense_siren", "siren", "boiling", "water_tap_faucet",
+        "civil_defense_siren", "siren", "boiling", "whistling", "water_tap_faucet",
     ]
 
     public init(

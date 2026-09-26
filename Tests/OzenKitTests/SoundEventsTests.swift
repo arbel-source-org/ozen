@@ -174,6 +174,21 @@ struct SoundEventsTests {
         let yell = policy.evaluate(reading("yell", at: 205))
         #expect(shout != nil)
         #expect(yell == nil)
+
+        let boiling = policy.evaluate(reading("boiling", at: 300))
+        let whistling = policy.evaluate(reading("whistling", at: 305))
+        #expect(boiling != nil)
+        #expect(whistling == nil)
+    }
+
+    @Test("a whistling kettle is a real classifier label, distinct from boiling, and both are important enough not to be silenced by default")
+    func whistlingKettle() {
+        #expect(SoundEventCatalog.event(for: "whistling")?.importance == .high)
+        #expect(SoundEventCatalog.event(for: "boiling")?.importance == .high)
+
+        var policy = SoundEventPolicy(preferences: SoundAlertPreferences(minimumImportance: .high))
+        #expect(policy.evaluate(reading("whistling", at: 1))?.event.identifier == "whistling")
+        #expect(policy.evaluate(reading("boiling", at: 100))?.event.identifier == "boiling")
     }
 
     @Test("a banner gives way only to an alert at least as important")
