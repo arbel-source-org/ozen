@@ -57,6 +57,9 @@ public final class LiveCaptionViewModel {
     private let withdrawNotification: ((String) -> Void)?
     /// Tells her when captions stop while the phone is put away.
     private var stoppedCaptions = StoppedCaptionsNotice()
+    /// Tells her when the first-time model download pauses because the
+    /// phone was put away.
+    private var downloadBackgrounded = DownloadBackgroundedNotice()
     private let phoneCalls: PhoneCallMonitor?
     /// A call ended while iOS still holds the microphone for it.
     private var callEndedDuringInterruption = false
@@ -223,6 +226,7 @@ public final class LiveCaptionViewModel {
                 }
                 self?.holdCaptionsIfStillSpeaking()
                 self?.checkCaptionsStillRunning()
+                self?.checkDownloadBackgrounded()
                 self?.refreshLockScreen()
             }
         }
@@ -367,6 +371,7 @@ public final class LiveCaptionViewModel {
         // see; putting the phone away with them still stopped is when she
         // needs telling, and no pipeline event will come along to say so.
         checkCaptionsStillRunning()
+        checkDownloadBackgrounded()
         // After a phone call iOS may never say the interruption ended.
         // Back on screen, try to take the microphone back: if that works
         // the call is over, and captions (and automatic recovery) resume.
@@ -477,6 +482,24 @@ public final class LiveCaptionViewModel {
             callEndedDuringInterruption: callEndedDuringInterruption
         )
         switch stoppedCaptions.update(for: cause, appIsActive: isAppActive, isEnabled: settings.notifyWhenInBackground) {
+        case .post(let content)?:
+            postNotification?(content)
+        case .withdraw(let identifier)?:
+            withdrawNotification?(identifier)
+        case nil:
+            break
+        }
+    }
+
+    /// Posts or withdraws the "download paused" notification to match
+    /// whether the model download is running now (see
+    /// `DownloadBackgroundedNotice`).
+    private func checkDownloadBackgrounded() {
+        switch downloadBackgrounded.update(
+            isDownloading: DownloadBackgroundedNotice.isDownloading(pipeline.phase),
+            appIsActive: isAppActive,
+            isEnabled: settings.notifyWhenInBackground
+        ) {
         case .post(let content)?:
             postNotification?(content)
         case .withdraw(let identifier)?:
