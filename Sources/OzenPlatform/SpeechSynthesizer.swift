@@ -18,8 +18,9 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
     public var isBusy: Bool { synthesizer.isSpeaking }
     /// Whether any Hebrew voice is installed at all; without one iOS
     /// falls back to a voice that mangles Hebrew, and the UI should say so.
-    /// False for the first moment after launch, until the voices are read.
-    public private(set) var hasHebrewVoice = false
+    /// Assumed true until the voices are read: Hebrew speech is held back
+    /// without one, and a phrase tapped right after launch went silent.
+    public private(set) var hasHebrewVoice = true
 
     public var onSpeakingChanged: (@MainActor (Bool) -> Void)?
 
@@ -64,7 +65,11 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
             }.value
             guard let self else { return }
             if let english = identifiers.1 { self.englishVoice = AVSpeechSynthesisVoice(identifier: english) }
-            guard let identifier = identifiers.0, let voice = AVSpeechSynthesisVoice(identifier: identifier) else { return }
+            guard let identifier = identifiers.0, let voice = AVSpeechSynthesisVoice(identifier: identifier) else {
+                self.voice = nil
+                self.hasHebrewVoice = false
+                return
+            }
             self.voice = voice
             self.hasHebrewVoice = voice.language == languageCode
         }
