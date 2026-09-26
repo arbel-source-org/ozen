@@ -17,6 +17,8 @@ import Foundation
 public enum HomeServer {
     public static let protocolVersion = 1
     public static let defaultPort = 8765
+    static let noAddress = "no valid server address"
+    static let noCode = "no pairing code"
 
     /// "192.168.1.20", "grandma-pc:8765", "ws://…" or "wss://…" all work;
     /// a bare host gets the default port and plain `ws`.
@@ -105,6 +107,27 @@ public struct HomeServerPairing: Sendable, Equatable {
         parts.host = "pair"
         parts.queryItems = [URLQueryItem(name: "address", value: address), URLQueryItem(name: "code", value: code)]
         return parts.url!
+    }
+}
+
+/// The answer to "Test connection" in the home computer's settings.
+public enum HomeServerCheck: Sendable, Equatable {
+    case connected(milliseconds: Int)
+    case codeRefused
+    case unreachable
+    case notSetUp
+
+    public init(availability: EngineAvailability, seconds: Double) {
+        switch availability {
+        case .available:
+            self = .connected(milliseconds: max(0, Int((seconds * 1000).rounded())))
+        case .unavailable(let why):
+            switch why.kind {
+            case .homeServerRejected: self = why.detail == HomeServer.noCode ? .notSetUp : .codeRefused
+            case .homeServerUnreachable: self = why.detail == HomeServer.noAddress ? .notSetUp : .unreachable
+            default: self = .unreachable
+            }
+        }
     }
 }
 

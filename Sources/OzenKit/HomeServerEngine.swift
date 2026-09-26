@@ -188,10 +188,10 @@ public actor HomeServerEngine: TranscriptionEngine {
 
     private func destination() -> Result<(url: URL, token: String), EngineUnavailability> {
         guard let url = HomeServer.url(from: address) else {
-            return .failure(.homeServerUnreachable("no valid server address"))
+            return .failure(.homeServerUnreachable(HomeServer.noAddress))
         }
         guard let token = token(), !token.isEmpty else {
-            return .failure(.homeServerRejected("no pairing code"))
+            return .failure(.homeServerRejected(HomeServer.noCode))
         }
         return .success((url, token))
     }

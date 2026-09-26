@@ -28,6 +28,8 @@ struct SettingsView: View {
     @State private var homeServerAddressDraft = ""
     @State private var homeServerCodeDraft = ""
     @State private var hasHomeServerCode = HomeServerCodeStore.hasKey
+    @State private var homeServerCheck: HomeServerCheck?
+    @State private var isCheckingHomeServer = false
     @State private var homeServerCodeSaveFailed = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -301,7 +303,10 @@ struct SettingsView: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .onSubmit(saveHomeServerAddress)
-                .onAppear { homeServerAddressDraft = viewModel.settings.homeServerAddress }
+                .onAppear {
+                    homeServerAddressDraft = viewModel.settings.homeServerAddress
+                    hasHomeServerCode = HomeServerCodeStore.hasKey
+                }
             if homeServerAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines) != viewModel.settings.homeServerAddress {
                 Button(tr("שמירת הכתובת", "Save address"), action: saveHomeServerAddress)
             }
@@ -324,6 +329,28 @@ struct SettingsView: View {
                 Label(tr("הקוד לא נשמר. נסו שוב.", "The code wasn’t saved. Try again."), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
             }
+            if hasHomeServerCode, HomeServer.url(from: viewModel.settings.homeServerAddress) != nil {
+                Button {
+                    isCheckingHomeServer = true
+                    homeServerCheck = nil
+                    Task {
+                        homeServerCheck = await viewModel.checkHomeServer()
+                        isCheckingHomeServer = false
+                    }
+                } label: {
+                    HStack {
+                        Text(tr("בדיקת חיבור", "Test connection"))
+                        if isCheckingHomeServer {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isCheckingHomeServer)
+                if let homeServerCheck {
+                    homeServerCheckLabel(homeServerCheck)
+                }
+            }
             if hasHomeServerCode {
                 Button(tr("מחיקת הקוד", "Delete code"), role: .destructive) {
                     HomeServerCodeStore.remove()
@@ -334,7 +361,25 @@ struct SettingsView: View {
         } header: {
             Text(tr("המחשב בבית", "Home computer"))
         } footer: {
-            Text(tr("הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד.", "The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself."))
+            Text(tr("הדרך הקלה: מצלמת האייפון על קוד ה‑QR שהמחשב מציג, והכול מתמלא לבד. הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד.", "The easy way: point the iPhone’s Camera at the QR code the computer shows, and everything fills in by itself. The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself."))
+        }
+    }
+
+    @ViewBuilder
+    private func homeServerCheckLabel(_ check: HomeServerCheck) -> some View {
+        switch check {
+        case .connected(let milliseconds):
+            Label(tr("מחובר: המחשב ענה תוך \(milliseconds) אלפיות שנייה", "Connected: the computer answered in \(milliseconds) ms"), systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        case .codeRefused:
+            Label(tr("המחשב ענה, אבל לא קיבל את הקוד. סרקו שוב את קוד ה‑QR או הקלידו את הקוד מחדש.", "The computer answered but didn’t accept the code. Scan the QR code again or retype the code."), systemImage: "key.slash")
+                .foregroundStyle(.red)
+        case .unreachable:
+            Label(tr("אין תשובה מהמחשב. בדקו שהוא דלוק ומחובר לאינטרנט.", "No answer from the computer. Check that it’s on and connected to the internet."), systemImage: "desktopcomputer.trianglebadge.exclamationmark")
+                .foregroundStyle(.orange)
+        case .notSetUp:
+            Label(tr("חסרים כתובת או קוד", "The address or code is missing"), systemImage: "questionmark.circle")
+                .foregroundStyle(.secondary)
         }
     }
 

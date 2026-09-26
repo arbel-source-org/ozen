@@ -111,6 +111,20 @@ struct HomeServerEngineTests {
         #expect(HomeServerPairing(address: "10.0.0.5", code: "two words") == nil)
     }
 
+    @Test("Test connection says connected with the time it took, a refused code, no answer, or nothing set up yet")
+    func connectionCheck() async {
+        let ok = await engine(ScriptedSocket(helloReply: ready)).checkAvailability(languageCode: "he")
+        #expect(HomeServerCheck(availability: ok, seconds: 0.0424) == .connected(milliseconds: 42))
+        let refused = await engine(ScriptedSocket(helloReply: #"{"type":"error","code":"unauthorized","detail":""}"#)).checkAvailability(languageCode: "he")
+        #expect(HomeServerCheck(availability: refused, seconds: 0.1) == .codeRefused)
+        let silent = await engine(ScriptedSocket(helloReply: nil)).checkAvailability(languageCode: "he")
+        #expect(HomeServerCheck(availability: silent, seconds: 0.3) == .unreachable)
+        let noCode = await engine(ScriptedSocket(helloReply: ready), token: nil).checkAvailability(languageCode: "he")
+        #expect(HomeServerCheck(availability: noCode, seconds: 0) == .notSetUp)
+        let noAddress = await engine(ScriptedSocket(helloReply: ready), address: "").checkAvailability(languageCode: "he")
+        #expect(HomeServerCheck(availability: noAddress, seconds: 0) == .notSetUp)
+    }
+
     @Test("audio goes out as little-endian 16-bit samples, clipped, with a broken sample sent as silence")
     func pcm() {
         let bytes = [UInt8](HomeServer.pcm16([0, 1, -1, 2, .nan]))

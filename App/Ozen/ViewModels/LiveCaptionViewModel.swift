@@ -862,6 +862,22 @@ public final class LiveCaptionViewModel {
         return true
     }
 
+    /// "Test connection": says hello to the saved address with the saved
+    /// code, the way captions would, and times the answer.
+    public func checkHomeServer() async -> HomeServerCheck {
+        let engine = HomeServerEngine(
+            address: settings.homeServerAddress,
+            token: { HomeServerCodeStore.read() },
+            connector: URLSessionHomeServerConnector()
+        )
+        let clock = ContinuousClock()
+        let start = clock.now
+        let availability = await engine.checkAvailability(languageCode: settings.languageCode)
+        let elapsed = start.duration(to: clock.now)
+        let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+        return HomeServerCheck(availability: availability, seconds: seconds)
+    }
+
     /// The home server's pairing code was saved or removed in Settings.
     public func homeServerCodeChanged() async {
         if settings.engine == .homeServer {
