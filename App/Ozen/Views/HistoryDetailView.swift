@@ -219,6 +219,8 @@ struct HistoryDetailView: View {
         }
         .navigationTitle(record?.title ?? tr("שיחה", "Conversation"))
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { viewModel.historyOpened(sessionID) }
+        .onDisappear { viewModel.historyClosed(sessionID) }
         .toolbar { toolbarContent }
         .alert(tr("שם לשיחה", "Conversation name"), isPresented: $renaming) {
             TextField(tr("למשל: ביקור אצל הרופא", "For example: doctor’s visit"), text: $newTitle)

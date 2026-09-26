@@ -1057,6 +1057,18 @@ public final class LiveCaptionViewModel {
         }
     }
 
+    /// Saved conversations open on screen right now (`HistoryDetailView`),
+    /// which the retention sweep leaves alone while she reads them.
+    @ObservationIgnored private var openedHistoryIDs: Set<UUID> = []
+
+    public func historyOpened(_ id: UUID) {
+        openedHistoryIDs.insert(id)
+    }
+
+    public func historyClosed(_ id: UUID) {
+        openedHistoryIDs.remove(id)
+    }
+
     /// Deletes saved conversations the retention setting says have expired,
     /// off the main thread and after any save in flight. The conversations
     /// still on screen are never touched. Returns how many were deleted.
@@ -1065,7 +1077,7 @@ public final class LiveCaptionViewModel {
         lastRetentionCheck = now
         let retention = settings.historyRetention
         guard retention != .forever else { return 0 }
-        let onScreen = Set([historySessionID] + closedHistorySessions.map(\.id))
+        let onScreen = Set([historySessionID] + closedHistorySessions.map(\.id)).union(openedHistoryIDs)
         let writer = historyWriter
         return await Task.detached(priority: .utility) {
             writer.deleteExpiredNow(retention: retention, now: now, protecting: onScreen)
@@ -1537,6 +1549,10 @@ public final class LiveCaptionViewModel {
 
     /// Names a saved conversation, in order with any autosave in flight.
     public func renameConversation(id: UUID, title: String) {
+        // The conversation still going may not have reached the disk yet
+        // (the first autosave comes after 20 s), and a name given to a
+        // conversation that isn't saved would be dropped without a word.
+        if id == historySessionID { persistHistory(ended: false) }
         historyWriter.renameNow(id: id, title: title)
         refreshSavingTrouble()
     }

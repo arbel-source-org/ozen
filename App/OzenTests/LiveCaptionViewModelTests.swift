@@ -1487,6 +1487,32 @@ struct LiveCaptionViewModelHistoryRetentionTests {
         #expect(left.count == 2)
         #expect(!left.contains(old.id))
         #expect(left.contains(oldStarred.id))
+
+        let reading = oldRecord(starred: false)
+        try history.save(reading)
+        viewModel.historyOpened(reading.id)
+        #expect(await viewModel.deleteExpiredHistory(now: now + 60 * day) == 0)
+        viewModel.historyClosed(reading.id)
+        #expect(await viewModel.deleteExpiredHistory(now: now + 60 * day) == 1)
+    }
+
+    @Test("a name given to the conversation still going sticks, even before its first autosave")
+    func nameBeforeFirstSave() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-rename-\(UUID())", isDirectory: true)
+        let store = SettingsStore(fileURL: directory.appendingPathComponent("settings.json"))
+        let history = TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "הרופא אמר", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        await eventually { !viewModel.segments.isEmpty }
+        let id = try #require(viewModel.savedConversationID(holdingLineAt: 0))
+        #expect(history.load(id: id) == nil)
+        viewModel.renameConversation(id: id, title: "ביקור")
+        viewModel.persistHistory(ended: true)
+        viewModel.waitForHistorySaves()
+        #expect(history.load(id: id)?.title == "ביקור")
     }
 }
 
