@@ -83,6 +83,25 @@ final class FakeAudioCapturer: AudioCapturing {
     }
 }
 
+/// Holds a `FakeEngine.prepare()` call suspended until a test releases it,
+/// so an in-flight preparation can be driven from outside with no guessing
+/// about scheduling order.
+actor PrepareGate {
+    private var isOpen = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        if isOpen { return }
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func open() {
+        isOpen = true
+        waiters.forEach { $0.resume() }
+        waiters.removeAll()
+    }
+}
+
 /// Scripted engine: the test hands it an availability answer, optional
 /// progress updates to emit during `prepare`, and a channel to push tokens
 /// through. Also records how many times it was constructed via the factory
@@ -94,6 +113,10 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
     /// Runs on the main actor in the middle of `prepare`, so a test can
     /// inspect pipeline state at that exact moment.
     var duringPrepare: (@MainActor () -> Void)?
+    /// Parks `prepare` right after it starts, until the test opens it, so a
+    /// test can hold one preparation genuinely in flight while it drives
+    /// the pipeline from outside.
+    var prepareGate: PrepareGate?
     /// Megabytes `prepare` would still download; nil when the model is there.
     var pendingDownload: Int?
     private(set) var prepareCount = 0
@@ -119,6 +142,7 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
         progress: @escaping @Sendable (EnginePreparationProgress) -> Void
     ) async -> EngineAvailability {
         lock.withLock { prepareCount += 1 }
+        await prepareGate?.wait()
         for update in progressUpdates {
             progress(update)
             await Task.yield()
@@ -987,6 +1011,35 @@ struct CaptionPipelineLifecycleTests {
         await first.value
 
         #expect(pipeline.phase == .listening)
+    }
+
+    @Test("a preparation stop() left running is never joined by a second one, so two models are never loading at once")
+    func abandonedPreparationIsNeverDoubled() async {
+        let slow = FakeEngine()
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: slow])
+        let first = Task { await pipeline.start(settings: .default) }
+        // Wait for the first run to genuinely reach the engine's prepare()
+        // call, then abandon it without waiting for it to finish.
+        while slow.prepareCount == 0 { await Task.yield() }
+        pipeline.stop()
+        // stop() cannot cancel the engine's own preparation (it has no way
+        // to), so it is still parked at the gate here. A second start must
+        // decline to begin its own rather than load the model again
+        // alongside it. The gate stays closed for now, so a second prepare()
+        // call would be stuck right here too, not yet counted -- give it
+        // every chance to reach that point before checking.
+        let second = Task { await pipeline.start(settings: .default) }
+        for _ in 0..<50 { await Task.yield() }
+        #expect(slow.prepareCount == 1)
+
+        // Opening it now (whatever the outcome) lets both tasks finish
+        // instead of leaving one stuck forever.
+        await gate.open()
+        await first.value
+        await second.value
+        #expect(slow.prepareCount == 1)
     }
 }
 

@@ -165,6 +165,14 @@ public final class CaptionPipeline {
     /// earlier run (a progress callback arriving after a restart, say)
     /// compare against it and drop themselves instead of clobbering state.
     private var runID = UUID()
+    /// Set for as long as `engine.prepare()` is actually running, even
+    /// after `stop()`/`restart()` abandons that run: `prepare()` has no way
+    /// to cancel a model download or load already under way, so it keeps
+    /// using memory until it finishes on its own. A new `start()` declines
+    /// to begin a second one alongside it — two multi-hundred-megabyte
+    /// models loading at once is exactly the kind of memory pressure iOS
+    /// kills apps over.
+    private var isPreparingEngine = false
     private var recovery: AutoRecoveryPolicy
     /// Notices capture that died while the screen still says "listening".
     private var audioWatchdog: AudioStallWatchdog
@@ -229,7 +237,7 @@ public final class CaptionPipeline {
     }
 
     public func start(settings: AppSettings) async {
-        guard !phase.isListening, !phase.isTransitioning else { return }
+        guard !phase.isListening, !phase.isTransitioning, !isPreparingEngine else { return }
         cancelScheduledRetry()
         let run = UUID()
         runID = run
@@ -320,6 +328,7 @@ public final class CaptionPipeline {
                 return
             }
         }
+        isPreparingEngine = true
         let availability = await engine.prepare(languageCode: settings.languageCode) { [weak self] progress in
             Task { @MainActor [weak self] in
                 guard let self, self.runID == run, case .preparingEngine(let shown) = self.phase else { return }
@@ -330,6 +339,7 @@ public final class CaptionPipeline {
                 self.trackDownload(progress, at: time)
             }
         }
+        isPreparingEngine = false
         guard runID == run else { return }
         if case .unavailable(let why) = availability {
             fail(.engineUnavailable, detail: why.detail, engineUnavailability: why)
