@@ -67,6 +67,10 @@ struct TypeToSpeakView: View {
                         QuickPhrasesEditor(viewModel: viewModel)
                     }
                 }
+                // Without edit mode the editor's rows had no delete or move
+                // handles: reordering needed a hidden long-press drag, and
+                // VoiceOver offered no way to move a phrase at all.
+                .environment(\.editMode, .constant(editingPhrases ? .active : .inactive))
             }
             .navigationTitle(tr("להגיד משהו", "Say something"))
             .navigationBarTitleDisplayMode(.inline)

@@ -227,6 +227,29 @@ final class OzenScreenshotUITests: XCTestCase {
         }
     }
 
+    /// "Edit" on the quick phrases must show real delete and move handles.
+    /// Before, it only listed the phrases: moving one needed a hidden
+    /// long-press drag and VoiceOver could not move them at all.
+    func testQuickPhraseEditorShowsHandles() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "hebrewDefault"]
+        app.launch()
+
+        let typeToSpeakButton = app.descendants(matching: .any)["typeToSpeakButton"]
+        XCTAssertTrue(typeToSpeakButton.waitForExistence(timeout: 10), "type to speak: the button to open it never appeared")
+        typeToSpeakButton.tap()
+
+        let editButton = app.buttons["עריכה"]
+        XCTAssertTrue(editButton.waitForExistence(timeout: 10), "quick phrases: the Edit button never appeared")
+        editButton.tap()
+
+        let handles = NSPredicate(format: "label BEGINSWITH[c] 'Delete' OR label BEGINSWITH[c] 'Remove' OR label BEGINSWITH 'מחיקה' OR label BEGINSWITH 'מחק' OR label BEGINSWITH 'הסר' OR label BEGINSWITH[c] 'Reorder' OR label BEGINSWITH 'סידור'")
+        let handle = app.buttons.matching(handles).firstMatch
+        let found = handle.waitForExistence(timeout: 10)
+        capture(app, name: "quick-phrases-editing")
+        XCTAssertTrue(found, "quick phrases: Edit showed no delete or move handles; buttons: \(app.buttons.allElementsBoundByIndex.prefix(40).map(\.label))")
+    }
+
     /// Screens reached only through Settings' navigation links, or from
     /// the microphone picker's own entry point on the caption screen --
     /// none of them ever screenshotted at the largest accessibility text
