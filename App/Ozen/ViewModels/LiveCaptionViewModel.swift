@@ -1311,8 +1311,20 @@ public final class LiveCaptionViewModel {
     /// The "who is this?" flow: tag an already-inferred cluster by name
     /// using one of its own segments, after the fact.
     public func nameSpeaker(of segment: TranscriptSegment, name: String) {
+        // The segment's own cluster may already carry a name (fixing a typo
+        // on an earlier tag): rename that saved profile instead of adding a
+        // second one for the same voice print.
+        let oldName = segment.speakerClusterID.flatMap { id in
+            pipeline.speakerClusters.first(where: { $0.id == id })?.name
+        }
         guard let centroid = pipeline.nameSpeaker(of: segment, name: name) else { return }
-        settings.speakerProfiles.append(SpeakerProfile(name: name, embedding: centroid))
+        if let oldName, settings.speakerProfiles.contains(where: { $0.name == oldName }) {
+            for index in settings.speakerProfiles.indices where settings.speakerProfiles[index].name == oldName {
+                settings.speakerProfiles[index].name = name
+            }
+        } else {
+            settings.speakerProfiles.append(SpeakerProfile(name: name, embedding: centroid))
+        }
         persist()
         speakerLabelsChanged()
     }

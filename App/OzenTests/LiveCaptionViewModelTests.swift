@@ -1370,6 +1370,20 @@ struct LiveCaptionViewModelDeleteConversationTests {
         #expect(history.load(id: earlier.id)?.segments.first?.speakerName == "Dr. Cohen")
     }
 
+    @Test("renaming an already-named speaker updates its saved profile instead of adding a duplicate")
+    func renamingSpeakerDoesNotDuplicateProfile() async throws {
+        let (viewModel, engine, _) = makeViewModel()
+        await viewModel.start()
+        await say("שלום", at: Date().timeIntervalSince1970, into: engine, until: viewModel, count: 1)
+
+        viewModel.nameSpeaker(of: viewModel.segments[0], name: "Dana")
+        #expect(viewModel.settings.speakerProfiles.count == 1)
+
+        viewModel.nameSpeaker(of: viewModel.segments[0], name: "Danna")
+        #expect(viewModel.settings.speakerProfiles.count == 1)
+        #expect(viewModel.settings.speakerProfiles.first?.name == "Danna")
+    }
+
     @Test("delete all also retires the conversation in progress")
     func deleteAllIncludesLive() async throws {
         let (viewModel, engine, history) = makeViewModel()
