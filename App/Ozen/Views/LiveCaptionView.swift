@@ -1193,11 +1193,13 @@ struct LiveCaptionView: View {
                     } else {
                         Image(systemName: current.systemImage)
                     }
-                    Text(current.title)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(statusIsNarrow ? 1 : 2)
-                        .minimumScaleFactor(statusIsNarrow ? 0.5 : 0.75)
-                        .multilineTextAlignment(.center)
+                    if !statusIsNarrow {
+                        Text(current.title)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.75)
+                            .multilineTextAlignment(.center)
+                    }
                 }
                 // "Loading the model" in plain yellow is close to invisible
                 // on the white theme.
@@ -1237,6 +1239,16 @@ struct LiveCaptionView: View {
         statusIsNarrow ? AnyLayout(VStackLayout(spacing: 2)) : AnyLayout(HStackLayout(spacing: 6))
     }
 
+    /// Narrow, the status button is its icon alone and this line says what
+    /// it means ("Listening · tap to pause"): even shrunk, the title only
+    /// fit as its first two letters.
+    private func statusLineText(_ current: PhasePresentation) -> Text {
+        let detail = Text(current.detail ?? "").foregroundStyle(.secondary)
+        guard statusIsNarrow else { return detail }
+        let title = Text(current.title).fontWeight(.semibold).foregroundStyle(current.tint.readable(on: theme.colorScheme))
+        return current.detail == nil ? title : title + Text(" · ").foregroundStyle(.secondary) + detail
+    }
+
     private func statusDetailGoesBelow(_ current: PhasePresentation) -> Bool {
         current.detail != nil && (statusIsNarrow || !current.detailFitsInStatus)
     }
@@ -1246,13 +1258,12 @@ struct LiveCaptionView: View {
     @ViewBuilder
     private var statusDetailLine: some View {
         let current = presentation
-        if let detail = current.detail, statusDetailGoesBelow(current) {
+        if statusIsNarrow || statusDetailGoesBelow(current) {
             Button {
                 perform(current.action)
             } label: {
-                Text(detail)
+                statusLineText(current)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
