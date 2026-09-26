@@ -319,6 +319,15 @@ struct HistoryDetailView: View {
 /// with its numbers standing out. "3 pills" means more with "the doctor" on it.
 private struct NumberLineLabel: View {
     let segment: SavedSegment
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    // The emphasized numbers use a fixed point size below; at accessibility
+    // Dynamic Type sizes the surrounding .body text grows well past that,
+    // leaving the numbers smaller than the sentence around them instead of
+    // standing out.
+    private var numberSize: Double {
+        dynamicTypeSize.isAccessibilitySize ? 34 : 17
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -330,12 +339,12 @@ private struct NumberLineLabel: View {
             Text(
                 caption: CaptionLayout.directed(segment.text),
                 emphasizingNumbers: true,
-                size: 17,
+                size: numberSize,
                 numberColor: nil
             )
             .font(.body)
             .foregroundStyle(.primary)
-            .lineLimit(2)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 6 : 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
