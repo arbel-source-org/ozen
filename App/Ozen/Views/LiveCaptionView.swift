@@ -742,7 +742,7 @@ struct LiveCaptionView: View {
                 Label(tr("שורות מוקדמות יותר נשמרו. הקישו כדי לקרוא אותן", "Earlier lines were saved. Tap to read them"), systemImage: "text.bubble")
                     .font(.system(size: max(15, liveDisplay.fontSize * 0.5), weight: .semibold))
                     .foregroundStyle(theme.chrome)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

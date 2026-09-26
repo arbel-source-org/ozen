@@ -487,6 +487,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+                .accessibilityHidden(true)
                 Slider(
                     value: $viewModel.display.fontSize,
                     in: DisplayPreferences.minimumFontSize...DisplayPreferences.maximumFontSize,
@@ -692,6 +693,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+                .accessibilityHidden(true)
                 Slider(value: $viewModel.speechRate, in: 0.2...0.7, step: 0.05)
                     .accessibilityLabel(tr("מהירות דיבור", "Speech rate"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speechRate))
@@ -702,6 +704,7 @@ struct SettingsView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
             }
             Button {
                 viewModel.speak("שלום, זה קול הטלפון. ככה אני נשמע.")
