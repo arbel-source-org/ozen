@@ -335,7 +335,7 @@ public final class CaptionPipeline {
             fail(.engineUnavailable, detail: why.detail, engineUnavailability: why)
             return
         }
-        await engine.setVocabulary(VocabularyHints.normalized(settings.vocabulary))
+        await engine.setVocabulary(primedVocabulary(userVocabulary: settings.vocabulary))
         guard runID == run else { return }
         currentEngine = engine
 
@@ -533,9 +533,18 @@ public final class CaptionPipeline {
 
     /// Replaces the keyword list without a restart; the deduplicator is
     /// reset so a newly added word can fire on a sentence still pending.
+    /// Also re-primes the running engine, since a word added, removed or
+    /// toggled here changes which alert phrases belong in its hint list.
     public func setKeywordAlerts(_ alerts: [KeywordAlert]) {
         keywordMatcher = KeywordAlertMatcher(alerts: alerts)
         keywordDeduplicator.forgetAll()
+        let userVocabulary = activeSettings?.vocabulary ?? []
+        Task { [weak self] in
+            guard let self else { return }
+            let terms = self.primedVocabulary(userVocabulary: userVocabulary)
+            guard let currentEngine = self.currentEngine, self.phase.isListening || self.phase == .paused else { return }
+            await currentEngine.setVocabulary(terms)
+        }
     }
 
     public func dismissSoundAlert(id: UUID) {
@@ -1121,7 +1130,15 @@ public final class CaptionPipeline {
         let cleaned = VocabularyHints.normalized(terms)
         activeSettings?.vocabulary = cleaned
         guard let currentEngine, phase.isListening || phase == .paused else { return }
-        await currentEngine.setVocabulary(cleaned)
+        await currentEngine.setVocabulary(primedVocabulary(userVocabulary: cleaned))
+    }
+
+    /// The engine hint list actually sent, merging in every enabled
+    /// keyword alert's phrase (see `VocabularyHints.combining`) — the
+    /// alert list changing (a word added, removed or toggled) also needs
+    /// this to be resent, not just the plain vocabulary list changing.
+    private func primedVocabulary(userVocabulary: [String]) -> [String] {
+        VocabularyHints.combining(vocabulary: userVocabulary, keywordAlerts: keywordMatcher.alerts)
     }
 
     private func trackDownload(_ progress: EnginePreparationProgress, at time: TimeInterval) {

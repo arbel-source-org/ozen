@@ -35,6 +35,33 @@ struct VocabularyTests {
         #expect(VocabularyHints.whisperPrompt(["אבי", "רותי "]) == "אבי, רותי.")
     }
 
+    @Test("an enabled keyword alert's phrase joins the vocabulary, a disabled one does not")
+    func combiningAddsEnabledAlertPhrases() {
+        let alerts = [
+            KeywordAlert(phrase: "סבתא"),
+            KeywordAlert(phrase: "אמבולנס", isEnabled: false),
+        ]
+        let combined = VocabularyHints.combining(vocabulary: ["רותי"], keywordAlerts: alerts)
+        #expect(combined == ["רותי", "סבתא"])
+    }
+
+    @Test("an alert phrase already in the vocabulary is not duplicated")
+    func combiningDoesNotDuplicate() {
+        let alerts = [KeywordAlert(phrase: "סבתא"), KeywordAlert(phrase: "  סבתא ")]
+        let combined = VocabularyHints.combining(vocabulary: ["סבתא", "רותי"], keywordAlerts: alerts)
+        #expect(combined == ["סבתא", "רותי"])
+    }
+
+    @Test("combining still respects the term cap and length clip")
+    func combiningRespectsCapAndLength() {
+        let long = String(repeating: "א", count: 100)
+        let combined = VocabularyHints.combining(vocabulary: [], keywordAlerts: [KeywordAlert(phrase: long)])
+        #expect(combined == [String(repeating: "א", count: VocabularyHints.maximumTermLength)])
+
+        let many = (0..<300).map { KeywordAlert(phrase: "שם\($0)") }
+        #expect(VocabularyHints.combining(vocabulary: [], keywordAlerts: many).count == VocabularyHints.maximumTerms)
+    }
+
     @Test("AppSettings cleans the vocabulary on construction so callers cannot store junk")
     func settingsNormalize() {
         var settings = AppSettings.default

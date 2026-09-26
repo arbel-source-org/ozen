@@ -39,6 +39,20 @@ public enum VocabularyHints {
         return terms.first { HebrewText.normalize($0).lowercased() == key }
     }
 
+    /// The terms to actually prime a recognizer with: the person's own
+    /// vocabulary list, plus every currently enabled keyword alert's phrase
+    /// that isn't on it already. A word saved only as an alert ("Grandma",
+    /// "Ambulance") is at least as important to get right as one saved to
+    /// the plain vocabulary list — missing it there is exactly the caption
+    /// the alert exists to catch — so it should not need to be typed twice
+    /// to help the recognizer spell it right. Alerts are appended after the
+    /// vocabulary so a name the reader chose to list on purpose keeps
+    /// priority if the combined list is over `maximumTerms`.
+    public static func combining(vocabulary: [String], keywordAlerts: [KeywordAlert]) -> [String] {
+        let alertPhrases = keywordAlerts.filter(\.isEnabled).map(\.phrase)
+        return normalized(vocabulary + alertPhrases)
+    }
+
     /// The text Whisper is primed with. A plain comma-separated list is
     /// what the model was trained to treat as "previous context": it
     /// biases spelling towards these forms without the model trying to

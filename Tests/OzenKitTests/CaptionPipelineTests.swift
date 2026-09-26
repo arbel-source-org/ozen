@@ -1331,6 +1331,43 @@ struct CaptionPipelineVocabularyTests {
         await pipeline.start(settings: .default)
         #expect(engine.vocabularySeen == [[]])
     }
+
+    @Test("enabled keyword alerts are primed into the engine's vocabulary at start")
+    func keywordAlertsPrimeVocabularyOnStart() async throws {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.vocabulary = ["רותי"]
+        settings.keywordAlerts = [KeywordAlert(phrase: "סבתא"), KeywordAlert(phrase: "אמבולנס", isEnabled: false)]
+        await pipeline.start(settings: settings)
+        #expect(engine.vocabularySeen == [["רותי", "סבתא"]])
+    }
+
+    @Test("a keyword alert phrase already in the vocabulary is not primed twice")
+    func keywordAlertAlreadyInVocabularyIsNotDuplicated() async throws {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.vocabulary = ["סבתא"]
+        settings.keywordAlerts = [KeywordAlert(phrase: "סבתא")]
+        await pipeline.start(settings: settings)
+        #expect(engine.vocabularySeen == [["סבתא"]])
+    }
+
+    @Test("changing the keyword alert list while listening re-primes the engine without a restart")
+    func settingKeywordAlertsRepriomesVocabularyLive() async throws {
+        let engine = FakeEngine()
+        let (pipeline, _, log) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.vocabulary = ["רותי"]
+        await pipeline.start(settings: settings)
+        let callsAfterStart = log.calls
+        pipeline.setKeywordAlerts([KeywordAlert(phrase: "סבתא")])
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(engine.vocabularySeen == [["רותי"], ["רותי", "סבתא"]])
+        #expect(pipeline.phase.isListening)
+        #expect(log.calls == callsAfterStart)
+    }
 }
 
 @Suite("CaptionPipeline permission pre-check")
