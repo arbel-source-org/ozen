@@ -51,7 +51,7 @@ struct PhasePresentationTests {
         let credit = PhasePresentation(phase: failure(EngineUnavailability(kind: .cloudOutOfCredit, detail: "")), engine: .cloud, interruptedBySystem: false)
         let offline = PhasePresentation(phase: failure(EngineUnavailability(kind: .noInternet, detail: "")), engine: .cloud, interruptedBySystem: false)
         #expect(key.action == .openEngineSettings)
-        #expect(key.title.contains("OpenRouter"))
+        #expect(!key.title.contains("OpenRouter") && key.title.contains("בענן"))
         #expect(credit.action == .openEngineSettings)
         #expect(offline.action == .retry)
         #expect(key.isBusy == false)
@@ -88,7 +88,8 @@ struct PhasePresentationTests {
         let refused = covering(.homeServerRejected)
         #expect(unreachable.detail?.contains("אין חיבור למחשב בבית") == true)
         #expect(refused.detail?.contains("קוד הצימוד") == true)
-        #expect(refused.action == .pause && refused.tint == .green)
+        #expect(refused.action == .openEngineSettings && refused.tint == .green)
+        #expect(refused.detail?.contains("ממי שהתקין את הטלפון") == true)
     }
 
     @Test("covering for the cloud sends the family to Settings when only they can fix it, and offers nothing to fix for no internet")
@@ -99,9 +100,9 @@ struct PhasePresentationTests {
         let noKey = covering(.cloudKeyNeeded)
         let noCredit = covering(.cloudOutOfCredit)
         let offline = covering(.noInternet)
-        #expect(noKey.detail?.contains("OpenRouter") == true)
+        #expect(noKey.detail?.contains("OpenRouter") == false && noKey.detail?.contains("ממי שהתקין את הטלפון") == true)
         #expect(noKey.action == .openEngineSettings && noKey.tint == .green)
-        #expect(noCredit.detail?.contains("הקרדיט") == true)
+        #expect(noCredit.detail?.contains("התקציב") == true)
         #expect(noCredit.action == .openEngineSettings && noCredit.tint == .green)
         // No internet still just says so and lets her keep going: nothing
         // in Settings would fix a dropped connection.

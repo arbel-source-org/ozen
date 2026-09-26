@@ -71,7 +71,7 @@ struct PhasePresentation {
             self.init(title: tr("מפעיל את המיקרופון", "Starting the microphone"), detail: nil, systemImage: "mic", tint: .yellow, isBusy: true)
 
         case .listening where coveringForCloud && coveredEngine == .homeServer && coverReason == .homeServerRejected:
-            self.init(title: tr("מקשיב", "Listening"), detail: tr("המחשב בבית לא קיבל את קוד הצימוד, ממשיך עם הזיהוי שבטלפון · הקישו כדי להשהות", "The home computer didn’t accept the pairing code, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("המחשב בבית לא קיבל את קוד הצימוד, ממשיך עם הזיהוי שבטלפון · בקשו עזרה ממי שהתקין את הטלפון", "The home computer didn’t accept the pairing code, carrying on with the phone’s own · Ask whoever set up the phone for help"), systemImage: "waveform", tint: .green, action: .openEngineSettings)
 
         case .listening where coveringForCloud && coveredEngine == .homeServer:
             self.init(title: tr("מקשיב", "Listening"), detail: tr("אין חיבור למחשב בבית, ממשיך עם הזיהוי שבטלפון · הקישו כדי להשהות", "Can’t reach the home computer, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
@@ -81,10 +81,10 @@ struct PhasePresentation {
         // screen for these two reasons; a generic "unavailable" here would
         // leave the family with no clue what to actually go fix.
         case .listening where coveringForCloud && coveredEngine == .cloud && coverReason == .cloudKeyNeeded:
-            self.init(title: tr("מקשיב", "Listening"), detail: tr("התמלול בענן צריך מפתח OpenRouter תקין, ממשיך עם הזיהוי שבטלפון · הקישו להגדרות", "Cloud transcription needs a valid OpenRouter key, carrying on with the phone’s own · Tap for Settings"), systemImage: "waveform", tint: .green, action: .openEngineSettings)
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("התמלול בענן לא מוגדר, ממשיך עם הזיהוי שבטלפון · בקשו עזרה ממי שהתקין את הטלפון", "Cloud transcription isn’t set up, carrying on with the phone’s own · Ask whoever set up the phone for help"), systemImage: "waveform", tint: .green, action: .openEngineSettings)
 
         case .listening where coveringForCloud && coveredEngine == .cloud && coverReason == .cloudOutOfCredit:
-            self.init(title: tr("מקשיב", "Listening"), detail: tr("נגמר הקרדיט של מפתח OpenRouter, ממשיך עם הזיהוי שבטלפון · הקישו להגדרות", "The OpenRouter key’s credit ran out, carrying on with the phone’s own · Tap for Settings"), systemImage: "waveform", tint: .green, action: .openEngineSettings)
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("נגמר התקציב לתמלול בענן, ממשיך עם הזיהוי שבטלפון · בקשו עזרה ממי שהתקין את הטלפון", "Cloud transcription’s budget ran out, carrying on with the phone’s own · Ask whoever set up the phone for help"), systemImage: "waveform", tint: .green, action: .openEngineSettings)
 
         case .listening where coveringForCloud:
             // Still captioning, so still green: the words keep coming, only
@@ -248,7 +248,7 @@ struct PhasePresentation {
             )
         case .cloudKeyNeeded:
             self.init(
-                title: tr("התמלול בענן צריך מפתח OpenRouter תקין", "Cloud transcription needs a valid OpenRouter key"),
+                title: tr("התמלול בענן לא מוגדר", "Cloud transcription isn’t set up"),
                 detail: tr("בקשו ממי שהתקין את הטלפון לתקן · הקישו להגדרות", "Ask whoever set up the phone to fix it · Tap for Settings"),
                 systemImage: "key",
                 tint: .orange,
@@ -256,8 +256,8 @@ struct PhasePresentation {
             )
         case .cloudOutOfCredit:
             self.init(
-                title: tr("נגמר הקרדיט של מפתח OpenRouter", "The OpenRouter key’s credit ran out"),
-                detail: tr("בקשו ממי שהתקין את הטלפון להוסיף קרדיט · הקישו להגדרות", "Ask whoever set up the phone to add credit · Tap for Settings"),
+                title: tr("נגמר התקציב לתמלול בענן", "Cloud transcription’s budget ran out"),
+                detail: tr("בקשו ממי שהתקין את הטלפון להוסיף תקציב · הקישו להגדרות", "Ask whoever set up the phone to add budget · Tap for Settings"),
                 systemImage: "creditcard",
                 tint: .orange,
                 action: .openEngineSettings
