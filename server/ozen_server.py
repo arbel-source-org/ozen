@@ -190,10 +190,25 @@ class Transcriber:
         self.beam = beam
         self.context = context
         self.lock = asyncio.Lock()
+        self.failures = 0
+        self.failures_before_exit = 3
 
     async def transcribe(self, audio, language, prompt, final):
         async with self.lock:
-            return await asyncio.to_thread(self._run, audio, language, prompt, final)
+            try:
+                result = await asyncio.to_thread(self._run, audio, language, prompt, final)
+            except Exception:
+                self.failures += 1
+                if self.failures >= self.failures_before_exit:
+                    # A broken CUDA context fails every pass from here on while
+                    # the process looks alive; exiting lets run.cmd start a
+                    # fresh one instead of every phone staying on its own model.
+                    log.critical("%d passes failed in a row; exiting to restart", self.failures)
+                    logging.shutdown()
+                    os._exit(3)
+                raise
+            self.failures = 0
+            return result
 
     def _run(self, audio, language, prompt, final):
         if self.speech_gate and lacks_voice(audio, self.speech_gate):

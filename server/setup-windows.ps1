@@ -33,7 +33,10 @@ $run = @(
     "set PATH=$site\cublas\bin;$site\cudnn\bin;%PATH%"
     "set HF_HOME=$Dir\hf"
     "set /p OZEN_TOKEN=<`"$codeFile`""
+    ':start'
     "`"$venvPython`" `"$Dir\ozen_server.py`" >> `"$Dir\server.log`" 2>&1"
+    'ping -n 6 127.0.0.1 >nul'
+    'goto start'
 ) -join "`r`n"
 [IO.File]::WriteAllText((Join-Path $Dir 'run.cmd'), $run + "`r`n")
 

@@ -21,7 +21,8 @@ powershell -ExecutionPolicy Bypass -File setup-windows.ps1
 It installs its own Python and everything else into `C:\ozen`, makes a
 pairing code once (`C:\ozen\pairing-code`), and registers a task that starts
 the server when Windows starts, before anyone logs in, and restarts it if it
-stops. Running it again updates the server and keeps the code. The log is
+stops (also when three passes in a row fail, as after a graphics-driver
+fault). Running it again updates the server and keeps the code. The log is
 `C:\ozen\server.log`.
 
 ## Running it on Linux
