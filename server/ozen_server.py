@@ -131,15 +131,27 @@ def quietest_point(samples, end, look_back, frame):
 SPEECH_OPTIONS = VadOptions(min_silence_duration_ms=100, speech_pad_ms=0)
 
 
-def speech_share(audio):
-    """How much of `audio` the Silero voice detector hears as a voice.
+MIN_VOICE_SECONDS = 0.2
+
+
+def voice_samples(audio):
+    """How many samples of `audio` the Silero voice detector hears as a voice.
 
     The energy detector that cuts lines passes a pot put down or a
     running tap as loudly as a word, and the ivrit.ai models turn that
     into confident Hebrew. A line with almost no voice in it is dropped
     before the model sees it (measured in accuracy/bench_gate.py)."""
     stamps = get_speech_timestamps(audio, SPEECH_OPTIONS)
-    return sum(t["end"] - t["start"] for t in stamps) / max(len(audio), 1)
+    return sum(t["end"] - t["start"] for t in stamps)
+
+
+def lacks_voice(audio, gate):
+    """Under `gate` of the line is voice, and not even a short word's worth.
+
+    The share alone would drop a sentence that clatter kept the line open
+    around for half a minute; household noise measured zero voice."""
+    voiced = voice_samples(audio)
+    return voiced / max(len(audio), 1) < gate and voiced < MIN_VOICE_SECONDS * RATE
 
 
 class Transcriber:
@@ -166,7 +178,7 @@ class Transcriber:
             return await asyncio.to_thread(self._run, audio, language, prompt, final)
 
     def _run(self, audio, language, prompt, final):
-        if self.speech_gate and speech_share(audio) < self.speech_gate:
+        if self.speech_gate and lacks_voice(audio, self.speech_gate):
             return "", None, []
         model = self.final_model if final else self.model
         segments, _ = model.transcribe(
@@ -248,6 +260,9 @@ class Session:
         pause, pad, keep = int(self.pause * R), int(self.trailing_pad * R), int(self.leading_keep * R)
         max_s = int(self.max_utterance * R)
         while True:
+            # Cleared before looking, so audio that lands between the look
+            # and the wait still wakes it.
+            self.changed.clear()
             total = len(self.buf)
             end_speech = self.last_speech_end
             if end_speech is None:
@@ -293,7 +308,6 @@ class Session:
                     return
 
     async def _wait(self):
-        self.changed.clear()
         try:
             await asyncio.wait_for(self.changed.wait(), timeout=0.05)
         except asyncio.TimeoutError:
