@@ -30,6 +30,7 @@ struct SettingsView: View {
     @State private var hasHomeServerCode = HomeServerCodeStore.hasKey
     @State private var homeServerCheck: HomeServerCheck?
     @State private var isCheckingHomeServer = false
+    @State private var confirmingHomeServerCodeDelete = false
     @State private var homeServerCodeSaveFailed = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -334,8 +335,10 @@ struct SettingsView: View {
                     isCheckingHomeServer = true
                     homeServerCheck = nil
                     Task {
-                        homeServerCheck = await viewModel.checkHomeServer()
+                        let check = await viewModel.checkHomeServer()
+                        homeServerCheck = check
                         isCheckingHomeServer = false
+                        UIAccessibility.post(notification: .announcement, argument: Self.homeServerCheckText(check))
                     }
                 } label: {
                     HStack {
@@ -347,15 +350,24 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(isCheckingHomeServer)
+                .accessibilityValue(isCheckingHomeServer ? tr("בודק…", "Checking…") : "")
                 if let homeServerCheck {
                     homeServerCheckLabel(homeServerCheck)
                 }
             }
             if hasHomeServerCode {
                 Button(tr("מחיקת הקוד", "Delete code"), role: .destructive) {
-                    HomeServerCodeStore.remove()
-                    hasHomeServerCode = false
-                    Task { await viewModel.homeServerCodeChanged() }
+                    confirmingHomeServerCodeDelete = true
+                }
+                .confirmationDialog(tr("למחוק את קוד המחשב?", "Delete the computer’s code?"), isPresented: $confirmingHomeServerCodeDelete, titleVisibility: .visible) {
+                    Button(tr("למחוק", "Delete"), role: .destructive) {
+                        HomeServerCodeStore.remove()
+                        hasHomeServerCode = false
+                        homeServerCheck = nil
+                        Task { await viewModel.homeServerCodeChanged() }
+                    }
+                } message: {
+                    Text(tr("הכתוביות יחזרו לזיהוי הדיבור בטלפון, עד שיסרקו שוב את קוד ה‑QR של המחשב.", "Captions go back to the phone’s speech recognition until the computer’s QR code is scanned again."))
                 }
             }
         } header: {
@@ -367,19 +379,33 @@ struct SettingsView: View {
 
     @ViewBuilder
     private func homeServerCheckLabel(_ check: HomeServerCheck) -> some View {
+        let text = Self.homeServerCheckText(check)
         switch check {
-        case .connected(let milliseconds):
-            Label(tr("מחובר: המחשב ענה תוך \(milliseconds) אלפיות שנייה", "Connected: the computer answered in \(milliseconds) ms"), systemImage: "checkmark.circle.fill")
+        case .connected:
+            Label(text, systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
         case .codeRefused:
-            Label(tr("המחשב ענה, אבל לא קיבל את הקוד. סרקו שוב את קוד ה‑QR או הקלידו את הקוד מחדש.", "The computer answered but didn’t accept the code. Scan the QR code again or retype the code."), systemImage: "key.slash")
+            Label(text, systemImage: "key.slash")
                 .foregroundStyle(.red)
         case .unreachable:
-            Label(tr("אין תשובה מהמחשב. בדקו שהוא דלוק ומחובר לאינטרנט.", "No answer from the computer. Check that it’s on and connected to the internet."), systemImage: "desktopcomputer.trianglebadge.exclamationmark")
+            Label(text, systemImage: "desktopcomputer.trianglebadge.exclamationmark")
                 .foregroundStyle(.orange)
         case .notSetUp:
-            Label(tr("חסרים כתובת או קוד", "The address or code is missing"), systemImage: "questionmark.circle")
+            Label(text, systemImage: "questionmark.circle")
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    static func homeServerCheckText(_ check: HomeServerCheck) -> String {
+        switch check {
+        case .connected(let milliseconds):
+            tr("מחובר: המחשב ענה תוך \(milliseconds) אלפיות שנייה", "Connected: the computer answered in \(milliseconds) ms")
+        case .codeRefused:
+            tr("המחשב ענה, אבל לא קיבל את הקוד. סרקו שוב את קוד ה‑QR או הקלידו את הקוד מחדש.", "The computer answered but didn’t accept the code. Scan the QR code again or retype the code.")
+        case .unreachable:
+            tr("אין תשובה מהמחשב. בדקו שהוא דלוק ומחובר לאינטרנט.", "No answer from the computer. Check that it’s on and connected to the internet.")
+        case .notSetUp:
+            tr("חסרים כתובת או קוד", "The address or code is missing")
         }
     }
 
