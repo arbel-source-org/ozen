@@ -131,15 +131,20 @@ struct LiveCaptionView: View {
     /// newest one, always has an oldest visible line scrolling out past
     /// the top edge — the same as any chat app with no separate top bar.
     /// At the largest text size that line can reach the status bar before
-    /// it's gone, so this fades it to the background colour first rather
-    /// than letting it collide with the clock and battery icons.
-    private var topScrollFade: some View {
-        LinearGradient(colors: [theme.background, theme.background.opacity(0)], startPoint: .top, endPoint: .bottom)
-            .frame(height: 90)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .ignoresSafeArea(edges: .top)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+    /// it's gone, so this fades it out first rather than letting it collide
+    /// with the clock and battery icons. Applied to `transcript` as a
+    /// `.mask`, not drawn as an overlay tinted like the background: a
+    /// keyword highlight or a colored number scrolling through here fades
+    /// to true transparency instead of washing out toward the background's
+    /// own color.
+    private var topScrollFadeMask: some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+                .frame(height: 90)
+            Color.black
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .ignoresSafeArea(edges: .top)
     }
 
     /// The screen itself: captions, banners and the control bar.
@@ -147,6 +152,7 @@ struct LiveCaptionView: View {
         ZStack(alignment: .bottom) {
             transcript
                 .simultaneousGesture(pinchToResize)
+                .mask(topScrollFadeMask)
 
             if pinchScale != 1 {
                 Text(tr("גודל טקסט \(Int(liveDisplay.fontSize))", "Text size \(Int(liveDisplay.fontSize))"))
@@ -172,8 +178,6 @@ struct LiveCaptionView: View {
                 showControlsButton
                     .transition(.opacity)
             }
-
-            topScrollFade
         }
         // A modifier, not a ZStack layer: a plain sibling that ignores the
         // safe area expands the whole ZStack's proposed size for every
