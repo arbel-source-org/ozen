@@ -9,7 +9,8 @@ import Foundation
 /// begins, that beginning is held: a later pass that changes a word or two
 /// in it is shown with the held words, and only what comes after moves.
 /// A pass that rewrites much of it, drops words or adds them is a real
-/// change of mind and is shown as it is. The final pass always wins.
+/// change of mind and is shown as it is, and so is a word two passes in a
+/// row read the new way. The final pass always wins.
 public struct LiveAgreement: Sendable, Equatable {
     public static let maximumHeldChanges = 2
 
@@ -27,6 +28,13 @@ public struct LiveAgreement: Sendable, Equatable {
         var shown = words
         var substituted = false
         if words.count >= held.count {
+            // Two passes in a row reading the new word are the same
+            // agreement that held the old one: "two pills" that became
+            // "three pills" twice is a correction, not flicker.
+            for index in held.indices where words[index] != held[index]
+                && lastWords.indices.contains(index) && lastWords[index] == words[index] {
+                held[index] = words[index]
+            }
             let changed = held.indices.filter { words[$0] != held[$0] }
             if !changed.isEmpty, changed.count <= Self.maximumHeldChanges, changed.count * 3 <= held.count {
                 for index in changed { shown[index] = held[index] }

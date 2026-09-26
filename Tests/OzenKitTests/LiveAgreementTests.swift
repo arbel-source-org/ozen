@@ -21,6 +21,16 @@ struct LiveAgreementTests {
         #expect(shown == "I have an appointment at the doctor at ten")
     }
 
+    @Test("a word read the new way twice in a row is a correction: two pills that became three shows three")
+    func confirmedCorrection() {
+        var agreement = LiveAgreement()
+        _ = agreement.settle("take two pills after the meal")
+        _ = agreement.settle("take two pills after the meal today")
+        #expect(agreement.settle("take three pills after the meal today") == "take two pills after the meal today")
+        #expect(agreement.settle("take three pills after the meal today please") == "take three pills after the meal today please")
+        #expect(agreement.settle("take two pills after the meal today please now") == "take three pills after the meal today please now")
+    }
+
     @Test("a word seen only once was never agreed on, so the newer reading is shown")
     func notYetAgreed() {
         var agreement = LiveAgreement()
