@@ -92,6 +92,7 @@ struct SoundAlertsView: View {
         } label: {
             Label(title, systemImage: "iphone.radiowaves.left.and.right")
         }
+        .accessibilityHint(tr("הקישו כדי להרגיש את הרטט", "Tap to feel the vibration"))
     }
 
     static func floorName(_ importance: SoundEvent.Importance) -> String {
