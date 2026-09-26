@@ -103,6 +103,7 @@ struct MicPickerView: View {
         case .wired: return "headphones"
         case .usb: return "cable.connector"
         case .hearingAid: return "ear"
+        case .remoteMic: return "mic.badge.plus"
         case .other: return "mic"
         }
     }
@@ -114,6 +115,7 @@ struct MicPickerView: View {
         case .wired: return tr("חוטי", "Wired")
         case .usb: return "USB"
         case .hearingAid: return tr("מכשיר שמיעה", "Hearing aid")
+        case .remoteMic: return tr("מיקרופון מרוחק", "Remote microphone")
         case .other: return tr("אחר", "Other")
         }
     }

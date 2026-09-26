@@ -115,4 +115,17 @@ struct AudioRoutePolicyTests {
         )
         #expect(selection == builtIn.uid)
     }
+
+    @Test("a remote assistive microphone (Phonak Roger) is not an ear-worn device, and isn't given way to like one")
+    func remoteMicIsNotOnTheEar() {
+        #expect(!AudioPortType.remoteMic.isOnTheListenersEar)
+
+        let rogerMic = AudioInputDescriptor(uid: "roger-1", portName: "Roger Table Mic", portType: .remoteMic)
+        let chosenByIOS = AudioRoutePolicy.resolveSelection(
+            available: [builtIn, rogerMic],
+            preferredUID: nil,
+            currentUID: rogerMic.uid
+        )
+        #expect(chosenByIOS == rogerMic.uid)
+    }
 }

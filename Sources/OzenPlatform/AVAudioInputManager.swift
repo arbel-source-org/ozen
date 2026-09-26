@@ -397,7 +397,14 @@ public final class AVAudioInputManager: AudioCapturing {
     /// treat it as informational labeling only, not a functional switch.
     static func portType(for port: AVAudioSessionPortDescription) -> AudioPortType {
         let name = port.portName.lowercased()
-        if name.contains("hearing") || name.contains("roger") || name.contains("phonak") || name.contains("oticon") {
+        // A Roger (Phonak Roger On/Select/Table Mic) is a remote microphone
+        // placed near whoever is talking, not worn on the listener's own
+        // ear like the rest of this heuristic — checked first so it isn't
+        // shadowed by the general "phonak" match below.
+        if name.contains("roger") {
+            return .remoteMic
+        }
+        if name.contains("hearing") || name.contains("phonak") || name.contains("oticon") {
             return .hearingAid
         }
         switch port.portType {

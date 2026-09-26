@@ -9,6 +9,11 @@ public enum AudioPortType: String, Sendable, Equatable, Codable {
     case wired
     case usb
     case hearingAid
+    /// A remote assistive microphone (e.g. a Phonak Roger), placed near
+    /// whoever is talking rather than worn on the listener's own ear. Not
+    /// a headset: it should be picked up automatically like an external
+    /// microphone, not rejected the way an ear-worn device is.
+    case remoteMic
     case other
 
     /// A microphone worn by the person reading the captions: a headset's
