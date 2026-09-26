@@ -45,6 +45,8 @@ struct TypeToSpeakView: View {
                                 .contentShape(Rectangle())
                             }
                             .foregroundStyle(.primary)
+                            .accessibilityLabel(phrase)
+                            .accessibilityHint(tr("להשמיע", "Play"))
                         }
                     } header: {
                         HStack {
