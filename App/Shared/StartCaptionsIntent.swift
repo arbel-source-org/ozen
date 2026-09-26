@@ -10,7 +10,7 @@ import Foundation
 /// anything.
 struct StartCaptionsIntent: AppIntent {
     static let title: LocalizedStringResource = "התחלת כתוביות"
-    static let description = IntentDescription("פותח את אוזן ומתחיל לכתב את השיחה.")
+    static let description = IntentDescription("פותח את אוזן ומתחיל להציג כתוביות לשיחה.")
     static let openAppWhenRun = true
 
     @MainActor

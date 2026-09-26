@@ -58,6 +58,7 @@ struct BatteryAdvisorTests {
         #expect(low.identifier == critical.identifier)
         #expect(!low.isUrgent && critical.isUrgent)
         #expect(low.body != critical.body)
+        #expect(critical.body.contains("עלול להיכבות"))
     }
 
     @Test("the phone notification is in English when the app is")

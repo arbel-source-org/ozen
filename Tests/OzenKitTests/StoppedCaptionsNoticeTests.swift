@@ -118,6 +118,7 @@ struct StoppedCaptionsNoticeTests {
         #expect(noMic.contains("מיקרופון"))
         #expect(cloudKey == cloudCredit)
         #expect(offline.contains("אינטרנט"))
+        #expect(offline.contains("זיהוי הדיבור שבטלפון") && !offline.contains("Whisper"))
         #expect(Set([callEnded, permission, storage, noMic, other, cloudKey, offline]).count == 7)
     }
 

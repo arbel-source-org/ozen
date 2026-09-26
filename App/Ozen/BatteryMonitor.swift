@@ -81,7 +81,7 @@ struct BatteryBanner: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tr("הסוללה ב-\(notice.warning.percent)%", "Battery at \(notice.warning.percent)%"))
                         .font(.headline)
-                    Text(isCritical ? tr("הטלפון עלול לכבות באמצע השיחה. חברו למטען.", "The phone might shut down mid-conversation. Plug in a charger.") : tr("כדאי לחבר למטען.", "Consider plugging in a charger."))
+                    Text(isCritical ? tr("הטלפון עלול להיכבות באמצע השיחה. חברו למטען.", "The phone might shut down mid-conversation. Plug in a charger.") : tr("כדאי לחבר למטען.", "Consider plugging in a charger."))
                         .font(.subheadline)
                         .opacity(0.9)
                 }

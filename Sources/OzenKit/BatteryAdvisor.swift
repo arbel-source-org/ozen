@@ -34,7 +34,7 @@ public enum BatteryWarning: Sendable, Equatable {
                 identifier: "battery",
                 title: tr("הסוללה ב-\(percent)%", "Battery at \(percent)%"),
                 body: tr(
-                    "הטלפון עלול לכבות, ואיתו הכתוביות וההתראות. חברו למטען.",
+                    "הטלפון עלול להיכבות, ואיתו הכתוביות וההתראות. חברו למטען.",
                     "The phone might turn off, and captions and alerts with it. Plug it in."
                 ),
                 threadIdentifier: "status",

@@ -25,7 +25,7 @@ struct StartCaptionsControl: ControlWidget {
             }
         }
         .displayName("התחלת כתוביות")
-        .description("פותח את אוזן ומתחיל לכתב את השיחה.")
+        .description("פותח את אוזן ומתחיל להציג כתוביות לשיחה.")
     }
 }
 

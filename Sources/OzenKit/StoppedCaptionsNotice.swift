@@ -131,8 +131,8 @@ public struct StoppedCaptionsNotice: Sendable, Equatable {
                 )
             case (_, .noInternet?):
                 return tr(
-                    "אין אינטרנט, והתמלול בענן צריך אותו. פתחו את אוזן כדי לעבור ל‑Whisper שבטלפון.",
-                    "There's no internet, and cloud transcription needs it. Open Ozen to switch to Whisper on the phone."
+                    "אין אינטרנט, והתמלול בענן צריך אותו. פתחו את אוזן כדי לעבור לזיהוי הדיבור שבטלפון.",
+                    "There's no internet, and cloud transcription needs it. Open Ozen to switch to the phone's own speech recognition."
                 )
             default:
                 return tr("פתחו את אוזן כדי להמשיך.", "Open Ozen to continue.")
