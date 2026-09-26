@@ -117,6 +117,15 @@ struct KeywordAlertMatcherTests {
         #expect(matcher.matches(in: "נסענו לבית גדול וגם חולים").isEmpty)
     }
 
+    @Test("a multi-word phrase matches across a standalone punctuation token")
+    func multiWordPhraseMatchesAcrossStandalonePunctuation() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("בית חולים")])
+        let matches = matcher.matches(in: "נסענו לבית , חולים דחוף")
+        #expect(matches.count == 1)
+        #expect(matches[0].matchedText == "לבית חולים")
+        #expect(matches[0].wordIndex == 1)
+    }
+
     @Test("an attached prefix on the first word of a multi-word phrase still matches")
     func prefixOnFirstWordOfMultiWordPhraseMatches() {
         let matcher = KeywordAlertMatcher(alerts: [alert("בית חולים")])

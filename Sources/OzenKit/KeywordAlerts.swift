@@ -175,7 +175,9 @@ public enum HebrewText {
 /// (so "Dan" never matches "Dana"), and the attached-prefix rule applies
 /// only to a phrase's first word — a caption is far more likely to attach
 /// a prefix to the word right after a preposition than in the middle of a
-/// fixed phrase.
+/// fixed phrase. A caption word that is standalone punctuation ("," set
+/// off by spaces on both sides) does not break a phrase's consecutive
+/// words apart; a real word in between still does.
 public struct KeywordAlertMatcher: Sendable, Equatable {
     public var alerts: [KeywordAlert]
 
@@ -200,19 +202,31 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
             let phraseWords = HebrewText.words(alert.phrase)
             guard !phraseWords.isEmpty, phraseWords.count <= normalizedWords.count else { continue }
 
-            let lastPossibleStart = normalizedWords.count - phraseWords.count
-            for start in 0...lastPossibleStart {
+            for start in 0..<normalizedWords.count {
                 guard HebrewText.stripAttachedPrefix(from: normalizedWords[start], leaving: phraseWords[0]) else {
                     continue
                 }
+                // A caption word that is pure punctuation ("," on its own,
+                // surrounded by spaces) normalizes to the empty string; a
+                // phrase's later words must still be found consecutively
+                // past it, so it is skipped rather than treated as a real
+                // word that breaks the phrase. A real filler word never
+                // normalizes to empty, so it still blocks the match below.
+                var cursor = start
                 var isFullMatch = true
-                for offset in 1..<phraseWords.count where normalizedWords[start + offset] != phraseWords[offset] {
-                    isFullMatch = false
-                    break
+                for offset in 1..<phraseWords.count {
+                    cursor += 1
+                    while cursor < normalizedWords.count && normalizedWords[cursor].isEmpty {
+                        cursor += 1
+                    }
+                    guard cursor < normalizedWords.count, normalizedWords[cursor] == phraseWords[offset] else {
+                        isFullMatch = false
+                        break
+                    }
                 }
                 guard isFullMatch else { continue }
 
-                let matchedText = trimmedWords[start...(start + phraseWords.count - 1)].joined(separator: " ")
+                let matchedText = trimmedWords[start...cursor].filter { !$0.isEmpty }.joined(separator: " ")
                 let match = KeywordMatch(alertID: alert.id, phrase: alert.phrase, matchedText: matchedText, wordIndex: start)
                 unordered.append((match, sequence))
                 sequence += 1
