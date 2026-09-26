@@ -225,6 +225,27 @@ struct TranscriptHistoryTests {
         #expect(store.search("״רופא״").count == 1)
     }
 
+    @Test("a search result's preview shows the line that matched, not always the conversation's first line")
+    func searchPreviewShowsTheMatchingLine() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        var segments = [segment(text: "בוקר טוב")]
+        segments += (1...13).map { segment(text: "שורת מילוי מספר \($0)") }
+        segments.append(segment(text: "לקחת כדור אחד בבוקר"))
+        try store.save(record(startedAt: 100, segments: segments))
+
+        let results = store.search("כדור")
+        #expect(results.count == 1)
+        #expect(results.first?.preview.contains("לקחת כדור אחד בבוקר") == true)
+        #expect(results.first?.preview.contains("בוקר טוב") == false)
+
+        // Listing without a query is unaffected: the cached line-1 preview
+        // still reads the greeting.
+        #expect(store.listSummaries().first?.preview == "בוקר טוב")
+    }
+
     @Test("search matches on speaker name even when the text doesn't contain the query")
     func searchMatchesSpeakerNames() throws {
         let dir = makeTempDirectory()

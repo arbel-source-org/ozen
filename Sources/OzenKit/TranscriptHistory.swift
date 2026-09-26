@@ -244,7 +244,7 @@ extension TranscriptSessionSummary {
             startedAt: record.startedAt,
             endedAt: record.endedAt,
             segmentCount: record.segments.count,
-            preview: Self.truncated(firstNonEmpty?.text ?? ""),
+            preview: Self.truncatedForPreview(firstNonEmpty?.text ?? ""),
             engine: record.engine,
             speakerNames: Self.realNames(in: record.segments),
             starredCount: record.segments.filter(\.isStarred).count,
@@ -300,7 +300,10 @@ extension TranscriptSessionSummary {
         return false
     }
 
-    private static func truncated(_ text: String) -> String {
+    /// Shared by the default line-1 preview and by `TranscriptHistoryStore`'s
+    /// search-result preview, so both read the same length in a history
+    /// list row.
+    static func truncatedForPreview(_ text: String) -> String {
         guard text.count > previewCharacterLimit else { return text }
         return String(text.prefix(previewCharacterLimit)) + "…"
     }
@@ -577,6 +580,12 @@ public struct TranscriptHistoryStore: Sendable {
     /// emit it either — without stripping it, a search for a plain-typed
     /// word would fail to find a session where the transcript happened to
     /// include the pointed form.
+    ///
+    /// A matching summary's `preview` is replaced with the line that
+    /// actually matched (see `matchingSnippet`), so a search result shows
+    /// why it matched instead of always repeating the conversation's
+    /// first line — this only changes the copy returned here, never the
+    /// cached summary written to disk.
     public func search(_ query: String) -> [TranscriptSessionSummary] {
         let words = Self.searchWords(query)
         guard !words.isEmpty else { return listSummaries() }
@@ -587,18 +596,47 @@ public struct TranscriptHistoryStore: Sendable {
                 // no, or says yes and its summary is ready.
                 if let text = cachedSearchText(forRecordFile: url) {
                     guard words.allSatisfy({ $0.found(in: text) }) else { return nil }
-                    if let summary = cachedSummary(forRecordFile: url) { return summary }
+                    if var summary = cachedSummary(forRecordFile: url) {
+                        if let snippet = Self.matchingSnippet(for: query, in: text) {
+                            summary.preview = snippet
+                        }
+                        return summary
+                    }
                 }
                 // Slow path, once per conversation: read it whole and write
                 // the files that make the next search fast.
                 guard let record = Self.decodeRecord(at: url) else { return nil }
-                let summary = TranscriptSessionSummary(summarizing: record)
+                var summary = TranscriptSessionSummary(summarizing: record)
                 let text = Self.searchableText(of: record)
                 writeSummary(summary, forRecordFile: url)
                 writeSearchText(text, forRecordFile: url)
-                return words.allSatisfy({ $0.found(in: text) }) ? summary : nil
+                guard words.allSatisfy({ $0.found(in: text) }) else { return nil }
+                if let snippet = Self.matchingSnippet(for: query, in: text) {
+                    summary.preview = snippet
+                }
+                return summary
             }
             .sorted { $0.startedAt > $1.startedAt }
+    }
+
+    /// The first prepared search line (see `searchableText`) that holds
+    /// every word of `query` — or, when none does, the first that holds
+    /// any, matching the same fallback `search` itself uses — truncated
+    /// like a normal preview. `text` is already normalized, so this reads
+    /// slightly differently than the original line (case folded, niqqud
+    /// gone); that trade-off is what keeps a search fast, never reading a
+    /// conversation back off disk just to build its preview.
+    static func matchingSnippet(for query: String, in text: String) -> String? {
+        let words = searchWords(query)
+        guard !words.isEmpty else { return nil }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
+        if let full = lines.first(where: { line in words.allSatisfy { $0.found(in: line) } }) {
+            return TranscriptSessionSummary.truncatedForPreview(full)
+        }
+        if let any = lines.first(where: { line in words.contains { $0.found(in: line) } }) {
+            return TranscriptSessionSummary.truncatedForPreview(any)
+        }
+        return nil
     }
 
     /// Every starred line in saved history, newest conversation first and

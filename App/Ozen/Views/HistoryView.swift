@@ -175,7 +175,7 @@ struct HistoryView: View {
         NavigationLink {
             HistoryDetailView(viewModel: viewModel, sessionID: session.id, searchQuery: query, onHistoryChanged: reload)
         } label: {
-            SessionRow(session: session)
+            SessionRow(session: session, isSearchResult: !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             // No destructive role: that role animates the row away
@@ -360,6 +360,11 @@ private struct SessionRow: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let session: TranscriptSessionSummary
+    /// True while a search query is active, so the preview below (which
+    /// `TranscriptHistoryStore.search` fills with the matching line, not
+    /// always the conversation's first line) reads as a match rather than
+    /// a plain opening line.
+    var isSearchResult: Bool = false
 
     // A long conversation's duration reads as a phrase ("3 שעות ו-27
     // דקות" — "3 hours and 27 minutes"), not just a number, so at the
@@ -394,10 +399,17 @@ private struct SessionRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Text(CaptionLayout.directed(session.preview))
-                .font(.body)
-                .lineLimit(2)
-                .foregroundStyle(.secondary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                if isSearchResult {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text(CaptionLayout.directed(session.preview))
+                    .font(.body)
+                    .lineLimit(2)
+                    .foregroundStyle(.secondary)
+            }
             HStack(spacing: 10) {
                 Text(ConversationStats.linesText(session.segmentCount))
                 if session.starredCount > 0 {
