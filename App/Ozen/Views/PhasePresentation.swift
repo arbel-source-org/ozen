@@ -59,7 +59,7 @@ struct PhasePresentation {
 
         switch phase {
         case .idle:
-            self.init(title: tr("לא פעיל", "Not active"), detail: tr("הקישו כדי להתחיל", "Tap to start"), systemImage: "play.circle.fill", tint: .secondary, action: .start)
+            self.init(title: tr("הכתוביות כבויות", "Captions are off"), detail: tr("הקישו כדי להתחיל", "Tap to start"), systemImage: "play.circle.fill", tint: .secondary, action: .start)
 
         case .requestingMicrophonePermission:
             self.init(title: tr("מבקש גישה למיקרופון", "Asking for microphone access"), detail: tr("אשרו בחלון שנפתח", "Allow it in the window that opens"), systemImage: "mic.badge.plus", tint: .yellow, isBusy: true)
@@ -71,10 +71,10 @@ struct PhasePresentation {
             self.init(title: tr("מפעיל את המיקרופון", "Starting the microphone"), detail: nil, systemImage: "mic", tint: .yellow, isBusy: true)
 
         case .listening where coveringForCloud && coveredEngine == .homeServer && coverReason == .homeServerRejected:
-            self.init(title: tr("מקשיב", "Listening"), detail: tr("המחשב בבית לא קיבל את קוד הצימוד, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "The home computer didn’t accept the pairing code, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("המחשב בבית לא קיבל את קוד הצימוד, ממשיך עם הזיהוי שבטלפון · הקישו כדי להשהות", "The home computer didn’t accept the pairing code, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
         case .listening where coveringForCloud && coveredEngine == .homeServer:
-            self.init(title: tr("מקשיב", "Listening"), detail: tr("אין חיבור למחשב בבית, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "Can’t reach the home computer, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("אין חיבור למחשב בבית, ממשיך עם הזיהוי שבטלפון · הקישו כדי להשהות", "Can’t reach the home computer, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
         // Cloud problems only a person can fix (no key, no credit) get their
         // own detail and a way to Settings, same as the failed-outright
@@ -89,10 +89,10 @@ struct PhasePresentation {
         case .listening where coveringForCloud:
             // Still captioning, so still green: the words keep coming, only
             // from the phone's own model while the cloud can't be used.
-            self.init(title: tr("מקשיב", "Listening"), detail: tr("הכתוביות בענן לא זמינות, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "Cloud captions aren’t available, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("הכתוביות בענן לא זמינות, ממשיך עם הזיהוי שבטלפון · הקישו כדי להשהות", "Cloud captions aren’t available, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
         case .listening:
-            self.init(title: tr("מקשיב", "Listening"), detail: tr("הקישו להשהיה", "Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("הקישו כדי להשהות", "Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
         case .paused where pausedForSpeech:
             // Not "paused": that reads as something to fix, and tapping it
@@ -100,7 +100,7 @@ struct PhasePresentation {
             self.init(title: tr("הטלפון מדבר", "The phone is talking"), detail: tr("הכתוביות ימשיכו לבד כשיסיים · הקישו כדי לעצור אותו", "Captions will continue on their own when it finishes · Tap to stop it"), systemImage: "speaker.wave.2.fill", tint: .orange, action: .stopSpeaking)
 
         case .paused:
-            self.init(title: tr("מושהה", "Paused"), detail: tr("הקישו להמשיך", "Tap to continue"), systemImage: "pause.circle.fill", tint: .orange, action: .resume)
+            self.init(title: tr("מושהה", "Paused"), detail: tr("הקישו כדי להמשיך", "Tap to continue"), systemImage: "pause.circle.fill", tint: .orange, action: .resume)
 
         case .failed(let failure):
             self.init(failure: failure, engine: engine)

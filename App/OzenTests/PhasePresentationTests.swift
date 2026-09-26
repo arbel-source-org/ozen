@@ -116,6 +116,8 @@ struct PhasePresentationTests {
         #expect(speaking.action == .stopSpeaking)
         let byHand = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false)
         #expect(byHand.title == "מושהה")
+        #expect(byHand.detail == "הקישו כדי להמשיך")
+        #expect(PhasePresentation(phase: .idle, engine: .whisperKit, interruptedBySystem: false).title == "הכתוביות כבויות")
     }
 
     @Test("sizes read as MB below a gigabyte and as GB with one decimal above")
