@@ -3,15 +3,13 @@ import Foundation
 public struct VoiceEvidence {
     public static let chunkSamples = 4096
     public static let contextSamples = 64
-    public static let voiceThreshold: Float = 0.9
-    public static let levelSamples = 32_000
+    public static let voiceThreshold: Float = 0.5
 
     public typealias Scorer = ([Float]) -> Float?
 
     private let score: Scorer
     private var pending: [Float] = []
     private var context = [Float](repeating: 0, count: VoiceEvidence.contextSamples)
-    private var recent: [Float] = []
     private var chunks: [(end: Int, voiced: Bool?)] = []
     private var start = 0
     private var received = 0
@@ -26,11 +24,7 @@ public struct VoiceEvidence {
         while pending.count >= Self.chunkSamples {
             let chunk = Array(pending.prefix(Self.chunkSamples))
             pending.removeFirst(Self.chunkSamples)
-            recent.append(contentsOf: chunk)
-            if recent.count > Self.levelSamples { recent.removeFirst(recent.count - Self.levelSamples) }
-            let gain = SpeechGain.gain(for: recent)
-            let input = gain > 1 ? (context + chunk).map { min(max($0 * gain, -1), 1) } : context + chunk
-            let probability = score(input)
+            let probability = score(context + chunk)
             context = Array(chunk.suffix(Self.contextSamples))
             chunks.append((end: received - pending.count, voiced: probability.map { $0 >= Self.voiceThreshold }))
         }
