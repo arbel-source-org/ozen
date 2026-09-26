@@ -318,7 +318,10 @@ async def handle(ws, transcriber, token, live_interval):
                 session.finished = True
                 session.changed.set()
                 break
-        await worker
+        # A phone that only checked whether the server is there hangs up
+        # without "end"; its worker would otherwise wait for audio forever.
+        if session.finished:
+            await worker
     except websockets.ConnectionClosed:
         pass
     except Exception as error:
