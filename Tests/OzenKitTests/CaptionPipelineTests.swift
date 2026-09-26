@@ -1032,6 +1032,28 @@ struct CaptionPipelineLifecycleTests {
         #expect(slow.prepareCount == 2)
         #expect(pipeline.phase == .listening)
     }
+
+    @Test("a start waiting on an abandoned load says the model is loading, and a stop meanwhile is kept")
+    func waitingStartShowsAndCanBeStopped() async {
+        let slow = FakeEngine()
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: slow])
+        let first = Task { await pipeline.start(settings: .default) }
+        while slow.prepareCount == 0 { await Task.yield() }
+        pipeline.stop()
+        let second = Task { await pipeline.start(settings: .default) }
+        for _ in 0..<50 { await Task.yield() }
+        #expect(pipeline.phase == .preparingEngine(EnginePreparationProgress(stage: .loadingModel)))
+        pipeline.stop()
+        #expect(pipeline.phase == .idle)
+
+        await gate.open()
+        await first.value
+        await second.value
+        #expect(slow.prepareCount == 1)
+        #expect(pipeline.phase == .idle)
+    }
 }
 
 @Suite("CaptionPipeline inputs")

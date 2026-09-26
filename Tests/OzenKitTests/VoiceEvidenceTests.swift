@@ -45,6 +45,15 @@ struct VoiceEvidenceTests {
         #expect(broken.hasVoice(inFirst: chunk * 3) == nil)
     }
 
+    @Test("one failed score leaves only its own chunk unknown; the gate works again after it")
+    func recoversAfterAFailure() {
+        var evidence = VoiceEvidence(score: Recorder([nil, 0.1, 0.1]).score)
+        evidence.append([Float](repeating: 0.01, count: chunk * 3))
+        #expect(evidence.hasVoice(inFirst: chunk * 3) == nil)
+        evidence.drop(prefix: chunk)
+        #expect(evidence.hasVoice(inFirst: chunk * 2) == false)
+    }
+
     @Test("follows the caller dropping the start of its buffer")
     func drop() {
         let recorder = Recorder([0.9, 0.1, 0.1])

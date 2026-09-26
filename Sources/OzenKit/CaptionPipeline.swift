@@ -189,8 +189,14 @@ public final class CaptionPipeline {
     /// it before beginning its own — two multi-hundred-megabyte models
     /// loading at once is exactly the kind of memory pressure iOS kills
     /// apps over — and then goes ahead, so a restart still restarts.
+    ///
+    /// While it waits the screen says the model is loading (a start that
+    /// just sat there looked like a tap that did nothing, for as long as a
+    /// stuck download took), and a stop in the meantime is kept: the
+    /// waiting start gives up instead of starting captions she stopped.
     private var isPreparingEngine = false
     private var preparationWaiters: [CheckedContinuation<Void, Never>] = []
+    private var stopCount = 0
     private var recovery: AutoRecoveryPolicy
     /// Notices capture that died while the screen still says "listening".
     private var audioWatchdog: AudioStallWatchdog
@@ -255,10 +261,17 @@ public final class CaptionPipeline {
     }
 
     public func start(settings: AppSettings) async {
-        while isPreparingEngine, !phase.isListening, !phase.isTransitioning {
-            await withCheckedContinuation { preparationWaiters.append($0) }
-        }
         guard !phase.isListening, !phase.isTransitioning else { return }
+        if isPreparingEngine {
+            let stops = stopCount
+            let waiting = EnginePreparationProgress(stage: .loadingModel)
+            phase = .preparingEngine(waiting)
+            while isPreparingEngine {
+                await withCheckedContinuation { preparationWaiters.append($0) }
+            }
+            guard stopCount == stops, phase == .preparingEngine(waiting) else { return }
+            phase = .idle
+        }
         cancelScheduledRetry()
         let run = UUID()
         runID = run
@@ -474,6 +487,7 @@ public final class CaptionPipeline {
     }
 
     public func stop() {
+        stopCount += 1
         recentAudio.clear()
         homeServerRecheck?.cancel()
         homeServerRecheck = nil
