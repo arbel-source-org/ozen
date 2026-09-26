@@ -1071,9 +1071,18 @@ struct LiveCaptionView: View {
         .accessibilityIdentifier("micPickerButton")
     }
 
+    /// While the phone is speaking a typed reply, this same button stops it
+    /// at once instead of opening the sheet: captions stay paused for as
+    /// long as it talks (see `TypeToSpeakView`), so cutting it off here,
+    /// without first reopening the sheet and finding its own Stop button,
+    /// gets real conversation moving again as soon as possible.
     private var typeToSpeakButton: some View {
         Button {
-            showingTypeToSpeak = true
+            if viewModel.isSpeaking {
+                viewModel.stopSpeaking()
+            } else {
+                showingTypeToSpeak = true
+            }
         } label: {
             VStack(spacing: 4) {
                 Image(systemName: viewModel.isSpeaking ? "speaker.wave.3.fill" : "keyboard")
@@ -1084,7 +1093,7 @@ struct LiveCaptionView: View {
             .frame(width: 56)
         }
         .ozenGlassButton()
-        .accessibilityLabel(tr("להגיד משהו בקול", "Say something out loud"))
+        .accessibilityLabel(viewModel.isSpeaking ? tr("עצירת הדיבור", "Stop speaking") : tr("להגיד משהו בקול", "Say something out loud"))
         .accessibilityIdentifier("typeToSpeakButton")
     }
 
