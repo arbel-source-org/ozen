@@ -5,7 +5,7 @@ WebSocket and gets back the words as they form, then the final line for
 each utterance. The rules mirror the phone's own Whisper engine
 (Sources/OzenPlatform/WhisperKitEngine.swift) so a line looks the same
 whichever does the work: speech detection decides where an utterance
-starts and ends, a 1 s pause ends it, 28 s is the most one pass hears
+starts and ends, a 0.7 s pause ends it, 28 s is the most one pass hears
 (cut at the quietest moment of the last 2 s), and while someone is still
 talking the utterance is decoded again every `live_interval` seconds.
 A GPU makes those passes fast enough to run far more often than a
@@ -181,7 +181,7 @@ class Transcriber:
 
 
 class Session:
-    pause = 1.0
+    pause = 0.7  # same as the phone (WhisperKitEngine.pauseSeconds), measured there
     trailing_pad = 0.3
     leading_keep = 0.5
     max_utterance = 28.0

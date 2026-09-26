@@ -5,10 +5,10 @@ a computer with an NVIDIA graphics card, and captions the phone's microphone
 over the network. The phone keeps its own model as a fallback: when this
 server can't be reached, captions carry on from the phone by themselves.
 
-Measured on an RTX 2080 Ti: a finished line is on the phone about 1 s after
-it was said (most of that is the second of quiet the server waits for before
-it calls a line finished) and the first words of a line appear about 0.2 s
-behind the speaker.
+Measured on an RTX 2080 Ti: the first words of a line appear about 0.15 s
+behind the speaker, and the finished line is on the phone about 1 s after it
+was said (0.7 s of that is the quiet the server waits for before it calls a
+line finished).
 
 ## Running it on Windows
 
@@ -43,8 +43,8 @@ With a graphics card of 8 GB or more, add `--final-model
 ivrit-ai/whisper-large-v3-ct2` to the start command (in `run.sh`, or `run.cmd`
 on Windows): the fast model keeps writing the live words and the full one
 writes each finished line. On a 2080 Ti that cut mistakes by about 15% with a
-TV loud in the room or the speaker across it, and put finished lines on the
-phone about 1.4 s after they were said instead of 0.9 s.
+TV loud in the room or the speaker across it, for about 0.4 s more per
+finished line.
 
 The first start downloads the model (about 1.6 GB, 3 GB more for the full one). The pairing code goes
 into the phone: Settings, Engine, Home computer.

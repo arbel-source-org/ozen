@@ -44,7 +44,16 @@ public actor WhisperKitEngine: TranscriptionEngine {
     // `InferenceCadence` (0.6 s on a cool phone, slower when hot, in Low
     // Power Mode, or when the last pass was itself slow).
     /// A gap this long with no speech ends the current utterance.
-    private let pauseSeconds = 1.0
+    ///
+    /// It was 1.0 s. People answering each other leave shorter gaps than
+    /// that, so a whole exchange ran into one line: 764 turns of Hebrew
+    /// broadcast conversation became 139 lines, several voices in each,
+    /// and 10.0% of the words came out wrong against 8.4% with every turn
+    /// on its own. At 0.7 s it was 365 lines and 8.9%, and 51.6 min of
+    /// lectures stayed where they were (13.6% -> 13.3%, 326 lines for 368
+    /// sentences). Shorter still started cutting sentences in half: at
+    /// 0.5 s the lectures got worse (14.2%, 494 lines).
+    private let pauseSeconds = 0.7
     /// Audio kept after the last detected speech when finalizing, so a
     /// trailing soft consonant isn't clipped.
     private let trailingPadSeconds = 0.3
