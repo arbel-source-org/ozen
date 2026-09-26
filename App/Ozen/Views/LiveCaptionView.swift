@@ -1066,6 +1066,12 @@ struct LiveCaptionView: View {
             }
             statusDetailLine
         }
+        // At the accessibility text sizes the buttons' padding grew past
+        // their fixed width until the bar was wider than the phone, and
+        // took the captions with it: both edges of every line were cut
+        // off. The bar stops growing at the largest ordinary size; a long
+        // press still shows a button's name in large type.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 8)
@@ -1091,6 +1097,7 @@ struct LiveCaptionView: View {
         .ozenGlassButton()
         .accessibilityLabel(tr("בחירת מיקרופון", "Choose microphone"))
         .accessibilityValue(viewModel.selectedInput?.portName ?? "")
+        .accessibilityShowsLargeContentViewer()
         .accessibilityIdentifier("micPickerButton")
     }
 
@@ -1112,11 +1119,14 @@ struct LiveCaptionView: View {
                     .font(.title2)
                 Text(tr("להגיד", "Say"))
                     .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
             .frame(width: 56)
         }
         .ozenGlassButton()
         .accessibilityLabel(viewModel.isSpeaking ? tr("עצירת הדיבור", "Stop speaking") : tr("להגיד משהו בקול", "Say something out loud"))
+        .accessibilityShowsLargeContentViewer()
         .accessibilityIdentifier("typeToSpeakButton")
     }
 
@@ -1137,11 +1147,14 @@ struct LiveCaptionView: View {
                     .font(.title2)
                 Text(tr("ניקוי", "Clear"))
                     .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
             .frame(width: 56)
         }
         .ozenGlassButton()
         .accessibilityLabel(tr("ניקוי הכתוביות מהמסך", "Clear the captions from the screen"))
+        .accessibilityShowsLargeContentViewer()
         .accessibilityIdentifier("clearButton")
     }
 
@@ -1154,11 +1167,14 @@ struct LiveCaptionView: View {
                     .font(.title2)
                 Text(tr("הגדרות", "Settings"))
                     .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
             .frame(width: 56)
         }
         .ozenGlassButton()
         .accessibilityLabel(tr("הגדרות", "Settings"))
+        .accessibilityShowsLargeContentViewer()
         .accessibilityIdentifier("settingsButton")
     }
 

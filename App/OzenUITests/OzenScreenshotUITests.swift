@@ -77,8 +77,11 @@ final class OzenScreenshotUITests: XCTestCase {
         let transcript = app.descendants(matching: .any)["transcriptScroll"]
         XCTAssertTrue(transcript.waitForExistence(timeout: 10), "caption screen: the transcript never appeared")
         capture(app, name: "caption-screen-accessibility-text")
-        let settingsButton = app.descendants(matching: .any)["settingsButton"]
-        XCTAssertTrue(settingsButton.isHittable, "caption screen: the settings button is off screen at this text size")
+        let screen = app.windows.firstMatch.frame
+        for identifier in ["settingsButton", "micPickerButton", "transcriptScroll"] {
+            let frame = app.descendants(matching: .any)[identifier].firstMatch.frame
+            XCTAssertTrue(frame.minX >= screen.minX - 1 && frame.maxX <= screen.maxX + 1, "caption screen: \(identifier) runs off the screen at this text size (\(frame) in \(screen))")
+        }
     }
 
     /// Onboarding at the largest accessibility text size iOS offers: a
