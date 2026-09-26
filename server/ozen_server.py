@@ -154,6 +154,23 @@ def lacks_voice(audio, gate):
     return voiced / max(len(audio), 1) < gate and voiced < MIN_VOICE_SECONDS * RATE
 
 
+def speech_gain(audio, target_peak=0.5, maximum_gain=100.0):
+    """Port of Sources/OzenKit/SpeechGain.swift: a voice across the room,
+    brought up to a common level, gave fewer mistakes (51.3 -> 49.6% of
+    words wrong; 86.5 -> 84.9% 8 dB quieter) and changed nothing up close."""
+    magnitudes = np.abs(audio[::4])
+    magnitudes = np.sort(magnitudes[np.isfinite(magnitudes)])
+    if len(magnitudes) == 0:
+        return audio
+    loud = magnitudes[min(len(magnitudes) - 1, int(len(magnitudes) * 0.999))]
+    if loud <= 0:
+        return audio
+    gain = min(max(target_peak / loud, 1.0), maximum_gain)
+    if gain <= 1:
+        return audio
+    return np.clip(audio * gain, -1, 1).astype(np.float32)
+
+
 class Transcriber:
     """The models on the GPU, shared by every connection, one pass at a time.
 
@@ -182,7 +199,7 @@ class Transcriber:
             return "", None, []
         model = self.final_model if final else self.model
         segments, _ = model.transcribe(
-            audio, language=language, task="transcribe",
+            speech_gain(audio), language=language, task="transcribe",
             beam_size=self.beam if final else 1,
             temperature=[0.0, 0.2, 0.4] if final else 0.0,
             condition_on_previous_text=False, without_timestamps=True,

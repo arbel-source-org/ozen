@@ -399,10 +399,15 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
             var options = isFinal ? finalPass : livePass
             options.promptTokens = promptTokens(using: pipe)
+            // A voice across the room reaches the model quiet; brought up to
+            // a common level it made fewer mistakes (speaker across the room
+            // 51.3 -> 49.6% of words wrong, 8 dB quieter 86.5 -> 84.9%) and
+            // changed nothing up close (see `SpeechGain`).
+            let heard = SpeechGain.normalized(window)
             let passStarted = ContinuousClock.now
             let results: [TranscriptionResult]
             do {
-                results = try await pipe.transcribe(audioArray: window, decodeOptions: options)
+                results = try await pipe.transcribe(audioArray: heard, decodeOptions: options)
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
@@ -411,7 +416,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 // the engine and the sentence being spoken was lost with the
                 // buffer. The same window gets one more try first.
                 try await Task.sleep(for: .milliseconds(250))
-                results = try await pipe.transcribe(audioArray: window, decodeOptions: options)
+                results = try await pipe.transcribe(audioArray: heard, decodeOptions: options)
             }
             if !isFinal {
                 // Only live passes: a final pass may retry at higher
