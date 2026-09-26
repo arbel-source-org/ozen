@@ -218,8 +218,11 @@ public struct WhisperResultFilter: Sendable, Equatable {
         // punctuation and symbols, so an empty result means no real word
         // survived.
         if Self.normalize(text).isEmpty { return false }
-        if isKnownHallucination(text) { return false }
-        if ambiguousHallucinations.contains(Self.normalize(text)),
+        // "toda raba toda raba": a decoding loop over a known phrase is
+        // judged as the phrase itself.
+        let once = Self.collapsingRepeats(text, maxRepeats: 1)
+        if isKnownHallucination(text) || isKnownHallucination(once) { return false }
+        if ambiguousHallucinations.contains(Self.normalize(once)),
            Self.isBracketed(text) || segment.noSpeechProb > ambiguousNoSpeechThreshold || segment.avgLogprob < ambiguousLogprobThreshold {
             return false
         }

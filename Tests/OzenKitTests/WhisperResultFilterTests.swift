@@ -205,6 +205,14 @@ struct WhisperResultFilterTests {
         #expect(!filter.accepts(segment("[תודה רבה]", noSpeech: 0.1, logprob: -1.0)))
         #expect(!filter.accepts(segment("Thank you.", noSpeech: 0.6, logprob: -0.3)))
     }
+
+    @Test("an invented phrase looped two or three times is judged as the phrase itself")
+    func loopedHallucinations() {
+        #expect(!filter.accepts(segment("תודה רבה. תודה רבה.", noSpeech: 0.45, logprob: -0.4)))
+        #expect(!filter.accepts(segment("תודה שצפיתם תודה שצפיתם תודה שצפיתם")))
+        #expect(filter.accepts(segment("תודה רבה, תודה רבה!", noSpeech: 0.05, logprob: -0.35)))
+        #expect(filter.accepts(segment("לא לא לא")))
+    }
 }
 
 @Suite("Whisper repeated-word loops")
