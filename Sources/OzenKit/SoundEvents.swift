@@ -225,18 +225,49 @@ public struct SoundEventPolicy: Sendable, Equatable {
     /// false alarms on that one sound against never hearing it at all.
     public var sensitiveConfidence: Double
     public var cooldownSeconds: TimeInterval
+    /// Above this confidence, a continuous sound (`sustainedIdentifiers`)
+    /// alerts on the very first window, the same as any other sound: an
+    /// unmistakable siren or smoke alarm should never wait through a second
+    /// ~0.75 s window to be confirmed.
+    public var emergencyConfidence: Double
+    /// How long a first, unconfirmed window of a continuous sound is
+    /// remembered while waiting for a second one to confirm it wasn't a
+    /// spike from the TV or kitchen clatter.
+    public var persistenceWindowSeconds: TimeInterval
     private var lastAlertAt: [String: TimeInterval] = [:]
+    private var pendingSince: [String: TimeInterval] = [:]
+
+    /// Sounds that are continuous by nature — a siren, a running tap, an
+    /// alarm that keeps sounding — as opposed to a one-shot sound like a
+    /// knock or a gunshot, or one whose "continuous" sounding is really a
+    /// train of separate beeps with silent gaps between them.
+    /// `smoke_detector` is deliberately not here: its beep pattern (three
+    /// short beeps, then several seconds of silence, repeating) can leave
+    /// no two beeps inside the same short persistence window, so requiring
+    /// a second confirming window could delay or even miss a real fire
+    /// rather than just filter a TV spike. A single classifier window
+    /// catching TV audio or kitchen clatter can briefly spike on one of the
+    /// sounds below, which really do keep sounding continuously; every
+    /// other identifier, including `smoke_detector`, alerts on its first
+    /// window as before.
+    static let sustainedIdentifiers: Set<String> = [
+        "civil_defense_siren", "siren", "boiling", "water_tap_faucet",
+    ]
 
     public init(
         preferences: SoundAlertPreferences = .default,
         minimumConfidence: Double = 0.6,
         sensitiveConfidence: Double = 0.4,
-        cooldownSeconds: TimeInterval = 20
+        cooldownSeconds: TimeInterval = 20,
+        emergencyConfidence: Double = 0.85,
+        persistenceWindowSeconds: TimeInterval = 2.0
     ) {
         self.preferences = preferences
         self.minimumConfidence = minimumConfidence
         self.sensitiveConfidence = sensitiveConfidence
         self.cooldownSeconds = cooldownSeconds
+        self.emergencyConfidence = emergencyConfidence
+        self.persistenceWindowSeconds = persistenceWindowSeconds
     }
 
     /// The confidence `identifier` needs to raise an alert right now. Never
@@ -255,6 +286,22 @@ public struct SoundEventPolicy: Sendable, Equatable {
         guard let event = SoundEventCatalog.event(for: observation.identifier) else { return nil }
         guard event.importance >= preferences.minimumImportance else { return nil }
         guard !preferences.mutedIdentifiers.contains(event.identifier) else { return nil }
+        // A continuous sound needs a second confirming window within
+        // `persistenceWindowSeconds`, unless it's already confident enough
+        // to be sure on its own: a real siren or a kettle at a rolling boil
+        // keeps sounding, so waiting under a second for the next window
+        // costs nothing, while a single TV or clatter spike never gets a
+        // second confirmation and never raises the banner.
+        if Self.sustainedIdentifiers.contains(event.identifier), observation.confidence < emergencyConfidence {
+            guard let pendingAt = pendingSince[event.identifier],
+                  observation.timestamp >= pendingAt,
+                  observation.timestamp - pendingAt <= persistenceWindowSeconds
+            else {
+                pendingSince[event.identifier] = observation.timestamp
+                return nil
+            }
+            pendingSince[event.identifier] = nil
+        }
         // Keyed by name, not identifier: two classifier labels the catalog
         // shows as the very same sound ("telephone_bell_ringing" and
         // "ringtone" both read "Phone ringing") must share one cooldown,
@@ -273,5 +320,6 @@ public struct SoundEventPolicy: Sendable, Equatable {
 
     public mutating func resetCooldowns() {
         lastAlertAt = [:]
+        pendingSince = [:]
     }
 }

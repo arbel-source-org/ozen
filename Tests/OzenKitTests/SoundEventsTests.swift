@@ -99,6 +99,43 @@ struct SoundEventsTests {
         #expect(knock?.event.identifier == "knock")
     }
 
+    @Test("a continuous sound needs a second confirming window before alerting, but an impulsive one alerts on the first")
+    func sustainedSoundsNeedPersistence() {
+        var policy = SoundEventPolicy()
+        let firstWindow = policy.evaluate(reading("civil_defense_siren", confidence: 0.65, at: 100))
+        let confirmingWindow = policy.evaluate(reading("civil_defense_siren", confidence: 0.65, at: 100.75))
+        #expect(firstWindow == nil)
+        #expect(confirmingWindow?.event.identifier == "civil_defense_siren")
+
+        let doorbell = policy.evaluate(reading("door_bell", confidence: 0.65, at: 200))
+        #expect(doorbell?.event.identifier == "door_bell")
+    }
+
+    @Test("a single window that's confident enough alerts immediately even for a continuous sound")
+    func sustainedSoundSkipsPersistenceAboveEmergencyConfidence() {
+        var policy = SoundEventPolicy()
+        let alert = policy.evaluate(reading("civil_defense_siren", confidence: 0.9, at: 100))
+        #expect(alert?.event.identifier == "civil_defense_siren")
+    }
+
+    @Test("a smoke or fire alarm's own beep, with silent gaps too long for a persistence window, is never held back")
+    func smokeDetectorNeverWaitsForPersistence() {
+        var policy = SoundEventPolicy()
+        let alert = policy.evaluate(reading("smoke_detector", confidence: 0.65, at: 100))
+        #expect(alert?.event.identifier == "smoke_detector")
+    }
+
+    @Test("a lone spike from the TV or kitchen clatter that's never confirmed never alerts")
+    func sustainedSoundSpikeWithoutConfirmationNeverAlerts() {
+        var policy = SoundEventPolicy()
+        let spike = policy.evaluate(reading("boiling", confidence: 0.65, at: 100))
+        let unrelatedLater = policy.evaluate(reading("boiling", confidence: 0.65, at: 105))
+        #expect(spike == nil)
+        // Arrived after the persistence window, so it starts a fresh,
+        // unconfirmed pending window rather than confirming the first.
+        #expect(unrelatedLater == nil)
+    }
+
     @Test("the same sound is not re-alerted within the cooldown, but a different sound is")
     func cooldown() {
         var policy = SoundEventPolicy(cooldownSeconds: 20)
