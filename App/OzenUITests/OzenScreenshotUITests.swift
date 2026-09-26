@@ -88,8 +88,17 @@ final class OzenScreenshotUITests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.25)
         }
         XCTAssertTrue(settings.isHittable, "caption screen: the control bar never came on screen")
-        capture(app, name: "caption-screen-accessibility-text-controls")
         let screen = app.windows.firstMatch.frame
+        // Hittable already while the bar is still sliding up: measured then,
+        // its buttons sat below the screen's edge. Wait until it stops.
+        var last = settings.frame
+        for _ in 0..<20 {
+            Thread.sleep(forTimeInterval: 0.25)
+            let now = settings.frame
+            if now == last && now.maxY <= screen.maxY + 1 { break }
+            last = now
+        }
+        capture(app, name: "caption-screen-accessibility-text-controls")
         for identifier in ["settingsButton", "micPickerButton", "transcriptScroll"] {
             let element = app.descendants(matching: .any)[identifier].firstMatch
             XCTAssertTrue(element.exists, "caption screen: \(identifier) is missing")
@@ -430,6 +439,7 @@ final class OzenScreenshotUITests: XCTestCase {
     /// down until it exists first (see `scrollDownUntilVisible`).
     private func openSettingsRow(_ app: XCUIApplication, rowIdentifier: String, screenIdentifier: String, captureName: String) {
         let row = scrollDownUntilVisible(app, identifier: rowIdentifier)
+        if !row.exists { capture(app, name: "debug-\(rowIdentifier)-not-found") }
         XCTAssertTrue(row.exists, "secondary screens: \(rowIdentifier) never appeared")
         // At the largest text size a row counts as hittable while only its
         // top edge shows above the home indicator, and a tap at its middle
