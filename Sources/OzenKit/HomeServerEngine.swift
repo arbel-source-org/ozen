@@ -100,6 +100,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         do {
             socket = try await handshake(target, languageCode: languageCode)
         } catch {
+            verified = nil
             continuation.finish(throwing: error as? EngineUnavailability ?? .homeServerUnreachable("\(error)"))
             return
         }
@@ -141,6 +142,9 @@ public actor HomeServerEngine: TranscriptionEngine {
                 if Task.isCancelled || endSent {
                     continuation.finish()
                 } else {
+                    // Checked again for real next time: the pipeline asks
+                    // whether the computer is back.
+                    verified = nil
                     continuation.finish(throwing: EngineUnavailability.homeServerUnreachable("connection lost: \(error)"))
                 }
                 return

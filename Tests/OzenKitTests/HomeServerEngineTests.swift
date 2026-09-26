@@ -210,6 +210,20 @@ struct HomeServerEngineTests {
         feed.finish()
     }
 
+    @Test("after the connection drops, the next availability check asks the server again instead of trusting the last answer")
+    func dropForgetsTheServer() async {
+        let socket = ScriptedSocket(helloReply: ready)
+        let server = engine(socket)
+        #expect(await server.checkAvailability(languageCode: "he") == .available)
+        let (audio, feed) = AsyncStream<[Float]>.makeStream()
+        let tokens = server.stream(languageCode: "he", audio: audio)
+        feed.yield([0.1])
+        await socket.drop()
+        do { for try await _ in tokens {} } catch {}
+        #expect(await server.checkAvailability(languageCode: "he").unavailability?.kind == .homeServerUnreachable)
+        feed.finish()
+    }
+
     @Test("a connection that drops while she is still talking ends the stream as unreachable")
     func drops() async {
         let socket = ScriptedSocket(helloReply: ready)
@@ -272,6 +286,75 @@ struct HomeServerCoverTests {
         server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
         #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
         #expect(captions.isCoveringForCloud)
+    }
+
+    @Test("once the unreachable computer answers again, captions go back to it by themselves")
+    func switchesBack() async {
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
+        #expect(await eventually { captions.activeEngineKind == .whisperKit })
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        #expect(!captions.isCoveringForCloud)
+        #expect(captions.coverReason == nil)
+    }
+
+    @Test("the switch back waits while someone is mid-sentence")
+    func waitsForTheSentenceToEnd() async throws {
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 0.3
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        let line = UUID()
+        phone.emit(TranscriptToken(utteranceID: line, text: "סבתא, את", isFinal: false, timestamp: Date().timeIntervalSince1970))
+        #expect(await eventually { captions.segments.last?.text == "סבתא, את" })
+        try await Task.sleep(for: .milliseconds(700))
+        #expect(captions.activeEngineKind == .whisperKit)
+        phone.emit(TranscriptToken(utteranceID: line, text: "סבתא, את באה?", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        #expect(await eventually { captions.activeEngineKind == .homeServer })
+    }
+
+    @Test("a computer still out of reach is asked again and again; a refused code is left for a person")
+    func keepsAskingOnlyWhenUnreachable() async throws {
+        for (kind, asksAgain) in [(EngineUnavailability.Kind.homeServerUnreachable, true), (.homeServerRejected, false)] {
+            let server = FakeEngine(kind: .homeServer, availability: .unavailable(kind, "test"))
+            let phone = FakeEngine(kind: .whisperKit)
+            let captions = CaptionPipeline(
+                audio: FakeAudioCapturer(),
+                engineFactory: { $0.engine == .homeServer ? server : phone },
+                embedder: FakeEmbedder(),
+                recovery: .disabled
+            )
+            captions.homeServerRecheckSeconds = 0.05
+            captions.homeServerSwitchBackQuietSeconds = 0
+            await captions.start(settings: serverSettings)
+            #expect(await eventually { captions.phase == .listening && captions.isCoveringForCloud })
+            let before = server.prepareCount
+            try await Task.sleep(for: .milliseconds(400))
+            #expect((server.prepareCount > before) == asksAgain, "\(kind)")
+            #expect(captions.activeEngineKind == .whisperKit)
+            captions.stop()
+        }
     }
 
     @Test("a new server address builds a new engine instead of reusing the one for the old address")

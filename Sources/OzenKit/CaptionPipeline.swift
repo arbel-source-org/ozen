@@ -78,6 +78,16 @@ public final class CaptionPipeline {
     /// server pairing code needs someone to re-enter it, an unreachable
     /// server doesn't.
     public private(set) var coverReason: EngineUnavailability.Kind?
+    /// While the phone covers for a home computer it couldn't reach, how
+    /// often to look whether the computer is back. Without it a single
+    /// dropped connection kept a phone that is never stopped on its own
+    /// model for good.
+    public var homeServerRecheckSeconds: Double = 60
+    /// Only switch back after this long without new words, so a sentence
+    /// isn't cut in half.
+    public var homeServerSwitchBackQuietSeconds: Double = 2
+    private var coveredSettings: AppSettings?
+    private var homeServerRecheck: Task<Void, Never>?
     /// The room the last download refused for want of space needed, so a
     /// return to the app only retries once that much is free.
     private var storageNeededMegabytes: Int?
@@ -214,7 +224,12 @@ public final class CaptionPipeline {
         activeSettings = settings
         isCoveringForCloud = nextStartCoversCloud
         nextStartCoversCloud = false
-        if !isCoveringForCloud { coverReason = nil }
+        if !isCoveringForCloud {
+            coverReason = nil
+            coveredSettings = nil
+            homeServerRecheck?.cancel()
+            homeServerRecheck = nil
+        }
         storageNeededMegabytes = nil
         // The stored threshold is the person's own choice once they've
         // touched it, but at the untouched app default it's specifically
@@ -402,6 +417,8 @@ public final class CaptionPipeline {
     }
 
     public func stop() {
+        homeServerRecheck?.cancel()
+        homeServerRecheck = nil
         cancelScheduledRetry()
         recovery.reset()
         listeningSince = nil
@@ -1152,7 +1169,42 @@ public final class CaptionPipeline {
         logEvent(.note("cloud unavailable, the phone's own model took over"))
         nextStartCoversCloud = true
         coverReason = failure.engineUnavailability?.kind
+        coveredSettings = activeSettings
         await start(settings: settings)
+        if coverReason == .homeServerUnreachable, coveredSettings?.engine == .homeServer {
+            recheckHomeServer()
+        }
+    }
+
+    /// See `homeServerRecheckSeconds`. Goes back to the chosen settings
+    /// once the computer answers and nobody is mid-sentence.
+    private func recheckHomeServer() {
+        homeServerRecheck?.cancel()
+        homeServerRecheck = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let seconds = self?.homeServerRecheckSeconds else { return }
+                try? await Task.sleep(for: .seconds(seconds))
+                guard !Task.isCancelled, let self, self.isCoveringForCloud,
+                      let chosen = self.coveredSettings, chosen.engine == .homeServer
+                else { return }
+                guard self.phase == .listening else { continue }
+                let server = self.cachedEngine(for: chosen)
+                guard await server.checkAvailability(languageCode: chosen.languageCode) == .available,
+                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening,
+                      self.isBetweenSentences
+                else { continue }
+                self.logEvent(.note("the home computer answers again, switching back to it"))
+                self.homeServerRecheck = nil
+                await self.restart(settings: chosen)
+                return
+            }
+        }
+    }
+
+    private var isBetweenSentences: Bool {
+        if stabilizer.segments.last.map({ !$0.isCommitted }) ?? false { return false }
+        guard let lastTokenAt = stats.lastTokenAt else { return true }
+        return now() - lastTokenAt >= homeServerSwitchBackQuietSeconds
     }
 
     // MARK: - Downloads and the network
