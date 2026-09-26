@@ -19,6 +19,14 @@ struct RecentAudioTests {
         #expect(recent.samples().isEmpty)
     }
 
+    @Test("appending exactly one capacity's worth in a single call replaces every sample, in order, from wherever the ring currently sits")
+    func fullCapacityAppendWrapsCleanly() {
+        var recent = RecentAudio(seconds: 1, sampleRate: 4)
+        recent.append([1, 2, 3])
+        recent.append([10, 20, 30, 40])
+        #expect(recent.samples() == [10, 20, 30, 40])
+    }
+
     @Test("a saved clip is a WAV file; only the newest few are kept; nothing is saved from silence never heard")
     func store() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-problem-audio-\(UUID())")

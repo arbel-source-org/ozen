@@ -15,9 +15,17 @@ public struct RecentAudio: Sendable {
 
     public mutating func append(_ samples: [Float]) {
         let tail = samples.count > capacity ? samples.suffix(capacity) : samples[...]
-        for sample in tail {
-            storage[next] = sample.isFinite ? sample : 0
-            next += 1
+        guard !tail.isEmpty else { return }
+        let sanitized = tail.map { $0.isFinite ? $0 : 0 }
+        let firstCount = min(sanitized.count, capacity - next)
+        storage.replaceSubrange(next..<(next + firstCount), with: sanitized[..<firstCount])
+        let secondCount = sanitized.count - firstCount
+        if secondCount > 0 {
+            storage.replaceSubrange(0..<secondCount, with: sanitized[firstCount...])
+            next = secondCount
+            isFull = true
+        } else {
+            next += firstCount
             if next == capacity {
                 next = 0
                 isFull = true
@@ -26,7 +34,12 @@ public struct RecentAudio: Sendable {
     }
 
     public func samples() -> [Float] {
-        isFull ? Array(storage[next...] + storage[..<next]) : Array(storage[..<next])
+        guard isFull else { return Array(storage[..<next]) }
+        var result: [Float] = []
+        result.reserveCapacity(capacity)
+        result.append(contentsOf: storage[next...])
+        result.append(contentsOf: storage[..<next])
+        return result
     }
 
     public mutating func clear() {
