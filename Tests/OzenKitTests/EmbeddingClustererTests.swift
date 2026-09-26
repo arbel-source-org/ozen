@@ -212,6 +212,25 @@ struct EmbeddingClustererConversationTests {
         #expect(clusterer.displayName(forClusterID: oldest) == EmbeddingClusterer.unknownSpeakerName)
         #expect(clusterer.clusters.isEmpty)
     }
+
+    @Test("a television that never gives 90 quiet minutes still wraps its numbering back to 1 instead of climbing past 200")
+    func continuousAudioWrapsNumbering() {
+        func voice(_ index: Int) -> [Float] {
+            var vector = [Float](repeating: 0, count: 221)
+            vector[index] = 1
+            return vector
+        }
+        var clusterer = EmbeddingClusterer(similarityThreshold: 0.9)
+        var numbers: [Int] = []
+        for index in 0..<220 {
+            let id = clusterer.assign(embedding: voice(index))
+            numbers.append(clusterer.clusters.first { $0.id == id }!.number)
+        }
+        // Once the 200 oldest labels still on screen have aged out, the
+        // 214th distinct voice reuses number 1 instead of becoming 214.
+        #expect(numbers[213] == 1)
+        #expect(numbers.max()! <= EmbeddingClusterer.activeUnnamedLimit + EmbeddingClusterer.retiredLimit + 1)
+    }
 }
 
 @Suite("EmbeddingClusterer with bad input")

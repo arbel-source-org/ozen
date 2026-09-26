@@ -35,7 +35,14 @@ public struct EmbeddingClusterer: Sendable {
     /// A doubtful window waiting for the next one to agree with it.
     private var doubtful: [Float]?
     private var nextID = 0
-    private var nextNumber = 1
+    /// Numbers currently shown as "Speaker N" somewhere on screen (active or
+    /// retired, since a retired cluster's past lines keep their label). A
+    /// plain always-increasing counter reached "Speaker 140" on a TV that
+    /// never gave the 90 minutes of silence a new conversation needs, since
+    /// `activeUnnamedLimit`/`retiredLimit` cap how many voices are *kept*
+    /// but not how high the counter climbed. The lowest free number is
+    /// reused instead, once its old line ages out of `retired` for good.
+    private var usedNumbers: Set<Int> = []
     /// Unnamed voices from conversations that have ended. New speech is no
     /// longer matched against them, but lines still on screen keep their
     /// labels.
@@ -76,7 +83,9 @@ public struct EmbeddingClusterer: Sendable {
         lastHeard[oldest.id] = nil
         retired.append(oldest)
         if retired.count > Self.retiredLimit {
-            retired.removeFirst(retired.count - Self.retiredLimit)
+            let overflow = retired.count - Self.retiredLimit
+            for evicted in retired.prefix(overflow) { usedNumbers.remove(evicted.number) }
+            retired.removeFirst(overflow)
         }
     }
 
@@ -156,7 +165,7 @@ public struct EmbeddingClusterer: Sendable {
         }
         clusters.removeAll { $0.name == nil }
         for cluster in ended { lastHeard[cluster.id] = nil }
-        nextNumber = 1
+        usedNumbers.removeAll()
     }
 
     /// Exactly what the caption rows and the saved history show, in
@@ -189,15 +198,13 @@ public struct EmbeddingClusterer: Sendable {
     public mutating func forgetName(ofCluster id: Int) {
         guard let index = clusters.firstIndex(where: { $0.id == id }), clusters[index].name != nil else { return }
         clusters[index].name = nil
-        clusters[index].number = nextNumber
-        nextNumber += 1
+        clusters[index].number = assignNumber()
     }
 
     public mutating func forgetName(_ name: String) {
         for index in clusters.indices where clusters[index].name == name {
             clusters[index].name = nil
-            clusters[index].number = nextNumber
-            nextNumber += 1
+            clusters[index].number = assignNumber()
         }
     }
 
@@ -220,11 +227,18 @@ public struct EmbeddingClusterer: Sendable {
         nextID += 1
         var cluster = SpeakerCluster(id: id, centroid: embedding, sampleCount: sampleCount, name: name)
         if name == nil {
-            cluster.number = nextNumber
-            nextNumber += 1
+            cluster.number = assignNumber()
         }
         clusters.append(cluster)
         return id
+    }
+
+    /// The lowest positive "Speaker N" number not already shown on screen.
+    private mutating func assignNumber() -> Int {
+        var candidate = 1
+        while usedNumbers.contains(candidate) { candidate += 1 }
+        usedNumbers.insert(candidate)
+        return candidate
     }
 
     private mutating func updateCentroid(at index: Int, with embedding: [Float]) {
