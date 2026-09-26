@@ -945,6 +945,34 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
         #expect(reclaimer.calls == 0)
         #expect(viewModel.isInterruptedBySystem)
     }
+
+    @Test("a tap on the paused-for-a-call status escapes it by taking the microphone back")
+    func tapReclaimsMicrophone() async {
+        let reclaimer = Reclaimer(answer: true)
+        let viewModel = makeViewModel(reclaimer: reclaimer)
+        await viewModel.start()
+        #expect(await eventually { viewModel.pipeline.phase.isListening })
+        viewModel.systemInterruptionChanged(began: true)
+
+        viewModel.reclaimMicrophoneAfterCall()
+
+        #expect(reclaimer.calls == 1)
+        #expect(viewModel.isInterruptedBySystem == false)
+    }
+
+    @Test("the tap changes nothing while the call is genuinely still going")
+    func tapDuringRealCallStaysPaused() async {
+        let reclaimer = Reclaimer(answer: false)
+        let viewModel = makeViewModel(reclaimer: reclaimer)
+        await viewModel.start()
+        #expect(await eventually { viewModel.pipeline.phase.isListening })
+        viewModel.systemInterruptionChanged(began: true)
+
+        viewModel.reclaimMicrophoneAfterCall()
+
+        #expect(reclaimer.calls == 1)
+        #expect(viewModel.isInterruptedBySystem)
+    }
 }
 
 @Suite("LiveCaptionViewModel captions that stop while the phone is put away")

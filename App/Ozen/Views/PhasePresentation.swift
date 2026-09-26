@@ -42,12 +42,17 @@ struct PhasePresentation {
         coverReason: EngineUnavailability.Kind? = nil
     ) {
         if interruptedBySystem {
+            // iOS doesn't promise to say when a call ends, and can simply
+            // never send it: without a tap she'd be stuck on this screen
+            // for good. A tap tries to take the microphone back right now;
+            // if the call is actually still going, iOS just refuses again
+            // and she stays safely paused.
             self.init(
                 title: tr("הכתוביות מושהות בגלל שיחה", "Captions paused for a call"),
-                detail: tr("ימשיכו אוטומטית כשהשיחה תסתיים", "They’ll continue on their own when the call ends"),
+                detail: tr("ימשיכו לבד כשהשיחה תסתיים · הקישו לנסות עכשיו", "They’ll continue on their own when the call ends · Tap to try now"),
                 systemImage: "phone.fill",
                 tint: .orange,
-                action: .none
+                action: .resume
             )
             return
         }

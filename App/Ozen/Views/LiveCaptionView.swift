@@ -1227,7 +1227,14 @@ struct LiveCaptionView: View {
         case .none:
             break
         case .start, .pause, .resume:
-            Task { await viewModel.togglePause() }
+            // A ghost interruption (iOS never said the call ended) shows
+            // this same action; the tap tries to take the microphone back
+            // instead of the ordinary pause/resume toggle.
+            if viewModel.isInterruptedBySystem {
+                viewModel.reclaimMicrophoneAfterCall()
+            } else {
+                Task { await viewModel.togglePause() }
+            }
         case .stopSpeaking:
             viewModel.stopSpeaking()
         case .retry:

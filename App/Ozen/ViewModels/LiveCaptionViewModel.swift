@@ -440,7 +440,10 @@ public final class LiveCaptionViewModel {
         await reclaimAfterCallTask?.value
     }
 
-    private func reclaimMicrophoneAfterCall() {
+    /// For the status line's tap while `interruptedBySystem`: iOS doesn't
+    /// promise to say when a call ends, so without this she could be stuck
+    /// on the paused screen with nothing to do until she force-quits.
+    public func reclaimMicrophoneAfterCall() {
         guard isInterruptedBySystem else { return }
         callEndedDuringInterruption = true
         // Only for captions that were running: taking the audio session

@@ -110,11 +110,12 @@ struct PhasePresentationTests {
         #expect(PhasePresentation.sizeText(megabytes: 1_301) == "1.4 GB")
     }
 
-    @Test("a phone call outranks every other state and offers no action")
+    @Test("a phone call outranks every other state, and a tap tries to take the microphone back right now")
     func phoneCall() {
         let presentation = PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: true)
-        #expect(presentation.action == .none)
+        #expect(presentation.action == .resume)
         #expect(presentation.systemImage == "phone.fill")
+        #expect(presentation.detail?.contains("לנסות עכשיו") == true)
     }
 
     @Test("a failure with a retry on the way says so and still lets her retry now")
