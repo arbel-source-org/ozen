@@ -1,0 +1,117 @@
+import Foundation
+
+/// Captions from a computer with a graphics card on the family's own
+/// network or reachable over the internet (`server/ozen_server.py`): the
+/// phone streams its microphone there and gets the words back as they
+/// form. The server runs the same Hebrew model as the phone, only far
+/// faster, and the phone's own model takes over whenever it can't be
+/// reached (see `CloudCover`).
+///
+/// Protocol version 1. Text frames are JSON, binary frames are audio:
+/// 16 kHz mono PCM16, little-endian. The phone opens with a hello carrying
+/// the pairing code; the server answers `ready` or `error`, then sends a
+/// `text` frame for every pass over the line being spoken, the last one
+/// marked final.
+public enum HomeServer {
+    public static let protocolVersion = 1
+    public static let defaultPort = 8765
+
+    /// "192.168.1.20", "grandma-pc:8765", "ws://…" or "wss://…" all work;
+    /// a bare host gets the default port and plain `ws`.
+    public static func url(from address: String) -> URL? {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains(" ") else { return nil }
+        let withScheme = trimmed.contains("://") ? trimmed : "ws://" + trimmed
+        guard var parts = URLComponents(string: withScheme),
+              let scheme = parts.scheme?.lowercased(), scheme == "ws" || scheme == "wss",
+              let host = parts.host, !host.isEmpty
+        else { return nil }
+        if parts.port == nil, !trimmed.contains("://") { parts.port = defaultPort }
+        return parts.url
+    }
+
+    public static func hello(token: String, languageCode: String, vocabulary: [String]) -> String {
+        encode([
+            "type": "hello",
+            "version": protocolVersion,
+            "token": token,
+            "language": languageCode,
+            "vocabulary": vocabulary,
+        ])
+    }
+
+    public static func vocabularyUpdate(_ terms: [String]) -> String {
+        encode(["type": "vocabulary", "terms": terms])
+    }
+
+    public static let end = #"{"type":"end"}"#
+
+    /// Clipped to the 16-bit range; the server wants the raw level, since
+    /// its speech detector is tuned on the same quiet measurement-mode
+    /// audio the phone's is.
+    public static func pcm16(_ samples: [Float]) -> Data {
+        var data = Data(capacity: samples.count * 2)
+        for sample in samples {
+            let value = Int16(max(-1, min(1, sample.isFinite ? sample : 0)) * 32767)
+            withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+        }
+        return data
+    }
+
+    private static func encode(_ object: [String: Any]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]) else { return "{}" }
+        return String(decoding: data, as: UTF8.self)
+    }
+}
+
+public enum HomeServerMessage: Sendable, Equatable {
+    case ready(model: String)
+    case refused(code: String, detail: String)
+    case text(utterance: Int, text: String, isFinal: Bool, confidence: Float?)
+
+    public init?(json: String) {
+        guard let data = json.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = object["type"] as? String
+        else { return nil }
+        switch type {
+        case "ready":
+            self = .ready(model: object["model"] as? String ?? "")
+        case "error":
+            self = .refused(code: object["code"] as? String ?? "", detail: object["detail"] as? String ?? "")
+        case "text":
+            guard let utterance = object["utterance"] as? Int,
+                  let text = object["text"] as? String,
+                  let isFinal = object["final"] as? Bool
+            else { return nil }
+            let confidence = (object["confidence"] as? NSNumber).map { Float(truncating: $0) }
+            self = .text(utterance: utterance, text: text, isFinal: isFinal, confidence: confidence)
+        default:
+            return nil
+        }
+    }
+}
+
+/// One open connection to the server. The real one wraps
+/// `URLSessionWebSocketTask` (OzenPlatform); tests script a fake.
+public protocol HomeServerSocket: Sendable {
+    func send(text: String) async throws
+    func send(data: Data) async throws
+    /// The next text frame; throws once the connection is closed.
+    func receive() async throws -> String
+    func close() async
+}
+
+public protocol HomeServerConnecting: Sendable {
+    func open(_ url: URL) async throws -> any HomeServerSocket
+}
+
+extension EngineUnavailability {
+    static func homeServerUnreachable(_ detail: String) -> EngineUnavailability {
+        EngineUnavailability(kind: .homeServerUnreachable, detail: detail)
+    }
+
+    static func homeServerRejected(_ detail: String) -> EngineUnavailability {
+        EngineUnavailability(kind: .homeServerRejected, detail: detail)
+    }
+}

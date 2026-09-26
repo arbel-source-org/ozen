@@ -37,7 +37,8 @@ struct PhasePresentation {
         scheduledRetry: ScheduledRetry? = nil,
         downloadSecondsRemaining: Double? = nil,
         pausedForSpeech: Bool = false,
-        coveringForCloud: Bool = false
+        coveringForCloud: Bool = false,
+        coveredEngine: TranscriptionEngineKind? = nil
     ) {
         if interruptedBySystem {
             self.init(
@@ -62,6 +63,9 @@ struct PhasePresentation {
 
         case .startingAudio:
             self.init(title: tr("מפעיל את המיקרופון", "Starting the microphone"), detail: nil, systemImage: "mic", tint: .yellow, isBusy: true)
+
+        case .listening where coveringForCloud && coveredEngine == .homeServer:
+            self.init(title: tr("מקשיב", "Listening"), detail: tr("אין חיבור למחשב בבית, ממשיך עם הזיהוי שבטלפון · הקישו להשהיה", "Can’t reach the home computer, carrying on with the phone’s own · Tap to pause"), systemImage: "waveform", tint: .green, action: .pause)
 
         case .listening where coveringForCloud:
             // Still captioning, so still green: the words keep coming, only
@@ -169,6 +173,7 @@ struct PhasePresentation {
         switch engine {
         case .appleSpeech: engineName = tr("זיהוי הדיבור של אפל", "Apple’s speech recognition")
         case .cloud: engineName = tr("התמלול בענן", "Cloud transcription")
+        case .homeServer: engineName = tr("המחשב בבית", "The home computer")
         case .whisperKit, .none: engineName = "Whisper"
         }
         switch engineFailure?.kind {
@@ -245,6 +250,22 @@ struct PhasePresentation {
                 systemImage: "wifi.slash",
                 tint: .orange,
                 action: .retry
+            )
+        case .homeServerUnreachable:
+            self.init(
+                title: tr("אין חיבור למחשב בבית", "Can’t reach the home computer"),
+                detail: tr("בדקו שהמחשב דלוק ומחובר · הקישו לנסות שוב", "Check that the computer is on and connected · Tap to try again"),
+                systemImage: "desktopcomputer.trianglebadge.exclamationmark",
+                tint: .orange,
+                action: .retry
+            )
+        case .homeServerRejected:
+            self.init(
+                title: tr("המחשב בבית לא קיבל את קוד הצימוד", "The home computer didn’t accept the pairing code"),
+                detail: tr("הקישו כדי להזין את הקוד בהגדרות", "Tap to enter the code in Settings"),
+                systemImage: "key",
+                tint: .orange,
+                action: .openEngineSettings
             )
         case .temporarilyUnavailable:
             self.init(title: tr("\(engineName) לא זמין כרגע", "\(engineName) isn’t available right now"), detail: tr("הקישו לנסות שוב", "Tap to try again"), systemImage: "clock", tint: .orange, action: .retry)

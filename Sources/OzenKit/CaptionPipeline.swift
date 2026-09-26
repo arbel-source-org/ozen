@@ -353,7 +353,7 @@ public final class CaptionPipeline {
 
         streamTask = Task { [weak self] in
             guard let self else { return }
-            var cloudFailure: CloudSpeechError?
+            var knownFailure: EngineUnavailability?
             var stopReason: String? = nil
             do {
                 for try await token in tokens {
@@ -361,8 +361,11 @@ public final class CaptionPipeline {
                     self.handle(token: token)
                 }
             } catch let error as CloudSpeechError {
-                cloudFailure = error
+                knownFailure = error.unavailability
                 stopReason = String(describing: error)
+            } catch let error as EngineUnavailability {
+                knownFailure = error
+                stopReason = error.detail
             } catch {
                 stopReason = String(describing: error)
             }
@@ -371,12 +374,13 @@ public final class CaptionPipeline {
             // still flowing. That's a failure the user should see and be
             // able to retry, not a silent stop.
             guard self.runID == run, self.phase.isListening else { return }
-            // A mid-stream CloudSpeechError already knows exactly what's
-            // wrong (a rejected key, no credit, no connection) -- reporting
-            // it generically would both show the wrong message and let
-            // AutoRecoveryPolicy auto-retry a problem only a person can fix.
-            if let cloudFailure {
-                self.fail(.engineUnavailable, detail: stopReason ?? "engine stream ended", engineUnavailability: cloudFailure.unavailability)
+            // A mid-stream failure the engine already named (a rejected
+            // key, no credit, the home server gone) -- reporting it
+            // generically would show the wrong message, let
+            // AutoRecoveryPolicy auto-retry a problem only a person can fix,
+            // and keep CloudCover from handing over to the phone.
+            if let knownFailure {
+                self.fail(.engineUnavailable, detail: stopReason ?? "engine stream ended", engineUnavailability: knownFailure)
             } else {
                 self.fail(.transcriptionStopped, detail: stopReason ?? "engine stream ended")
             }
@@ -1076,7 +1080,7 @@ public final class CaptionPipeline {
     }
 
     private func cachedEngine(for settings: AppSettings) -> any TranscriptionEngine {
-        let key = "\(settings.engine.rawValue)|\(settings.whisperModelVariant)|\(settings.allowServerFallbackForAppleSpeech)|\(settings.cloudModel)"
+        let key = "\(settings.engine.rawValue)|\(settings.whisperModelVariant)|\(settings.allowServerFallbackForAppleSpeech)|\(settings.cloudModel)|\(settings.homeServerAddress)"
         if let cached = engineCache[key] { return cached }
         // Only the engine in use is kept. A Whisper engine holds its loaded
         // model, hundreds of megabytes to 3 GB; every model tried once in

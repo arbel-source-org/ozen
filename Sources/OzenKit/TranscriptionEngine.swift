@@ -8,12 +8,15 @@ public enum TranscriptionEngineKind: String, Codable, Sendable, CaseIterable {
     case appleSpeech
     /// A speech model on the internet (see `CloudSpeech`).
     case cloud
+    /// The family's own GPU computer (see `HomeServer`).
+    case homeServer
 
     public var displayName: String {
         switch self {
         case .whisperKit: return "Whisper (on-device)"
         case .appleSpeech: return "Apple Speech"
         case .cloud: return "Cloud (OpenRouter)"
+        case .homeServer: return "Home server"
         }
     }
 }
@@ -136,6 +139,10 @@ public struct EngineUnavailability: Sendable, Equatable, Error {
         case cloudOutOfCredit
         /// Cloud captions can't reach the internet.
         case noInternet
+        /// The home server didn't answer, or the connection to it dropped.
+        case homeServerUnreachable
+        /// The home server turned the pairing code down, or there is none.
+        case homeServerRejected
         case temporarilyUnavailable
         case other
     }

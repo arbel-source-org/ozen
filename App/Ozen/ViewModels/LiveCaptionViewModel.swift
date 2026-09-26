@@ -113,6 +113,12 @@ public final class LiveCaptionViewModel {
                     return AppleSpeechEngine(allowServerFallback: settings.allowServerFallbackForAppleSpeech)
                 case .cloud:
                     return CloudSpeechEngine(model: settings.cloudModel, apiKey: { CloudKeyStore.read() })
+                case .homeServer:
+                    return HomeServerEngine(
+                        address: settings.homeServerAddress,
+                        token: { HomeServerCodeStore.read() },
+                        connector: URLSessionHomeServerConnector()
+                    )
                 }
             },
             // CAM++ needs its bundled CoreML model to actually load; a
@@ -820,6 +826,23 @@ public final class LiveCaptionViewModel {
     /// it at every start, so a running or failed session just starts again.
     public func cloudKeyChanged() async {
         if settings.engine == .cloud {
+            await restartIfRunning()
+        }
+    }
+
+    public func setHomeServerAddress(_ address: String) async {
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard settings.homeServerAddress != trimmed else { return }
+        settings.homeServerAddress = trimmed
+        persist()
+        if settings.engine == .homeServer {
+            await restartIfRunning()
+        }
+    }
+
+    /// The home server's pairing code was saved or removed in Settings.
+    public func homeServerCodeChanged() async {
+        if settings.engine == .homeServer {
             await restartIfRunning()
         }
     }

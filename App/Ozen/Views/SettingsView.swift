@@ -25,6 +25,10 @@ struct SettingsView: View {
     @State private var cloudKeyDraft = ""
     @State private var hasCloudKey = CloudKeyStore.hasKey
     @State private var cloudKeySaveFailed = false
+    @State private var homeServerAddressDraft = ""
+    @State private var homeServerCodeDraft = ""
+    @State private var hasHomeServerCode = HomeServerCodeStore.hasKey
+    @State private var homeServerCodeSaveFailed = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -58,6 +62,7 @@ struct SettingsView: View {
                 case .whisperKit: whisperModelSection
                 case .appleSpeech: appleSpeechSection
                 case .cloud: cloudSection
+                case .homeServer: homeServerSection
                 }
                 vocabularySection
                 speakersSection
@@ -171,6 +176,7 @@ struct SettingsView: View {
         case .whisperKit: return tr("Whisper (במכשיר)", "Whisper (on device)")
         case .appleSpeech: return tr("זיהוי הדיבור של אפל", "Apple's speech recognition")
         case .cloud: return tr("תמלול בענן \u{2066}(OpenRouter)\u{2069}", "Cloud transcription (OpenRouter)")
+        case .homeServer: return tr("המחשב בבית", "Home computer")
         }
     }
 
@@ -178,7 +184,8 @@ struct SettingsView: View {
         switch kind {
         case .whisperKit: return tr("מודל קוד פתוח שרץ על הטלפון. עברית טובה, אפשר לבחור גודל מודל.", "An open-source model that runs on the phone. Good Hebrew, and you can choose the model size.")
         case .appleSpeech: return tr("מובנה ב‑iOS. מהיר מאוד, אבל עברית במכשיר לא זמינה בכל גרסה.", "Built into iOS. Very fast, but on-device Hebrew isn’t available in every version.")
-        case .cloud: return tr("מודל גדול באינטרנט. הכי מדויק, גם כשכמה אנשים מדברים. צריך אינטרנט ומפתח \u{2066}OpenRouter.\u{2069}", "A large model online. The most accurate, even with several people talking. Needs internet and an OpenRouter key.")
+        case .cloud: return tr("מודל באינטרנט, לטלפון שאיטי מדי למודל שבתוכו. בעברית הוא טועה יותר מהמודל שבטלפון. צריך אינטרנט ומפתח \u{2066}OpenRouter.\u{2069}", "A model online, for a phone too slow for the one inside it. It gets more Hebrew wrong than the phone’s own model. Needs internet and an OpenRouter key.")
+        case .homeServer: return tr("מחשב של המשפחה עם כרטיס מסך כותב את הכתוביות: אותו מודל עברית, מהר בהרבה, והטלפון לא מתחמם. כשאין אליו חיבור, הטלפון ממשיך לבד.", "A family computer with a graphics card writes the captions: the same Hebrew model, much faster, and the phone stays cool. When it can’t be reached, the phone carries on by itself.")
         }
     }
 
@@ -282,8 +289,70 @@ struct SettingsView: View {
         } header: {
             Text(tr("תמלול בענן", "Cloud transcription"))
         } footer: {
-            Text(tr("הקול נשלח דרך האינטרנט ל‑OpenRouter, ומשם לדגם של Google שכותב את הכתוביות. רק כשמישהו מדבר, משפט אחרי משפט. שעת דיבור רצוף עולה בערך 15 סנט מהקרדיט של המפתח (המדויק יותר: כ‑30 סנט). המפתח נשמר רק בטלפון. בלי אינטרנט הכתוביות נעצרות, ואפשר לחזור ל‑Whisper שבטלפון.", "The audio is sent over the internet to OpenRouter, and from there to a Google model that writes the captions. Only while someone is speaking, sentence by sentence. An hour of continuous speech costs about 15 cents from the key’s credit (the more accurate one: about 30 cents). The key is saved only on the phone. Without internet the captions stop, and you can switch back to the on-phone Whisper."))
+            Text(tr("הקול נשלח דרך האינטרנט ל‑OpenRouter, ומשם לדגם של Google שכותב את הכתוביות. רק כשמישהו מדבר, משפט אחרי משפט. שעת דיבור רצוף עולה בערך 15 סנט מהקרדיט של המפתח (המדויק יותר: כ‑30 סנט). המפתח נשמר רק בטלפון. בלי אינטרנט, מודל ה‑Whisper שכבר בטלפון ממשיך לבד.", "The audio is sent over the internet to OpenRouter, and from there to a Google model that writes the captions. Only while someone is speaking, sentence by sentence. An hour of continuous speech costs about 15 cents from the key’s credit (the more accurate one: about 30 cents). The key is saved only on the phone. Without internet, a Whisper model already on the phone carries on by itself."))
         }
+    }
+
+    private var homeServerSection: some View {
+        Section {
+            TextField(tr("כתובת המחשב", "Computer address"), text: $homeServerAddressDraft)
+                .keyboardType(.URL)
+                .textContentType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .onSubmit(saveHomeServerAddress)
+                .onAppear { homeServerAddressDraft = viewModel.settings.homeServerAddress }
+            if homeServerAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines) != viewModel.settings.homeServerAddress {
+                Button(tr("שמירת הכתובת", "Save address"), action: saveHomeServerAddress)
+            }
+            if !homeServerAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, HomeServer.url(from: homeServerAddressDraft) == nil {
+                Label(tr("הכתובת לא נראית תקינה", "That address doesn’t look right"), systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+            }
+            if hasHomeServerCode {
+                Label(tr("קוד צימוד שמור בטלפון", "Pairing code saved on the phone"), systemImage: "key.fill")
+                    .foregroundStyle(.green)
+            }
+            SecureField(hasHomeServerCode ? tr("קוד חדש במקום השמור", "New code instead of the saved one") : tr("קוד הצימוד מהמחשב", "The pairing code from the computer"), text: $homeServerCodeDraft)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .onSubmit(saveHomeServerCode)
+            if !homeServerCodeDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button(tr("שמירת הקוד", "Save code"), action: saveHomeServerCode)
+            }
+            if homeServerCodeSaveFailed {
+                Label(tr("הקוד לא נשמר. נסו שוב.", "The code wasn’t saved. Try again."), systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+            }
+            if hasHomeServerCode {
+                Button(tr("מחיקת הקוד", "Delete code"), role: .destructive) {
+                    HomeServerCodeStore.remove()
+                    hasHomeServerCode = false
+                    Task { await viewModel.homeServerCodeChanged() }
+                }
+            }
+        } header: {
+            Text(tr("המחשב בבית", "Home computer"))
+        } footer: {
+            Text(tr("הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד.", "The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself."))
+        }
+    }
+
+    private func saveHomeServerAddress() {
+        let address = homeServerAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        homeServerAddressDraft = address
+        Task { await viewModel.setHomeServerAddress(address) }
+    }
+
+    private func saveHomeServerCode() {
+        let code = homeServerCodeDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+        let saved = HomeServerCodeStore.save(code)
+        homeServerCodeSaveFailed = !saved
+        guard saved else { return }
+        homeServerCodeDraft = ""
+        hasHomeServerCode = true
+        Task { await viewModel.homeServerCodeChanged() }
     }
 
     private func saveCloudKey() {

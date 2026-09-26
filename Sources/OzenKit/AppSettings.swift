@@ -160,6 +160,9 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// The OpenRouter model cloud captions use (see `CloudSpeech`). The key
     /// itself is kept in the Keychain, never in this file.
     public var cloudModel: String
+    /// Where the home server is ("192.168.1.20", "pc.example:8765",
+    /// "wss://…"); the pairing code is kept in the Keychain, not here.
+    public var homeServerAddress: String
     public var display: DisplayPreferences
     /// A short buzz when speech resumes after a quiet stretch — the reader
     /// may have looked away from the screen.
@@ -257,6 +260,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         whisperModelVariant: String = WhisperModelCatalog.defaultVariant,
         allowServerFallbackForAppleSpeech: Bool = false,
         cloudModel: String = CloudSpeech.accurateModel,
+        homeServerAddress: String = "",
         display: DisplayPreferences = .default,
         hapticOnSpeechResume: Bool = true,
         speakerSimilarityThreshold: Float = 0.45,
@@ -284,6 +288,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.whisperModelVariant = whisperModelVariant
         self.allowServerFallbackForAppleSpeech = allowServerFallbackForAppleSpeech
         self.cloudModel = cloudModel
+        self.homeServerAddress = homeServerAddress
         self.display = display
         self.hapticOnSpeechResume = hapticOnSpeechResume
         self.speakerSimilarityThreshold = speakerSimilarityThreshold
@@ -357,7 +362,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case engine, languageCode, preferredInputUID, speakerProfiles, creditLine
-        case whisperModelVariant, allowServerFallbackForAppleSpeech, cloudModel, display
+        case whisperModelVariant, allowServerFallbackForAppleSpeech, cloudModel, homeServerAddress, display
         case hapticOnSpeechResume, speakerSimilarityThreshold
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding, appLanguage
@@ -381,6 +386,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         whisperModelVariant = container.lenient(String.self, forKey: .whisperModelVariant) ?? defaults.whisperModelVariant
         allowServerFallbackForAppleSpeech = container.lenient(Bool.self, forKey: .allowServerFallbackForAppleSpeech) ?? defaults.allowServerFallbackForAppleSpeech
         cloudModel = container.lenient(String.self, forKey: .cloudModel).flatMap { $0.isEmpty ? nil : $0 } ?? defaults.cloudModel
+        homeServerAddress = container.lenient(String.self, forKey: .homeServerAddress) ?? defaults.homeServerAddress
         display = container.lenient(DisplayPreferences.self, forKey: .display) ?? defaults.display
         hapticOnSpeechResume = container.lenient(Bool.self, forKey: .hapticOnSpeechResume) ?? defaults.hapticOnSpeechResume
         speakerSimilarityThreshold = container.lenient(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold
@@ -412,6 +418,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         switch engine {
         case .whisperKit: return whisperModelVariant
         case .cloud: return cloudModel
+        case .homeServer: return "home server"
         case .appleSpeech: return nil
         }
     }

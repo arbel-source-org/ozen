@@ -61,7 +61,7 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
             return .glitch
         case .engineUnavailable:
             switch failure.engineUnavailability?.kind {
-            case .permissionDenied, .languageNotSupportedOnDevice, .cloudKeyNeeded, .cloudOutOfCredit:
+            case .permissionDenied, .languageNotSupportedOnDevice, .cloudKeyNeeded, .cloudOutOfCredit, .homeServerRejected:
                 return .never
             case .waitingForWiFi:
                 // Retrying on a timer would only ask the same question of
@@ -77,7 +77,7 @@ public struct AutoRecoveryPolicy: Sendable, Equatable {
                 return .download
             case .modelLoadFailed:
                 return .loadFailure
-            case .noInternet, .temporarilyUnavailable, .other, .none:
+            case .noInternet, .homeServerUnreachable, .temporarilyUnavailable, .other, .none:
                 return .glitch
             }
         }

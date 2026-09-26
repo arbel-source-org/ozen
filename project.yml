@@ -28,6 +28,11 @@ targets:
       properties:
         NSMicrophoneUsageDescription: "Ozen needs the microphone to caption conversation live."
         NSSpeechRecognitionUsageDescription: "Ozen uses on-device speech recognition to caption conversation live. Nothing is sent off the phone."
+        # A home server on the same Wi-Fi is reached without TLS; anything
+        # over the internet goes through wss:// with a real certificate.
+        NSLocalNetworkUsageDescription: "Ozen can send the microphone to your own computer at home, which captions faster than the phone."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
         UILaunchScreen: {}
         CFBundleDevelopmentRegion: he
         CFBundleDisplayName: "Ozen"

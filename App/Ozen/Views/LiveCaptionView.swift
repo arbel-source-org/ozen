@@ -106,7 +106,8 @@ struct LiveCaptionView: View {
             scheduledRetry: viewModel.pipeline.scheduledRetry,
             downloadSecondsRemaining: viewModel.pipeline.downloadSecondsRemaining,
             pausedForSpeech: viewModel.captionsHeldForSpeech,
-            coveringForCloud: viewModel.pipeline.isCoveringForCloud
+            coveringForCloud: viewModel.pipeline.isCoveringForCloud,
+            coveredEngine: viewModel.settings.engine
         )
     }
 

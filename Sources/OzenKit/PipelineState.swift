@@ -50,9 +50,9 @@ public struct PipelineFailure: Sendable, Equatable, Error {
         switch why.kind {
         case .languageNotSupportedOnDevice, .modelDownloadFailed, .modelLoadFailed, .notEnoughStorage:
             return true
-        case .noInternet:
+        case .noInternet, .homeServerUnreachable:
             return true
-        case .permissionDenied, .waitingForWiFi, .cloudKeyNeeded, .cloudOutOfCredit, .temporarilyUnavailable, .other:
+        case .permissionDenied, .waitingForWiFi, .cloudKeyNeeded, .cloudOutOfCredit, .homeServerRejected, .temporarilyUnavailable, .other:
             return false
         }
     }
