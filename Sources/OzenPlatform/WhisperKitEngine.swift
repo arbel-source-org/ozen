@@ -375,15 +375,16 @@ public actor WhisperKitEngine: TranscriptionEngine {
             // Kitchen clatter and a running tap pass the energy detector
             // and come back from Whisper as confident Hebrew. A stretch in
             // which the voice model heard no voice at all never reaches
-            // Whisper; a line already on screen is always finished.
-            if intake.hasVoice(upTo: end) == false && lastShownText.isEmpty {
+            // Whisper; a line already on screen is always finished. So is
+            // the last one when captions stop: its final quarter-second
+            // may not have been scored yet.
+            if !status.finished && intake.hasVoice(upTo: end) == false && lastShownText.isEmpty {
                 tally.recordSkippedWithoutVoice()
                 if isFinal {
                     intake.drop(prefix: end)
                     utteranceID = UUID()
                     samplesAtLastPass = 0
                     lastLivePassSeconds = nil
-                    if status.finished && total - end == 0 { break }
                 }
                 continue
             }
