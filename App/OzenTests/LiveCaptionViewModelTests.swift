@@ -60,7 +60,8 @@ struct LiveCaptionViewModelTests {
         #expect(viewModel.typeToSpeakDraft.isEmpty)
         viewModel.typeToSpeakDraft = "אני באה עוד מעט"
         await viewModel.start()
-        viewModel.stop()
+        await viewModel.togglePause()
+        await viewModel.togglePause()
         #expect(viewModel.typeToSpeakDraft == "אני באה עוד מעט")
         viewModel.flushPendingSettingsSave()
         #expect(!((try? String(contentsOf: file, encoding: .utf8)) ?? "").contains("אני באה"))
@@ -602,7 +603,7 @@ struct LiveCaptionViewModelSpeechTests {
     func noHebrewVoiceHoldsBackHebrewOnly() async throws {
         let (viewModel, synthesizer) = makeViewModel()
         synthesizer.hasHebrewVoice = false
-        viewModel.start()
+        await viewModel.start()
         await eventually { viewModel.phase.isListening }
         #expect(!viewModel.canSay("תודה"))
         viewModel.speak("תודה")
