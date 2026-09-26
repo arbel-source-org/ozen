@@ -820,6 +820,11 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
+                if abs(viewModel.speakerSimilarityThreshold - AppSettings.default.speakerSimilarityThreshold) > 0.005 {
+                    Button(tr("חזרה להגדרה הרגילה", "Back to the usual setting")) {
+                        viewModel.speakerSimilarityThreshold = AppSettings.default.speakerSimilarityThreshold
+                    }
+                }
             }
         } header: {
             Text(tr("התנהגות", "Behavior"))
