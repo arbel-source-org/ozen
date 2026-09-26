@@ -12,15 +12,28 @@ struct LockScreenCaptionsTests {
         segment.speakerClusterID.map { "Speaker \($0)" }
     }
 
+    /// A line's text with its marks removed, for length checks: the marks
+    /// are invisible and don't cost any of the line's drawn width.
+    private func plain(_ text: String) -> String {
+        text.replacingOccurrences(of: CaptionLayout.rightToLeftMark, with: "")
+    }
+
     @Test("the newest lines with text, the one still being written included")
     func newestLines() {
         let segments = [line("one"), line("two"), line("  "), line("three", final: false)]
         let lines = LockScreenCaptions.lines(from: segments) { _ in nil }
         #expect(lines == [
-            LockScreenCaptionLine(speaker: nil, text: "two", isFinal: true),
-            LockScreenCaptionLine(speaker: nil, text: "three", isFinal: false),
+            LockScreenCaptionLine(speaker: nil, text: CaptionLayout.directed("two"), isFinal: true),
+            LockScreenCaptionLine(speaker: nil, text: CaptionLayout.directed("three"), isFinal: false),
         ])
         #expect(LockScreenCaptions.lines(from: []) { _ in nil }.isEmpty)
+    }
+
+    @Test("a line ending in a Latin brand name reads right to left, its own mark included")
+    func directionMarks() {
+        let lines = LockScreenCaptions.lines(from: [line("תתקשר ב-WhatsApp")]) { _ in nil }
+        #expect(lines == [LockScreenCaptionLine(speaker: nil, text: CaptionLayout.directed("תתקשר ב-WhatsApp"), isFinal: true)])
+        #expect(lines[0].text.hasPrefix(CaptionLayout.rightToLeftMark))
     }
 
     @Test("the top line always says who is talking; below it a name shows only where the speaker changes")
@@ -36,7 +49,7 @@ struct LockScreenCaptionsTests {
     @Test("asked for one line, the newest comes with its speaker's name even mid-run")
     func singleLine() {
         let one = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b", speaker: 1), line("  ")], count: 1, name: names)
-        #expect(one == [LockScreenCaptionLine(speaker: "Speaker 1", text: "b", isFinal: true)])
+        #expect(one == [LockScreenCaptionLine(speaker: "Speaker 1", text: CaptionLayout.directed("b"), isFinal: true)])
     }
 
     @Test("long lines are cut to what fits: the newest line gets more room than the one before, and a name takes its share")
@@ -44,27 +57,27 @@ struct LockScreenCaptionsTests {
         let long = (1...40).map { "word\($0)" }.joined(separator: " ")
         let lines = LockScreenCaptions.lines(from: [line(long), line(long)]) { _ in nil }
         #expect(lines.count == 2)
-        #expect(lines[0].text.count <= LockScreenTextSize.regular.earlierLineMaximumCharacters)
-        #expect(lines[1].text.count <= LockScreenTextSize.regular.newestLineMaximumCharacters)
-        #expect(lines[1].text.count > LockScreenTextSize.regular.earlierLineMaximumCharacters)
+        #expect(plain(lines[0].text).count <= LockScreenTextSize.regular.earlierLineMaximumCharacters)
+        #expect(plain(lines[1].text).count <= LockScreenTextSize.regular.newestLineMaximumCharacters)
+        #expect(plain(lines[1].text).count > LockScreenTextSize.regular.earlierLineMaximumCharacters)
         #expect(lines.allSatisfy { $0.text.hasSuffix("word40") })
 
         let named = LockScreenCaptions.lines(from: [line(long, speaker: 1)], name: names)
         #expect(named[0].speaker == "Speaker 1")
-        #expect(named[0].text.count + "Speaker 1: ".count <= LockScreenTextSize.regular.newestLineMaximumCharacters)
+        #expect(plain(named[0].text).count + "Speaker 1: ".count <= LockScreenTextSize.regular.newestLineMaximumCharacters)
 
         let longName: (TranscriptSegment) -> String? = { _ in String(repeating: "n", count: 90) }
         let crowded = LockScreenCaptions.lines(from: [line(long)], name: longName)
-        #expect(crowded[0].text == LockScreenCaptions.tail(of: long, maximumCharacters: LockScreenCaptions.minimumCharacters))
+        #expect(crowded[0].text == CaptionLayout.directed(LockScreenCaptions.tail(of: long, maximumCharacters: LockScreenCaptions.minimumCharacters)))
     }
 
     @Test("large lock screen text keeps fewer characters, and follows the caption size in the app")
     func largeText() {
         let long = (1...40).map { "word\($0)" }.joined(separator: " ")
         let lines = LockScreenCaptions.lines(from: [line(long), line(long)], textSize: .large) { _ in nil }
-        #expect(lines[0].text.count <= LockScreenTextSize.large.earlierLineMaximumCharacters)
-        #expect(lines[1].text.count <= LockScreenTextSize.large.newestLineMaximumCharacters)
-        #expect(lines[1].text.count > LockScreenTextSize.regular.earlierLineMaximumCharacters)
+        #expect(plain(lines[0].text).count <= LockScreenTextSize.large.earlierLineMaximumCharacters)
+        #expect(plain(lines[1].text).count <= LockScreenTextSize.large.newestLineMaximumCharacters)
+        #expect(plain(lines[1].text).count > LockScreenTextSize.regular.earlierLineMaximumCharacters)
         #expect(LockScreenTextSize.large.newestLineMaximumCharacters < LockScreenTextSize.regular.newestLineMaximumCharacters)
 
         #expect(LockScreenTextSize(captionSize: DisplayPreferences.default.fontSize) == .regular)

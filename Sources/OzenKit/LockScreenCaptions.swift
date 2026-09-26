@@ -58,7 +58,12 @@ public enum LockScreenCaptions {
             let room = max(minimumCharacters, budget - (speaker.map { $0.count + 2 } ?? 0))
             return LockScreenCaptionLine(
                 speaker: speaker,
-                text: tail(of: segment.text, maximumCharacters: room),
+                // The widget draws this on its own line, the same as any
+                // other caption text (`CaptionLayout.directed`): without
+                // the mark, a line ending in a Latin brand or medication
+                // name reorders under the system's bidi algorithm instead
+                // of reading right to left.
+                text: CaptionLayout.directed(tail(of: segment.text, maximumCharacters: room)),
                 isFinal: segment.isCommitted,
                 lastUpdate: segment.lastUpdateTimestamp
             )
