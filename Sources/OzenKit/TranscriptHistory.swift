@@ -469,10 +469,17 @@ public struct TranscriptHistoryStore: Sendable {
     /// is turned into a space before niqqud is stripped, so "tel-aviv" and
     /// a Maqaf'd "תל־אביב" both split into two words the same way a plain
     /// "tel aviv" does, instead of fusing into one word neither half of a
-    /// two-word search can find.
+    /// two-word search can find. Punctuation is turned into a space too,
+    /// rather than deleted outright, so dictation punctuation ("כדורים?")
+    /// or Hebrew gershayim quotes ("״רופא״") glued onto a word by voice
+    /// dictation or typing don't stop it matching the bare word.
     private static func normalizedForSearch(_ text: String) -> String {
         let separated = HebrewText.separatingJoiners(text.replacingOccurrences(of: "\n", with: " "))
-        return strippingNiqqud(separated).lowercased()
+        let withoutNiqqud = strippingNiqqud(separated)
+        let withoutPunctuation = withoutNiqqud.unicodeScalars.map { scalar -> Unicode.Scalar in
+            (CharacterSet.punctuationCharacters.contains(scalar) || CharacterSet.symbols.contains(scalar)) ? " " : scalar
+        }
+        return String(String.UnicodeScalarView(withoutPunctuation)).lowercased()
     }
 
     /// The words of a search, compared the way saved text is: without
@@ -486,21 +493,33 @@ public struct TranscriptHistoryStore: Sendable {
 
     /// One word of a search. Saved text is searched for the word as typed,
     /// which also finds it with a prefix attached ("rofe" finds "la-rofe",
-    /// to the doctor). The reverse needs help: "ha-rofe" (the doctor),
-    /// typed with the article as people naturally do, is also looked for
-    /// without it, so it finds "la-rofe" and a bare "rofe" too. Only when
-    /// three letters or more remain, so a short name that starts with that
-    /// letter is not cut down to something found everywhere.
+    /// to the doctor). The reverse needs help: a query itself carrying one
+    /// of Hebrew's inseparable prefixes — vav ("and"), he ("the"), bet
+    /// ("in/with"), lamed ("to"), mem ("from"), shin ("that"), kaf ("as"),
+    /// and the everyday two-letter stacks of them (וה, ול, וב, ומ, שה, בה,
+    /// לה, מה) — is also looked for with that prefix stripped, so
+    /// "la-rofe" or "ve-ha-rofe" (typed with the prefix, as people
+    /// naturally do) also finds a bare "rofe". Only stripped when three
+    /// letters or more remain underneath, so a short name is not cut down
+    /// to something found everywhere.
     struct SearchWord {
         let forms: [String]
 
+        /// Longest first, so a two-letter stack is tried whole before its
+        /// first letter alone is tried on top of it.
+        static let attachedPrefixes: [String] = [
+            "וה", "ול", "וב", "ומ", "שה", "בה", "לה", "מה",
+            "ו", "ה", "ב", "ל", "מ", "ש", "כ",
+        ]
+
         init(_ word: String) {
-            let withoutArticle = word.dropFirst()
-            if word.first == "\u{05D4}", withoutArticle.count >= 3 {
-                forms = [word, String(withoutArticle)]
-            } else {
-                forms = [word]
+            var forms = [word]
+            for prefix in Self.attachedPrefixes where word.hasPrefix(prefix) {
+                let stem = String(word.dropFirst(prefix.count))
+                guard stem.count >= 3, !forms.contains(stem) else { continue }
+                forms.append(stem)
             }
+            self.forms = forms
         }
 
         func found(in text: String) -> Bool {

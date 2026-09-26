@@ -194,6 +194,37 @@ struct TranscriptHistoryTests {
         #expect(TranscriptHistoryStore.matchingSegmentIDs(in: loaded, query: "הרופא") == loaded.segments.map(\.id))
     }
 
+    @Test("a query typed with an attached preposition or conjunction also finds the bare word")
+    func searchStripsAttachedPrefixesFromTheQuery() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "הרופא אמר")]))
+        try store.save(record(startedAt: 200, segments: [segment(text: "רופא שיניים")]))
+        try store.save(record(startedAt: 300, segments: [segment(text: "שני כדורים ביום")]))
+
+        // "to the doctor" and "and the doctor" both find a bare "doctor",
+        // whether or not the saved text itself carries the article.
+        #expect(store.search("לרופא").count == 2)
+        #expect(store.search("והרופא").count == 2)
+        // "and pills" finds a bare "pills" with no prefix at all.
+        #expect(store.search("וכדורים").count == 1)
+    }
+
+    @Test("dictation punctuation and Hebrew quotes around a search query don't stop it matching")
+    func searchIgnoresDictationPunctuation() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        try store.save(record(startedAt: 100, segments: [segment(text: "לקחת כדורים בבוקר")]))
+        try store.save(record(startedAt: 200, segments: [segment(text: "ביקור אצל הרופא")]))
+
+        #expect(store.search("כדורים?").count == 1)
+        #expect(store.search("״רופא״").count == 1)
+    }
+
     @Test("search matches on speaker name even when the text doesn't contain the query")
     func searchMatchesSpeakerNames() throws {
         let dir = makeTempDirectory()
