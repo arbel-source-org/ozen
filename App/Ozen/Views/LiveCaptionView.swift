@@ -1195,8 +1195,8 @@ struct LiveCaptionView: View {
                     }
                     Text(current.title)
                         .font(.subheadline.weight(.semibold))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.75)
+                        .lineLimit(statusIsNarrow ? 1 : 2)
+                        .minimumScaleFactor(statusIsNarrow ? 0.5 : 0.75)
                         .multilineTextAlignment(.center)
                 }
                 // "Loading the model" in plain yellow is close to invisible
