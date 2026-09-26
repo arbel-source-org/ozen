@@ -20,6 +20,15 @@ struct KeywordAlertMatcherTests {
         #expect(matches[0].wordIndex == 1)
     }
 
+    @Test("a name behind the invisible direction mark the Hebrew model starts some lines with is still found")
+    func directionMarkBeforeTheName() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
+        for mark in ["\u{202B}", "\u{200F}", "\u{202A}", "\u{2067}"] {
+            #expect(matcher.matches(in: mark + "סבתא, בואי לאכול").count == 1, "U+\(String(mark.unicodeScalars.first!.value, radix: 16))")
+            #expect(matcher.matches(in: "בואי " + mark + "סבתא\u{202C}").count == 1)
+        }
+    }
+
     @Test("every single-letter attached prefix matches the stem")
     func everySingleLetterPrefixMatches() {
         let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])

@@ -464,6 +464,16 @@ struct CaptionPipelineTokenTests {
         #expect(woken.raised)
     }
 
+    @Test("the invisible direction mark the Hebrew model starts some lines with never reaches the saved line")
+    func directionMarksAreDropped() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        engine.emit(token(UUID(), "\u{202B}שלום סבתא\u{202C}", final: true))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+        #expect(pipeline.segments.first?.text == "שלום סבתא")
+    }
+
     @Test("tokens become segments; the same utterance updates in place; final commits it")
     func tokensBecomeSegments() async {
         let engine = FakeEngine()

@@ -935,8 +935,21 @@ public final class CaptionPipeline {
         }
     }
 
-    private func handle(token: TranscriptToken) {
+    private func handle(token incoming: TranscriptToken) {
         stats.tokensReceived += 1
+        // ivrit.ai's model starts some lines with an invisible direction
+        // mark; kept, it would travel into saved conversations and search.
+        let cleaned = HebrewText.removingDirectionMarks(incoming.text)
+        let token = cleaned == incoming.text ? incoming : TranscriptToken(
+            utteranceID: incoming.utteranceID,
+            text: cleaned,
+            isFinal: incoming.isFinal,
+            timestamp: incoming.timestamp,
+            speakerClusterID: incoming.speakerClusterID,
+            confidence: incoming.confidence,
+            startsNewSpeakerTurn: incoming.startsNewSpeakerTurn,
+            uncertainWords: incoming.uncertainWords.map(HebrewText.removingDirectionMarks)
+        )
         stats.lastTokenAt = now()
         // A brand-new utterance with nothing to show yet isn't worth an
         // (empty) row on screen; wait for text before creating it.

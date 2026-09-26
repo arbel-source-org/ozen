@@ -69,6 +69,22 @@ public enum HebrewText {
         return String(String.UnicodeScalarView(withoutNiqqud))
     }
 
+    /// Invisible marks that only steer which way text runs: the
+    /// left-to-right and right-to-left marks, the embeddings, overrides and
+    /// isolates, and the Arabic letter mark. ivrit.ai's Hebrew model, trained
+    /// on subtitles, starts some lines with one; glued to the first word, it
+    /// made that word a different string, so her name at the start of a
+    /// line never raised its alert.
+    static let directionMarks: Set<Unicode.Scalar> = [
+        "\u{200E}", "\u{200F}", "\u{202A}", "\u{202B}", "\u{202C}", "\u{202D}", "\u{202E}",
+        "\u{2066}", "\u{2067}", "\u{2068}", "\u{2069}", "\u{061C}",
+    ]
+
+    public static func removingDirectionMarks(_ text: String) -> String {
+        guard text.unicodeScalars.contains(where: directionMarks.contains) else { return text }
+        return String(String.UnicodeScalarView(text.unicodeScalars.filter { !directionMarks.contains($0) }))
+    }
+
     /// Hyphen, Hebrew maqaf, hyphen variants, en and em dashes, slash.
     static let wordJoiners: Set<Unicode.Scalar> = ["-", "\u{05BE}", "\u{2010}", "\u{2011}", "\u{2013}", "\u{2014}", "/"]
 
@@ -86,7 +102,7 @@ public enum HebrewText {
     /// collapsed to single spaces. Mirrors `WhisperResultFilter.normalize`
     /// with the added niqqud pass Hebrew needs.
     public static func normalize(_ text: String) -> String {
-        let withoutNiqqud = stripNiqqud(separatingJoiners(text))
+        let withoutNiqqud = stripNiqqud(separatingJoiners(removingDirectionMarks(text)))
         let stripped = withoutNiqqud.unicodeScalars.filter { scalar in
             !CharacterSet.punctuationCharacters.contains(scalar)
                 && !CharacterSet.symbols.contains(scalar)
