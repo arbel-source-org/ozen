@@ -66,6 +66,27 @@ struct SoundEventsTests {
         SoundObservation(identifier: id, confidence: confidence, timestamp: time)
     }
 
+    @Test("a siren heard for a minute keeps its banner up the whole time; an ordinary sound's banner is short")
+    func sirenBannerNeverLapses() throws {
+        var policy = SoundEventPolicy()
+        var alerts: [SoundAlert] = []
+        for second in 0..<60 {
+            for half in [0.0, 0.5] {
+                if let alert = policy.evaluate(reading("civil_defense_siren", at: 100 + Double(second) + half)) {
+                    alerts.append(alert)
+                }
+            }
+        }
+        #expect(alerts.count >= 3)
+        for (shown, next) in zip(alerts, alerts.dropFirst()) {
+            #expect(next.timestamp - shown.timestamp < shown.bannerSeconds - 2)
+        }
+        var fresh = SoundEventPolicy()
+        let heard = fresh.evaluate(reading("door_bell"))
+        let bell = try #require(heard)
+        #expect(bell.bannerSeconds == 8)
+    }
+
     @Test("a confident, listed, important sound becomes an alert")
     func basicAlert() {
         var policy = SoundEventPolicy()

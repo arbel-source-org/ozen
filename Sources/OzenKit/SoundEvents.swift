@@ -165,6 +165,13 @@ public struct SoundAlert: Sendable, Equatable, Identifiable {
         self.timestamp = timestamp
     }
 
+    /// How long the banner stays up. A critical one outlasts the policy's
+    /// cooldown, so a siren still sounding raises its next alert while the
+    /// banner is up: the screen never goes blank mid-siren as if it stopped.
+    public var bannerSeconds: TimeInterval {
+        event.importance == .critical ? SoundEventPolicy.defaultCooldownSeconds + 4 : 8
+    }
+
     /// Whether this alert's banner replaces the one on screen: a kettle
     /// heard during a smoke alarm doesn't take its banner away. It still
     /// buzzes and is read out.
@@ -225,6 +232,7 @@ public struct SoundAlertPreferences: Codable, Sendable, Equatable {
 /// and a reading below the confidence floor, an unlisted label, a muted
 /// sound, or one below the importance the user asked for is dropped.
 public struct SoundEventPolicy: Sendable, Equatable {
+    public static let defaultCooldownSeconds: TimeInterval = 20
     public var preferences: SoundAlertPreferences
     public var minimumConfidence: Double
     /// The floor for a sound in `preferences.sensitiveIdentifiers`. Kept
@@ -265,7 +273,7 @@ public struct SoundEventPolicy: Sendable, Equatable {
         preferences: SoundAlertPreferences = .default,
         minimumConfidence: Double = 0.6,
         sensitiveConfidence: Double = 0.4,
-        cooldownSeconds: TimeInterval = 20,
+        cooldownSeconds: TimeInterval = SoundEventPolicy.defaultCooldownSeconds,
         emergencyConfidence: Double = 0.85,
         persistenceWindowSeconds: TimeInterval = 2.0
     ) {

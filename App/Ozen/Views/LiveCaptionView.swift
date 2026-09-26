@@ -271,10 +271,8 @@ struct LiveCaptionView: View {
             announceAlert(alert.event.importance == .critical ? tr("שימו לב! \(alert.event.name)", "Attention! \(alert.event.name)") : tr("התראה: \(alert.event.name)", "Alert: \(alert.event.name)"))
         }
         .task(id: visibleSoundAlert?.id) {
-            // Banners clear themselves; critical ones stay twice as long.
             guard let alert = visibleSoundAlert else { return }
-            let seconds: UInt64 = alert.event.importance == .critical ? 16 : 8
-            try? await Task.sleep(nanoseconds: seconds * 1_000_000_000)
+            try? await Task.sleep(for: .seconds(alert.bannerSeconds))
             if visibleSoundAlert?.id == alert.id {
                 withAnimation { visibleSoundAlert = nil }
             }
