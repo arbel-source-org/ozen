@@ -114,4 +114,37 @@ struct CloudCoverTests {
         let failure = PipelineFailure(kind: .engineUnavailable, detail: "", engineUnavailability: EngineUnavailability(kind: .noInternet, detail: ""))
         #expect(CloudCover.phoneSettings(replacing: .default, after: failure) == nil)
     }
+
+    @Test("once the internet returns, cloud captions switch back by themselves")
+    func switchesBackWhenInternetReturns() async {
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone)
+        captions.cloudRecheckSeconds = 0.05
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { captions.activeEngineKind == .whisperKit })
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        #expect(!captions.isCoveringForCloud)
+        #expect(captions.coverReason == nil)
+    }
+
+    @Test("a key or credit problem is left for a person, never asked again on its own")
+    func doesNotRecheckWhenAPersonMustAct() async throws {
+        for kind in [EngineUnavailability.Kind.cloudKeyNeeded, .cloudOutOfCredit] {
+            let cloud = FakeEngine(kind: .cloud, availability: .unavailable(kind, "test"))
+            let phone = FakeEngine(kind: .whisperKit)
+            let captions = pipeline(cloud: cloud, phone: phone)
+            captions.cloudRecheckSeconds = 0.05
+            captions.homeServerSwitchBackQuietSeconds = 0
+            await captions.start(settings: cloudSettings)
+            #expect(await eventually { captions.phase == .listening && captions.isCoveringForCloud }, "\(kind)")
+            let before = cloud.prepareCount
+            try await Task.sleep(for: .milliseconds(300))
+            #expect(cloud.prepareCount == before, "\(kind)")
+            #expect(captions.activeEngineKind == .whisperKit, "\(kind)")
+        }
+    }
 }

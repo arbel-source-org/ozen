@@ -83,6 +83,12 @@ public final class CaptionPipeline {
     /// dropped connection kept a phone that is never stopped on its own
     /// model for good.
     public var homeServerRecheckSeconds: Double = 60
+    /// While the phone covers for the cloud after losing the internet, how
+    /// often to look whether it can be reached again. Without it, a single
+    /// dropped connection kept a phone that is never stopped on its own
+    /// model for good -- the weaker, more battery-hungry choice -- until
+    /// someone restarted the app.
+    public var cloudRecheckSeconds: Double = 60
     /// Only switch back after this long without new words, so a sentence
     /// isn't cut in half.
     public var homeServerSwitchBackQuietSeconds: Double = 2
@@ -93,6 +99,7 @@ public final class CaptionPipeline {
     private var recentAudio = RecentAudio(seconds: 30, sampleRate: 16_000)
     public var recentAudioSamples: [Float] { recentAudio.samples() }
     private var homeServerRecheck: Task<Void, Never>?
+    private var cloudRecheck: Task<Void, Never>?
     /// The room the last download refused for want of space needed, so a
     /// return to the app only retries once that much is free.
     private var storageNeededMegabytes: Int?
@@ -234,6 +241,8 @@ public final class CaptionPipeline {
             coveredSettings = nil
             homeServerRecheck?.cancel()
             homeServerRecheck = nil
+            cloudRecheck?.cancel()
+            cloudRecheck = nil
         }
         storageNeededMegabytes = nil
         // The stored threshold is the person's own choice once they've
@@ -425,6 +434,8 @@ public final class CaptionPipeline {
         recentAudio.clear()
         homeServerRecheck?.cancel()
         homeServerRecheck = nil
+        cloudRecheck?.cancel()
+        cloudRecheck = nil
         cancelScheduledRetry()
         recovery.reset()
         listeningSince = nil
@@ -1183,6 +1194,9 @@ public final class CaptionPipeline {
         if coverReason == .homeServerUnreachable, coveredSettings?.engine == .homeServer {
             recheckHomeServer()
         }
+        if coverReason == .noInternet, coveredSettings?.engine == .cloud {
+            recheckCloud()
+        }
     }
 
     /// See `homeServerRecheckSeconds`. Goes back to the chosen settings
@@ -1204,6 +1218,34 @@ public final class CaptionPipeline {
                 else { continue }
                 self.logEvent(.note("the home computer answers again, switching back to it"))
                 self.homeServerRecheck = nil
+                await self.restart(settings: chosen)
+                return
+            }
+        }
+    }
+
+    /// See `cloudRecheckSeconds`. Only for a dropped connection: a key or
+    /// credit problem needs a person to fix it, not a periodic retry, and
+    /// `PhasePresentation` already gives them a way to Settings for those.
+    /// Goes back to the cloud once it can be reached again and nobody is
+    /// mid-sentence.
+    private func recheckCloud() {
+        cloudRecheck?.cancel()
+        cloudRecheck = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let seconds = self?.cloudRecheckSeconds else { return }
+                try? await Task.sleep(for: .seconds(seconds))
+                guard !Task.isCancelled, let self, self.isCoveringForCloud,
+                      let chosen = self.coveredSettings, chosen.engine == .cloud
+                else { return }
+                guard self.phase == .listening else { continue }
+                let cloud = self.cachedEngine(for: chosen)
+                guard await cloud.checkAvailability(languageCode: chosen.languageCode) == .available,
+                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening,
+                      self.isBetweenSentences
+                else { continue }
+                self.logEvent(.note("the cloud answers again, switching back to it"))
+                self.cloudRecheck = nil
                 await self.restart(settings: chosen)
                 return
             }
