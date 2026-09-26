@@ -91,6 +91,12 @@ struct HomeServerEngineTests {
         #expect(release.contains("zip -q ../ozen-home-server.zip") && release.contains("setup-windows.ps1"))
         #expect(launcher.contains("/releases/latest/download/ozen-home-server.zip"))
         #expect(launcher.contains("setup-windows.ps1"))
+        // Windows PowerShell 5.1 reads a script without a BOM as the local
+        // code page, and cmd reads .cmd files the same way: any Hebrew in
+        // them would be garbled on a Hebrew Windows.
+        let setup = try String(contentsOf: root.appendingPathComponent("server/setup-windows.ps1"), encoding: .utf8)
+        #expect(launcher.unicodeScalars.allSatisfy { $0.isASCII })
+        #expect(setup.unicodeScalars.allSatisfy { $0.isASCII })
     }
 
     @Test("an address without a scheme gets ws and the default port; a given port or wss is kept; nonsense is refused")
