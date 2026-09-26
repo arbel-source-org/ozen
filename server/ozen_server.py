@@ -33,6 +33,7 @@ import json
 import logging
 import math
 import os
+import re
 import time
 
 import numpy as np
@@ -41,6 +42,9 @@ from faster_whisper import WhisperModel
 
 RATE = 16_000
 PROTOCOL_VERSION = 1
+# Direction marks the ivrit.ai model puts at some line starts; they hide a
+# name from the phone's alerts (see HebrewText.directionMarks).
+DIRECTION_MARKS = re.compile("[\u200e\u200f\u202a-\u202e\u2066-\u2069\u061c]")
 log = logging.getLogger("ozen")
 
 
@@ -153,7 +157,7 @@ class Transcriber:
             if t:
                 kept.append(t)
                 logprobs.append(s.avg_logprob)
-        text = " ".join(kept).strip()
+        text = DIRECTION_MARKS.sub("", " ".join(kept)).strip()
         confidence = None
         if logprobs:
             confidence = min(max(math.exp(sum(logprobs) / len(logprobs)), 0.0), 1.0)
