@@ -80,14 +80,21 @@ final class OzenScreenshotUITests: XCTestCase {
         let reveal = app.descendants(matching: .any)["showControlsButton"]
         if reveal.exists { reveal.tap() }
         let settings = app.descendants(matching: .any)["settingsButton"]
+        // A hidden bar's buttons still exist, just off screen: wait until
+        // one can be tapped, so the picture and the checks see it shown.
         XCTAssertTrue(settings.waitForExistence(timeout: 5), "caption screen: the control bar never showed")
+        for _ in 0..<20 where !settings.isHittable {
+            if reveal.exists, reveal.isHittable { reveal.tap() }
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        XCTAssertTrue(settings.isHittable, "caption screen: the control bar never came on screen")
         capture(app, name: "caption-screen-accessibility-text-controls")
         let screen = app.windows.firstMatch.frame
         for identifier in ["settingsButton", "micPickerButton", "transcriptScroll"] {
             let element = app.descendants(matching: .any)[identifier].firstMatch
             XCTAssertTrue(element.exists, "caption screen: \(identifier) is missing")
             let frame = element.frame
-            XCTAssertTrue(frame.minX >= screen.minX - 1 && frame.maxX <= screen.maxX + 1, "caption screen: \(identifier) runs off the screen at this text size (\(frame) in \(screen))")
+            XCTAssertTrue(frame.minX >= screen.minX - 1 && frame.maxX <= screen.maxX + 1 && frame.minY >= screen.minY - 1 && frame.maxY <= screen.maxY + 1, "caption screen: \(identifier) runs off the screen at this text size (\(frame) in \(screen))")
         }
     }
 
