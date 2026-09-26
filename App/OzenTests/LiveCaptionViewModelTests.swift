@@ -1372,9 +1372,20 @@ struct LiveCaptionViewModelDeleteConversationTests {
 
     @Test("renaming an already-named speaker updates its saved profile instead of adding a duplicate")
     func renamingSpeakerDoesNotDuplicateProfile() async throws {
-        let (viewModel, engine, _) = makeViewModel()
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-rename-\(UUID())", isDirectory: true)
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        )
         await viewModel.start()
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.count == 1 })
         await say("שלום", at: Date().timeIntervalSince1970, into: engine, until: viewModel, count: 1)
+        #expect(viewModel.segments.first?.speakerClusterID != nil)
 
         viewModel.nameSpeaker(of: viewModel.segments[0], name: "Dana")
         #expect(viewModel.settings.speakerProfiles.count == 1)
