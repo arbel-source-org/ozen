@@ -873,6 +873,31 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .listening)
     }
 
+    @Test("a new home-computer beam builds a new engine, so the next connection asks for it")
+    func homeServerBeamChangeBuildsNewEngine() async {
+        let built = BuiltEngines()
+        let beams = BeamLog()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                beams.add(settings.homeServerBeam)
+                let engine = FakeEngine(kind: settings.engine)
+                built.add(engine)
+                return engine
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        var settings = AppSettings.default
+        settings.engine = .homeServer
+        settings.homeServerBeam = 5
+        await pipeline.start(settings: settings)
+        settings.homeServerBeam = 2
+        await pipeline.restart(settings: settings)
+        #expect(beams.values == [5, 2])
+        #expect(pipeline.phase == .listening)
+    }
+
     @Test("a memory warning with captions stopped lets go of the loaded engine; starting again builds it anew")
     func memoryWarningWhileStoppedReleasesEngine() async {
         let built = BuiltEngines()
@@ -2320,4 +2345,9 @@ struct CaptionPipelineRetryGuardTests {
         #expect(engine.prepareCount == 1)
         #expect(pipeline.phase.isListening)
     }
+}
+
+private final class BeamLog {
+    private(set) var values: [Int] = []
+    func add(_ beam: Int) { values.append(beam) }
 }
