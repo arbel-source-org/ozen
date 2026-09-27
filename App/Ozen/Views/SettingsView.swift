@@ -49,6 +49,8 @@ struct SettingsView: View {
     }
     @Environment(\.scenePhase) private var scenePhase
 
+    private static let voiceSample = "שלום, זה קול הטלפון. ככה אני נשמע."
+
     var body: some View {
         NavigationStack {
             // Hers first: how captions look, what alerts her, the voice,
@@ -707,10 +709,13 @@ struct SettingsView: View {
                 .accessibilityHidden(true)
             }
             Button {
-                viewModel.speak("שלום, זה קול הטלפון. ככה אני נשמע.")
+                viewModel.speak(Self.voiceSample)
             } label: {
                 Label(tr("להשמיע דוגמה", "Play a sample"), systemImage: "speaker.wave.2")
             }
+            // Without a Hebrew voice the sample is never said; the line
+            // below says what to install.
+            .disabled(!viewModel.canSay(Self.voiceSample))
             if !viewModel.hasHebrewVoice {
                 Text(tr("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice is installed. Add one in the device settings → Accessibility → Spoken Content → Voices → Hebrew."))
                     .font(.footnote)
