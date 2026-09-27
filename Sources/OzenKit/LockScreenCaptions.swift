@@ -184,7 +184,11 @@ public enum HebrewTime {
     /// "a minute ago", "two minutes ago" (Hebrew's own dual form), "7 minutes ago";
     /// from an hour on, whole hours ("two hours ago", not "130 minutes ago").
     public static func minutesAgo(_ minutes: Int) -> String {
-        if Localization.language == .english { return englishMinutesAgo(minutes) }
+        switch Localization.language {
+        case .english: return englishMinutesAgo(minutes)
+        case .hebrew: break
+        default: return genericMinutesAgo(minutes, in: Localization.language)
+        }
         switch minutes {
         case ...1: return "לפני דקה"
         case 2: return "לפני שתי דקות"
@@ -201,6 +205,45 @@ public enum HebrewTime {
         case 2..<60: return "\(minutes) minutes ago"
         case 60..<120: return "an hour ago"
         default: return "\(minutes / 60) hours ago"
+        }
+    }
+
+    private enum TimeUnit { case minute, hour }
+
+    private static func genericMinutesAgo(_ minutes: Int, in language: UILanguage) -> String {
+        switch minutes {
+        case ...1: return agoPhrase(1, unit: .minute, in: language)
+        case 2..<60: return agoPhrase(minutes, unit: .minute, in: language)
+        case 60..<120: return agoPhrase(1, unit: .hour, in: language)
+        case 120..<180: return agoPhrase(2, unit: .hour, in: language)
+        default: return agoPhrase(minutes / 60, unit: .hour, in: language)
+        }
+    }
+
+    /// Arabic's dual takes a different ending after "قبل" ("ago") than it
+    /// does standing alone, so the two-count case is looked up separately
+    /// here instead of through `TimeUnitWord`.
+    private static func agoPhrase(_ count: Int, unit: TimeUnit, in language: UILanguage) -> String {
+        let category = pluralCategory(for: count, in: language)
+        let word: String
+        if language == .arabic, category == .two {
+            word = unit == .minute ? "دقيقتين" : "ساعتين"
+        } else {
+            word = unit == .minute ? TimeUnitWord.minute(category, in: language) : TimeUnitWord.hour(category, in: language)
+        }
+        let counted = countedPhrase(count, word: word, omitNumeral: omitsNumeral(category, in: language))
+        switch language {
+        case .russian: return "\(counted) назад"
+        case .ukrainian: return "\(counted) тому"
+        case .arabic: return "قبل \(counted)"
+        case .french: return "il y a \(counted)"
+        case .spanish: return "hace \(counted)"
+        case .german: return "vor \(counted)"
+        case .portuguese: return "há \(counted)"
+        case .chineseSimplified: return "\(counted)前"
+        case .hindi: return "\(counted) पहले"
+        case .amharic: return "ከ\(count) \(word) በፊት"
+        case .hebrew, .english: return counted
         }
     }
 }
