@@ -17,6 +17,7 @@ struct CaptionRow: View {
     let isStarred: Bool
     let isUncertain: Bool
     var marksUncertainWords = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -58,7 +59,10 @@ struct CaptionRow: View {
                     // A line still being written keeps its dimmer colour
                     // throughout, numbers included, so it reads as unfinished.
                     numberColor: segment.isCommitted ? theme.numberText : nil,
-                    uncertainWords: marksUncertainWords && segment.isCommitted ? segment.uncertainWords : []
+                    uncertainWords: marksUncertainWords && segment.isCommitted ? segment.uncertainWords : [],
+                    // Only once the line is final: a number still being
+                    // heard can change under her finger.
+                    linkingPhoneNumbers: segment.isCommitted
                 )
                     .font(.system(size: display.fontSize, weight: display.boldText ? .bold : .medium))
                     .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
@@ -85,6 +89,17 @@ struct CaptionRow: View {
         // screen leaves the repeated name out.
         .accessibilityLabel(accessibilityText)
         .accessibilityHint(isKeywordHit ? tr("מכילה מילה חשובה", "Contains an important word") : "")
+        // The line is one element for VoiceOver, so the tappable number in
+        // it is offered as an action instead.
+        .accessibilityActions {
+            if segment.isCommitted {
+                ForEach(PhoneNumbers.matches(in: segment.text), id: \.dialable) { phone in
+                    if let url = phone.url {
+                        Button(tr("להתקשר ל־\(phone.dialable)", "Call \(phone.dialable)")) { openURL(url) }
+                    }
+                }
+            }
+        }
     }
 
     private var accessibilityText: String {
