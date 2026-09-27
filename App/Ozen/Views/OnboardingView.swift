@@ -57,6 +57,13 @@ struct OnboardingView: View {
             .background(Color(.systemBackground))
         }
         .background(Color(.systemBackground))
+        // Only the caption screen carries out Siri and Shortcut requests.
+        // One made during these pages would otherwise wait and happen when
+        // she finishes, long after it was asked: a sentence said out loud
+        // out of nowhere, or captions that don't start.
+        .task(id: PendingAppAction.shared.serial) {
+            _ = PendingAppAction.shared.takeAll()
+        }
         // Six pages to read, a permission to grant, a name to type: long
         // enough that the phone's own lock timeout can end onboarding
         // partway through. The caption screen manages this on its own
