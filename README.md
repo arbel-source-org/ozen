@@ -297,6 +297,23 @@ work space of five-way beam search over 30-second windows and NVIDIA's
 libraries. The setup checks the card and the free space before it
 downloads anything.
 
+Measured on rented cards (2026-09-27, the server's exact work on the same
+100 Hebrew sentences: the full model with beam 5 for each finished
+sentence, Turbo for live words; every card wrote the same text):
+
+| Card | Finished sentence | Live words |
+|---|---|---|
+| RTX 4090 | 0.33 s | 0.12 s |
+| RTX 3090 | 0.52 s | 0.22 s |
+| RTX 4060 Ti | 0.69 s | 0.27 s |
+| RTX 3060 12 GB | 0.77 s | 0.34 s |
+| RTX 2080 Ti (Linux) | 0.79 s | 0.27 s |
+| RTX 3070 | 0.93 s | 0.42 s |
+| RTX 2080 Ti (Windows) | 1.02 s | 0.23 s |
+
+The two 2080 Ti rows are different computers, so the gap between them is a
+hint that Windows adds overhead to beam search, not a clean measurement.
+
 A faster card shortens only the final pass: words already appear about
 0.2 s after they're said, and a sentence counts as finished after a 0.7 s
 pause whatever the card. Beam search wider than 5 measured no more
