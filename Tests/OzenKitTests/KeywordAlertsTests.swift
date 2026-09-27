@@ -114,6 +114,14 @@ struct KeywordAlertMatcherTests {
         #expect(matcher.matches(in: "היי סבתוש מה נשמע").count == 1)
     }
 
+    @Test("a curated nickname behind an attached prefix still matches")
+    func prefixedCuratedNicknameMatches() {
+        let matcher = KeywordAlertMatcher(alerts: [alert("סבתא")])
+        #expect(matcher.matches(in: "כשסבתוש הגיעה").count == 1)
+        #expect(matcher.matches(in: "תגידו לסבתושה").count == 1)
+        #expect(KeywordAlertMatcher(alerts: [alert("אמא")]).matches(in: "הלכתי לאימא").count == 1)
+    }
+
     @Test("the alternate spelling ima/ama matches in either direction")
     func amaImaSpellingVariantsMatchBothWays() {
         #expect(KeywordAlertMatcher(alerts: [alert("אמא")]).matches(in: "איפה אימא שלי").count == 1)

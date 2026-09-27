@@ -228,7 +228,9 @@ public enum HebrewText {
         if let core = diminutiveCore(rawWord) {
             return stripAttachedPrefix(from: core, leaving: stem)
         }
-        return affectionateVariants[stem]?.contains(normalizedWord) ?? false
+        guard let variants = affectionateVariants[stem] else { return false }
+        return variants.contains(normalizedWord)
+            || variants.contains { stripAttachedPrefix(from: normalizedWord, leaving: $0) }
     }
 }
 
