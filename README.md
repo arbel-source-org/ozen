@@ -394,6 +394,12 @@ real room are being verified by hand — see the design doc's checklist.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+GNU Affero General Public License v3.0 — see [LICENSE](LICENSE).
+
+Ozen is free software, and every copy has to stay free: anyone who shares
+the app, a changed version of it, or runs a changed home-computer server for
+other people must pass on the full source code under the same license. Code
+taken from an earlier version before 2026-09-28 was under MIT; everything from
+then on is AGPL-3.0.
 
 Made by Arbel.
