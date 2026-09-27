@@ -33,7 +33,7 @@ struct DiagnosticsView: View {
         parser.locale = Locale(identifier: "en_US_POSIX")
         parser.dateFormat = "yyyy-MM-dd-HHmmss"
         guard let date = parser.date(from: stamp) else { return stamp }
-        return date.formatted(date: .abbreviated, time: .standard)
+        return date.formatted(inAppLanguage: .abbreviated, time: .standard)
     }
 
     private func loadJournalLines() -> [String] {
@@ -85,7 +85,7 @@ struct DiagnosticsView: View {
                 LabeledContent(tr("דוברים שזוהו", "Speakers identified"), value: "\(viewModel.pipeline.speakerClusters.count)")
                 LabeledContent(tr("דוברים חדשים בסשן", "New speakers this session"), value: "\(viewModel.stats.speakerClustersOpened)")
                 if let started = viewModel.stats.sessionStartedAt {
-                    LabeledContent(tr("התחלת סשן", "Session started"), value: Date(timeIntervalSince1970: started).formatted(date: .omitted, time: .standard))
+                    LabeledContent(tr("התחלת סשן", "Session started"), value: Date(timeIntervalSince1970: started).formatted(inAppLanguage: .omitted, time: .standard))
                 }
             }
 
@@ -248,7 +248,7 @@ struct DiagnosticsView: View {
 
     private static var installExpiryText: String {
         guard let date = InstallExpiryStatus.shared.expiresAt else { return "—" }
-        return date.formatted(date: .abbreviated, time: .shortened)
+        return date.formatted(inAppLanguage: .abbreviated, time: .shortened)
     }
 
     private static var vibrationText: String {
@@ -353,7 +353,7 @@ struct DiagnosticsView: View {
                 ForEach(misses, id: \.identifier) { miss in
                     LabeledContent(
                         SoundEventCatalog.event(for: miss.identifier)?.name ?? miss.identifier,
-                        value: "\(Int((miss.bestConfidence * 100).rounded()))% · \(Date(timeIntervalSince1970: miss.lastHeardAt).formatted(date: .omitted, time: .shortened))"
+                        value: "\(Int((miss.bestConfidence * 100).rounded()))% · \(Date(timeIntervalSince1970: miss.lastHeardAt).formatted(inAppLanguage: .omitted, time: .shortened))"
                     )
                 }
             } header: {

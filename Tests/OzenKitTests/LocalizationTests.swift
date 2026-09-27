@@ -46,4 +46,22 @@ struct LocalizationTests {
         #expect(UILanguage.forSpeaking("10:30", otherwise: .english) == .english)
         #expect(UILanguage.forSpeaking("Привет", otherwise: .hebrew) == .hebrew)
     }
+
+    @Test("dates are written in the app's language, not the phone's, keeping the phone's region")
+    func dateLanguage() {
+        let hebrew = UILanguage.hebrew.locale(keepingRegionOf: Locale(identifier: "en_GB"))
+        #expect(hebrew.language.languageCode?.identifier == "he")
+        #expect(hebrew.region?.identifier == "GB")
+        let english = UILanguage.english.locale(keepingRegionOf: Locale(identifier: "he_IL"))
+        #expect(english.language.languageCode?.identifier == "en")
+        #expect(english.region?.identifier == "IL")
+
+        let date = Date(timeIntervalSince1970: 1_791_000_000)
+        let style = Date.FormatStyle(date: .abbreviated, time: .omitted, timeZone: TimeZone(identifier: "UTC")!)
+        let inHebrew = date.formatted(style.locale(hebrew))
+        let inEnglish = date.formatted(style.locale(english))
+        #expect(inHebrew.unicodeScalars.contains { (0x05D0...0x05EA).contains($0.value) })
+        #expect(!inEnglish.unicodeScalars.contains { (0x05D0...0x05EA).contains($0.value) })
+        #expect(inEnglish.contains("Oct") || inEnglish.contains("Sep"))
+    }
 }

@@ -649,7 +649,7 @@ struct LiveCaptionView: View {
     private func quietGapDivider(from previous: TranscriptSegment, to segment: TranscriptSegment) -> some View {
         let start = Date(timeIntervalSince1970: segment.startTimestamp)
         let sameDay = Calendar.current.isDate(start, inSameDayAs: Date(timeIntervalSince1970: previous.lastUpdateTimestamp))
-        let time = start.formatted(date: sameDay ? .omitted : .abbreviated, time: .shortened)
+        let time = start.formatted(inAppLanguage: sameDay ? .omitted : .abbreviated, time: .shortened)
         return HStack(spacing: 10) {
             Rectangle()
                 .fill(theme.pendingText.opacity(0.5))

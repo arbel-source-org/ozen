@@ -184,7 +184,7 @@ struct HistoryDetailView: View {
                 ShareLink(
                     item: TranscriptHistoryStore.exportText(record, utcOffsetSeconds: TimeZone.current.secondsFromGMT()),
                     subject: Text(tr("שיחה מאוזן", "Conversation from Ozen")),
-                    message: Text(Date(timeIntervalSince1970: record.startedAt).formatted(date: .abbreviated, time: .shortened))
+                    message: Text(Date(timeIntervalSince1970: record.startedAt).formatted(inAppLanguage: .abbreviated, time: .shortened))
                 ) {
                     Label(tr("שיתוף", "Share"), systemImage: "square.and.arrow.up")
                 }
@@ -441,7 +441,7 @@ private struct SavedLineRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             if showsTime {
-                Text(Date(timeIntervalSince1970: segment.startTimestamp).formatted(date: .omitted, time: .shortened))
+                Text(Date(timeIntervalSince1970: segment.startTimestamp).formatted(inAppLanguage: .omitted, time: .shortened))
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
             }

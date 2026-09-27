@@ -909,7 +909,7 @@ struct SettingsView: View {
             if let expiresAt = InstallExpiryStatus.shared.expiresAt {
                 // Installed with a free Apple ID: when it has to be
                 // installed again, for whoever does that.
-                LabeledContent(tr("ההתקנה תקפה עד", "Install valid until"), value: expiresAt.formatted(date: .abbreviated, time: .shortened))
+                LabeledContent(tr("ההתקנה תקפה עד", "Install valid until"), value: expiresAt.formatted(inAppLanguage: .abbreviated, time: .shortened))
             }
             Link(destination: URL(string: "https://github.com/arbel-source-org/ozen")!) {
                 Label(tr("קוד המקור בגיטהאב", "Source code on GitHub"), systemImage: "chevron.left.forwardslash.chevron.right")

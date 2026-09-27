@@ -86,7 +86,7 @@ struct KeywordAlertsView: View {
                                 }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            Text(Date(timeIntervalSince1970: hit.timestamp).formatted(date: .omitted, time: .shortened))
+                            Text(Date(timeIntervalSince1970: hit.timestamp).formatted(inAppLanguage: .omitted, time: .shortened))
                                 .foregroundStyle(.secondary)
                                 .monospacedDigit()
                         }

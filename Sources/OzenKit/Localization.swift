@@ -12,6 +12,15 @@ public enum UILanguage: String, Codable, Sendable, CaseIterable {
         if scalars.contains(where: { ("a"..."z").contains($0) || ("A"..."Z").contains($0) }) { return .english }
         return fallback
     }
+
+    public func locale(keepingRegionOf base: Locale) -> Locale {
+        var components = Locale.Components(locale: base)
+        components.languageComponents = Locale.Language.Components(
+            languageCode: self == .hebrew ? "he" : "en",
+            region: base.region
+        )
+        return Locale(components: components)
+    }
 }
 
 public enum AppLanguage: String, Codable, Sendable, CaseIterable {
@@ -38,7 +47,15 @@ public enum Localization {
         set { store.value = newValue }
     }
 
+    public static var locale: Locale { language.locale(keepingRegionOf: .current) }
+
     private static let store = LanguageStore()
+}
+
+public extension Date {
+    func formatted(inAppLanguage date: Date.FormatStyle.DateStyle, time: Date.FormatStyle.TimeStyle) -> String {
+        formatted(Date.FormatStyle(date: date, time: time, locale: Localization.locale))
+    }
 }
 
 private final class LanguageStore: @unchecked Sendable {

@@ -32,7 +32,7 @@ struct StarredLinesView: View {
                                 } label: {
                                     VStack(alignment: .leading, spacing: 2) {
                                         HStack(spacing: 6) {
-                                            Text(Date(timeIntervalSince1970: line.segment.startTimestamp).formatted(date: .omitted, time: .shortened))
+                                            Text(Date(timeIntervalSince1970: line.segment.startTimestamp).formatted(inAppLanguage: .omitted, time: .shortened))
                                                 .font(.caption2.monospacedDigit())
                                                 .foregroundStyle(.secondary)
                                             if let name = line.segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
