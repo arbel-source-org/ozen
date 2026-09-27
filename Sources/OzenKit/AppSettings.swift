@@ -174,6 +174,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// did: on LibriSpeech, CAM++ clusters correctly 96.8% of the time at
     /// 0.45, against MFCC's 45.8% at the old default of 0.75.
     public var speakerSimilarityThreshold: Float
+    /// Which scale `speakerSimilarityThreshold` was saved on: 1 for files
+    /// written before the CAM++ embedder, whose untouched 0.75 was the old
+    /// default rather than a choice.
+    private var speakerThresholdScale = 2
     /// Words and names that buzz and highlight when spoken.
     public var keywordAlerts: [KeywordAlert]
     /// Doorbell, siren, kettle... shown as banners; see `SoundEventCatalog`.
@@ -363,7 +367,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case engine, languageCode, preferredInputUID, speakerProfiles, creditLine
         case whisperModelVariant, allowServerFallbackForAppleSpeech, cloudModel, homeServerAddress, display
-        case hapticOnSpeechResume, speakerSimilarityThreshold
+        case hapticOnSpeechResume, speakerSimilarityThreshold, speakerThresholdScale
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding, appLanguage
         case notifyWhenInBackground, allowCellularModelDownload, historyRetention
@@ -394,6 +398,12 @@ public struct AppSettings: Codable, Sendable, Equatable {
         speakerSimilarityThreshold = speakerSimilarityThreshold.isFinite
             ? min(max(speakerSimilarityThreshold, 0.2), 0.95)
             : defaults.speakerSimilarityThreshold
+        // Files from before 2026-09-14 saved the old default, 0.75, even when
+        // nobody touched the slider; read as a choice, it kept CAM++ from
+        // telling voices apart (it wants about 0.45).
+        if (container.lenient(Int.self, forKey: .speakerThresholdScale) ?? 1) < 2, speakerSimilarityThreshold == 0.75 {
+            speakerSimilarityThreshold = defaults.speakerSimilarityThreshold
+        }
         keywordAlerts = container.lenientArray(of: KeywordAlert.self, forKey: .keywordAlerts) ?? defaults.keywordAlerts
         soundAlerts = container.lenient(SoundAlertPreferences.self, forKey: .soundAlerts) ?? defaults.soundAlerts
         saveHistory = container.lenient(Bool.self, forKey: .saveHistory) ?? defaults.saveHistory

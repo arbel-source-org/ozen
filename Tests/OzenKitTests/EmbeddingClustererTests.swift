@@ -258,6 +258,20 @@ struct AppSettingsThresholdDecodingTests {
         #expect(try decode("7") == 0.95)
         #expect(try decode("0.8") == 0.8)
     }
+
+    @Test("an old file's untouched 0.75 becomes today's default; a choice made since is kept")
+    func oldDefaultMigrates() throws {
+        func decode(_ json: String) throws -> AppSettings {
+            try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
+        }
+        #expect(try decode(#"{"speakerSimilarityThreshold":0.75}"#).speakerSimilarityThreshold == AppSettings.default.speakerSimilarityThreshold)
+        #expect(try decode(#"{"speakerSimilarityThreshold":0.6}"#).speakerSimilarityThreshold == 0.6)
+
+        var chosen = AppSettings.default
+        chosen.speakerSimilarityThreshold = 0.75
+        let saved = try JSONEncoder().encode(chosen)
+        #expect(try JSONDecoder().decode(AppSettings.self, from: saved).speakerSimilarityThreshold == 0.75)
+    }
 }
 
 @Suite("EmbeddingClusterer doubtful windows")
