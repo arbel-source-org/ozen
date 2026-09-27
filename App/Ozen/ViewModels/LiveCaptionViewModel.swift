@@ -1092,8 +1092,12 @@ public final class LiveCaptionViewModel {
         guard retention != .forever else { return 0 }
         let onScreen = Set([historySessionID] + closedHistorySessions.map(\.id)).union(openedHistoryIDs)
         let writer = historyWriter
+        let clips = problemAudio
         return await Task.detached(priority: .utility) {
-            writer.deleteExpiredNow(retention: retention, now: now, protecting: onScreen)
+            if let cutoff = retention.cutoff(now: now) {
+                clips?.deleteClips(olderThan: cutoff)
+            }
+            return writer.deleteExpiredNow(retention: retention, now: now, protecting: onScreen)
         }.value
     }
 

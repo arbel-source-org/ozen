@@ -61,10 +61,7 @@ public struct ProblemAudioStore: Sendable {
     public func save(_ samples: [Float], sampleRate: Int, at date: Date) -> URL? {
         guard !samples.isEmpty else { return nil }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
-        let url = directory.appendingPathComponent("problem-\(formatter.string(from: date)).wav")
+        let url = directory.appendingPathComponent("problem-\(Self.nameFormatter().string(from: date)).wav")
         do {
             try WAVFile.pcm16(samples, sampleRate: sampleRate).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         } catch {
@@ -85,5 +82,27 @@ public struct ProblemAudioStore: Sendable {
 
     public func remove(_ url: URL) {
         try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Clips are her voice: they follow the same "delete after" choice as
+    /// her saved conversations instead of staying on the phone for good.
+    @discardableResult
+    public func deleteClips(olderThan cutoff: TimeInterval) -> Int {
+        let formatter = Self.nameFormatter()
+        var deleted = 0
+        for clip in clips() {
+            let stamp = clip.deletingPathExtension().lastPathComponent.dropFirst("problem-".count)
+            guard let date = formatter.date(from: String(stamp)), date.timeIntervalSince1970 < cutoff else { continue }
+            remove(clip)
+            deleted += 1
+        }
+        return deleted
+    }
+
+    private static func nameFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd-HHmmss"
+        return formatter
     }
 }

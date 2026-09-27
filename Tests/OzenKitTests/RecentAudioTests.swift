@@ -53,4 +53,18 @@ struct RecentAudioTests {
         store.remove(try #require(clips.first))
         #expect(store.clips().count == 1)
     }
+
+    @Test("clips older than the chosen keep-for time are deleted; newer ones stay")
+    func clipsExpire() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-problem-audio-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ProblemAudioStore(directory: directory, keep: 5)
+        let now: TimeInterval = 1_790_000_000
+        let old = try #require(store.save([0.1], sampleRate: 16_000, at: Date(timeIntervalSince1970: now - 10 * 86_400)))
+        let recent = try #require(store.save([0.1], sampleRate: 16_000, at: Date(timeIntervalSince1970: now - 2 * 86_400)))
+        let cutoff = try #require(HistoryRetention.week.cutoff(now: now))
+        #expect(store.deleteClips(olderThan: cutoff) == 1)
+        #expect(store.clips().map(\.lastPathComponent) == [recent.lastPathComponent])
+        #expect(!FileManager.default.fileExists(atPath: old.path))
+    }
 }

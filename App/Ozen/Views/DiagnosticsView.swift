@@ -214,6 +214,12 @@ struct DiagnosticsView: View {
             problemClips = viewModel.problemAudio?.clips() ?? []
             notificationsAllowed = await AlertNotifier.shared.isAllowed()
             reportText = report
+            // "Send report" shares this text as it stands: kept current
+            // while the screen is open, not frozen at the moment it opened.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                reportText = report
+            }
         }
         .accessibilityIdentifier("diagnosticsScreen")
         .navigationTitle(tr("אבחון", "Diagnostics"))
