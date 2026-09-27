@@ -734,6 +734,41 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.stats.speakerClustersOpened == 0)
     }
 
+    @Test("a line's voice is judged from its last few windows together, so one odd window doesn't rename it")
+    func lineVoiceIsPooled() async {
+        struct OddWindowEmbedder: SpeakerEmbedding {
+            func embed(samples: [Float], sampleRate: Double) -> [Float]? {
+                guard let first = samples.first else { return nil }
+                return first > 0 ? [1, 0, 0] : [0.1, 0.995, 0]
+            }
+        }
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: OddWindowEmbedder(), recovery: .disabled)
+        pipeline.enroll(profile: SpeakerProfile(name: "דנה", embedding: [1, 0, 0]))
+        await pipeline.start(settings: .default)
+
+        let id = UUID()
+        engine.emit(token(id, "היי"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.segments.first?.speakerClusterID != nil })
+        audio.push([Float](repeating: -0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.first?.sampleCount == EmbeddingClusterer.enrollmentWeight + 2 })
+
+        #expect(pipeline.displayName(for: pipeline.segments[0]) == "דנה")
+        #expect(pipeline.speakerClusters.count == 1)
+
+        let next = UUID()
+        engine.emit(token(id, "היי", final: true))
+        engine.emit(token(next, "מי זה"))
+        #expect(await eventually { pipeline.segments.count == 2 })
+        audio.push([Float](repeating: -0.5, count: 24_000))
+        audio.push([Float](repeating: -0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.count == 2 })
+        #expect(await eventually { pipeline.displayName(for: pipeline.segments[1]) != "דנה" })
+    }
+
     @Test("a profile saved by a different, since-replaced embedder is not seeded as a phantom speaker")
     func mismatchedProfileLengthIsNotEnrolled() async {
         let engine = FakeEngine()

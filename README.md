@@ -27,7 +27,10 @@ things, for Hebrew conversation, entirely on-device.
   better than one long one: on 16 Hebrew speakers in groups of four, three
   short separate recordings named the right person 84% of the time against
   64% for one 30-second recording, and past about a minute of recording,
-  length alone stopped helping. Unnamed voices are numbered from
+  length alone stopped helping. A line's voice is judged from its last three
+  1.5-second windows together, not only the newest: 92% of lines went to
+  the right saved person against 84% from one window (a guest took a family
+  name a little more often, 22% against 18%). Unnamed voices are numbered from
   1 in each conversation, so a phone listening all week doesn't reach
   "speaker 140". Voices are told apart by [WeSpeaker CAM++](https://huggingface.co/Wespeaker/wespeaker-voxceleb-campplus-LM),
   a small (7.3M-parameter) neural speaker-embedding model run entirely
