@@ -55,6 +55,19 @@ if ($gpu.GB -lt 5.5) {
     exit 1
 }
 $accurate = $gpu.GB -ge 7.5
+# Python, the NVIDIA libraries and the models, plus room to unpack them.
+# A first install on a nearly full disk otherwise stopped halfway with a
+# raw download error; a second run skips what is already there.
+$neededGB = if ($accurate) { 12 } else { 7 }
+if (-not (Test-Path (Join-Path $Dir 'venv'))) {
+    $freeGB = [math]::Round((Get-PSDrive -Name $Dir.Substring(0, 1)).Free / 1GB, 1)
+    if ($freeGB -lt $neededGB) {
+        Tell ("Ozen needs about $neededGB GB of free space on drive $($Dir.Substring(0, 2)), and there is $freeGB GB.`n`n" +
+            "Free some space (for example empty the Recycle Bin or remove programs you don't use) and run this setup again.`n`n" +
+            "Nothing was installed. The phone keeps writing captions by itself.") 'Warning'
+        exit 1
+    }
+}
 if (-not $Quiet) {
     $what = if ($accurate) { 'the fast model for live words and the accurate one for finished lines' } else { 'the fast model (the accurate one needs 8 GB)' }
     if (-not (Ask ("Found $($gpu.Name) with $($gpu.GB) GB. Ozen will use $what.`n`n" +
