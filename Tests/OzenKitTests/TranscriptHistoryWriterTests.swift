@@ -19,14 +19,17 @@ struct TranscriptHistoryWriterTests {
         )
     }
 
-    /// Runs `work` on another thread, so a call that wrongly blocks shows
-    /// up as a failed expectation instead of hanging the whole test run.
+    /// Runs `work` on a thread of its own, so a call that wrongly blocks
+    /// shows up as a failed expectation instead of hanging the whole test
+    /// run. Not the shared global queue: on a one-core runner its threads
+    /// were all taken by other tests, and the work did not even start
+    /// within the second this waits.
     private func offThread(_ work: @escaping @Sendable () -> Void) -> DispatchSemaphore {
         let done = DispatchSemaphore(value: 0)
-        DispatchQueue.global().async {
+        Thread {
             work()
             done.signal()
-        }
+        }.start()
         return done
     }
 

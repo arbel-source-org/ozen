@@ -560,7 +560,10 @@ struct HomeServerCoverTests {
             embedder: FakeEmbedder(),
             recovery: .disabled
         )
-        captions.homeServerRecheckSeconds = 0.02
+        // Long enough that the phone's turn outlasts a busy one-core
+        // runner's scheduling delay: at 0.02 s the switch back could
+        // happen between two polls, and the test missed the phone's turn.
+        captions.homeServerRecheckSeconds = 0.1
         captions.homeServerSwitchBackQuietSeconds = 0
         await captions.start(settings: serverSettings)
         var waits: [Double] = []
@@ -570,13 +573,13 @@ struct HomeServerCoverTests {
             #expect(await eventually { captions.activeEngineKind == .whisperKit })
             waits.append(captions.currentHomeServerRecheckSeconds)
         }
-        #expect(waits == [0.02, 0.04, 0.08, 0.16])
+        #expect(waits == [0.1, 0.2, 0.4, 0.8])
 
         #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
         captions.homeServerFlapWindowSeconds = 0
         server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
         #expect(await eventually { captions.activeEngineKind == .whisperKit })
-        #expect(captions.currentHomeServerRecheckSeconds == 0.02)
+        #expect(captions.currentHomeServerRecheckSeconds == 0.1)
         captions.stop()
     }
 
