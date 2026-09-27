@@ -153,6 +153,24 @@ struct LiveCaptionViewModelTests {
         #expect(viewModel.stats.engineRestarts == 1)
     }
 
+    @Test("a home-computer beam change reconnects once it settles, but not after the engine was switched away")
+    func beamRestartSettles() async throws {
+        let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())
+        await viewModel.start()
+        await viewModel.setEngine(.homeServer)
+        #expect(viewModel.stats.engineRestarts == 1)
+
+        viewModel.homeServerBeam = 2
+        try await Task.sleep(for: .seconds(LiveCaptionViewModel.beamSettleSeconds + 0.8))
+        #expect(viewModel.stats.engineRestarts == 2)
+
+        viewModel.homeServerBeam = 3
+        await viewModel.setEngine(.appleSpeech)
+        #expect(viewModel.stats.engineRestarts == 3)
+        try await Task.sleep(for: .seconds(LiveCaptionViewModel.beamSettleSeconds + 0.8))
+        #expect(viewModel.stats.engineRestarts == 3)
+    }
+
     @Test("choosing a Whisper model persists, and only restarts when Whisper is the active engine")
     func modelChoice() async {
         let store = temporaryStore()

@@ -846,6 +846,9 @@ public final class LiveCaptionViewModel {
 
     public func setEngine(_ kind: TranscriptionEngineKind) async {
         guard settings.engine != kind else { return }
+        // A beam change still settling would otherwise restart the new
+        // engine a second time, a second after this switch.
+        beamRestart?.cancel()
         settings.engine = kind
         persist()
         await restartIfRunning()
@@ -1034,7 +1037,7 @@ public final class LiveCaptionViewModel {
             guard settings.engine == .homeServer else { return }
             beamRestart = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(Self.beamSettleSeconds))
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, self?.settings.engine == .homeServer else { return }
                 await self?.restartIfRunning()
             }
         }
