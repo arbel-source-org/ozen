@@ -430,6 +430,7 @@ private struct ConversationSummarySection: View {
 /// of their turn, a star, and the question mark for an unsure line.
 private struct SavedLineRow: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openURL) private var openURL
     let segment: SavedSegment
     let previous: SavedSegment?
     let showsTime: Bool
@@ -463,7 +464,8 @@ private struct SavedLineRow: View {
                     caption: CaptionLayout.displayText(segment.text),
                     emphasizingNumbers: emphasizeNumbers,
                     size: max(17, fontSize * 0.7),
-                    numberColor: nil
+                    numberColor: nil,
+                    linkingPhoneNumbers: true
                 )
                     .font(.system(size: max(17, fontSize * 0.7)))
             }
@@ -473,6 +475,13 @@ private struct SavedLineRow: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
         .accessibilityHint(isMatch ? tr("מכילה את מה שחיפשת", "Contains what you searched for") : "")
+        .accessibilityActions {
+            ForEach(PhoneNumbers.matches(in: segment.text), id: \.dialable) { phone in
+                if let url = phone.url {
+                    Button(tr("להתקשר ל־\(phone.dialable)", "Call \(phone.dialable)")) { openURL(url) }
+                }
+            }
+        }
     }
 
     private var isUncertain: Bool {
