@@ -91,9 +91,13 @@ final class OzenScreenshotUITests: XCTestCase {
         let screen = app.windows.firstMatch.frame
         // Hittable already while the bar is still sliding up: measured then,
         // its buttons sat below the screen's edge. Wait until it stops.
+        // The bar hides itself after five idle seconds, and a slow
+        // simulator (the iPad run) spends that long getting here: bring
+        // it back instead of measuring a hidden bar below the screen.
         var last = settings.frame
         for _ in 0..<20 {
             Thread.sleep(forTimeInterval: 0.25)
+            if !settings.isHittable, reveal.exists, reveal.isHittable { reveal.tap() }
             let now = settings.frame
             if now == last && now.maxY <= screen.maxY + 1 { break }
             last = now
