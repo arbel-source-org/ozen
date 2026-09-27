@@ -27,8 +27,6 @@ struct SpeakerEnrollmentView: View {
                         ProgressView(value: progress) {
                             Text(tr("מקליט… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) שניות", "Recording… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) seconds"))
                         }
-                        // Otherwise VoiceOver reads a raw percentage as the
-                        // value, on top of the elapsed time already in the label.
                         .accessibilityValue(tr("\(Int(progress * targetSeconds)) שניות", "\(Int(progress * targetSeconds)) seconds"))
                         LevelMeter(level: viewModel.inputLevel, isActive: true)
                         Text(tr("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.", "Ask the person to speak naturally, at a normal distance from the selected microphone. If the bar doesn’t move while speaking, the microphone isn’t hearing anything. Captions are paused during recording."))
@@ -48,7 +46,10 @@ struct SpeakerEnrollmentView: View {
                 } header: {
                     Text(tr("הקלטה", "Recording"))
                 } footer: {
-                    Text(tr("ההקלטה עצמה לא נשמרת — רק \"טביעת קול\" מספרית קצרה שממנה אי אפשר לשחזר את הדיבור.", "The recording itself isn’t saved — only a short numeric “voiceprint” that the speech can’t be reconstructed from."))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(tr("לזיהוי טוב יותר, הקליטו כל אדם 3–4 פעמים באותו שם, בימים ובמקומות שונים: חדר שקט, עם טלוויזיה ברקע, מהצד השני של החדר.", "For better recognition, record each person 3–4 times under the same name, on different days and in different places: a quiet room, with the TV on, from across the room."))
+                        Text(tr("ההקלטה עצמה לא נשמרת — רק \"טביעת קול\" מספרית קצרה שממנה אי אפשר לשחזר את הדיבור.", "The recording itself isn’t saved — only a short numeric “voiceprint” that the speech can’t be reconstructed from."))
+                    }
                 }
             }
             .accessibilityIdentifier("speakerEnrollmentScreen")
