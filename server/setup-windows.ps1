@@ -39,13 +39,27 @@ foreach ($smi in $smiCandidates) {
         $line = & $smi --query-gpu=name,memory.total --format=csv,noheader,nounits 2>$null | Select-Object -First 1
         if ($line) {
             $name, $mib = $line -split ',\s*'
-            $gpu = @{ Name = $name.Trim(); GB = [math]::Round([double]$mib / 1024, 1) }
+            $gpu = @{ Name = $name.Trim(); GB = [math]::Round([double]$mib / 1024, 1); Smi = $smi }
         }
     } catch { }
 }
 if (-not $gpu) {
     Tell ("This computer has no NVIDIA graphics card that Windows can use, so it can't write captions for Ozen.`n`n" +
         "Ozen needs an NVIDIA card with at least 6 GB of memory (for example an RTX 2060 or 3060) and its normal NVIDIA driver.`n`n" +
+        "Nothing was installed. The phone keeps writing captions by itself.") 'Warning'
+    exit 1
+}
+# The server computes in 16-bit floats, which CTranslate2 refuses on cards
+# before compute capability 7.0 (GTX 10-series and older): the setup
+# would finish and the server then fail on every start. Drivers too old
+# to report the capability are let through.
+$capability = $null
+try {
+    $capLine = & $gpu.Smi --query-gpu=compute_cap --format=csv,noheader 2>$null | Select-Object -First 1
+    if ($capLine -match '^\s*(\d+)\.(\d+)') { $capability = [double]"$($Matches[1]).$($Matches[2])" }
+} catch { }
+if ($capability -and $capability -lt 7.0) {
+    Tell ("This computer's graphics card ($($gpu.Name)) is too old for Ozen: it needs an NVIDIA GTX 16-series or RTX 20-series card or newer.`n`n" +
         "Nothing was installed. The phone keeps writing captions by itself.") 'Warning'
     exit 1
 }

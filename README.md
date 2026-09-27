@@ -51,6 +51,21 @@ things, for Hebrew conversation, entirely on-device.
   WhisperKit's format, so it is downloaded from the releases of the
   public `ozen-models` repository (`scripts/model-release/`) and compiled
   on the phone.
+- **Your own computer as the recognizer (optional).** A Windows or Linux
+  PC with an NVIDIA graphics card, at home, writes the captions instead
+  of the phone: the phone sends its microphone to the PC and gets the
+  words back, on the home Wi‑Fi or from anywhere with internet (through
+  an encrypted `wss://` address). The PC runs the full-size Hebrew Whisper (ivrit.ai's large-v3,
+  1.55 billion parameters, 16-bit) with beam search for each finished
+  sentence, and the faster Turbo for the live words: 8.3% of words wrong
+  on Hebrew conversation, against 8.9% for the phone's model, and 22%
+  against 25% when the speaker sits across the room. Words appear about
+  0.2 s after they are said; a finished sentence settles about 0.9 s after
+  the speaker stops (on an RTX 2080 Ti). Setup is one double-click
+  (`Ozen-Home-Setup.cmd` from the latest release) and pairing is a QR
+  code; if the PC can't be reached, the phone's own model carries on.
+  See [Home computer requirements](#home-computer-requirements) and
+  `server/README.md`.
 - **Optional cloud captions** for when the phone's models are too slow or
   lose track of several people talking: each sentence goes to a speech
   model through [OpenRouter](https://openrouter.ai) with a key pasted into
@@ -70,10 +85,11 @@ things, for Hebrew conversation, entirely on-device.
 - **Bottom buttons that get out of the way**: while captions follow the
   newest line on their own, the buttons slide away after a few seconds so
   they never cover it; a touch brings them back.
-- **Nothing leaves the phone unless you choose the cloud.** No server, no
-  account. The exceptions are both explicit and off by default: cloud
-  captions above, and a switch to let Apple's recognizer use Apple's
-  servers when iOS has no on-device Hebrew model.
+- **Nothing leaves the phone unless you choose to send it.** No account,
+  no company server. The exceptions are all explicit and off by default:
+  your own home computer, cloud captions above, and a switch to let
+  Apple's recognizer use Apple's servers when iOS has no on-device Hebrew
+  model.
 - **A status control that always says what's happening** — asking for the
   microphone, downloading the model (with a percentage and the time left
   at its current pace), loading it,
@@ -260,6 +276,33 @@ things, for Hebrew conversation, entirely on-device.
   timeline of the last failures, retries, microphone stalls, phone calls
   and low-memory warnings with clock times, and one-tap copy of all of it
   for asking for help.
+
+## Home computer requirements
+
+Only for the optional home computer; the phone works on its own.
+
+| | Minimum | Recommended |
+|---|---|---|
+| Graphics card | NVIDIA GTX 16-series or RTX 20-series or newer, 6 GB (e.g. RTX 2060) | NVIDIA with 8 GB or more (e.g. RTX 3060 12 GB, 4060, 2080 Ti) |
+| What runs | The fast Turbo model for everything | Turbo for live words plus the full large-v3 for finished sentences (more accurate, most of all from across the room) |
+| Disk | 7 GB free | 12 GB free |
+| System | Windows 10/11 or Linux, with the normal NVIDIA driver | same |
+| Connection | The phone reaches it on the same Wi‑Fi, or from anywhere through the free Tailscale Funnel the setup offers | same |
+
+Older NVIDIA cards (GTX 10-series and earlier) have enough memory but lack
+the fast 16-bit arithmetic the server uses, and AMD, Intel and Apple
+graphics aren't supported. Memory in use is about 6.5 GB with both
+models: 1.6 GB for Turbo and 3.1 GB for large-v3 at 16 bits, the rest the
+work space of five-way beam search over 30-second windows and NVIDIA's
+libraries. The setup checks the card and the free space before it
+downloads anything.
+
+A faster card shortens only the final pass: words already appear about
+0.2 s after they're said, and a sentence counts as finished after a 0.7 s
+pause whatever the card. Beam search wider than 5 measured no more
+accurate (beam 20: same 8.3% word error, 1.5 s per sentence instead of
+0.9 s); Settings → Home computer → "Finished lines" trades a little
+accuracy for about 0.15 s at beam 1.
 
 ## Repo layout
 
