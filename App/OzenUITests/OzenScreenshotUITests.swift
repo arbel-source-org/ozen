@@ -251,7 +251,7 @@ final class OzenScreenshotUITests: XCTestCase {
         XCTAssertTrue(screen.waitForExistence(timeout: 10), "home server guide: settings never appeared")
         capture(app, name: "home-server-guide-settings-top")
 
-        openSettingsRow(app, rowIdentifier: "homeServerGuideRow", screenIdentifier: "homeServerGuideScreen", captureName: "home-server-guide-accessibility-text-top")
+        openSettingsRow(app, rowIdentifier: "homeServerGuideRow", screenIdentifier: "homeServerGuideScreen", captureName: "home-server-guide-accessibility-text-top", maxSwipes: 40)
         app.descendants(matching: .any)["homeServerGuideRow"].tap()
         let share = scrollDownUntilVisible(app, identifier: "shareSetupLink")
         capture(app, name: "home-server-guide-accessibility-text-bottom")
@@ -437,8 +437,8 @@ final class OzenScreenshotUITests: XCTestCase {
 
     /// Taps a Settings row by its own accessibility identifier, scrolling
     /// down until it exists first (see `scrollDownUntilVisible`).
-    private func openSettingsRow(_ app: XCUIApplication, rowIdentifier: String, screenIdentifier: String, captureName: String) {
-        let row = scrollDownUntilVisible(app, identifier: rowIdentifier)
+    private func openSettingsRow(_ app: XCUIApplication, rowIdentifier: String, screenIdentifier: String, captureName: String, maxSwipes: Int = 15) {
+        let row = scrollDownUntilVisible(app, identifier: rowIdentifier, maxSwipes: maxSwipes)
         if !row.exists { capture(app, name: "debug-\(rowIdentifier)-not-found") }
         XCTAssertTrue(row.exists, "secondary screens: \(rowIdentifier) never appeared")
         // At the largest text size a row counts as hittable while only its
