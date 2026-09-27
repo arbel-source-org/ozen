@@ -1,4 +1,6 @@
+import asyncio
 import sys
+import time
 import types
 import unittest
 
@@ -41,6 +43,65 @@ class Beam(unittest.TestCase):
         t._run(audio, "he", None, True)
         t._run(audio, "he", None, False, beam=2)
         self.assertEqual(t.model.beams, [2, 5, 1])
+
+
+class SlowGPU:
+    """Stands in for the Transcriber: each pass takes a while, as on a GPU."""
+    context = False
+
+    def __init__(self, live_seconds):
+        self.live_seconds = live_seconds
+        self.passes = []
+
+    async def transcribe(self, audio, language, prompt, final, hotwords=None, gate=True, beam=None):
+        self.passes.append((time.monotonic(), final))
+        await asyncio.sleep(0.05 if final else self.live_seconds)
+        return ("שלום" if final else "של"), 0.9, []
+
+
+class Socket:
+    def __init__(self):
+        self.sent = []
+
+    async def send(self, text):
+        self.sent.append(text)
+
+
+def pcm(seconds, level):
+    n = int(seconds * S.RATE)
+    wave = level * np.sin(np.arange(n) * 2 * np.pi * 300 / S.RATE)
+    return (wave * 32767).astype("<i2").tobytes()
+
+
+class PauseEnd(unittest.TestCase):
+    def play(self):
+        gpu = SlowGPU(live_seconds=0.25)
+        session = S.Session(Socket(), gpu, "he", [], live_interval=0.3)
+
+        async def feed():
+            worker = asyncio.create_task(session.run())
+            for seconds, level in ((0.6, 0.0005), (1.5, 0.3), (1.6, 0.0005)):
+                chunk = pcm(seconds, level)
+                step = int(0.1 * S.RATE) * 2
+                for i in range(0, len(chunk), step):
+                    session.add_audio(chunk[i:i + step])
+                    await asyncio.sleep(0.1)
+            session.finished = True
+            session.changed.set()
+            await asyncio.wait_for(worker, 5)
+
+        asyncio.run(feed())
+        return gpu, session
+
+    def test_no_live_pass_reads_only_silence_and_the_final_starts_at_the_pause(self):
+        gpu, session = self.play()
+        finals = [t for t, final in gpu.passes if final]
+        self.assertEqual(len(finals), 1)
+        speech_over = [t for t, final in gpu.passes if not final]
+        # One live pass may read the last words; none may only reread them.
+        after_last_words = [t for t in speech_over if t > finals[0] - 0.7]
+        self.assertLessEqual(len(after_last_words), 1, gpu.passes)
+        self.assertLess(session.final_lag_seconds[0], 0.15, session.final_lag_seconds)
 
 
 if __name__ == "__main__":

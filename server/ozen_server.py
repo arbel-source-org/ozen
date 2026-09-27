@@ -278,12 +278,16 @@ class Session:
         self.last_speech_end = None
         self.finished = False
         self.samples_at_last_pass = 0
+        self.speech_end_at_last_pass = None
         self.utterance = 0
         self.previous_text = ""
         self.changed = asyncio.Event()
         self.lines = 0
         self.empty_finals = 0
         self.final_seconds = []
+        # How long after the pause ended each finished pass could start:
+        # the audio that piled up past the pause while the GPU was busy.
+        self.final_lag_seconds = []
 
     def add_audio(self, pcm16: bytes):
         chunk = np.frombuffer(pcm16, dtype="<i2").astype(np.float32) / 32768.0
@@ -329,7 +333,12 @@ class Session:
             pause_reached = total - end_speech >= pause
             too_long = total >= max_s
             final = pause_reached or too_long or self.finished
-            if not final and total - self.samples_at_last_pass < int(self.live_interval * R):
+            # Once the voice stops, another live pass reads the same words
+            # plus silence and changes nothing on screen, but it holds the
+            # GPU when the pause ends, so the finished pass had to wait for
+            # it. Live passes run only when there is speech they haven't read.
+            if not final and (total - self.samples_at_last_pass < int(self.live_interval * R)
+                              or end_speech == self.speech_end_at_last_pass):
                 await self._wait()
                 continue
             if not final:
@@ -341,6 +350,9 @@ class Session:
                     cut = quietest_point(window, len(window), int(self.cut_look_back * R), int(self.cut_frame * R))
                     window = window[:cut]
             self.samples_at_last_pass = total
+            self.speech_end_at_last_pass = end_speech
+            if final and pause_reached:
+                self.final_lag_seconds.append(max(0, total - end_speech - pause) / R)
             started = time.monotonic()
             text, confidence, pieces = await self.t.transcribe(
                 window.copy(), self.language, self.prompt(), final, ", ".join(self.vocabulary) or None,
@@ -366,6 +378,7 @@ class Session:
                     self.last_speech_end = self.last_speech_end - used if self.last_speech_end > used else None
                 self.utterance += 1
                 self.samples_at_last_pass = 0
+                self.speech_end_at_last_pass = None
                 if self.finished and len(self.buf) == 0:
                     return
 
@@ -374,8 +387,10 @@ class Session:
         if not self.final_seconds:
             return f"{minutes:.1f} min of audio, no lines"
         median = sorted(self.final_seconds)[len(self.final_seconds) // 2]
+        lag = sorted(self.final_lag_seconds)[len(self.final_lag_seconds) // 2] if self.final_lag_seconds else 0.0
         return (f"{minutes:.1f} min of audio, {self.lines} lines, {self.empty_finals} finished empty, "
-                f"finished-line pass median {median:.2f} s, worst {max(self.final_seconds):.2f} s")
+                f"finished-line pass median {median:.2f} s, worst {max(self.final_seconds):.2f} s, "
+                f"wait after the pause median {lag:.2f} s")
 
     async def _wait(self):
         try:
