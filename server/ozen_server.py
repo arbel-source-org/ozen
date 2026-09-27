@@ -258,8 +258,9 @@ class Session:
     cut_look_back = 2.0
     cut_frame = 0.05
 
-    def __init__(self, ws, transcriber, language, vocabulary, live_interval):
+    def __init__(self, ws, transcriber, language, vocabulary, live_interval, enhancer=None):
         self.ws = ws
+        self.enhancer = enhancer
         self.t = transcriber
         self.language = language
         self.vocabulary = vocabulary
@@ -281,6 +282,8 @@ class Session:
 
     def add_audio(self, pcm16: bytes):
         chunk = np.frombuffer(pcm16, dtype="<i2").astype(np.float32) / 32768.0
+        if self.enhancer is not None:
+            chunk = self.enhancer.process(chunk)
         # The phone sends whatever it has; the detector sees chunks of the
         # size it was tuned on (about 43 ms).
         step = 688
@@ -398,7 +401,7 @@ def save_report(text, client):
     return name
 
 
-async def handle(ws, transcriber, token, live_interval):
+async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     peer = ws.remote_address
     try:
         hello = json.loads(await asyncio.wait_for(ws.recv(), timeout=10))
@@ -412,7 +415,8 @@ async def handle(ws, transcriber, token, live_interval):
         await ws.send(json.dumps({"type": "error", "code": "unauthorized", "detail": ""}))
         return
     session = Session(ws, transcriber, hello.get("language", "he"),
-                      [str(v) for v in hello.get("vocabulary", [])][:200], live_interval)
+                      [str(v) for v in hello.get("vocabulary", [])][:200], live_interval,
+                      make_enhancer() if make_enhancer else None)
     await ws.send(json.dumps({"type": "ready", "model": transcriber.name, "version": PROTOCOL_VERSION}))
     purpose = str(hello.get("purpose", "captions"))[:20]
     client = str(hello.get("client", ""))[:80]
@@ -479,6 +483,9 @@ async def main():
     p.add_argument("--speech-gate", type=float, default=0.05,
                    help="skip a line when less than this share of it is a voice; 0 turns it off")
     p.add_argument("--live-interval", type=float, default=0.3)
+    p.add_argument("--enhance-mix", type=float, default=0.0,
+                   help="mix this share of GTCRN-cleaned audio with the original (see enhance.py); 0 turns it off")
+    p.add_argument("--enhance-model", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "gtcrn_simple.onnx"))
     args = p.parse_args()
     token = os.environ.get("OZEN_TOKEN")
     if not token:
@@ -489,7 +496,13 @@ async def main():
     # Warm the model so the first sentence isn't slow.
     await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, False)
     await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, True)
-    async with websockets.serve(lambda ws: handle(ws, transcriber, token, args.live_interval),
+    make_enhancer = None
+    if args.enhance_mix > 0:
+        from enhance import StreamingEnhancer
+        make_enhancer = lambda: StreamingEnhancer(args.enhance_model, args.enhance_mix)
+        make_enhancer()
+        log.info("cleaning audio: %.0f%% GTCRN", args.enhance_mix * 100)
+    async with websockets.serve(lambda ws: handle(ws, transcriber, token, args.live_interval, make_enhancer),
                                 args.host, args.port, max_size=2**22, ping_interval=10, ping_timeout=20):
         log.info("listening on %s:%d with %s", args.host, args.port, transcriber.name)
         await asyncio.Future()
