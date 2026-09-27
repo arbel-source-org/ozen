@@ -162,6 +162,9 @@ struct HistoryView: View {
                 .padding(.vertical, 8)
                 .background(isSelected ? Color.accentColor : Color(.secondarySystemBackground), in: Capsule())
                 .foregroundStyle(isSelected ? Color.white : Color.primary)
+                // The chip itself stays small; the tap area is a full 44 points.
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

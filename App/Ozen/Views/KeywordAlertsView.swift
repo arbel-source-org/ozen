@@ -57,11 +57,14 @@ struct KeywordAlertsView: View {
                         Text(alert.phrase)
                             .foregroundStyle(alert.isEnabled ? .primary : .secondary)
                     }
-                }
-                .onDelete { offsets in
-                    let ids = offsets.map { viewModel.keywordAlerts[$0].id }
-                    for id in ids {
-                        viewModel.removeKeywordAlert(id: id)
+                    // A full swipe while scrolling deleted a name for good;
+                    // now the swipe only shows the button (as in History).
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            viewModel.removeKeywordAlert(id: alert.id)
+                        } label: {
+                            Label(tr("מחיקה", "Delete"), systemImage: "trash")
+                        }
                     }
                 }
                 ForEach(unusedSuggestions, id: \.self) { word in
