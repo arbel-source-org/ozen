@@ -14,6 +14,8 @@ fake_vad.get_speech_timestamps = lambda *a, **kw: []
 sys.modules.setdefault("faster_whisper", fake)
 sys.modules.setdefault("faster_whisper.vad", fake_vad)
 sys.modules.setdefault("websockets", types.ModuleType("websockets"))
+if not hasattr(sys.modules["websockets"], "ConnectionClosed"):
+    sys.modules["websockets"].ConnectionClosed = type("ConnectionClosed", (Exception,), {})
 
 import ozen_server as S
 
@@ -102,6 +104,21 @@ class PauseEnd(unittest.TestCase):
         after_last_words = [t for t in speech_over if t > finals[0] - 0.7]
         self.assertLessEqual(len(after_last_words), 1, gpu.passes)
         self.assertLess(session.final_lag_seconds[0], 0.15, session.final_lag_seconds)
+
+
+class GoneSocket:
+    remote_address = ("203.0.113.9", 4444)
+
+    async def recv(self):
+        raise S.websockets.ConnectionClosed()
+
+    async def send(self, text):
+        raise S.websockets.ConnectionClosed()
+
+
+class HungUp(unittest.TestCase):
+    def test_a_peer_that_hangs_up_before_the_hello_ends_quietly(self):
+        asyncio.run(S.handle(GoneSocket(), None, "code", 1.0))
 
 
 if __name__ == "__main__":

@@ -430,6 +430,15 @@ def requested_beam(value):
     return value if 1 <= value <= 10 else None
 
 
+async def refuse(ws, code, detail):
+    """A peer that already hung up (a port scan, a check that gave up)
+    gets no reply; sending anyway raised and put a traceback in the log."""
+    try:
+        await ws.send(json.dumps({"type": "error", "code": code, "detail": detail}))
+    except websockets.ConnectionClosed:
+        pass
+
+
 async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     peer = ws.remote_address
     try:
@@ -437,11 +446,11 @@ async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     except Exception:
         hello = None
     if not isinstance(hello, dict):
-        await ws.send(json.dumps({"type": "error", "code": "bad_request", "detail": "hello expected"}))
+        await refuse(ws, "bad_request", "hello expected")
         return
     if hello.get("type") != "hello" or not hmac.compare_digest(str(hello.get("token", "")), token):
         log.warning("refused %s", peer)
-        await ws.send(json.dumps({"type": "error", "code": "unauthorized", "detail": ""}))
+        await refuse(ws, "unauthorized", "")
         return
     beam = requested_beam(hello.get("beam"))
     session = Session(ws, transcriber, hello.get("language", "he"),
