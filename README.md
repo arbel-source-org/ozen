@@ -318,7 +318,7 @@ A faster card shortens only the final pass: words already appear about
 0.2 s after they're said, and a sentence counts as finished after a 0.7 s
 pause whatever the card. Beam search wider than 5 measured no more
 accurate (beam 20: same 8.3% word error, 1.5 s per sentence instead of
-0.9 s); Settings → Home computer → "Finished lines" trades a little
+0.9 s); Settings → Home computer → "Speed or accuracy" trades a little
 accuracy for about 0.15 s at beam 1.
 
 ## Repo layout
