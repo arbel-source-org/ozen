@@ -49,4 +49,23 @@ struct CAMPlusPlusSpeakerEmbedderTests {
         #expect(acrossSpeakers1 < sameSpeaker)
         #expect(acrossSpeakers2 < sameSpeaker)
     }
+
+    @Test("prints made by the desktop tool match what the phone computes")
+    func desktopPrintsMatchTheApp() throws {
+        struct DesktopPrints: Decodable { let prints: [String: [Float]] }
+        let embedder = try #require(CAMPlusPlusSpeakerEmbedder())
+        let fixture = try SpeakerFixtureLoading.load()
+        let desktop = try JSONDecoder().decode(DesktopPrints.self, from: SpeakerFixtureLoading.data(named: "desktop_prints.json"))
+        var phone: [String: [Float]] = [:]
+        for (key, clip) in fixture.clips {
+            let samples = try SpeakerFixtureLoading.readSamples(named: clip.wavFile)
+            phone[key] = try #require(embedder.embed(samples: samples, sampleRate: fixture.sampleRate))
+        }
+        for (key, print) in desktop.prints {
+            let agreement = cosineSimilarity(try #require(phone[key]), print)
+            #expect(agreement > 0.98, "\(key): desktop vs phone \(agreement)")
+        }
+        let otherVoice = cosineSimilarity(try #require(phone["speakerB_clip1"]), try #require(desktop.prints["speakerA_clip1"]))
+        #expect(otherVoice < 0.45, "another speaker's desktop print scored \(otherVoice)")
+    }
 }
