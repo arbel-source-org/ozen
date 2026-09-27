@@ -46,9 +46,10 @@ public enum HomeServer {
         languageCode: String,
         vocabulary: [String],
         purpose: String = "captions",
-        client: String = ""
+        client: String = "",
+        beam: Int? = nil
     ) -> String {
-        encode([
+        var fields: [String: Any] = [
             "type": "hello",
             "version": protocolVersion,
             "token": token,
@@ -56,7 +57,9 @@ public enum HomeServer {
             "vocabulary": vocabulary,
             "purpose": purpose,
             "client": client,
-        ])
+        ]
+        if let beam { fields["beam"] = beam }
+        return encode(fields)
     }
 
     public static func vocabularyUpdate(_ terms: [String]) -> String {

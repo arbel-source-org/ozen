@@ -19,6 +19,7 @@ public actor HomeServerEngine: TranscriptionEngine {
     private let handshakeSeconds: Double
     private let client: String
     private let stallSeconds: Double
+    private let beam: Int?
     private var speechDetector = EnergyVoiceDetector.forWhisperLines()
     private var samplesSent = 0
     private var speechSinceReply: Int?
@@ -36,7 +37,8 @@ public actor HomeServerEngine: TranscriptionEngine {
         connector: any HomeServerConnecting,
         handshakeSeconds: Double = 5,
         client: String = "",
-        stallSeconds: Double = 35
+        stallSeconds: Double = 35,
+        beam: Int? = nil
     ) {
         self.address = address
         self.token = token
@@ -44,6 +46,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         self.handshakeSeconds = handshakeSeconds
         self.client = client
         self.stallSeconds = stallSeconds
+        self.beam = beam
     }
 
     public func setVocabulary(_ terms: [String]) async {
@@ -277,7 +280,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
         do {
             try await socket.send(text: HomeServer.hello(
-                token: target.token, languageCode: languageCode, vocabulary: vocabulary, purpose: purpose, client: client
+                token: target.token, languageCode: languageCode, vocabulary: vocabulary, purpose: purpose, client: client, beam: beam
             ))
             let reply = try await Self.firstReply(from: socket, within: handshakeSeconds)
             switch HomeServerMessage(json: reply) {

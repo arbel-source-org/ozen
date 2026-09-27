@@ -163,6 +163,11 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// Where the home server is ("192.168.1.20", "pc.example:8765",
     /// "wss://…"); the pairing code is kept in the Keychain, not here.
     public var homeServerAddress: String
+    /// How many candidate wordings the home computer weighs for each
+    /// finished line. More is slower; past 5 it measured no more accurate
+    /// (accuracy/bench_beam2.py), so 5 is both the default and the top.
+    public var homeServerBeam: Int
+    public static let homeServerBeamRange = 1...5
     public var display: DisplayPreferences
     /// A short buzz when speech resumes after a quiet stretch — the reader
     /// may have looked away from the screen.
@@ -265,6 +270,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         allowServerFallbackForAppleSpeech: Bool = false,
         cloudModel: String = CloudSpeech.accurateModel,
         homeServerAddress: String = "",
+        homeServerBeam: Int = 5,
         display: DisplayPreferences = .default,
         hapticOnSpeechResume: Bool = true,
         speakerSimilarityThreshold: Float = 0.45,
@@ -293,6 +299,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         self.allowServerFallbackForAppleSpeech = allowServerFallbackForAppleSpeech
         self.cloudModel = cloudModel
         self.homeServerAddress = homeServerAddress
+        self.homeServerBeam = min(max(homeServerBeam, Self.homeServerBeamRange.lowerBound), Self.homeServerBeamRange.upperBound)
         self.display = display
         self.hapticOnSpeechResume = hapticOnSpeechResume
         self.speakerSimilarityThreshold = speakerSimilarityThreshold
@@ -366,7 +373,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
 
     private enum CodingKeys: String, CodingKey {
         case engine, languageCode, preferredInputUID, speakerProfiles, creditLine
-        case whisperModelVariant, allowServerFallbackForAppleSpeech, cloudModel, homeServerAddress, display
+        case whisperModelVariant, allowServerFallbackForAppleSpeech, cloudModel, homeServerAddress, homeServerBeam, display
         case hapticOnSpeechResume, speakerSimilarityThreshold, speakerThresholdScale
         case keywordAlerts, soundAlerts, saveHistory
         case quickPhrases, speechRate, vocabulary, hasCompletedOnboarding, appLanguage
@@ -391,6 +398,8 @@ public struct AppSettings: Codable, Sendable, Equatable {
         allowServerFallbackForAppleSpeech = container.lenient(Bool.self, forKey: .allowServerFallbackForAppleSpeech) ?? defaults.allowServerFallbackForAppleSpeech
         cloudModel = container.lenient(String.self, forKey: .cloudModel).flatMap { $0.isEmpty ? nil : $0 } ?? defaults.cloudModel
         homeServerAddress = container.lenient(String.self, forKey: .homeServerAddress) ?? defaults.homeServerAddress
+        homeServerBeam = container.lenient(Int.self, forKey: .homeServerBeam)
+            .map { min(max($0, Self.homeServerBeamRange.lowerBound), Self.homeServerBeamRange.upperBound) } ?? defaults.homeServerBeam
         display = container.lenient(DisplayPreferences.self, forKey: .display) ?? defaults.display
         hapticOnSpeechResume = container.lenient(Bool.self, forKey: .hapticOnSpeechResume) ?? defaults.hapticOnSpeechResume
         speakerSimilarityThreshold = container.lenient(Float.self, forKey: .speakerSimilarityThreshold) ?? defaults.speakerSimilarityThreshold

@@ -192,6 +192,7 @@ struct AppSettingsTests {
         settings.display = DisplayPreferences(fontSize: 44, theme: .highContrast, boldText: true, showSpeakerNames: false, keepScreenAwake: false, autoHideControls: false)
         settings.hapticOnSpeechResume = false
         settings.speakerSimilarityThreshold = 0.6
+        settings.homeServerBeam = 2
         settings.keywordAlerts = [KeywordAlert(phrase: "סבתא"), KeywordAlert(phrase: "תרופה", isEnabled: false)]
         settings.soundAlerts = SoundAlertPreferences(isEnabled: true, minimumImportance: .high, mutedIdentifiers: ["music"])
         settings.saveHistory = false
@@ -358,5 +359,18 @@ struct SavedSpeakerTests {
         let edited = hebrew + ["תודה רבה"]
         #expect(AppSettings.displayedQuickPhrases(stored: edited, language: .english) == edited)
         #expect(AppSettings.displayedQuickPhrases(stored: [], language: .english).isEmpty)
+    }
+
+    @Test("the home computer's beam defaults to 5, and a file outside 1...5 gets the nearest edge")
+    func homeServerBeamClamped() throws {
+        func decoded(_ json: String) throws -> AppSettings {
+            try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
+        }
+        #expect(AppSettings.default.homeServerBeam == 5)
+        #expect(try decoded("{}").homeServerBeam == 5)
+        #expect(try decoded(#"{"homeServerBeam":3}"#).homeServerBeam == 3)
+        #expect(try decoded(#"{"homeServerBeam":9}"#).homeServerBeam == 5)
+        #expect(try decoded(#"{"homeServerBeam":-2}"#).homeServerBeam == 1)
+        #expect(try decoded(#"{"homeServerBeam":"fast"}"#).homeServerBeam == 5)
     }
 }

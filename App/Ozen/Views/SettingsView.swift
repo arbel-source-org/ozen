@@ -394,6 +394,33 @@ struct SettingsView: View {
                     homeServerCheckLabel(homeServerCheck)
                 }
             }
+            VStack(alignment: .leading, spacing: 8) {
+                sliderLabelLayout {
+                    Text(tr("שורות סופיות", "Finished lines"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(Self.homeServerBeamDescription(Int(viewModel.homeServerBeam)))
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityHidden(true)
+                Slider(value: $viewModel.homeServerBeam, in: 1...5, step: 1)
+                    .accessibilityLabel(tr("שורות סופיות במחשב", "Finished lines on the computer"))
+                    .accessibilityValue(Self.homeServerBeamDescription(Int(viewModel.homeServerBeam)))
+                    .accessibilityHint(tr("החליקו למעלה לדיוק רב יותר, למטה למהירות.", "Swipe up for more accurate, down for faster."))
+                    .accessibilityIdentifier("homeServerBeamSlider")
+                sliderLabelLayout {
+                    Text(tr("מהיר יותר", "Faster"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(tr("מדויק יותר", "More accurate"))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
+                if Int(viewModel.homeServerBeam) != AppSettings.default.homeServerBeam {
+                    Button(tr("חזרה להגדרה הרגילה", "Back to the usual setting")) {
+                        viewModel.homeServerBeam = Double(AppSettings.default.homeServerBeam)
+                    }
+                }
+            }
             if hasHomeServerCode {
                 Button(tr("מחיקת הקוד", "Delete code"), role: .destructive) {
                     confirmingHomeServerCodeDelete = true
@@ -412,7 +439,15 @@ struct SettingsView: View {
         } header: {
             Text(tr("המחשב בבית", "Home computer"))
         } footer: {
-            Text(tr("הדרך הקלה: מצלמת האייפון על קוד ה‑QR שהמחשב מציג, והכול מתמלא לבד. הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד.", "The easy way: point the iPhone’s Camera at the QR code the computer shows, and everything fills in by itself. The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself."))
+            Text(tr("הדרך הקלה: מצלמת האייפון על קוד ה‑QR שהמחשב מציג, והכול מתמלא לבד. הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד. \"שורות סופיות\": כמה ניסוחים המחשב שוקל לכל משפט שהסתיים; פחות מביא אותו מהר יותר, ביותר טעויות.", "The easy way: point the iPhone’s Camera at the QR code the computer shows, and everything fills in by itself. The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself. “Finished lines”: how many wordings the computer weighs for each finished sentence; fewer brings it sooner, with more mistakes."))
+        }
+    }
+
+    static func homeServerBeamDescription(_ beam: Int) -> String {
+        switch beam {
+        case ...1: return tr("1 מתוך 5, הכי מהיר", "1 of 5, fastest")
+        case 5...: return tr("5 מתוך 5, הכי מדויק (רגיל)", "5 of 5, most accurate (usual)")
+        default: return tr("\(beam) מתוך 5", "\(beam) of 5")
         }
     }
 

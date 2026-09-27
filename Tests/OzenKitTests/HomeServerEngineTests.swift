@@ -73,8 +73,8 @@ private func text(_ utterance: Int, _ words: String, final: Bool) -> String {
     #"{"type":"text","utterance":\#(utterance),"text":"\#(words)","final":\#(final),"confidence":0.9}"#
 }
 
-private func engine(_ socket: ScriptedSocket?, address: String = "10.0.0.5", token: String? = "1234") -> HomeServerEngine {
-    HomeServerEngine(address: address, token: { token }, connector: Connector(socket: socket), handshakeSeconds: 0.3, client: "Ozen 36, iOS 18.2")
+private func engine(_ socket: ScriptedSocket?, address: String = "10.0.0.5", token: String? = "1234", beam: Int? = nil) -> HomeServerEngine {
+    HomeServerEngine(address: address, token: { token }, connector: Connector(socket: socket), handshakeSeconds: 0.3, client: "Ozen 36, iOS 18.2", beam: beam)
 }
 
 @Suite("Home server")
@@ -209,6 +209,19 @@ struct HomeServerEngineTests {
 
         #expect(await engine(ScriptedSocket(helloReply: ready)).sendReport("x", languageCode: "he") == false)
         #expect(await engine(ScriptedSocket(helloReply: ready), token: nil).sendReport("x", languageCode: "he") == false)
+    }
+
+    @Test("the Settings beam goes to the server in the hello; without one the hello leaves it to the server")
+    func helloCarriesBeam() async {
+        let chosen = ScriptedSocket(helloReply: ready)
+        _ = await engine(chosen, beam: 2).checkAvailability(languageCode: "he")
+        #expect(await chosen.sentTexts.first?.contains(#""beam":2"#) == true)
+
+        let unset = ScriptedSocket(helloReply: ready)
+        _ = await engine(unset).checkAvailability(languageCode: "he")
+        let hello = await unset.sentTexts.first ?? ""
+        #expect(hello.contains(#""type":"hello""#))
+        #expect(!hello.contains("beam"))
     }
 
     @Test("a name added while captions stream reaches the server at once, as a vocabulary frame")

@@ -15,7 +15,11 @@ Protocol, version 1. Text frames are JSON, binary frames are audio.
   phone -> server
     {"type": "hello", "version": 1, "token": "...", "language": "he",
      "vocabulary": ["Ruti", ...], "purpose": "check" | "captions",
-     "client": "Ozen 0.2.36 (36), iOS 18.2"}  first frame, required
+     "client": "Ozen 0.2.36 (36), iOS 18.2",
+     "beam": 5}                               first frame, required; beam
+                                              (1-10) is optional, the
+                                              finished-line beam the phone's
+                                              Settings slider picked
     <binary>                                  PCM16 little-endian, 16 kHz, mono
     {"type": "vocabulary", "terms": [...]}    the names list changed
     {"type": "end"}                           no more audio; finish the line
@@ -196,10 +200,10 @@ class Transcriber:
         self.failures = 0
         self.failures_before_exit = 3
 
-    async def transcribe(self, audio, language, prompt, final, hotwords=None, gate=True):
+    async def transcribe(self, audio, language, prompt, final, hotwords=None, gate=True, beam=None):
         async with self.lock:
             try:
-                result = await asyncio.to_thread(self._run, audio, language, prompt, final, hotwords, gate)
+                result = await asyncio.to_thread(self._run, audio, language, prompt, final, hotwords, gate, beam)
             except Exception:
                 self.failures += 1
                 if self.failures >= self.failures_before_exit:
@@ -213,13 +217,13 @@ class Transcriber:
             self.failures = 0
             return result
 
-    def _run(self, audio, language, prompt, final, hotwords=None, gate=True):
+    def _run(self, audio, language, prompt, final, hotwords=None, gate=True, beam=None):
         if gate and self.speech_gate and lacks_voice(audio, self.speech_gate):
             return "", None, []
         model = self.final_model if final else self.model
         segments, _ = model.transcribe(
             speech_gain(audio), language=language, task="transcribe",
-            beam_size=self.beam if final else 1,
+            beam_size=(beam or self.beam) if final else 1,
             temperature=[0.0, 0.2, 0.4] if final else 0.0,
             condition_on_previous_text=False, without_timestamps=True,
             # The names list both as the prompt and as hotwords, which are
@@ -258,8 +262,9 @@ class Session:
     cut_look_back = 2.0
     cut_frame = 0.05
 
-    def __init__(self, ws, transcriber, language, vocabulary, live_interval, enhancer=None):
+    def __init__(self, ws, transcriber, language, vocabulary, live_interval, enhancer=None, beam=None):
         self.ws = ws
+        self.beam = beam
         self.enhancer = enhancer
         self.t = transcriber
         self.language = language
@@ -338,7 +343,8 @@ class Session:
             self.samples_at_last_pass = total
             started = time.monotonic()
             text, confidence, pieces = await self.t.transcribe(
-                window.copy(), self.language, self.prompt(), final, ", ".join(self.vocabulary) or None)
+                window.copy(), self.language, self.prompt(), final, ", ".join(self.vocabulary) or None,
+                beam=self.beam)
             if final:
                 self.final_seconds.append(time.monotonic() - started)
                 if text:
@@ -401,6 +407,14 @@ def save_report(text, client):
     return name
 
 
+def requested_beam(value):
+    """The phone's beam if it sent a sensible one, else None (the server's
+    --beam). A bool is an int to Python and is refused like any other junk."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    return value if 1 <= value <= 10 else None
+
+
 async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     peer = ws.remote_address
     try:
@@ -414,13 +428,14 @@ async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
         log.warning("refused %s", peer)
         await ws.send(json.dumps({"type": "error", "code": "unauthorized", "detail": ""}))
         return
+    beam = requested_beam(hello.get("beam"))
     session = Session(ws, transcriber, hello.get("language", "he"),
                       [str(v) for v in hello.get("vocabulary", [])][:200], live_interval,
-                      make_enhancer() if make_enhancer else None)
+                      make_enhancer() if make_enhancer else None, beam)
     await ws.send(json.dumps({"type": "ready", "model": transcriber.name, "version": PROTOCOL_VERSION}))
     purpose = str(hello.get("purpose", "captions"))[:20]
     client = str(hello.get("client", ""))[:80]
-    log.info("session from %s: %s, %s", peer, purpose, client or "unknown app")
+    log.info("session from %s: %s, %s, beam %s", peer, purpose, client or "unknown app", beam or transcriber.beam)
     worker = asyncio.create_task(session.run())
 
     # A pass that fails (a CUDA error, say) must end the connection: an

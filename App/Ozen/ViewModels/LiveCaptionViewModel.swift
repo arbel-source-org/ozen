@@ -121,7 +121,8 @@ public final class LiveCaptionViewModel {
                         address: settings.homeServerAddress,
                         token: { HomeServerCodeStore.read() },
                         connector: URLSessionHomeServerConnector(),
-                        client: LiveCaptionViewModel.homeServerClient
+                        client: LiveCaptionViewModel.homeServerClient,
+                        beam: settings.homeServerBeam
                     )
                 }
             },
@@ -1016,6 +1017,31 @@ public final class LiveCaptionViewModel {
             schedulePersist()
         }
     }
+
+    /// The home computer's finished-line beam, as a Double for the
+    /// Settings slider. Saved as it moves. Running captions reconnect with
+    /// the new value once it has stayed put for a second, so a drag (or a
+    /// run of VoiceOver swipes) reconnects once, not on every step.
+    public var homeServerBeam: Double {
+        get { Double(settings.homeServerBeam) }
+        set {
+            let range = AppSettings.homeServerBeamRange
+            let beam = min(max(Int(newValue.rounded()), range.lowerBound), range.upperBound)
+            guard beam != settings.homeServerBeam else { return }
+            settings.homeServerBeam = beam
+            schedulePersist()
+            beamRestart?.cancel()
+            guard settings.engine == .homeServer else { return }
+            beamRestart = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(Self.beamSettleSeconds))
+                guard !Task.isCancelled else { return }
+                await self?.restartIfRunning()
+            }
+        }
+    }
+
+    nonisolated static let beamSettleSeconds: Double = 1
+    @ObservationIgnored private var beamRestart: Task<Void, Never>?
 
     public var saveHistory: Bool {
         get { settings.saveHistory }

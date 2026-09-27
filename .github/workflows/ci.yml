@@ -35,6 +35,14 @@ jobs:
           swift-version: "6.1"
       - run: swift build
       - run: swift test
+      # The home server's own checks: faster-whisper and the GPU are stood
+      # in for, so numpy is all they need.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Home server tests
+        working-directory: server
+        run: pip install numpy && python -m unittest test_ozen_server -v
 
   app:
     name: Ozen app (iOS Simulator)
