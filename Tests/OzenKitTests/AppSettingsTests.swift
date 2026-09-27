@@ -361,7 +361,7 @@ struct SavedSpeakerTests {
         #expect(AppSettings.displayedQuickPhrases(stored: [], language: .english).isEmpty)
     }
 
-    @Test("the home computer's beam defaults to 5, and a file outside 1...5 gets the nearest edge")
+    @Test("the home computer's beam defaults to 5, and a file outside 1...7 gets the nearest edge")
     func homeServerBeamClamped() throws {
         func decoded(_ json: String) throws -> AppSettings {
             try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
@@ -369,7 +369,8 @@ struct SavedSpeakerTests {
         #expect(AppSettings.default.homeServerBeam == 5)
         #expect(try decoded("{}").homeServerBeam == 5)
         #expect(try decoded(#"{"homeServerBeam":3}"#).homeServerBeam == 3)
-        #expect(try decoded(#"{"homeServerBeam":9}"#).homeServerBeam == 5)
+        #expect(try decoded(#"{"homeServerBeam":7}"#).homeServerBeam == 7)
+        #expect(try decoded(#"{"homeServerBeam":9}"#).homeServerBeam == 7)
         #expect(try decoded(#"{"homeServerBeam":-2}"#).homeServerBeam == 1)
         #expect(try decoded(#"{"homeServerBeam":"fast"}"#).homeServerBeam == 5)
     }

@@ -405,7 +405,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
                 .accessibilityHidden(true)
-                Slider(value: $viewModel.homeServerBeam, in: 1...5, step: 1)
+                Slider(value: $viewModel.homeServerBeam, in: Double(AppSettings.homeServerBeamRange.lowerBound)...Double(AppSettings.homeServerBeamRange.upperBound), step: 1)
                     .accessibilityLabel(tr("מהירות מול דיוק במחשב", "Speed or accuracy on the computer"))
                     .accessibilityValue(Self.homeServerBeamDescription(Int(viewModel.homeServerBeam)))
                     .accessibilityHint(tr("החליקו למעלה לדיוק רב יותר, למטה למהירות.", "Swipe up for more accurate, down for faster."))
@@ -418,6 +418,9 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
+                Text(tr("ההבדל בזמן ההמתנה קטן מאוד, חלקיק שנייה. עדיף להשאיר על 5, אלא אם אתם יודעים מה אתם עושים.", "The difference in waiting time is very small, a fraction of a second. Leave it at 5 unless you know what you’re doing."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 if Int(viewModel.homeServerBeam) != AppSettings.default.homeServerBeam {
                     Button(tr("חזרה להגדרה הרגילה", "Back to the usual setting")) {
                         viewModel.homeServerBeam = Double(AppSettings.default.homeServerBeam)
@@ -447,10 +450,12 @@ struct SettingsView: View {
     }
 
     static func homeServerBeamDescription(_ beam: Int) -> String {
+        let top = AppSettings.homeServerBeamRange.upperBound
         switch beam {
-        case ...1: return tr("1 מתוך 5, הכי מהיר", "1 of 5, fastest")
-        case 5...: return tr("5 מתוך 5, הכי מדויק (רגיל)", "5 of 5, most accurate (usual)")
-        default: return tr("\(beam) מתוך 5", "\(beam) of 5")
+        case ...1: return tr("1 מתוך \(top), הכי מהיר", "1 of \(top), fastest")
+        case AppSettings.default.homeServerBeam: return tr("\(beam) מתוך \(top), הרגיל", "\(beam) of \(top), usual")
+        case top...: return tr("\(top) מתוך \(top), הכי איטי", "\(top) of \(top), slowest")
+        default: return tr("\(beam) מתוך \(top)", "\(beam) of \(top)")
         }
     }
 

@@ -169,9 +169,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var homeServerAddress: String
     /// How many candidate wordings the home computer weighs for each
     /// finished line. More is slower; past 5 it measured no more accurate
-    /// (accuracy/bench_beam2.py), so 5 is both the default and the top.
+    /// (accuracy/bench_beam2.py), so 5 is the default and 6-7 are there
+    /// for the owner to try, not a recommendation.
     public var homeServerBeam: Int
-    public static let homeServerBeamRange = 1...5
+    public static let homeServerBeamRange = 1...7
     public var display: DisplayPreferences
     /// A short buzz when speech resumes after a quiet stretch — the reader
     /// may have looked away from the screen.
