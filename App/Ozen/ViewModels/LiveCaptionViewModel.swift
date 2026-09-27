@@ -1300,6 +1300,12 @@ public final class LiveCaptionViewModel {
     public var isSpeaking: Bool { synthesizer?.isSpeaking ?? false }
     public var hasHebrewVoice: Bool { synthesizer?.hasHebrewVoice ?? false }
     public func canSay(_ text: String) -> Bool { synthesizer?.canSay(text) ?? false }
+    /// False when the app is in a language beyond Hebrew and English and
+    /// the phone has no voice for it: its ready-made phrases are then held
+    /// back, and the Say screen says what to install.
+    public var hasVoiceForAppLanguage: Bool {
+        synthesizer?.hasVoiceOrOwnHint(for: uiLanguage) ?? true
+    }
 
     public var speechRate: Float {
         get { settings.speechRate }

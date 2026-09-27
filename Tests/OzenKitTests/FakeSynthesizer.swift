@@ -13,11 +13,16 @@ final class FakeSynthesizer: SpeechSynthesizing {
     private var queued: [String] = []
     private var pendingCallbacks: [Bool] = []
     var hasHebrewVoice = true
+    var missingVoices: Set<UILanguage> = []
     var onSpeakingChanged: (@MainActor (Bool) -> Void)?
 
     var isBusy: Bool { isSpeaking || !queued.isEmpty }
 
     func refreshVoice() {}
+
+    func hasVoice(for language: UILanguage) -> Bool {
+        language == .hebrew ? hasHebrewVoice : !missingVoices.contains(language)
+    }
 
     func speak(_ text: String, rate: Float) {
         requests.append(text)

@@ -123,6 +123,14 @@ struct LocalizationTests {
         #expect(!synthesizer.canSay("שלום"))
         #expect(synthesizer.canSay("Thank you"))
         #expect(synthesizer.canSay("شكرًا"))
+
+        synthesizer.missingVoices = [.amharic]
+        #expect(!synthesizer.canSay("አመሰግናለሁ"))
+        #expect(synthesizer.canSay("شكرًا"))
+        #expect(!synthesizer.hasVoiceOrOwnHint(for: .amharic))
+        #expect(synthesizer.hasVoiceOrOwnHint(for: .arabic))
+        #expect(synthesizer.hasVoiceOrOwnHint(for: .hebrew))
+        #expect(synthesizer.hasVoiceOrOwnHint(for: .english))
     }
 
     @Test("dates are written in the app's language, not the phone's, keeping the phone's region")

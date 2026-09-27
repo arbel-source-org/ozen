@@ -29,6 +29,13 @@ extension SpeechSynthesizing {
         language == .hebrew ? hasHebrewVoice : true
     }
 
+    /// True unless the app is in a language beyond Hebrew and English with
+    /// no voice on the phone. Hebrew has its own hint, and English always
+    /// has a voice.
+    public func hasVoiceOrOwnHint(for appLanguage: UILanguage) -> Bool {
+        appLanguage == .hebrew || appLanguage == .english || hasVoice(for: appLanguage)
+    }
+
     /// Whether `text` would come out as speech someone can understand:
     /// only text in a language the phone has no voice for is held back.
     public func canSay(_ text: String) -> Bool {
