@@ -147,6 +147,10 @@ private final class RecognitionSession: @unchecked Sendable {
     /// was set from real (non-empty) text -- the evidence an empty final
     /// result is later checked against before trusting that cached text.
     private var speechChunksAtLastText: [UUID: Int] = [:]
+    /// Each finished request's count, kept when the next one resets the
+    /// live count: a late result for it must be judged by its own speech,
+    /// not the new request's.
+    private var speechChunksAtRollover: [UUID: Int] = [:]
     /// Below this many VAD-speech chunks, an empty final is treated as the
     /// recognizer's own correct retraction of a noise-triggered partial,
     /// not the known quirk of a real utterance's final coming back empty
@@ -242,6 +246,7 @@ private final class RecognitionSession: @unchecked Sendable {
         }
 
         let id = UUID()
+        speechChunksAtRollover[utteranceID] = speechChunksInRequest
         utteranceID = id
         samplesInRequest = 0
         samplesSinceSpeech = 0
@@ -277,6 +282,7 @@ private final class RecognitionSession: @unchecked Sendable {
             // of recognizer hiccups the leftovers would only pile up.
             lastTextByUtterance[id] = nil
             speechChunksAtLastText[id] = nil
+            speechChunksAtRollover[id] = nil
             let response = RecognitionRequestPolicy.respond(
                 isCurrentRequest: isCurrent && id == utteranceID,
                 requestHadSpeech: requestHasSpeech,
@@ -328,7 +334,7 @@ private final class RecognitionSession: @unchecked Sendable {
                 return lastTextByUtterance[id] ?? ""
             }
             lastTextByUtterance[id] = text
-            speechChunksAtLastText[id] = speechChunksInRequest
+            speechChunksAtLastText[id] = id == utteranceID ? speechChunksInRequest : speechChunksAtRollover[id] ?? 0
             return text
         }
         if displayText.isEmpty { return }
@@ -344,6 +350,7 @@ private final class RecognitionSession: @unchecked Sendable {
             lock.withLock {
                 lastTextByUtterance[id] = nil
                 speechChunksAtLastText[id] = nil
+                speechChunksAtRollover[id] = nil
             }
         }
     }
