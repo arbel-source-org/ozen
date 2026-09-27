@@ -38,7 +38,36 @@ things were broken along the way, none of them in Ozen itself.
    Auto-Lock to Never while installing, `sudo systemctl restart usbmuxd`, and run
    the same command again — the 2FA code will be asked for again.
 
-## On iOS 26: the app installs but will not open
+## AltServer-signed builds do not open on iOS 26 and later — use Impactor
+
+**Confirmed 2026-09-27 on an iPad (iPad15,7) on iPadOS 27.0.** Tapping the icon
+does nothing, or the app flashes and closes. The process never starts, so there
+is no crash report and nothing in Ozen's code runs. `idevicesyslog` shows the
+kernel rejecting AltServer-Linux's signature on every tap:
+
+```
+AMFI: '.../Ozen.app/Ozen' cmsBlobVerifyWithAgilityHash failed: component=0x53 error=0x23 unique=8
+AMFI: '.../Ozen.app/Ozen': Unrecoverable CT signature issue, bailing out.
+AMFI: code signature validation failed.
+SpringBoard: Bootstrapping failed ... "Launch failed." NSPOSIXErrorDomain code 85 (Launchd job spawn failed)
+```
+
+POSIX 85 is `EBADEXEC`. AltServer-Linux (v0.0.5, unmaintained) writes a
+signature whose CMS hash-agility data current iOS no longer accepts. This is
+the cause behind "it crashes as soon as we open it" reports from sideloaded
+installs; do not look for it in the app's launch code.
+
+**For every install on iOS/iPadOS 26 or later, sign with
+[Impactor](https://github.com/claration/Impactor) instead of AltServer.** Its
+Linux AppImage is at `~/.local/share/altlinux/Impactor-linux-x86_64.appimage`:
+open it, drop `Ozen.ipa` on the window, pick the device, sign in with the same
+Apple ID (app-specific password), install. Keeping the same Apple ID keeps
+settings, saved voices and the downloaded model. After installing, check the
+fix the same way: leave `idevicesyslog` running, open the app, and search the
+output for `AMFI` — no "code signature validation failed" means the signature
+was accepted.
+
+### The earlier report (2026-09-19)
 
 Seen on 2026-09-19 with an iPhone 13 mini on iOS 26.5.2 (Developer Mode on):
 AltServer signs and installs Ozen without an error, but tapping the icon does
