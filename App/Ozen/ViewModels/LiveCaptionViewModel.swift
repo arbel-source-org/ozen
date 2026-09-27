@@ -1378,6 +1378,13 @@ public final class LiveCaptionViewModel {
     /// Records `seconds` of the person talking and saves them as a named
     /// profile. Returns false if the recording was too short/quiet to get
     /// a usable voice print.
+    /// Every voice print saved under this name predates the current voice
+    /// model, so the person is never recognized until recorded again.
+    public func needsNewRecording(_ speaker: SavedSpeaker) -> Bool {
+        let prints = settings.speakerProfiles.filter { speaker.profileIDs.contains($0.id) }
+        return !prints.isEmpty && !prints.contains(where: pipeline.canRecognize)
+    }
+
     public func enroll(name: String, seconds: Double, onProgress: @MainActor (Double) -> Void) async -> Bool {
         let samples = await pipeline.captureEnrollmentSamples(seconds: seconds, onProgress: onProgress)
         // Stopped midway: the part recorded isn't kept as her voice.

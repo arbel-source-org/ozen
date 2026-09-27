@@ -786,11 +786,18 @@ public final class CaptionPipeline {
         )?.count
     }
 
+    /// False for a voice print the current embedder can't compare against
+    /// live speech: that person is never named until recorded again.
+    public func canRecognize(_ profile: SpeakerProfile) -> Bool {
+        guard let expected = expectedEmbeddingLength else { return true }
+        return profile.embedding.count == expected
+    }
+
     /// Seeds the clusterer with a saved profile so that person is named
     /// from their first utterance. Does nothing for a profile whose voice
     /// print predates the current embedder — see `expectedEmbeddingLength`.
     public func enroll(profile: SpeakerProfile) {
-        guard expectedEmbeddingLength == nil || profile.embedding.count == expectedEmbeddingLength else { return }
+        guard canRecognize(profile) else { return }
         profileClusters[profile.id] = clusterer.enroll(name: profile.name, embedding: profile.embedding)
         speakerClusters = clusterer.clusters
     }

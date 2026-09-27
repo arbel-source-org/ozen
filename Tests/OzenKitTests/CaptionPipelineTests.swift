@@ -708,7 +708,10 @@ struct CaptionPipelineTokenTests {
         let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
         // FakeEmbedder always returns length-3 vectors; this profile is
         // from a shorter, older embedder and can never match live speech.
-        pipeline.enroll(profile: SpeakerProfile(name: "דנה", embedding: [1, 0]))
+        let old = SpeakerProfile(name: "דנה", embedding: [1, 0])
+        #expect(!pipeline.canRecognize(old))
+        #expect(pipeline.canRecognize(SpeakerProfile(name: "דנה", embedding: [1, 0, 0])))
+        pipeline.enroll(profile: old)
         #expect(pipeline.speakerClusters.isEmpty)
 
         await pipeline.start(settings: .default)

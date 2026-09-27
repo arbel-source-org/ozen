@@ -777,7 +777,16 @@ struct SettingsView: View {
                     renamingProfile = viewModel.settings.speakerProfiles.first { $0.name == speaker.name }
                 } label: {
                     HStack {
-                        Label(speaker.name, systemImage: "person.wave.2")
+                        VStack(alignment: .leading, spacing: 4) {
+                            Label(speaker.name, systemImage: "person.wave.2")
+                            // Voices saved before the September 2026 voice
+                            // model are never matched again, silently.
+                            if viewModel.needsNewRecording(speaker) {
+                                Text(tr("נשמר בגרסה ישנה ולא מזוהה. כדי לתקן: \"הוספת דובר\" באותו שם.", "Saved by an older version and not recognized. To fix: \"Add speaker\" with the same name."))
+                                    .font(.footnote)
+                                    .foregroundStyle(.orange)
+                            }
+                        }
                         Spacer()
                         Image(systemName: "pencil")
                             .foregroundStyle(.secondary)
