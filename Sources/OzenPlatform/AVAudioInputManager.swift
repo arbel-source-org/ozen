@@ -44,7 +44,6 @@ public final class AVAudioInputManager: AudioCapturing {
     }
 
     public func prepareSession(preferredInputUID: String?) async throws {
-        self.preferredInputUID = preferredInputUID
         // Off the main thread: activating the session waits on the audio
         // server, which can take seconds while AirPods reconnect or another
         // app lets go of the microphone, and captions start right at launch,
@@ -68,6 +67,10 @@ public final class AVAudioInputManager: AudioCapturing {
             try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
             try session.setActive(true)
         }.value
+        // Set after the wait, not before: another caller (a voice recording
+        // started from Settings) can prepare the session meanwhile, and the
+        // input chosen below must be this caller's own.
+        self.preferredInputUID = preferredInputUID
         sessionPrepared = true
         refreshAvailableInputs()
         try applySelection()

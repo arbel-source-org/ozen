@@ -769,6 +769,24 @@ struct CaptionPipelineTokenTests {
         #expect(await eventually { pipeline.displayName(for: pipeline.segments[1]) != "דנה" })
     }
 
+    @Test("a pooled line counts toward a voice like one window, not as the sum of the windows it pooled")
+    func pooledWindowWeighsLikeOne() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        pipeline.enroll(profile: SpeakerProfile(name: "דנה", embedding: [1, 0, 0]))
+        await pipeline.start(settings: .default)
+
+        engine.emit(token(UUID(), "היי"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.first?.sampleCount == EmbeddingClusterer.enrollmentWeight + 3 })
+
+        let centroid = pipeline.speakerClusters.first?.centroid ?? []
+        #expect(abs((centroid.first ?? 0) - 1) < 0.001)
+    }
+
     @Test("a profile saved by a different, since-replaced embedder is not seeded as a phantom speaker")
     func mismatchedProfileLengthIsNotEnrolled() async {
         let engine = FakeEngine()

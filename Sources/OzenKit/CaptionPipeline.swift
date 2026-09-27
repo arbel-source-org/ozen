@@ -1215,7 +1215,11 @@ public final class CaptionPipeline {
         for print in linePrints.prints where print.count == sum.count {
             for index in sum.indices { sum[index] += print[index] }
         }
-        return sum
+        // Scaled to the length of a single window's print: the matched voice
+        // takes this into its running average like any one window, and a
+        // sum of three would pull its centroid three times as hard.
+        let length = embedding.reduce(0) { $0 + $1 * $1 }.squareRoot()
+        return normalized(sum).map { $0 * length }
     }
 
     private func normalized(_ vector: [Float]) -> [Float] {
