@@ -305,6 +305,13 @@ a free Apple ID from a Linux machine is documented step by step, including
 the three things that were broken along the way, in
 [docs/sideloading-from-linux.md](docs/sideloading-from-linux.md).
 
+**On iOS or iPadOS 26 and later, install with
+[Impactor](https://github.com/claration/Impactor), not AltServer.** A build
+signed by AltServer-Linux installs without an error but never opens: the
+system rejects its signature before the app starts (`AMFI: code signature
+validation failed` in the device log), so it looks like the app crashes on
+launch and leaves no crash report. Confirmed on iPadOS 27 on 2026-09-27.
+
 When she calls with a problem, [docs/troubleshooting.md](docs/troubleshooting.md)
 says what every status message means and what to do about it, and how to
 get the diagnostics report sent over.
