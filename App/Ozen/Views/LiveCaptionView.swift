@@ -390,18 +390,22 @@ struct LiveCaptionView: View {
                     }
                 }
             }
+            .pageSized()
         }
         .sheet(isPresented: $showingMicPicker) {
             MicPickerView(viewModel: viewModel)
                 .alertOverlay(for: viewModel)
+                .pageSized()
         }
         .sheet(isPresented: $showingSettings) {
             SettingsView(viewModel: viewModel)
                 .alertOverlay(for: viewModel)
+                .pageSized()
         }
         .sheet(isPresented: $showingTypeToSpeak) {
             TypeToSpeakView(viewModel: viewModel)
                 .alertOverlay(for: viewModel)
+                .pageSized()
         }
         .onChange(of: viewModel.isShowingBigText, initial: true) { _, asked in
             if asked { presentBigText() }
@@ -417,9 +421,11 @@ struct LiveCaptionView: View {
         }
         .sheet(item: $namingSegment) { segment in
             NameSpeakerSheet(segment: segment, viewModel: viewModel)
+                .pageSized()
         }
         .sheet(item: $fixingWordFromSegment) { segment in
             FixVocabularyWordSheet(segment: segment, viewModel: viewModel)
+                .pageSized()
         }
         .confirmationDialog(
             tr("להוריד את המודל בחבילת הגלישה?", "Download the model over cellular data?"),
@@ -465,6 +471,7 @@ struct LiveCaptionView: View {
             .sheet(isPresented: $showingNameAlertForm) {
                 NameAlertSheet(viewModel: viewModel)
                     .alertOverlay(for: viewModel)
+                    .pageSized()
             }
             .alert(tr("הבעיה סומנה", "Problem marked"), isPresented: $showingProblemMarked) {
                 Button(tr("אישור", "OK"), role: .cancel) {}
