@@ -534,8 +534,12 @@ struct SettingsView: View {
         Section {
             Picker(tr("שפת האפליקציה", "App language"), selection: appLanguageBinding) {
                 Text(tr("כמו בטלפון", "Same as the phone")).tag(AppLanguage.system)
-                Text("עברית").tag(AppLanguage.hebrew)
-                Text("English").tag(AppLanguage.english)
+                // Every other language by its own name, not by Hebrew or
+                // English about it: a reader picks "العربية" by recognizing
+                // it. Same order as the cases are declared in.
+                ForEach(AppLanguage.allCases.filter { $0 != .system }, id: \.self) { language in
+                    Text(language.resolved(preferredLanguages: []).nativeName).tag(language)
+                }
             }
         } footer: {
             Text(tr("השפה של הכפתורים וההגדרות. הכתוביות נשארות בשפה שמדברים בה.", "The language of the buttons and settings. Captions stay in the language people speak."))

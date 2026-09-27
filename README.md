@@ -78,10 +78,14 @@ things, for Hebrew conversation, entirely on-device.
   stops working, the credit runs out or the internet goes, a Whisper
   model already on the phone takes over and the status line says so
   (`CloudCover`); captions don't stop for a billing problem.
-- **Hebrew or English interface**, following the phone's language or a
-  choice in Settings. Every piece of text holds both versions side by side
-  (`tr(hebrew, english)`, checked by `scripts/check-translations.py`);
-  caption lines stay right to left either way.
+- **Twelve interface languages** (Hebrew, English, Arabic, Russian,
+  Amharic, French, Spanish, Ukrainian, German, Portuguese, Simplified
+  Chinese, Hindi), following the phone's language or a choice in Settings.
+  Every piece of text is written as `tr(hebrew, english)`, with every other
+  language drawn from a translation table keyed by the English text
+  (`scripts/check-translations.py` checks both); Hebrew and Arabic read
+  right to left, and caption lines stay right to left for Hebrew speech
+  either way.
 - **Bottom buttons that get out of the way**: while captions follow the
   newest line on their own, the buttons slide away after a few seconds so
   they never cover it; a touch brings them back.
