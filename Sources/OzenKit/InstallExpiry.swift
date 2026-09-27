@@ -77,6 +77,17 @@ public enum InstallExpiry {
                 return "on \(englishWeekdayNames[weekday]) at \(time)"
             }
         }
+        if Localization.language != .hebrew {
+            switch expiryDay - today {
+            case 0: return tr("היום בשעה %1", "today at %1", args: ["\(time)"])
+            case 1: return tr("מחר בשעה %1", "tomorrow at %1", args: ["\(time)"])
+            default:
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.locale = Localization.language.formattingLocale
+                let weekday = calendar.weekdaySymbols[(expiryDay + 4) % 7]
+                return tr("ביום %1 בשעה %2", "on %1 at %2", args: ["\(weekday)", "\(time)"])
+            }
+        }
         switch expiryDay - today {
         case 0: return "היום בשעה \(time)"
         case 1: return "מחר בשעה \(time)"

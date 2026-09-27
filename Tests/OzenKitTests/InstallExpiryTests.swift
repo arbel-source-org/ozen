@@ -60,6 +60,27 @@ struct InstallExpiryTests {
         #expect(InstallExpiry.shouldWarn(expiresAt: expiry, now: monday(10, 30, plusDays: 7)) == false)
     }
 
+    @Test("the other interface languages get their own words for today, tomorrow and the weekday")
+    func wordingInOtherLanguages() {
+        let now = monday(9)
+        Localization.$override.withValue(.russian) {
+            #expect(InstallExpiry.whenText(expiresAt: monday(22, 5), now: now, utcOffsetSeconds: israel) == "сегодня в 22:05")
+            #expect(InstallExpiry.whenText(expiresAt: monday(7, 24, plusDays: 2), now: now, utcOffsetSeconds: israel) == "среда, 07:24")
+        }
+        Localization.$override.withValue(.french) {
+            #expect(InstallExpiry.whenText(expiresAt: monday(0, 30, plusDays: 1), now: now, utcOffsetSeconds: israel) == "demain à 00:30")
+            #expect(InstallExpiry.whenText(expiresAt: monday(7, 24, plusDays: 6), now: now, utcOffsetSeconds: israel) == "dimanche à 07:24")
+        }
+        for language in UILanguage.allCases where language != .hebrew {
+            Localization.$override.withValue(language) {
+                for plusDays in 0...6 {
+                    let text = InstallExpiry.whenText(expiresAt: monday(7, 24, plusDays: plusDays), now: now, utcOffsetSeconds: israel)
+                    #expect(!text.unicodeScalars.contains { (0x0590...0x05FF).contains($0.value) }, "\(language): \(text)")
+                }
+            }
+        }
+    }
+
     @Test("when it stops opening reads as today, tomorrow, or the day of the week")
     func wording() {
         let now = monday(9)

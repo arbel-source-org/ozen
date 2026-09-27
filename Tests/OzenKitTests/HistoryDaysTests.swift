@@ -60,6 +60,31 @@ struct HistoryDaysTests {
         #expect(HistoryDays.grouped([], now: mondayNoonUTC, utcOffsetSeconds: { _ in 0 }).isEmpty)
     }
 
+    @Test("the other interface languages: their own today and yesterday, weekday and date order, never Hebrew")
+    func otherLanguageTitles() {
+        let today = CivilDate.localDay(of: mondayNoonUTC, utcOffsetSeconds: israel)
+        Localization.$override.withValue(.russian) {
+            #expect(HistoryDays.title(day: today, today: today) == "Сегодня")
+            #expect(HistoryDays.title(day: today - 2, today: today) == "Суббота")
+            #expect(HistoryDays.title(day: today - 7, today: today) == "Понедельник, 7 сентября")
+        }
+        Localization.$override.withValue(.french) {
+            #expect(HistoryDays.title(day: today - 1, today: today) == "Hier")
+            #expect(HistoryDays.title(day: today - 258, today: today) == "Mardi 30 décembre 2025")
+        }
+        Localization.$override.withValue(.chineseSimplified) {
+            #expect(HistoryDays.title(day: today - 7, today: today) == "9月7日 星期一")
+        }
+        for language in UILanguage.allCases where language != .hebrew {
+            Localization.$override.withValue(language) {
+                for back in [0, 1, 2, 6, 7, 258] {
+                    let title = HistoryDays.title(day: today - back, today: today)
+                    #expect(!title.isEmpty && !title.unicodeScalars.contains { (0x0590...0x05FF).contains($0.value) }, "\(language): \(title)")
+                }
+            }
+        }
+    }
+
     @Test("English titles: today, yesterday, a weekday, then the weekday with the date")
     func englishTitles() {
         Localization.$override.withValue(.english) {

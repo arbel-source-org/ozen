@@ -36,6 +36,7 @@ public enum HistoryDays {
 
     public static func title(day: Int, today: Int) -> String {
         if Localization.language == .english { return englishTitle(day: day, today: today) }
+        if Localization.language != .hebrew { return localizedTitle(day: day, today: today, language: Localization.language) }
         let weekday = "יום \(weekdayNames[CivilDate.weekday(ofDay: day)])"
         switch today - day {
         case 0: return "היום"
@@ -59,6 +60,32 @@ public enum HistoryDays {
             let year = date.year == CivilDate(daysSinceEpoch: today).year ? "" : " \(date.year)"
             return "\(weekday), \(date.day) \(englishMonthNames[date.month - 1])\(year)"
         }
+    }
+
+    /// The other interface languages: the phone's own names and date order
+    /// for each ("четверг, 5 марта", "jeudi 5 mars", "3月5日 星期四"),
+    /// with a capital letter as a heading has.
+    private static func localizedTitle(day: Int, today: Int, language: UILanguage) -> String {
+        switch today - day {
+        case 0: return tr("היום", "Today", in: language)
+        case 1: return tr("אתמול", "Yesterday", in: language)
+        case 2...6:
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.locale = language.formattingLocale
+            return heading(calendar.weekdaySymbols[CivilDate.weekday(ofDay: day)], language)
+        default:
+            let sameYear = CivilDate(daysSinceEpoch: day).year == CivilDate(daysSinceEpoch: today).year
+            let formatter = DateFormatter()
+            formatter.locale = language.formattingLocale
+            formatter.timeZone = TimeZone(identifier: "UTC")
+            formatter.dateFormat = DateFormatter.dateFormat(fromTemplate: sameYear ? "EEEEdMMMM" : "EEEEdMMMMy", options: 0, locale: language.formattingLocale)
+            return heading(formatter.string(from: Date(timeIntervalSince1970: TimeInterval(day) * 86_400)), language)
+        }
+    }
+
+    private static func heading(_ text: String, _ language: UILanguage) -> String {
+        guard let first = text.first else { return text }
+        return String(first).uppercased(with: language.formattingLocale) + text.dropFirst()
     }
 
     private static let weekdayNames = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"]

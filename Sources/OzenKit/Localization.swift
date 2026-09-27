@@ -49,6 +49,11 @@ public enum UILanguage: String, Codable, Sendable, CaseIterable {
         }
     }
 
+    /// Dates and weekdays in this language, however the phone is set.
+    var formattingLocale: Locale {
+        Locale(identifier: self == .chineseSimplified ? "zh-Hans" : languageCode.identifier)
+    }
+
     /// The code the phone's voice list is searched with.
     public var speechVoiceCode: String {
         switch self {
