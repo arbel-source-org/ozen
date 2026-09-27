@@ -63,7 +63,9 @@ struct LiveCaptionView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var theme: CaptionTheme { CaptionTheme(viewModel.display.theme) }
+    @Environment(\.colorScheme) private var systemScheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    private var theme: CaptionTheme { CaptionTheme(viewModel.display.theme, system: systemScheme, contrast: contrast) }
 
     /// The saved display settings with a pinch in progress applied, so the
     /// text grows under the fingers and only the final size is saved.
@@ -248,7 +250,7 @@ struct LiveCaptionView: View {
                 AlertFlashOverlay(alert: viewModel.soundAlerts.last)
             }
         }
-        .preferredColorScheme(theme.colorScheme)
+        .preferredColorScheme(theme.preferredScheme)
     }
 
     /// Everything that reacts to what happens: Siri requests, alerts,
@@ -840,7 +842,7 @@ struct LiveCaptionView: View {
         }
         .foregroundStyle(theme.chrome)
         .padding(14)
-        .background(theme.chrome.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+        .background(theme.chrome.opacity(theme.cardFill), in: RoundedRectangle(cornerRadius: 14))
     }
 
     /// For a phone set up before the walkthrough asked for her name: the
@@ -877,7 +879,7 @@ struct LiveCaptionView: View {
         }
         .foregroundStyle(theme.chrome)
         .padding(14)
-        .background(theme.chrome.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+        .background(theme.chrome.opacity(theme.cardFill), in: RoundedRectangle(cornerRadius: 14))
     }
 
     /// After iOS closed the app in the middle of a conversation: what was
@@ -919,7 +921,7 @@ struct LiveCaptionView: View {
         }
         .foregroundStyle(theme.chrome)
         .padding(14)
-        .background(theme.chrome.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+        .background(theme.chrome.opacity(theme.cardFill), in: RoundedRectangle(cornerRadius: 14))
     }
 
     /// Finished lines reach VoiceOver (speech or a braille display) by

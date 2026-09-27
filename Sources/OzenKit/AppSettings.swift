@@ -53,6 +53,10 @@ public struct DisplayPreferences: Codable, Sendable, Equatable {
         case highContrast
         /// Black text on white, for bright rooms.
         case light
+        /// White on black or black on white, following the phone's own
+        /// light/dark setting, so it changes with the room when the phone is
+        /// set to switch automatically at sunset.
+        case matchPhone
     }
 
     public var fontSize: Double

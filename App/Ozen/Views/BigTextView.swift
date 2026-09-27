@@ -20,7 +20,9 @@ struct BigTextView: View {
 
     static let fontSize: CGFloat = 52
 
-    private var theme: CaptionTheme { CaptionTheme(display.theme) }
+    @Environment(\.colorScheme) private var systemScheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    private var theme: CaptionTheme { CaptionTheme(display.theme, system: systemScheme, contrast: contrast) }
     private var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     var body: some View {
@@ -31,7 +33,7 @@ struct BigTextView: View {
         }
         .accessibilityIdentifier("bigTextScreen")
         .background(theme.background.ignoresSafeArea())
-        .preferredColorScheme(theme.colorScheme)
+        .preferredColorScheme(theme.preferredScheme)
         .onAppear { isTyping = !isFlipped }
     }
 

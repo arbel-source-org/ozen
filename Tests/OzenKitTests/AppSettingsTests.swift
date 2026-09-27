@@ -373,4 +373,14 @@ struct SavedSpeakerTests {
         #expect(try decoded(#"{"homeServerBeam":-2}"#).homeServerBeam == 1)
         #expect(try decoded(#"{"homeServerBeam":"fast"}"#).homeServerBeam == 5)
     }
+
+    @Test("the match-the-phone look is saved and read back, and a look this build doesn't know falls back to the default")
+    func matchPhoneTheme() throws {
+        var display = DisplayPreferences.default
+        display.theme = .matchPhone
+        let data = try JSONEncoder().encode(display)
+        #expect(try JSONDecoder().decode(DisplayPreferences.self, from: data).theme == .matchPhone)
+        let unknown = String(decoding: data, as: UTF8.self).replacingOccurrences(of: "matchPhone", with: "sepia")
+        #expect(try JSONDecoder().decode(DisplayPreferences.self, from: Data(unknown.utf8)).theme == DisplayPreferences.default.theme)
+    }
 }

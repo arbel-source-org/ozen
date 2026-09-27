@@ -30,6 +30,9 @@ struct SettingsView: View {
     @State private var hasCloudKey = CloudKeyStore.hasKey
     @State private var cloudKeySaveFailed = false
     @State private var homeServerAddressDraft = ""
+    @Environment(\.colorScheme) private var systemScheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    private var previewTheme: CaptionTheme { CaptionTheme(viewModel.display.theme, system: systemScheme, contrast: contrast) }
     @State private var homeServerCodeDraft = ""
     @State private var hasHomeServerCode = HomeServerCodeStore.hasKey
     @State private var homeServerCheck: HomeServerCheck?
@@ -146,7 +149,7 @@ struct SettingsView: View {
 
     /// A menu shows the chosen theme's name beside the label, and at the
     /// largest text sizes there is room for two letters of it. There,
-    /// the three themes are rows of their own with a checkmark.
+    /// the themes are rows of their own with a checkmark.
     @ViewBuilder
     private var themePicker: some View {
         let picker = Picker(tr("צבעים", "Colors"), selection: $viewModel.display.theme) {
@@ -565,13 +568,13 @@ struct SettingsView: View {
                     caption: tr("שלום סבתא, נגיע בשש עם שלושה ילדים.", "Hello grandma, we’ll arrive at six with three kids."),
                     emphasizingNumbers: viewModel.display.emphasizeNumbers,
                     size: viewModel.display.fontSize,
-                    numberColor: CaptionTheme(viewModel.display.theme).numberText
+                    numberColor: previewTheme.numberText
                 )
                     .font(.system(size: viewModel.display.fontSize, weight: viewModel.display.boldText ? .bold : .medium))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
-                    .background(CaptionTheme(viewModel.display.theme).background, in: RoundedRectangle(cornerRadius: 10))
-                    .foregroundStyle(CaptionTheme(viewModel.display.theme).text)
+                    .background(previewTheme.background, in: RoundedRectangle(cornerRadius: 10))
+                    .foregroundStyle(previewTheme.text)
             }
 
             themePicker
