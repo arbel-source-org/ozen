@@ -56,7 +56,7 @@ struct CaptionLiveActivity: Widget {
             } minimal: {
                 Image(systemName: "captions.bubble.fill")
                     .foregroundStyle(.yellow)
-                    .accessibilityLabel(context.state.english ? "Ozen" : "אוזן")
+                    .accessibilityLabel(context.state.appName ?? (context.state.english ? "Ozen" : "אוזן"))
             }
         }
     }
@@ -96,7 +96,7 @@ struct CaptionLinesView: View {
             } else if isStale {
                 // The app stopped updating the lines (iOS closed it, say):
                 // they may be long out of date.
-                note(state.english ? "Captions aren’t updating. Open Ozen." : "הכתוביות לא מתעדכנות. פתחו את אוזן.")
+                note(state.notUpdating ?? (state.english ? "Captions aren’t updating. Open Ozen." : "הכתוביות לא מתעדכנות. פתחו את אוזן."))
             } else if let ageNote = state.ageNote {
                 // Captions run, but nobody has spoken for a while.
                 note(ageNote, color: .white.opacity(0.7))
@@ -119,7 +119,7 @@ struct CaptionLinesView: View {
     }
 
     private var listeningLabel: some View {
-        Label(state.english ? "Listening…" : "מקשיב…", systemImage: "ear")
+        Label(state.listening ?? (state.english ? "Listening…" : "מקשיב…"), systemImage: "ear")
             .font(.system(size: fontSize, weight: .semibold))
             .foregroundStyle(.white.opacity(0.8))
     }

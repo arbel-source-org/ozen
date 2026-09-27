@@ -26,12 +26,18 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
         /// The app's own words (not the captions) in English. The widget
         /// can't read the app's language setting itself.
         var english: Bool = false
+        /// The widget's own few words, already in the app's language, for
+        /// the languages beyond Hebrew and English. Absent from an older
+        /// build's state, when `english` decides as before.
+        var appName: String? = nil
+        var listening: String? = nil
+        var notUpdating: String? = nil
     }
 }
 
 nonisolated extension CaptionActivityAttributes.ContentState {
     enum CodingKeys: String, CodingKey {
-        case lines, status, ageNote, large, english
+        case lines, status, ageNote, large, english, appName, listening, notUpdating
     }
 
     /// Lines sent by an older build, still on the lock screen after an
@@ -44,7 +50,10 @@ nonisolated extension CaptionActivityAttributes.ContentState {
             status: try container.decodeIfPresent(String.self, forKey: .status),
             ageNote: try container.decodeIfPresent(String.self, forKey: .ageNote),
             large: try container.decodeIfPresent(Bool.self, forKey: .large) ?? false,
-            english: try container.decodeIfPresent(Bool.self, forKey: .english) ?? false
+            english: try container.decodeIfPresent(Bool.self, forKey: .english) ?? false,
+            appName: try container.decodeIfPresent(String.self, forKey: .appName),
+            listening: try container.decodeIfPresent(String.self, forKey: .listening),
+            notUpdating: try container.decodeIfPresent(String.self, forKey: .notUpdating)
         )
     }
 }

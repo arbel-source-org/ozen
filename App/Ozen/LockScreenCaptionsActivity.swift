@@ -43,7 +43,10 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
             status: content.status,
             ageNote: content.ageNote,
             large: content.textSize == .large,
-            english: Localization.language == .english
+            english: Localization.language == .english,
+            appName: tr("אוזן", "Ozen"),
+            listening: tr("מקשיב…", "Listening…"),
+            notUpdating: tr("הכתוביות לא מתעדכנות. פתחו את אוזן.", "Captions aren’t updating. Open Ozen.")
         )
         let staleDate = Date().addingTimeInterval(Self.staleAfterSeconds)
         if let activityID, Self.isRunning(id: activityID) {
