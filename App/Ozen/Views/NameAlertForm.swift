@@ -40,6 +40,9 @@ struct NameAlertForm: View {
                     .foregroundStyle(.green)
             }
         }
+        // A name typed and then "Next" or "Done" instead of "Add" was
+        // dropped, and the name alert never came.
+        .onDisappear(perform: addName)
     }
 
     private var addedText: String {

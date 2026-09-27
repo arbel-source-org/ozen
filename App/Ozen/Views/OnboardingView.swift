@@ -399,6 +399,9 @@ private struct EngineCard: View {
                     .font(.title)
                     .foregroundStyle(selected ? Color.accentColor : Color.secondary)
                     .frame(width: 36)
+                    // "Selected" comes from the trait below; the icon's own
+                    // name read out as "checkmark circle fill".
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.title3.weight(.semibold))
