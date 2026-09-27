@@ -345,6 +345,23 @@ struct SavedSpeakerTests {
         #expect(SavedSpeaker.grouping([]).isEmpty)
     }
 
+    @Test("every interface language has its own ready-made phrases, same count as Hebrew, and an untouched list switches to them")
+    func quickPhrasesInEveryLanguage() {
+        let hebrew = AppSettings.defaultQuickPhrases
+        var seen: Set<[String]> = []
+        for language in UILanguage.allCases {
+            let phrases = AppSettings.defaultQuickPhrases(for: language)
+            #expect(phrases.count == hebrew.count, "\(language)")
+            #expect(!phrases.contains { $0.isEmpty }, "\(language)")
+            seen.insert(phrases)
+        }
+        #expect(seen.count == UILanguage.allCases.count)
+        let arabic = AppSettings.defaultQuickPhrases(for: .arabic)
+        #expect(AppSettings.displayedQuickPhrases(stored: hebrew, language: .arabic) == arabic)
+        #expect(AppSettings.displayedQuickPhrases(stored: arabic, language: .russian) == AppSettings.defaultQuickPhrases(for: .russian))
+        #expect(AppSettings.displayedQuickPhrases(stored: arabic, language: .hebrew) == hebrew)
+    }
+
     @Test("the untouched ready-made phrases follow the app's language, an edited list does not")
     func quickPhrasesFollowLanguage() {
         let hebrew = AppSettings.defaultQuickPhrases
