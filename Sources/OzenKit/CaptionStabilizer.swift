@@ -22,6 +22,10 @@ public struct TranscriptSegment: Identifiable, Sendable, Equatable {
     /// can't yet be treated as permanently settled, however far back it's
     /// scrolled.
     public var isProvisionalCommit: Bool = false
+    /// Final because the engine said so, not by `commitStale`'s guess:
+    /// only such a line's words can't change under a finger that taps a
+    /// phone number in it.
+    public var isSettled: Bool { isCommitted && !isProvisionalCommit }
     /// The words in `text` the engine was least sure of (see
     /// `UncertainWords`): at the doctor's it matters whether the doubt is
     /// about "10:30" or about "thank you".

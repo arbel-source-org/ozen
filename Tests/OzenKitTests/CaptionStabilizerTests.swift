@@ -91,6 +91,8 @@ struct CaptionStabilizerTests {
         let id = UUID()
         stabilizer.ingest(TranscriptToken(utteranceID: id, text: "הרופא אמר", isFinal: false, timestamp: 0))
         #expect(stabilizer.commitStale(now: 7).map(\.id) == [id])
+        #expect(stabilizer.segments.first?.isCommitted == true)
+        #expect(stabilizer.segments.first?.isSettled == false)
 
         let reopened = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "הרופא אמר כדור", isFinal: false, timestamp: 8))
         #expect(reopened.isCommitted == false)
@@ -98,6 +100,7 @@ struct CaptionStabilizerTests {
 
         let settled = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "הרופא אמר כדור אחד", isFinal: true, timestamp: 9))
         #expect(settled.isCommitted)
+        #expect(settled.isSettled)
         #expect(settled.text == "הרופא אמר כדור אחד")
 
         // Now it's the engine's final: nothing more changes the words.

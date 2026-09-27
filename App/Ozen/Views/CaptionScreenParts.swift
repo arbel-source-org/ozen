@@ -60,12 +60,15 @@ struct CaptionRow: View {
                     // throughout, numbers included, so it reads as unfinished.
                     numberColor: segment.isCommitted ? theme.numberText : nil,
                     uncertainWords: marksUncertainWords && segment.isCommitted ? segment.uncertainWords : [],
-                    // Only once the line is final: a number still being
-                    // heard can change under her finger.
-                    linkingPhoneNumbers: segment.isCommitted
+                    // Only once the engine says the line is final: a
+                    // number still being heard can change under her finger.
+                    linkingPhoneNumbers: segment.isSettled
                 )
                     .font(.system(size: display.fontSize, weight: display.boldText ? .bold : .medium))
                     .foregroundStyle(segment.isCommitted ? theme.text : theme.pendingText)
+                    // A tappable number takes the theme's own number colour,
+                    // not the system blue, which is dim on the light theme.
+                    .tint(theme.numberText)
                     .multilineTextAlignment(.leading)
                     .lineSpacing(display.fontSize * 0.15)
                     .fixedSize(horizontal: false, vertical: true)
@@ -92,7 +95,7 @@ struct CaptionRow: View {
         // The line is one element for VoiceOver, so the tappable number in
         // it is offered as an action instead.
         .accessibilityActions {
-            if segment.isCommitted {
+            if segment.isSettled {
                 ForEach(PhoneNumbers.matches(in: segment.text), id: \.dialable) { phone in
                     if let url = phone.url {
                         Button(tr("להתקשר ל־\(phone.dialable)", "Call \(phone.dialable)")) { openURL(url) }
