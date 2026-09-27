@@ -562,6 +562,14 @@ struct SettingsView: View {
                     Image(systemName: "textformat.size.larger")
                 }
                 .accessibilityValue("\(Int(viewModel.display.fontSize))")
+                // A pinch on the caption screen changes this too, and one
+                // made by accident had no quick way back.
+                if Int(viewModel.display.fontSize) != Int(DisplayPreferences.default.fontSize) {
+                    Button(tr("חזרה לגודל הרגיל", "Back to the usual size")) {
+                        viewModel.display.fontSize = DisplayPreferences.default.fontSize
+                    }
+                    .accessibilityIdentifier("resetFontSizeButton")
+                }
                 // With a number in it, so the number switch below shows
                 // what it does right here.
                 Text(

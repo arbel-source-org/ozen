@@ -4,6 +4,10 @@ import OzenKit
 struct KeywordAlertsView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var newPhrase = ""
+    /// A word waiting for "Delete" to be confirmed: losing the one that
+    /// buzzes when someone says her name should take a second tap, as
+    /// deleting a conversation or a voice does.
+    @State private var pendingDelete: KeywordAlert?
     @FocusState private var isEditing: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -61,7 +65,7 @@ struct KeywordAlertsView: View {
                     // now the swipe only shows the button (as in History).
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
-                            viewModel.removeKeywordAlert(id: alert.id)
+                            pendingDelete = alert
                         } label: {
                             Label(tr("מחיקה", "Delete"), systemImage: "trash")
                         }
@@ -100,6 +104,18 @@ struct KeywordAlertsView: View {
         }
         .accessibilityIdentifier("keywordAlertsScreen")
         .navigationTitle(tr("מילים חשובות", "Important words"))
+        .confirmationDialog(
+            tr("למחוק את \"\(pendingDelete?.phrase ?? "")\"?", "Delete “\(pendingDelete?.phrase ?? "")”?"),
+            isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button(tr("למחוק", "Delete"), role: .destructive) {
+                if let alert = pendingDelete { viewModel.removeKeywordAlert(id: alert.id) }
+                pendingDelete = nil
+            }
+        } message: {
+            Text(tr("הטלפון יפסיק להתריע כשהמילה נאמרת.", "The phone will stop alerting when this word is said."))
+        }
         .navigationBarTitleDisplayMode(.inline)
     }
 

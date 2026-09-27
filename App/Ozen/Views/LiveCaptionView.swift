@@ -218,6 +218,9 @@ struct LiveCaptionView: View {
                 if let title = viewModel.microphoneDrop.title {
                     MicrophoneDropBanner(title: title) {
                         withAnimation { viewModel.dismissMicrophoneDrop() }
+                        showingMicPicker = true
+                    } onDismiss: {
+                        withAnimation { viewModel.dismissMicrophoneDrop() }
                     }
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
