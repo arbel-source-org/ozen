@@ -213,6 +213,12 @@ struct LiveCaptionView: View {
                     }
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
+                if let title = viewModel.microphoneDrop.title {
+                    MicrophoneDropBanner(title: title) {
+                        withAnimation { viewModel.dismissMicrophoneDrop() }
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 if let notice = battery.notice {
                     BatteryBanner(notice: notice) {
                         withAnimation { battery.dismiss() }

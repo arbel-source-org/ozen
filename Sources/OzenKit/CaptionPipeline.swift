@@ -59,6 +59,10 @@ public final class CaptionPipeline {
     public private(set) var keywordHits: [KeywordHit] = []
     /// Segments that contain at least one keyword hit, for highlighting.
     public private(set) var keywordHitSegmentIDs: Set<UUID> = []
+    /// An external microphone went away mid-conversation and the phone's
+    /// own took over: said on screen, since captions get worse quietly.
+    public private(set) var microphoneDrop = MicrophoneDropNotice()
+    private var lastSelectedInput: AudioInputDescriptor?
     /// Doorbell/siren/kettle alerts that passed `soundPolicy`, newest last.
     public private(set) var soundAlerts: [SoundAlert] = []
 
@@ -496,6 +500,7 @@ public final class CaptionPipeline {
         cancelScheduledRetry()
         recovery.reset()
         listeningSince = nil
+        microphoneDrop.dismiss()
         tearDownSession()
         phase = .idle
     }
@@ -698,9 +703,21 @@ public final class CaptionPipeline {
         availableInputs = audio.availableInputs
         let previous = selectedInputUID
         selectedInputUID = audio.selectedInputUID
-        if selectedInputUID != previous, let input = availableInputs.first(where: { $0.uid == selectedInputUID }) {
-            journalOnly(.input(name: input.portName, type: input.portType))
+        let current = availableInputs.first(where: { $0.uid == selectedInputUID })
+        if selectedInputUID != previous {
+            if let current {
+                journalOnly(.input(name: current.portName, type: current.portType))
+            }
+            microphoneDrop.inputChanged(from: lastSelectedInput, to: current, isListening: phase.isListening)
         }
+        // Remembered apart from the list: the one that just went away is
+        // no longer in it.
+        if let current { lastSelectedInput = current }
+    }
+
+    /// Hides the notice until another microphone drops.
+    public func dismissMicrophoneDrop() {
+        microphoneDrop.dismiss()
     }
 
     /// What the running engine says about its own work; see

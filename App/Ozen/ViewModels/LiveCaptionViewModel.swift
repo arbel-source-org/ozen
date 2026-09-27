@@ -590,6 +590,11 @@ public final class LiveCaptionViewModel {
     public var keywordHits: [KeywordHit] { pipeline.keywordHits }
     public var keywordHitSegmentIDs: Set<UUID> { pipeline.keywordHitSegmentIDs }
     public var soundAlerts: [SoundAlert] { pipeline.soundAlerts }
+    public var microphoneDrop: MicrophoneDropNotice { pipeline.microphoneDrop }
+
+    public func dismissMicrophoneDrop() {
+        pipeline.dismissMicrophoneDrop()
+    }
 
     public var selectedInput: AudioInputDescriptor? {
         availableInputs.first { $0.uid == selectedInputUID }

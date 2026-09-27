@@ -1083,6 +1083,47 @@ struct CaptionPipelineInputTests {
         #expect(pipeline.phase == .listening)
     }
 
+    @Test("a lapel microphone dropping mid-conversation says so; its return clears it")
+    func externalMicrophoneDropIsShown() async {
+        let builtIn = AudioInputDescriptor(uid: "builtin", portName: "iPhone Microphone", portType: .builtInMic)
+        let lapel = AudioInputDescriptor(uid: "usb-lav", portName: "USB Lavalier", portType: .usb)
+        let audio = FakeAudioCapturer()
+        audio.availableInputs = [builtIn, lapel]
+        let (pipeline, _, _) = makePipeline(audio: audio)
+        var settings = AppSettings.default
+        settings.preferredInputUID = "usb-lav"
+        await pipeline.start(settings: settings)
+        #expect(pipeline.selectedInputUID == "usb-lav")
+        #expect(pipeline.microphoneDrop.lost == nil)
+
+        audio.selectedInputUID = "builtin"
+        audio.simulateRouteChange(inputs: [builtIn])
+        #expect(pipeline.microphoneDrop.lost == lapel)
+        #expect(pipeline.microphoneDrop.title?.contains("USB Lavalier") == true)
+
+        audio.selectedInputUID = "usb-lav"
+        audio.simulateRouteChange(inputs: [builtIn, lapel])
+        #expect(pipeline.microphoneDrop.lost == nil)
+    }
+
+    @Test("a headset going away, or a change while stopped, is not a drop")
+    func headsetDropIsNotShown() {
+        let builtIn = AudioInputDescriptor(uid: "builtin", portName: "iPhone Microphone", portType: .builtInMic)
+        let airpods = AudioInputDescriptor(uid: "airpods", portName: "AirPods", portType: .bluetooth)
+        let roger = AudioInputDescriptor(uid: "roger", portName: "Roger On", portType: .remoteMic)
+        var notice = MicrophoneDropNotice()
+        notice.inputChanged(from: airpods, to: builtIn, isListening: true)
+        #expect(notice.lost == nil)
+        notice.inputChanged(from: roger, to: builtIn, isListening: false)
+        #expect(notice.lost == nil)
+        notice.inputChanged(from: roger, to: builtIn, isListening: true)
+        #expect(notice.lost == roger)
+        notice.inputChanged(from: builtIn, to: nil, isListening: true)
+        #expect(notice.lost == roger)
+        notice.dismiss()
+        #expect(notice.lost == nil)
+    }
+
     @Test("a system route change refreshes the list without restarting")
     func routeChangeRefreshesInputs() async {
         let (pipeline, audio, _) = makePipeline()
