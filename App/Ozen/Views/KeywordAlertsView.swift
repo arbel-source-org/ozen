@@ -75,7 +75,7 @@ struct KeywordAlertsView: View {
                     Button {
                         viewModel.addKeywordAlert(phrase: word)
                     } label: {
-                        Label(tr("להוסיף: %1", "Add: %1", args: ["\(word)"]), systemImage: "plus.circle")
+                        Label(tr("להוסיף: %1", "Add: %1", args: ["\(AlertSuggestions.label(for: word, in: viewModel.uiLanguage))"]), systemImage: "plus.circle")
                     }
                 }
             }
@@ -119,8 +119,6 @@ struct KeywordAlertsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private static let suggestions = ["סבתא", "אמא", "תרופה", "רופא"]
-
     private var listed: KeywordAlert? {
         viewModel.listedKeywordAlert(matching: newPhrase)
     }
@@ -137,7 +135,7 @@ struct KeywordAlertsView: View {
     /// a suggestion row here.
     private var unusedSuggestions: [String] {
         var seen = Set<String>()
-        let candidates = (viewModel.vocabulary + Self.suggestions).filter { word in
+        let candidates = (viewModel.vocabulary + AlertSuggestions.words).filter { word in
             let normalized = HebrewText.normalize(word)
             guard seen.insert(normalized).inserted else { return false }
             return !viewModel.keywordAlerts.contains { HebrewText.normalize($0.phrase) == normalized }

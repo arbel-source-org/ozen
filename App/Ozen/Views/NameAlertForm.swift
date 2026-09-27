@@ -9,8 +9,6 @@ struct NameAlertForm: View {
     @State private var nameDraft = ""
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private static let suggestedNames = ["סבתא", "אמא"]
-
     private var formLayout: AnyLayout {
         dynamicTypeSize.isAccessibilitySize
             ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
@@ -31,7 +29,7 @@ struct NameAlertForm: View {
                     .disabled(nameDraft.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             formLayout {
-                ForEach(Self.suggestedNames, id: \.self) { word in
+                ForEach(AlertSuggestions.names, id: \.self) { word in
                     suggestionButton(word)
                 }
             }
@@ -56,7 +54,7 @@ struct NameAlertForm: View {
         return Button {
             viewModel.addKeywordAlert(phrase: word)
         } label: {
-            Label(word, systemImage: added ? "checkmark" : "plus")
+            Label(AlertSuggestions.label(for: word, in: viewModel.uiLanguage), systemImage: added ? "checkmark" : "plus")
         }
         .buttonStyle(.bordered)
         .controlSize(.large)
