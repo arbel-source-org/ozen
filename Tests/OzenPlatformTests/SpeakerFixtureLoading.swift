@@ -20,6 +20,10 @@ enum SpeakerFixtureError: Error {
 private final class FixtureBundleLocator {}
 
 enum SpeakerFixtureLoading {
+    static func url(named filename: String) throws -> URL {
+        try resourceURL(named: filename)
+    }
+
     private static func resourceURL(named filename: String) throws -> URL {
         let bundle = Bundle(for: FixtureBundleLocator.self)
         if let direct = bundle.url(forResource: filename, withExtension: nil) {

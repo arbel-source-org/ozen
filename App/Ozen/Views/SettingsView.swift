@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import UIKit
 import AppIntents
 import OzenKit
@@ -7,6 +8,9 @@ import OzenPlatform
 struct SettingsView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var showingEnrollment = false
+    @State private var showingRecordingImporter = false
+    @State private var importingRecordings = false
+    @State private var recordingImport: RecordingImport.Result?
     @State private var confirmingClear = false
     @State private var renamingProfile: SpeakerProfile?
     @State private var renameText = ""
@@ -88,6 +92,23 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingEnrollment) {
                 SpeakerEnrollmentView(viewModel: viewModel)
+            }
+            .fileImporter(isPresented: $showingRecordingImporter, allowedContentTypes: [.audio], allowsMultipleSelection: true) { picked in
+                guard case .success(let urls) = picked, !urls.isEmpty else { return }
+                importingRecordings = true
+                Task {
+                    recordingImport = await viewModel.enroll(recordings: urls)
+                    importingRecordings = false
+                }
+            }
+            .alert(
+                tr("הקלטות", "Recordings"),
+                isPresented: Binding(get: { recordingImport != nil }, set: { if !$0 { recordingImport = nil } }),
+                presenting: recordingImport
+            ) { _ in
+                Button(tr("אישור", "OK"), role: .cancel) {}
+            } message: { result in
+                Text(result.summary)
             }
             .alert(
                 tr("שינוי שם", "Rename"),
@@ -810,10 +831,23 @@ struct SettingsView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("addSpeakerButton")
+            Button {
+                showingRecordingImporter = true
+            } label: {
+                HStack {
+                    Label(tr("הוספה מהקלטות קיימות", "Add from existing recordings"), systemImage: "waveform.badge.plus")
+                    if importingRecordings {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(importingRecordings)
+            .accessibilityIdentifier("importRecordingsButton")
         } header: {
             Text(tr("דוברים שמורים", "Saved speakers"))
         } footer: {
-            Text(tr("דובר שמור מזוהה בשמו מהמשפט הראשון. אפשר גם להקיש על שורה בכתוביות ולתת שם אחרי שהאדם כבר דיבר.", "A saved speaker is recognized by name from the first sentence. You can also tap a line in the captions and give a name after the person has already spoken."))
+            Text(tr("דובר שמור מזוהה בשמו מהמשפט הראשון. אפשר גם להקיש על שורה בכתוביות ולתת שם אחרי שהאדם כבר דיבר. בהוספה מהקלטות, כל קובץ נשמר בשם שבשם הקובץ: \"סבתא 1\" ו-\"סבתא 2\" הם שתי הקלטות של סבתא. בכל קובץ רק אדם אחד מדבר.", "A saved speaker is recognized by name from the first sentence. You can also tap a line in the captions and give a name after the person has already spoken. When adding from recordings, each file is saved under the name in its file name: “Savta 1” and “Savta 2” are two recordings of Savta. Only one person should speak in each file."))
         }
     }
 

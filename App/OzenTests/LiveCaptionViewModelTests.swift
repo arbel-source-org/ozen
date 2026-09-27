@@ -223,6 +223,27 @@ struct LiveCaptionViewModelTests {
         #expect(store.load().speakerProfiles.isEmpty)
     }
 
+    @Test("recordings opened from Files become one voice print each, under the name in the file name")
+    func enrollFromRecordings() async {
+        let store = temporaryStore()
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: fakePipeline())
+        let files = ["סבתא 1.m4a", "סבתא 2.m4a", "Aba.m4a", "12.m4a", "broken.m4a", "silent.m4a"]
+            .map { URL(fileURLWithPath: "/tmp/\($0)") }
+
+        let result = await viewModel.enroll(recordings: files) { url in
+            switch url.lastPathComponent {
+            case "broken.m4a": nil
+            case "silent.m4a": []
+            default: [Float](repeating: 0.5, count: 96_000)
+            }
+        }
+
+        #expect(result.added == ["סבתא": 2, "Aba": 1])
+        #expect(result.unusable == ["12.m4a", "broken.m4a", "silent.m4a"])
+        #expect(store.load().speakerProfiles.map(\.name) == ["סבתא", "סבתא", "Aba"])
+        #expect(viewModel.pipeline.speakerClusters.filter { $0.name == "סבתא" }.count == 2)
+    }
+
     @Test("a voice recording stopped midway saves no profile, however much was heard")
     func enrollStoppedMidway() async {
         let store = temporaryStore()
