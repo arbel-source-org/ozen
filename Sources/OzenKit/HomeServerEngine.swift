@@ -19,11 +19,15 @@ public actor HomeServerEngine: TranscriptionEngine {
     private let handshakeSeconds: Double
     private let client: String
     private let stallSeconds: Double
+    private let pingSeconds: Double
+    private let pongSeconds: Double
     private let beam: Int?
     private var speechDetector = EnergyVoiceDetector.forWhisperLines()
     private var samplesSent = 0
     private var speechSinceReply: Int?
     private var stalled = false
+    private var pingSentAt: ContinuousClock.Instant?
+    private var pongLost = false
     private var vocabulary: [String] = []
     private var echo: PromptEchoDetector?
     private let filter = WhisperResultFilter()
@@ -38,6 +42,8 @@ public actor HomeServerEngine: TranscriptionEngine {
         handshakeSeconds: Double = 5,
         client: String = "",
         stallSeconds: Double = 35,
+        pingSeconds: Double = 5,
+        pongSeconds: Double = 8,
         beam: Int? = nil
     ) {
         self.address = address
@@ -46,6 +52,8 @@ public actor HomeServerEngine: TranscriptionEngine {
         self.handshakeSeconds = handshakeSeconds
         self.client = client
         self.stallSeconds = stallSeconds
+        self.pingSeconds = pingSeconds
+        self.pongSeconds = pongSeconds
         self.beam = beam
     }
 
@@ -134,6 +142,8 @@ public actor HomeServerEngine: TranscriptionEngine {
         liveSocket = socket
         endSent = false
         stalled = false
+        pongLost = false
+        pingSentAt = nil
         samplesSent = 0
         speechSinceReply = nil
         speechDetector = EnergyVoiceDetector.forWhisperLines()
@@ -149,7 +159,28 @@ public actor HomeServerEngine: TranscriptionEngine {
             try? await socket.send(text: HomeServer.end)
             self.markEndSent()
         }
-        defer { sender.cancel() }
+        let heartbeat = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(self.pingSeconds))
+                if Task.isCancelled { return }
+                switch await self.heartbeatStep() {
+                case .wait:
+                    continue
+                case .lost:
+                    await socket.close()
+                    return
+                case .ping:
+                    Task {
+                        guard (try? await socket.ping()) != nil else { return }
+                        await self.notePong()
+                    }
+                }
+            }
+        }
+        defer {
+            sender.cancel()
+            heartbeat.cancel()
+        }
 
         // Stopping captions cancels this task, but a socket's receive
         // doesn't notice cancellation: without the close the connection
@@ -180,6 +211,9 @@ public actor HomeServerEngine: TranscriptionEngine {
                 if stalled {
                     verified = nil
                     continuation.finish(throwing: EngineUnavailability.homeServerUnreachable("no reply for \(Int(stallSeconds)) s of speech"))
+                } else if pongLost {
+                    verified = nil
+                    continuation.finish(throwing: EngineUnavailability.homeServerUnreachable("no answer to a ping for \(Int(pongSeconds)) s"))
                 } else if Task.isCancelled || endSent {
                     continuation.finish()
                 } else {
@@ -254,6 +288,30 @@ public actor HomeServerEngine: TranscriptionEngine {
 
     private func noteReply() {
         speechSinceReply = nil
+    }
+
+    /// A connection that died without closing (Wi-Fi dropped under a
+    /// router that never says so) sends no error, and the stall check
+    /// only notices after `stallSeconds` of speech. The server answers a
+    /// ping even while it is busy on a line, so one left unanswered for
+    /// `pongSeconds` means the path is gone: true here closes it, and the
+    /// phone's own model takes over. A ping is only sent once the last
+    /// one was answered.
+    private func heartbeatStep() -> HeartbeatStep {
+        let now = ContinuousClock.now
+        guard let sent = pingSentAt else {
+            pingSentAt = now
+            return .ping
+        }
+        guard now - sent >= .seconds(pongSeconds) else { return .wait }
+        pongLost = true
+        return .lost
+    }
+
+    private enum HeartbeatStep { case ping, wait, lost }
+
+    private func notePong() {
+        pingSentAt = nil
     }
 
     // MARK: - Connecting

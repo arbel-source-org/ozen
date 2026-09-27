@@ -13,6 +13,9 @@ private actor ScriptedSocket: HomeServerSocket {
     private(set) var sentTexts: [String] = []
     private(set) var sentBytes = 0
     private(set) var isClosed = false
+    var answersPings = true
+    private(set) var pings = 0
+    private var pingWaiters: [CheckedContinuation<Void, Error>] = []
     private var queue: [String] = []
     private var waiters: [CheckedContinuation<String, Error>] = []
 
@@ -30,7 +33,19 @@ private actor ScriptedSocket: HomeServerSocket {
         let pending = waiters
         waiters = []
         pending.forEach { $0.resume(throwing: Closed()) }
+        let pingsPending = pingWaiters
+        pingWaiters = []
+        pingsPending.forEach { $0.resume(throwing: Closed()) }
     }
+
+    func ping() async throws {
+        if isClosed { throw Closed() }
+        pings += 1
+        if answersPings { return }
+        try await withCheckedThrowingContinuation { pingWaiters.append($0) }
+    }
+
+    func setAnswersPings(_ answers: Bool) { answersPings = answers }
 
     func send(text: String) async throws {
         if isClosed { throw Closed() }
@@ -74,7 +89,7 @@ private func text(_ utterance: Int, _ words: String, final: Bool) -> String {
 }
 
 private func engine(_ socket: ScriptedSocket?, address: String = "10.0.0.5", token: String? = "1234", beam: Int? = nil) -> HomeServerEngine {
-    HomeServerEngine(address: address, token: { token }, connector: Connector(socket: socket), handshakeSeconds: 0.3, client: "Ozen 36, iOS 18.2", beam: beam)
+    HomeServerEngine(address: address, token: { token }, connector: Connector(socket: socket), handshakeSeconds: 1, client: "Ozen 36, iOS 18.2", beam: beam)
 }
 
 @Suite("Home server")
@@ -154,6 +169,38 @@ struct HomeServerEngineTests {
         #expect(HomeServerCheck(availability: noAddress, seconds: 0) == .notSetUp)
     }
 
+    @Test("a connection that stops answering pings is given up on within seconds, even in silence; one that answers is kept")
+    func deadPathIsDropped() async throws {
+        func run(answering: Bool) async throws -> (Error?, Int) {
+            let socket = ScriptedSocket(helloReply: ready)
+            await socket.setAnswersPings(answering)
+            let server = HomeServerEngine(address: "10.0.0.5", token: { "1234" }, connector: Connector(socket: socket), handshakeSeconds: 1, pingSeconds: 0.05, pongSeconds: 1)
+            let (audio, feed) = AsyncStream<[Float]>.makeStream()
+            let tokens = server.stream(languageCode: "he", audio: audio)
+            let quiet = [Float](repeating: 0.0005, count: 1600)
+            let feeding = Task {
+                for _ in 0..<120 {
+                    feed.yield(quiet)
+                    try? await Task.sleep(for: .milliseconds(25))
+                }
+                feed.finish()
+            }
+            defer { feeding.cancel() }
+            do {
+                for try await _ in tokens {}
+                return (nil, await socket.pings)
+            } catch {
+                return (error, await socket.pings)
+            }
+        }
+        let (dead, deadPings) = try await run(answering: false)
+        #expect((dead as? EngineUnavailability)?.kind == .homeServerUnreachable)
+        #expect(deadPings == 1)
+        let (alive, alivePings) = try await run(answering: true)
+        #expect(alive == nil)
+        #expect(alivePings >= 10)
+    }
+
     @Test("audio goes out as little-endian 16-bit samples, clipped, with a broken sample sent as silence")
     func pcm() {
         let bytes = [UInt8](HomeServer.pcm16([0, 1, -1, 2, .nan]))
@@ -164,7 +211,7 @@ struct HomeServerEngineTests {
     func stuckServerIsDropped() async throws {
         func run(_ chunk: [Float], replyEvery: Int?, reply: @escaping (Int) -> String = { text($0, "", final: true) }) async throws -> Error? {
             let socket = ScriptedSocket(helloReply: ready)
-            let server = HomeServerEngine(address: "10.0.0.5", token: { "1234" }, connector: Connector(socket: socket), handshakeSeconds: 0.3, stallSeconds: 2)
+            let server = HomeServerEngine(address: "10.0.0.5", token: { "1234" }, connector: Connector(socket: socket), handshakeSeconds: 1, stallSeconds: 2)
             let (audio, feed) = AsyncStream<[Float]>.makeStream()
             let tokens = server.stream(languageCode: "he", audio: audio)
             let quiet = [Float](repeating: 0.0005, count: 1600)

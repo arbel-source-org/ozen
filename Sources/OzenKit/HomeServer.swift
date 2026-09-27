@@ -213,6 +213,9 @@ public protocol HomeServerSocket: Sendable {
     func send(data: Data) async throws
     /// The next text frame; throws once the connection is closed.
     func receive() async throws -> String
+    /// Returns when the server answers a ping; throws if the connection
+    /// closes first.
+    func ping() async throws
     func close() async
 }
 

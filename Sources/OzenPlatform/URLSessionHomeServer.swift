@@ -37,6 +37,14 @@ final class URLSessionHomeServerSocket: HomeServerSocket, @unchecked Sendable {
         }
     }
 
+    func ping() async throws {
+        try await withCheckedThrowingContinuation { (done: CheckedContinuation<Void, Error>) in
+            task.sendPing { error in
+                if let error { done.resume(throwing: error) } else { done.resume() }
+            }
+        }
+    }
+
     func close() async {
         task.cancel(with: .normalClosure, reason: nil)
     }
