@@ -112,6 +112,38 @@ def placeholders(body):
     return {int(number) for number in PLACEHOLDER.findall(body)}
 
 
+def unescape(body):
+    """A Swift string literal's source text (as `literals()` yields it) still
+    holds its escapes literally, e.g. a two-character `\\n` rather than a
+    newline. `tr()` receives the runtime, already-unescaped string, so a key
+    used to look it up in Translations.json must be unescaped the same way,
+    or a key with an escape in it silently never matches."""
+    out = []
+    i = 0
+    n = len(body)
+    while i < n:
+        c = body[i]
+        if c == "\\" and i + 1 < n:
+            nxt = body[i + 1]
+            simple = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "'": "'", "\\": "\\", "0": "\0"}
+            if nxt in simple:
+                out.append(simple[nxt])
+                i += 2
+                continue
+            if nxt == "u" and i + 2 < n and body[i + 2] == "{":
+                end = body.find("}", i + 3)
+                if end != -1:
+                    out.append(chr(int(body[i + 3:end], 16)))
+                    i = end + 1
+                    continue
+            out.append(nxt)
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def args_list(rest, after):
     """rest[after:] optionally holds `, args: [ ... ]`. Returns the number
     of string-literal elements in that list, or None when there's no args
@@ -191,7 +223,7 @@ def check(path, list_untranslated, keys):
                     f"{path}:{line}: placeholders must be exactly %1..%{count}: "
                     f"Hebrew has {sorted(heb_placeholders)}, English has {sorted(eng_placeholders)}"
                 )
-        keys.setdefault(english, set()).update(range(1, (count or 0) + 1))
+        keys.setdefault(unescape(english), set()).update(range(1, (count or 0) + 1))
     untranslated = []
     if list_untranslated:
         for start, _, body in literals(text):
