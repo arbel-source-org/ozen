@@ -40,7 +40,7 @@ struct KeywordAlertsView: View {
                     .accessibilityLabel(Text(listed == nil ? tr("הוספה", "Add") : tr("הפעלה", "Turn on")))
                 }
                 if let listed {
-                    Text(listed.isEnabled ? tr("\"\(listed.phrase)\" כבר ברשימה.", "“\(listed.phrase)” is already in the list.") : tr("\"\(listed.phrase)\" כבר ברשימה, במצב כבוי. הקישו על הפלוס כדי להפעיל מחדש.", "“\(listed.phrase)” is already in the list, turned off. Tap the plus to turn it back on."))
+                    Text(listed.isEnabled ? tr("\"%1\" כבר ברשימה.", "“%1” is already in the list.", args: ["\(listed.phrase)"]) : tr("\"%1\" כבר ברשימה, במצב כבוי. הקישו על הפלוס כדי להפעיל מחדש.", "“%1” is already in the list, turned off. Tap the plus to turn it back on.", args: ["\(listed.phrase)"]))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -75,7 +75,7 @@ struct KeywordAlertsView: View {
                     Button {
                         viewModel.addKeywordAlert(phrase: word)
                     } label: {
-                        Label(tr("להוסיף: \(word)", "Add: \(word)"), systemImage: "plus.circle")
+                        Label(tr("להוסיף: %1", "Add: %1", args: ["\(word)"]), systemImage: "plus.circle")
                     }
                 }
             }
@@ -105,7 +105,7 @@ struct KeywordAlertsView: View {
         .accessibilityIdentifier("keywordAlertsScreen")
         .navigationTitle(tr("מילים חשובות", "Important words"))
         .confirmationDialog(
-            tr("למחוק את \"\(pendingDelete?.phrase ?? "")\"?", "Delete “\(pendingDelete?.phrase ?? "")”?"),
+            tr("למחוק את \"%1\"?", "Delete “%1”?", args: ["\(pendingDelete?.phrase ?? "")"]),
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
             titleVisibility: .visible
         ) {

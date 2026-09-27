@@ -130,7 +130,7 @@ struct SettingsView: View {
                 Text(tr("השם החדש יופיע גם על השורות שכבר בכתוביות.", "The new name will also appear on lines already in the captions."))
             }
             .confirmationDialog(
-                tr("למחוק את \(pendingSpeakerRemoval ?? "") מהדוברים השמורים?", "Delete \(pendingSpeakerRemoval ?? "") from saved speakers?"),
+                tr("למחוק את %1 מהדוברים השמורים?", "Delete %1 from saved speakers?", args: ["\(pendingSpeakerRemoval ?? "")"]),
                 isPresented: Binding(get: { pendingSpeakerRemoval != nil }, set: { if !$0 { pendingSpeakerRemoval = nil } }),
                 titleVisibility: .visible,
                 presenting: pendingSpeakerRemoval
@@ -239,7 +239,7 @@ struct SettingsView: View {
                 Button {
                     Task { await viewModel.acceptBetterModelOffer() }
                 } label: {
-                    Label(tr("המודל הזה טועה בהרבה מילים בעברית. הקישו כדי לעבור ל-\(recommended.displayName), \(recommended.sizeLabel)", "This model gets many Hebrew words wrong. Tap to switch to \(recommended.displayName), \(recommended.sizeLabel)"), systemImage: "sparkles")
+                    Label(tr("המודל הזה טועה בהרבה מילים בעברית. הקישו כדי לעבור ל-%1, %2", "This model gets many Hebrew words wrong. Tap to switch to %1, %2", args: ["\(recommended.displayName)", "\(recommended.sizeLabel)"]), systemImage: "sparkles")
                 }
                 .accessibilityIdentifier("switchToRecommendedModel")
             }
@@ -247,7 +247,7 @@ struct SettingsView: View {
         } header: {
             Text("Whisper")
         } footer: {
-            Text(tr("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \u{2066}\"\(recommendedModelName)\"\u{2069} הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.", "A bigger model understands Hebrew better but responds more slowly. “\(recommendedModelName)” is the recommended choice for this iPhone. Models weigh hundreds of MB, so by default they only download over Wi‑Fi."))
+            Text(tr("מודל גדול יותר מבין עברית טוב יותר אבל מגיב לאט יותר. \u{2066}\"%1\"\u{2069} הוא הבחירה המומלצת לאייפון הזה. מודלים שוקלים מאות MB, ולכן כברירת מחדל הם יורדים רק ב-Wi-Fi.", "A bigger model understands Hebrew better but responds more slowly. “%1” is the recommended choice for this iPhone. Models weigh hundreds of MB, so by default they only download over Wi‑Fi.", args: ["\(recommendedModelName)"]))
         }
     }
 
@@ -452,10 +452,10 @@ struct SettingsView: View {
     static func homeServerBeamDescription(_ beam: Int) -> String {
         let top = AppSettings.homeServerBeamRange.upperBound
         switch beam {
-        case ...1: return tr("1 מתוך \(top), הכי מהיר", "1 of \(top), fastest")
-        case AppSettings.default.homeServerBeam: return tr("\(beam) מתוך \(top), הרגיל", "\(beam) of \(top), usual")
-        case top...: return tr("\(top) מתוך \(top), הכי איטי", "\(top) of \(top), slowest")
-        default: return tr("\(beam) מתוך \(top)", "\(beam) of \(top)")
+        case ...1: return tr("1 מתוך %1, הכי מהיר", "1 of %1, fastest", args: ["\(top)"])
+        case AppSettings.default.homeServerBeam: return tr("%1 מתוך %2, הרגיל", "%1 of %2, usual", args: ["\(beam)", "\(top)"])
+        case top...: return tr("%1 מתוך %1, הכי איטי", "%1 of %1, slowest", args: ["\(top)"])
+        default: return tr("%1 מתוך %2", "%1 of %2", args: ["\(beam)", "\(top)"])
         }
     }
 
@@ -481,7 +481,7 @@ struct SettingsView: View {
     static func homeServerCheckText(_ check: HomeServerCheck) -> String {
         switch check {
         case .connected(let milliseconds):
-            tr("מחובר: המחשב ענה תוך \(milliseconds) אלפיות שנייה", "Connected: the computer answered in \(milliseconds) ms")
+            tr("מחובר: המחשב ענה תוך %1 אלפיות שנייה", "Connected: the computer answered in %1 ms", args: ["\(milliseconds)"])
         case .codeRefused:
             tr("המחשב ענה, אבל לא קיבל את הקוד. סרקו שוב את קוד ה‑QR או הקלידו את הקוד מחדש.", "The computer answered but didn’t accept the code. Scan the QR code again or retype the code.")
         case .unreachable:

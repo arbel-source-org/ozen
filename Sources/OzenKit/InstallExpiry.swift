@@ -92,7 +92,7 @@ public enum InstallExpiry {
     /// The warning on the caption screen, as seen from `now`.
     public static func warningTitle(expiresAt: Date, now: Date, utcOffsetSeconds: Int) -> String {
         let when = whenText(expiresAt: expiresAt, now: now, utcOffsetSeconds: utcOffsetSeconds)
-        return tr("אוזן תפסיק להיפתח \(when)", "Ozen will stop opening \(when)")
+        return tr("אוזן תפסיק להיפתח %1", "Ozen will stop opening %1", args: ["\(when)"])
     }
 
     public static var warningDetail: String {

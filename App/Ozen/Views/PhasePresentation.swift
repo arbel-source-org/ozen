@@ -157,7 +157,7 @@ struct PhasePresentation {
             self.init(title: tr("מבקש אישור לזיהוי דיבור", "Asking for speech recognition permission"), detail: tr("אשרו בחלון שנפתח", "Allow it in the window that opens"), systemImage: "waveform.badge.plus", tint: .yellow, isBusy: true)
         case .downloadingModel:
             let percent = preparation.fraction.map { Int(($0 * 100).rounded()) }
-            let title = percent.map { tr("מוריד את מודל השפה · \($0)%", "Downloading the language model · \($0)%") } ?? tr("מוריד את מודל השפה", "Downloading the language model")
+            let title = percent.map { tr("מוריד את מודל השפה · %1%", "Downloading the language model · %1%", args: ["\($0)"]) } ?? tr("מוריד את מודל השפה", "Downloading the language model")
             // The download only runs while the app is open; the screen is
             // kept on meanwhile, but she might still switch away.
             let detail = [secondsRemaining.map(Self.remainingText), modelName, tr("פעם אחת בלבד", "Just this once"), tr("השאירו את האפליקציה פתוחה", "Leave the app open")]
@@ -217,7 +217,7 @@ struct PhasePresentation {
             )
         case .languageNotSupportedOnDevice:
             self.init(
-                title: tr("\(engineName) לא זמין בעברית במכשיר הזה", "\(engineName) isn’t available in Hebrew on this device"),
+                title: tr("%1 לא זמין בעברית במכשיר הזה", "%1 isn’t available in Hebrew on this device", args: ["\(engineName)"]),
                 detail: tr("הקישו כדי לעבור למנוע אחר בהגדרות", "Tap to switch engines in Settings"),
                 systemImage: "globe",
                 tint: .red,
@@ -241,7 +241,7 @@ struct PhasePresentation {
                 action: .confirmCellularDownload
             )
         case .notEnoughStorage:
-            let missing = engineFailure?.missingMegabytes.flatMap { $0 > 0 ? tr("צריך לפנות עוד \(Self.sizeText(megabytes: $0))", "Need to free up \(Self.sizeText(megabytes: $0)) more") : nil }
+            let missing = engineFailure?.missingMegabytes.flatMap { $0 > 0 ? tr("צריך לפנות עוד %1", "Need to free up %1 more", args: ["\(Self.sizeText(megabytes: $0))"]) : nil }
             self.init(
                 title: tr("אין מספיק מקום פנוי בטלפון", "Not enough free space on the phone"),
                 detail: [missing, tr("או הקישו לבחור מודל קטן יותר", "Or tap to choose a smaller model")].compactMap { $0 }.joined(separator: " · "),
@@ -298,9 +298,9 @@ struct PhasePresentation {
                 action: .openEngineSettings
             )
         case .temporarilyUnavailable:
-            self.init(title: tr("\(engineName) לא זמין כרגע", "\(engineName) isn’t available right now"), detail: tr("הקישו לנסות שוב", "Tap to try again"), systemImage: "clock", tint: .orange, action: .retry)
+            self.init(title: tr("%1 לא זמין כרגע", "%1 isn’t available right now", args: ["\(engineName)"]), detail: tr("הקישו לנסות שוב", "Tap to try again"), systemImage: "clock", tint: .orange, action: .retry)
         case .other, .none:
-            self.init(title: tr("\(engineName) לא זמין", "\(engineName) isn’t available"), detail: tr("הקישו לנסות שוב", "Tap to try again"), systemImage: "exclamationmark.triangle", tint: .red, action: .retry)
+            self.init(title: tr("%1 לא זמין", "%1 isn’t available", args: ["\(engineName)"]), detail: tr("הקישו לנסות שוב", "Tap to try again"), systemImage: "exclamationmark.triangle", tint: .red, action: .retry)
         }
     }
 
@@ -314,7 +314,7 @@ struct PhasePresentation {
         case ..<90: return tr("עוד כדקה", "About a minute left")
         case ..<(59.5 * 60):
             let minutes = Int((seconds / 60).rounded())
-            return minutes == 2 ? tr("עוד כשתי דקות", "About 2 minutes left") : tr("עוד כ-\(minutes) דקות", "About \(minutes) minutes left")
+            return minutes == 2 ? tr("עוד כשתי דקות", "About 2 minutes left") : tr("עוד כ-%1 דקות", "About %1 minutes left", args: ["\(minutes)"])
         default: return tr("עוד יותר משעה", "More than an hour left")
         }
     }

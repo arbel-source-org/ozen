@@ -33,7 +33,7 @@ struct ModelManagerView: View {
             } header: {
                 Text(tr("מודלים", "Models"))
             } footer: {
-                Text(tr("הורדה נעשית פעם אחת ונשמרת בטלפון (לא מגובה ל‑iCloud). סה\"כ שטח: \(Self.format(bytes: totalOnDisk)).", "Downloaded once and saved on the phone (not backed up to iCloud). Total space: \(Self.format(bytes: totalOnDisk)).") + (freeBytes.map { " " + tr("פנוי בטלפון: \(Self.format(bytes: $0)).", "Free on the phone: \(Self.format(bytes: $0)).") } ?? ""))
+                Text(tr("הורדה נעשית פעם אחת ונשמרת בטלפון (לא מגובה ל‑iCloud). סה\"כ שטח: %1.", "Downloaded once and saved on the phone (not backed up to iCloud). Total space: %1.", args: ["\(Self.format(bytes: totalOnDisk))"]) + (freeBytes.map { " " + tr("פנוי בטלפון: %1.", "Free on the phone: %1.", args: ["\(Self.format(bytes: $0))"]) } ?? ""))
             }
         }
         .accessibilityIdentifier("modelManagerScreen")
@@ -42,7 +42,7 @@ struct ModelManagerView: View {
         .onAppear(perform: refresh)
         .onChange(of: viewModel.phase.step) { _, _ in refresh() }
         .confirmationDialog(
-            tr("למחוק את \(pendingDelete?.displayName ?? "") מהטלפון?", "Delete \(pendingDelete?.displayName ?? "") from the phone?"),
+            tr("למחוק את %1 מהטלפון?", "Delete %1 from the phone?", args: ["\(pendingDelete?.displayName ?? "")"]),
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
             titleVisibility: .visible
         ) {
@@ -55,13 +55,13 @@ struct ModelManagerView: View {
                 // The picked one: the next time it has to load (the next
                 // launch, say) it downloads all over again first, which
                 // with no Wi-Fi nearby is a long wait nobody expects.
-                Text(tr("זה המודל שנבחר. בפעם הבאה שהוא ייטען, למשל כשהאפליקציה תיפתח מחדש, הוא יירד שוב (\(option.sizeLabel)) לפני שיהיו כתוביות.", "This is the selected model. Next time it needs to load, for example when the app reopens, it will download again (\(option.sizeLabel)) before there are captions."))
+                Text(tr("זה המודל שנבחר. בפעם הבאה שהוא ייטען, למשל כשהאפליקציה תיפתח מחדש, הוא יירד שוב (%1) לפני שיהיו כתוביות.", "This is the selected model. Next time it needs to load, for example when the app reopens, it will download again (%1) before there are captions.", args: ["\(option.sizeLabel)"]))
             } else {
                 Text(tr("אפשר להוריד אותו שוב בכל עת.", "It can be downloaded again anytime."))
             }
         }
         .confirmationDialog(
-            tr("להוריד את \(pendingSwitch?.displayName ?? "") ולעבור אליו?", "Download \(pendingSwitch?.displayName ?? "") and switch to it?"),
+            tr("להוריד את %1 ולעבור אליו?", "Download %1 and switch to it?", args: ["\(pendingSwitch?.displayName ?? "")"]),
             isPresented: Binding(get: { pendingSwitch != nil }, set: { if !$0 { pendingSwitch = nil } }),
             titleVisibility: .visible,
             presenting: pendingSwitch
@@ -71,7 +71,7 @@ struct ModelManagerView: View {
             }
             Button(tr("ביטול", "Cancel"), role: .cancel) {}
         } message: { option in
-            Text(tr("הכתוביות ייעצרו עד שההורדה (\(option.sizeLabel)) תסתיים והמודל ייטען. בלי Wi-Fi ההורדה עשויה לחכות לו.", "Captions will stop until the download (\(option.sizeLabel)) finishes and the model loads. Without Wi‑Fi, the download may wait for it."))
+            Text(tr("הכתוביות ייעצרו עד שההורדה (%1) תסתיים והמודל ייטען. בלי Wi-Fi ההורדה עשויה לחכות לו.", "Captions will stop until the download (%1) finishes and the model loads. Without Wi‑Fi, the download may wait for it.", args: ["\(option.sizeLabel)"]))
         }
         .alert(tr("המחיקה נכשלה", "Delete failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
             Button(tr("סגירה", "Close"), role: .cancel) {}
@@ -148,18 +148,18 @@ struct ModelManagerView: View {
                 statusLayout {
                     Text(option.sizeLabel)
                     if let progress = downloadProgress {
-                        Text(tr("· מוריד \(Int((progress * 100).rounded()))%", "· downloading \(Int((progress * 100).rounded()))%"))
+                        Text(tr("· מוריד %1%", "· downloading %1%", args: ["\(Int((progress * 100).rounded()))"]))
                     } else if isInstalled {
                         Image(systemName: "checkmark")
                         Text(tr("מותקן", "Installed"))
                         if let size = sizesOnDisk[option.variant] {
-                            Text(tr("· \(Self.format(bytes: size)) בפועל", "· \(Self.format(bytes: size)) actual"))
+                            Text(tr("· %1 בפועל", "· %1 actual", args: ["\(Self.format(bytes: size))"]))
                         }
                     } else if isPartial {
                         Image(systemName: "exclamationmark.arrow.circlepath")
                         Text(tr("ההורדה נקטעה · תימשך מאיפה שנעצרה בבחירה", "Download interrupted · will resume from where it stopped when selected"))
                         if let size = sizesOnDisk[option.variant] {
-                            Text(tr("· \(Self.format(bytes: size)) כבר ירדו", "· \(Self.format(bytes: size)) already downloaded"))
+                            Text(tr("· %1 כבר ירדו", "· %1 already downloaded", args: ["\(Self.format(bytes: size))"]))
                         }
                     } else if StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.installMegabytes, availableBytes: freeBytes) != nil {
                         Image(systemName: "externaldrive.badge.exclamationmark")
@@ -269,6 +269,6 @@ private struct RatingDots: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(tr("\(label) \(value) מתוך 5", "\(label) \(value) out of 5"))
+        .accessibilityLabel(tr("%1 %2 מתוך 5", "%1 %2 out of 5", args: ["\(label)", "\(value)"]))
     }
 }

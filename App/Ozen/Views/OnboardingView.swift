@@ -97,7 +97,7 @@ struct OnboardingView: View {
         OnboardingPage(symbol: "cpu", title: tr("הכנה חד-פעמית", "One-time setup")) {
             EngineCard(
                 title: tr("עברית מדויקת (מומלץ)", "Accurate Hebrew (recommended)"),
-                subtitle: tr("מוריד פעם אחת קובץ של כ-\(modelSizeText), ב-Wi-Fi, ומכין אותו לטלפון במשך כמה דקות. אחר כך עובד בלי אינטרנט.", "Downloads a file of about \(modelSizeText) once, over Wi‑Fi, and takes a few minutes to set it up for the phone. After that it works without the internet."),
+                subtitle: tr("מוריד פעם אחת קובץ של כ-%1, ב-Wi-Fi, ומכין אותו לטלפון במשך כמה דקות. אחר כך עובד בלי אינטרנט.", "Downloads a file of about %1 once, over Wi‑Fi, and takes a few minutes to set it up for the phone. After that it works without the internet.", args: ["\(modelSizeText)"]),
                 symbol: "sparkles",
                 selected: viewModel.settings.engine == .whisperKit
             ) {
@@ -129,7 +129,7 @@ struct OnboardingView: View {
                     }
                 }
                 if let missing = modelStorageShortfall {
-                    Label(tr("אין מספיק מקום בטלפון למודל הזה. צריך לפנות עוד \(PhasePresentation.sizeText(megabytes: missing)).", "Not enough room on the phone for this model. \(PhasePresentation.sizeText(megabytes: missing)) more needs to be freed up."), systemImage: "externaldrive.badge.exclamationmark")
+                    Label(tr("אין מספיק מקום בטלפון למודל הזה. צריך לפנות עוד %1.", "Not enough room on the phone for this model. %1 more needs to be freed up.", args: ["\(PhasePresentation.sizeText(megabytes: missing))"]), systemImage: "externaldrive.badge.exclamationmark")
                         .font(.callout)
                         .foregroundStyle(.red)
                 }

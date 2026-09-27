@@ -22,7 +22,7 @@ public struct MicrophoneDropNotice: Sendable, Equatable {
     private static let placedNearTheTalker: Set<AudioPortType> = [.wired, .usb, .remoteMic]
 
     public var title: String? {
-        lost.map { tr("המיקרופון \u{2068}\($0.portName)\u{2069} התנתק", "\($0.portName) disconnected") }
+        lost.map { tr("המיקרופון \u{2068}%1\u{2069} התנתק", "%1 disconnected", args: ["\($0.portName)"]) }
     }
 
     public static var detail: String {

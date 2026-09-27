@@ -98,7 +98,7 @@ struct CaptionRow: View {
             if segment.isSettled {
                 ForEach(PhoneNumbers.matches(in: segment.text), id: \.dialable) { phone in
                     if let url = phone.url {
-                        Button(tr("להתקשר ל־\(phone.dialable)", "Call \(phone.dialable)")) { openURL(url) }
+                        Button(tr("להתקשר ל־%1", "Call %1", args: ["\(phone.dialable)"])) { openURL(url) }
                     }
                 }
             }
@@ -108,7 +108,7 @@ struct CaptionRow: View {
     private var accessibilityText: String {
         var line = speakerName.map { "\($0): \(segment.text)" } ?? segment.text
         if isUncertain { line = tr("ייתכן שלא נשמע נכון. ", "May not have been heard correctly. ") + line }
-        return isStarred ? tr("מסומן כחשוב. \(line)", "Marked as important. \(line)") : line
+        return isStarred ? tr("מסומן כחשוב. %1", "Marked as important. %1", args: ["\(line)"]) : line
     }
 }
 
@@ -286,7 +286,7 @@ struct SoundAlertBanner: View {
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(tr("התראה: \(alert.event.name)", "Alert: \(alert.event.name)"))
+        .accessibilityLabel(tr("התראה: %1", "Alert: %1", args: ["\(alert.event.name)"]))
         .accessibilityHint(tr("הקישו לסגירה", "Tap to close"))
     }
 }
@@ -365,8 +365,8 @@ struct KeywordHitPill: View {
     // aren't tracked by gender.
     private var text: String {
         guard let speakerName else {
-            return tr("נאמר: \(hit.match.matchedText)", "Said: \(hit.match.matchedText)")
+            return tr("נאמר: %1", "Said: %1", args: ["\(hit.match.matchedText)"])
         }
-        return tr("\(speakerName) — נאמר: \(hit.match.matchedText)", "\(speakerName) said: \(hit.match.matchedText)")
+        return tr("%1 — נאמר: %2", "%1 said: %2", args: ["\(speakerName)", "\(hit.match.matchedText)"])
     }
 }

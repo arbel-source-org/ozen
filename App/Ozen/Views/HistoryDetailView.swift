@@ -56,7 +56,7 @@ struct HistoryDetailView: View {
                 .accessibilityActions { copyButton(segment.text) }
             }
             if numberLineIDs.count > Self.listedNumberLines {
-                Text(tr("ועוד \(ConversationStats.linesText(numberLineIDs.count - Self.listedNumberLines)) עם מספרים בהמשך השיחה", "Plus \(ConversationStats.linesText(numberLineIDs.count - Self.listedNumberLines)) with numbers later in the conversation"))
+                Text(tr("ועוד %1 עם מספרים בהמשך השיחה", "Plus %1 with numbers later in the conversation", args: ["\(ConversationStats.linesText(numberLineIDs.count - Self.listedNumberLines))"]))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -156,11 +156,11 @@ struct HistoryDetailView: View {
 
     private var nextMatchTitle: String {
         if isSearch {
-            return tr("המקום הבא (\(currentMatch + 1) מתוך \(matches.count))", "Next match (\(currentMatch + 1) of \(matches.count))")
+            return tr("המקום הבא (%1 מתוך %2)", "Next match (%1 of %2)", args: ["\(currentMatch + 1)", "\(matches.count)"])
         }
         return hasJumped
-            ? tr("הסימון הבא (\(currentMatch + 1) מתוך \(matches.count))", "Next starred (\(currentMatch + 1) of \(matches.count))")
-            : tr("לשורות המסומנות (\(matches.count))", "To starred lines (\(matches.count))")
+            ? tr("הסימון הבא (%1 מתוך %2)", "Next starred (%1 of %2)", args: ["\(currentMatch + 1)", "\(matches.count)"])
+            : tr("לשורות המסומנות (%1)", "To starred lines (%1)", args: ["\(matches.count)"])
     }
 
     @ToolbarContentBuilder
@@ -238,7 +238,7 @@ struct HistoryDetailView: View {
         .alert(tr("המחיקה נכשלה", "Deletion failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
             Button(tr("סגירה", "Close"), role: .cancel) {}
         } message: {
-            Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")", "What wasn’t deleted is still saved on the phone. You can try again.\n\(deleteError ?? "")"))
+            Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n%1", "What wasn’t deleted is still saved on the phone. You can try again.\n%1", args: ["\(deleteError ?? "")"]))
         }
         .confirmationDialog(tr("למחוק את השיחה הזו?", "Delete this conversation?"), isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button(tr("מחיקה", "Delete"), role: .destructive) {
@@ -414,7 +414,7 @@ private struct ConversationSummarySection: View {
             }
 
             if stats.wordsPerMinute > 0 {
-                LabeledContent(tr("קצב דיבור", "Speaking pace"), value: tr("\(Int(stats.wordsPerMinute.rounded())) מילים לדקה", "\(Int(stats.wordsPerMinute.rounded())) words per minute"))
+                LabeledContent(tr("קצב דיבור", "Speaking pace"), value: tr("%1 מילים לדקה", "%1 words per minute", args: ["\(Int(stats.wordsPerMinute.rounded()))"]))
             }
             LabeledContent(tr("חילופי דוברים", "Speaker turns"), value: "\(stats.totalTurns)")
             if let longest = stats.longestTurn, stats.speakers.count > 1 {
@@ -478,7 +478,7 @@ private struct SavedLineRow: View {
         .accessibilityActions {
             ForEach(PhoneNumbers.matches(in: segment.text), id: \.dialable) { phone in
                 if let url = phone.url {
-                    Button(tr("להתקשר ל־\(phone.dialable)", "Call \(phone.dialable)")) { openURL(url) }
+                    Button(tr("להתקשר ל־%1", "Call %1", args: ["\(phone.dialable)"])) { openURL(url) }
                 }
             }
         }

@@ -24,7 +24,7 @@ struct MicPickerView: View {
                         .foregroundStyle(.primary)
                     }
                     if let refusedInputName {
-                        Label(tr("הטלפון לא עבר ל\"\(refusedInputName)\", והמיקרופון המסומן עדיין מקליט. נסו לנתק ולחבר אותו שוב.", "The phone did not switch to “\(refusedInputName)”, and the marked microphone is still recording. Try unplugging and reconnecting it."), systemImage: "exclamationmark.triangle.fill")
+                        Label(tr("הטלפון לא עבר ל\"%1\", והמיקרופון המסומן עדיין מקליט. נסו לנתק ולחבר אותו שוב.", "The phone did not switch to “%1”, and the marked microphone is still recording. Try unplugging and reconnecting it.", args: ["\(refusedInputName)"]), systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                             .font(.footnote)
                     }
@@ -192,7 +192,7 @@ struct LevelMeter: View {
             }
         }
         .accessibilityLabel(tr("עוצמת קליטה", "Input level"))
-        .accessibilityValue(tr("\(Int(level * 100)) אחוז", "\(Int(level * 100)) percent"))
+        .accessibilityValue(tr("%1 אחוז", "%1 percent", args: ["\(Int(level * 100))"]))
     }
 
     private var meterColor: Color {

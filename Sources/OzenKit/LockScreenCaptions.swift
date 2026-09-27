@@ -161,7 +161,7 @@ extension LockScreenCaptions {
 
     /// "said 3 minutes ago", for the lock screen.
     public static func ageNote(minutes: Int) -> String {
-        tr("נאמר \(HebrewTime.minutesAgo(minutes))", "said \(HebrewTime.minutesAgo(minutes))")
+        tr("נאמר %1", "said %1", args: ["\(HebrewTime.minutesAgo(minutes))"])
     }
 }
 

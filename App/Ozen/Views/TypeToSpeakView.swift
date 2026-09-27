@@ -170,7 +170,7 @@ struct TypeToSpeakView: View {
             }
             .ozenGlassButton()
             .disabled(!viewModel.canSay(phrase))
-            .accessibilityLabel(tr("להשמיע שוב: \(phrase)", "Play again: \(phrase)"))
+            .accessibilityLabel(tr("להשמיע שוב: %1", "Play again: %1", args: ["\(phrase)"]))
 
             if !viewModel.quickPhrases.contains(phrase) {
                 Button {

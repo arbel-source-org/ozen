@@ -175,8 +175,7 @@ private struct SoundEventRow: View {
             Group {
                 if let nearMiss {
                     Text(tr(
-                        "נשמע ב-\(Int((nearMiss.bestConfidence * 100).rounded()))%, קצת חלש מדי",
-                        "Heard at \(Int((nearMiss.bestConfidence * 100).rounded()))%, a bit too faint"
+                        "נשמע ב-%1%, קצת חלש מדי", "Heard at %1%, a bit too faint", args: ["\(Int((nearMiss.bestConfidence * 100).rounded()))"]
                     ))
                 } else {
                     Text(tr("מתריע גם על צליל חלש. הקישו כדי לבטל.", "Alerts on a faint sound too. Tap to undo."))

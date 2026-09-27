@@ -77,7 +77,7 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         guard shouldNotify(key: key, appIsActive: appIsActive, now: now) else { return nil }
         return AlertNotificationContent(
             identifier: key,
-            title: tr("נאמר: \(hit.match.phrase)", "Said: \(hit.match.phrase)"),
+            title: tr("נאמר: %1", "Said: %1", args: ["\(hit.match.phrase)"]),
             // On the lock screen too, a line opening with an English word
             // would otherwise read out of order.
             body: Self.rightToLeft(Self.excerpt(lineText)),

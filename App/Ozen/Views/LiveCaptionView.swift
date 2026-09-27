@@ -158,7 +158,7 @@ struct LiveCaptionView: View {
                 .mask(topScrollFadeMask)
 
             if pinchScale != 1 {
-                Text(tr("גודל טקסט \(Int(liveDisplay.fontSize))", "Text size \(Int(liveDisplay.fontSize))"))
+                Text(tr("גודל טקסט %1", "Text size %1", args: ["\(Int(liveDisplay.fontSize))"]))
                     .font(.headline.monospacedDigit())
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -280,7 +280,7 @@ struct LiveCaptionView: View {
                 withAnimation { visibleSoundAlert = alert }
             }
             vibrate(.pattern(for: alert.event.importance))
-            announceAlert(alert.event.importance == .critical ? tr("שימו לב! \(alert.event.name)", "Attention! \(alert.event.name)") : tr("התראה: \(alert.event.name)", "Alert: \(alert.event.name)"))
+            announceAlert(alert.event.importance == .critical ? tr("שימו לב! %1", "Attention! %1", args: ["\(alert.event.name)"]) : tr("התראה: %1", "Alert: %1", args: ["\(alert.event.name)"]))
         }
         .task(id: visibleSoundAlert?.id) {
             guard let alert = visibleSoundAlert else { return }
@@ -297,7 +297,7 @@ struct LiveCaptionView: View {
                 withAnimation { visibleKeywordHit = hit }
             }
             vibrate(.keyword)
-            announceAlert(tr("נאמר: \(hit.match.phrase)", "Said: \(hit.match.phrase)"))
+            announceAlert(tr("נאמר: %1", "Said: %1", args: ["\(hit.match.phrase)"]))
         }
         .task(id: visibleKeywordHit?.id) {
             guard let hit = visibleKeywordHit else { return }
@@ -683,12 +683,12 @@ struct LiveCaptionView: View {
         }
         .padding(.top, 8)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(tr("אחרי הפסקה, מהשעה \(time)", "After a break, from \(time)"))
+        .accessibilityLabel(tr("אחרי הפסקה, מהשעה %1", "After a break, from %1", args: ["\(time)"]))
     }
 
     private func awayDivider(lineCount: Int) -> some View {
         HStack(spacing: 10) {
-            Text(tr("נאמר כשהאפליקציה הייתה סגורה · \(ConversationStats.linesText(lineCount))", "Said while the app was closed · \(ConversationStats.linesText(lineCount))"))
+            Text(tr("נאמר כשהאפליקציה הייתה סגורה · %1", "Said while the app was closed · %1", args: ["\(ConversationStats.linesText(lineCount))"]))
                 .font(.system(size: max(15, liveDisplay.fontSize * 0.5), weight: .semibold))
                 .foregroundStyle(theme.pendingText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -698,7 +698,7 @@ struct LiveCaptionView: View {
         }
         .padding(.top, 8)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(tr("מכאן, מה שנאמר כשהאפליקציה הייתה סגורה: \(ConversationStats.linesText(lineCount))", "From here, what was said while the app was closed: \(ConversationStats.linesText(lineCount))"))
+        .accessibilityLabel(tr("מכאן, מה שנאמר כשהאפליקציה הייתה סגורה: %1", "From here, what was said while the app was closed: %1", args: ["\(ConversationStats.linesText(lineCount))"]))
         // On screen, it has been seen: no need to offer the jump.
         .onAppear { viewModel.acknowledgeAwayLines() }
     }
@@ -723,7 +723,7 @@ struct LiveCaptionView: View {
                     }
                 }
             } label: {
-                Label(tr("מה שנאמר בינתיים · \(ConversationStats.linesText(mark.count))", "What was said meanwhile · \(ConversationStats.linesText(mark.count))"), systemImage: "arrow.up.to.line")
+                Label(tr("מה שנאמר בינתיים · %1", "What was said meanwhile · %1", args: ["\(ConversationStats.linesText(mark.count))"]), systemImage: "arrow.up.to.line")
                     .font(.headline)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -824,7 +824,7 @@ struct LiveCaptionView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(tr("עברית מדויקת בהרבה עם מודל אחר", "Much more accurate Hebrew with a different model"))
                             .font(.headline)
-                        Text(tr("הקישו כדי להוריד \(option.displayName), \(option.sizeLabel), פעם אחת ב-Wi-Fi", "Tap to download \(option.displayName), \(option.sizeLabel), once over Wi-Fi"))
+                        Text(tr("הקישו כדי להוריד %1, %2, פעם אחת ב-Wi-Fi", "Tap to download %1, %2, once over Wi-Fi", args: ["\(option.displayName)", "\(option.sizeLabel)"]))
                             .font(.subheadline.weight(.semibold))
                     }
                     .multilineTextAlignment(.leading)
@@ -897,7 +897,7 @@ struct LiveCaptionView: View {
                     Image(systemName: "text.bubble")
                         .font(.title2)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(tr("השיחה מ\(Self.minutesAgoText(minutes)) נשמרה", "The conversation from \(Self.minutesAgoText(minutes)) was saved"))
+                        Text(tr("השיחה מ%1 נשמרה", "The conversation from %1 was saved", args: ["\(Self.minutesAgoText(minutes))"]))
                             .font(.headline)
                         Text(CaptionLayout.directed(recent.title ?? recent.preview))
                             .font(.subheadline)
@@ -951,7 +951,7 @@ struct LiveCaptionView: View {
     private func announceStopOrReturn(_ phase: PipelinePhase) {
         switch stopAnnouncer.phaseChanged(to: phase) {
         case .stopped?:
-            announceAlert(tr("הכתוביות נעצרו: \(presentation.title)", "Captions stopped: \(presentation.title)"))
+            announceAlert(tr("הכתוביות נעצרו: %1", "Captions stopped: %1", args: ["\(presentation.title)"]))
         case .back?:
             announceAlert(tr("הכתוביות חזרו", "Captions are back"))
         case nil:
@@ -1334,7 +1334,7 @@ struct LiveCaptionView: View {
     private var cellularDownloadMessage: String {
         let megabytes = viewModel.phase.failure?.engineUnavailability?.downloadMegabytes ?? 0
         let size = megabytes > 0 ? "\(megabytes) MB" : tr("כמה מאות MB", "A few hundred MB")
-        return tr("המודל שוקל \(size). בחבילת גלישה זה יכול לעלות כסף או לגמור את נפח הגלישה. ב-Wi-Fi ההורדה תתחיל לבד.", "The model is about \(size). Over cellular data this can cost money or use up your data plan. On Wi‑Fi the download will start on its own.")
+        return tr("המודל שוקל %1. בחבילת גלישה זה יכול לעלות כסף או לגמור את נפח הגלישה. ב-Wi-Fi ההורדה תתחיל לבד.", "The model is about %1. Over cellular data this can cost money or use up your data plan. On Wi‑Fi the download will start on its own.", args: ["\(size)"])
     }
 
     private func perform(_ action: PhasePresentation.Action) {

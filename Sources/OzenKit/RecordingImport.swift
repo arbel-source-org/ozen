@@ -20,7 +20,7 @@ public enum RecordingImport {
 
         public var summary: String {
             let added = self.added.sorted { $0.key < $1.key }.map { name, count in
-                count == 1 ? name : tr("\(name) (\(count) הקלטות)", "\(name) (\(count) recordings)")
+                count == 1 ? name : tr("%1 (%2 הקלטות)", "%1 (%2 recordings)", args: ["\(name)", "\(count)"])
             }
             var lines: [String] = []
             if !added.isEmpty {

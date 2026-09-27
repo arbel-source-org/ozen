@@ -173,7 +173,7 @@ public struct EmbeddingClusterer: Sendable {
     public static var unknownSpeakerName: String { tr("דובר לא ידוע", "Unknown speaker") }
 
     public static func genericName(number: Int) -> String {
-        tr("דובר \(number)", "Speaker \(number)")
+        tr("דובר %1", "Speaker %1", args: ["\(number)"])
     }
 
     public func displayName(forClusterID id: Int?) -> String {

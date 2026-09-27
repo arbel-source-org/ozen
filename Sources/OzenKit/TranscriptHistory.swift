@@ -766,7 +766,7 @@ public struct TranscriptHistoryStore: Sendable {
                 return CaptionLayout.opensLeftToRight(line) ? CaptionLayout.rightToLeftMark + line : line
             }
         let date = formattedDate(record.startedAt, utcOffsetSeconds: utcOffsetSeconds)
-        let heading = namedHeading(title: record.title, date: date) ?? tr("שיחה מתאריך \(date)", "Conversation from \(date)")
+        let heading = namedHeading(title: record.title, date: date) ?? tr("שיחה מתאריך %1", "Conversation from %1", args: ["\(date)"])
         guard !formatted.isEmpty else { return heading }
         let transcript = formatted.joined(separator: "\n")
         let numbered = record.segments.count < numbersBlockMinimumLines ? [] : zip(record.segments, formatted)
@@ -775,8 +775,7 @@ public struct TranscriptHistoryStore: Sendable {
             .map(\.1)
         guard !numbered.isEmpty else { return "\(heading)\n\n\(transcript)" }
         return tr(
-            "\(heading)\n\nמספרים שנאמרו:\n\(numbered.joined(separator: "\n"))\n\nהשיחה:\n\(transcript)",
-            "\(heading)\n\nNumbers mentioned:\n\(numbered.joined(separator: "\n"))\n\nThe conversation:\n\(transcript)"
+            "%1\n\nמספרים שנאמרו:\n%2\n\nהשיחה:\n%3", "%1\n\nNumbers mentioned:\n%2\n\nThe conversation:\n%3", args: ["\(heading)", "\(numbered.joined(separator: "\n"))", "\(transcript)"]
         )
     }
 

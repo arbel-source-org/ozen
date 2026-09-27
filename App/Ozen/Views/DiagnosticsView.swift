@@ -251,7 +251,7 @@ struct DiagnosticsView: View {
     private var retryText: String {
         guard let retry = viewModel.pipeline.scheduledRetry else { return "—" }
         let seconds = max(0, Int((retry.at - Date().timeIntervalSince1970).rounded()))
-        return tr("ניסיון \(retry.attempt), בעוד \(seconds) שנ׳", "Attempt \(retry.attempt), in \(seconds) s")
+        return tr("ניסיון %1, בעוד %2 שנ׳", "Attempt %1, in %2 s", args: ["\(retry.attempt)", "\(seconds)"])
     }
 
     private static var installExpiryText: String {
@@ -293,8 +293,8 @@ struct DiagnosticsView: View {
     /// iOS lets it have before ending it.
     private static var memoryText: String {
         var parts: [String] = []
-        if let used = DeviceMemory.footprintBytes() { parts.append(tr("\(format(bytes: used)) בשימוש", "\(format(bytes: used)) in use")) }
-        if let left = DeviceMemory.availableBytes() { parts.append(tr("עוד \(format(bytes: left))", "\(format(bytes: left)) more")) }
+        if let used = DeviceMemory.footprintBytes() { parts.append(tr("%1 בשימוש", "%1 in use", args: ["\(format(bytes: used))"])) }
+        if let left = DeviceMemory.availableBytes() { parts.append(tr("עוד %1", "%1 more", args: ["\(format(bytes: left))"])) }
         return parts.isEmpty ? "—" : parts.joined(separator: " · ")
     }
 
@@ -367,7 +367,7 @@ struct DiagnosticsView: View {
             } header: {
                 Text(tr("צלילים שנשמעו חלש מדי להתראה", "Sounds heard too faint to alert"))
             } footer: {
-                Text(tr("התראה צריכה ביטחון של \(Int((viewModel.pipeline.soundAlertConfidence * 100).rounded()))%. צליל שמופיע כאן נשמע, אבל רחוק או חלש מדי.", "An alert needs \(Int((viewModel.pipeline.soundAlertConfidence * 100).rounded()))% confidence. A sound listed here was heard, but too far or too faint."))
+                Text(tr("התראה צריכה ביטחון של %1%. צליל שמופיע כאן נשמע, אבל רחוק או חלש מדי.", "An alert needs %1% confidence. A sound listed here was heard, but too far or too faint.", args: ["\(Int((viewModel.pipeline.soundAlertConfidence * 100).rounded()))"]))
             }
         }
     }
@@ -388,7 +388,7 @@ struct DiagnosticsView: View {
               let middle = levels.decibels(atFraction: 0.5),
               let loud = levels.decibels(atFraction: 0.9)
         else { return "—" }
-        return tr("שקט \(quiet) · אמצע \(middle) · חזק \(loud)", "quiet \(quiet) · mid \(middle) · loud \(loud)")
+        return tr("שקט %1 · אמצע %2 · חזק %3", "quiet %1 · mid %2 · loud %3", args: ["\(quiet)", "\(middle)", "\(loud)"])
     }
 
     static func describe(_ network: NetworkConditions?) -> String {

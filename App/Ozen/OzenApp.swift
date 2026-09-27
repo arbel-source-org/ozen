@@ -78,8 +78,7 @@ struct OzenApp: App {
                 Button(tr("ביטול", "Cancel"), role: .cancel) {}
             } message: { pairing in
                 Text(tr(
-                    "הקול ישלח לכתוביות אל \(pairing.computerName). אשרו רק אם זה המחשב של המשפחה.",
-                    "The audio will go to \(pairing.computerName) for captions. Only connect if this is the family’s computer."
+                    "הקול ישלח לכתוביות אל %1. אשרו רק אם זה המחשב של המשפחה.", "The audio will go to %1 for captions. Only connect if this is the family’s computer.", args: ["\(pairing.computerName)"]
                 ))
             }
             .alert(

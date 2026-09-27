@@ -41,7 +41,7 @@ struct HistoryView: View {
 
     private var savingFooter: String {
         let size = ModelManagerView.format(bytes: totalSize)
-        let base = tr("השיחות נשמרות רק בטלפון הזה (\(size)). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע.", "Conversations are saved only on this phone (\(size)). They aren’t backed up anywhere, and can be deleted anytime.")
+        let base = tr("השיחות נשמרות רק בטלפון הזה (%1). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע.", "Conversations are saved only on this phone (%1). They aren’t backed up anywhere, and can be deleted anytime.", args: ["\(size)"])
         guard viewModel.historyRetention != .forever else { return base }
         return base + tr(" שיחות עם שורה מסומנת או עם שם נשמרות תמיד.", " Conversations with a starred line or a name are always kept.")
     }
@@ -114,8 +114,8 @@ struct HistoryView: View {
     }
 
     private var emptyConversationsMessage: String {
-        if !query.isEmpty { return tr("לא נמצא כלום עבור \"\(query)\".", "Nothing found for “\(query)”.") }
-        if let speakerFilter { return tr("אין שיחות עם \(speakerFilter).", "No conversations with \(speakerFilter).") }
+        if !query.isEmpty { return tr("לא נמצא כלום עבור \"%1\".", "Nothing found for “%1”.", args: ["\(query)"]) }
+        if let speakerFilter { return tr("אין שיחות עם %1.", "No conversations with %1.", args: ["\(speakerFilter)"]) }
         return tr("עדיין אין שיחות שמורות.", "No saved conversations yet.")
     }
 
@@ -261,7 +261,7 @@ struct HistoryView: View {
         .alert(tr("המחיקה נכשלה", "Deletion failed"), isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
             Button(tr("סגירה", "Close"), role: .cancel) {}
         } message: {
-            Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n\(deleteError ?? "")", "What wasn’t deleted is still saved on the phone. You can try again.\n\(deleteError ?? "")"))
+            Text(tr("מה שלא נמחק עדיין שמור בטלפון. אפשר לנסות שוב.\n%1", "What wasn’t deleted is still saved on the phone. You can try again.\n%1", args: ["\(deleteError ?? "")"]))
         }
         .confirmationDialog(
             tr("למחוק את השיחה הזו?", "Delete this conversation?"),
@@ -321,7 +321,7 @@ struct HistoryView: View {
         switch count {
         case 1: return tr("שיחה ישנה אחת תימחק עכשיו", "1 old conversation will be deleted now")
         case 2: return tr("שתי שיחות ישנות יימחקו עכשיו", "2 old conversations will be deleted now")
-        default: return tr("\(count) שיחות ישנות יימחקו עכשיו", "\(count) old conversations will be deleted now")
+        default: return tr("%1 שיחות ישנות יימחקו עכשיו", "%1 old conversations will be deleted now", args: ["\(count)"])
         }
     }
 

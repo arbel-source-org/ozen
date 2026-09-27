@@ -25,9 +25,9 @@ struct SpeakerEnrollmentView: View {
                 Section {
                     if isRecording {
                         ProgressView(value: progress) {
-                            Text(tr("מקליט… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) שניות", "Recording… \(Int(progress * targetSeconds))/\(Int(targetSeconds)) seconds"))
+                            Text(tr("מקליט… %1/%2 שניות", "Recording… %1/%2 seconds", args: ["\(Int(progress * targetSeconds))", "\(Int(targetSeconds))"]))
                         }
-                        .accessibilityValue(tr("\(Int(progress * targetSeconds)) שניות", "\(Int(progress * targetSeconds)) seconds"))
+                        .accessibilityValue(tr("%1 שניות", "%1 seconds", args: ["\(Int(progress * targetSeconds))"]))
                         LevelMeter(level: viewModel.inputLevel, isActive: true)
                         Text(tr("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.", "Ask the person to speak naturally, at a normal distance from the selected microphone. If the bar doesn’t move while speaking, the microphone isn’t hearing anything. Captions are paused during recording."))
                             .font(.footnote)
@@ -39,7 +39,7 @@ struct SpeakerEnrollmentView: View {
                         Button {
                             record()
                         } label: {
-                            Label(tr("הקלטה ושמירה (\(Int(targetSeconds)) שניות)", "Record and save (\(Int(targetSeconds)) seconds)"), systemImage: "record.circle")
+                            Label(tr("הקלטה ושמירה (%1 שניות)", "Record and save (%1 seconds)", args: ["\(Int(targetSeconds))"]), systemImage: "record.circle")
                         }
                         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
