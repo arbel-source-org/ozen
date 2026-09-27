@@ -50,9 +50,11 @@ things, for Hebrew conversation, entirely on-device.
   lose track of several people talking: each sentence goes to a speech
   model through [OpenRouter](https://openrouter.ai) with a key pasted into
   Settings (stored only in the phone's Keychain). On Hebrew test recordings
-  it got 29% of words wrong against 39% for Whisper large-v3 turbo and 60%
-  for Whisper small, and puts each change of speaker on its own line. About
-  15 cents per hour of continuous speech. See `CloudSpeech`. If the key
+  the default cloud model got 24% of words wrong (the faster, cheaper one
+  29%) against 39% for Whisper large-v3 turbo and 60% for Whisper small,
+  and puts each change of speaker on its own line. The faster one costs
+  about 15 cents per hour of continuous speech, the default more. See
+  `CloudSpeech`. If the key
   stops working, the credit runs out or the internet goes, a Whisper
   model already on the phone takes over and the status line says so
   (`CloudCover`); captions don't stop for a billing problem.
