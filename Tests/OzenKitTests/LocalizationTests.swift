@@ -92,7 +92,37 @@ struct LocalizationTests {
         #expect(UILanguage.forSpeaking("Thank you", otherwise: .hebrew) == .english)
         #expect(UILanguage.forSpeaking("10:30", otherwise: .hebrew) == .hebrew)
         #expect(UILanguage.forSpeaking("10:30", otherwise: .english) == .english)
-        #expect(UILanguage.forSpeaking("Привет", otherwise: .hebrew) == .hebrew)
+        #expect(UILanguage.forSpeaking("Привет", otherwise: .hebrew) == .russian)
+        #expect(UILanguage.forSpeaking("Дякую", otherwise: .ukrainian) == .ukrainian)
+        #expect(UILanguage.forSpeaking("Я не зрозуміла", otherwise: .hebrew) == .ukrainian)
+        #expect(UILanguage.forSpeaking("شكرًا", otherwise: .english) == .arabic)
+        #expect(UILanguage.forSpeaking("አመሰግናለሁ", otherwise: .english) == .amharic)
+        #expect(UILanguage.forSpeaking("धन्यवाद", otherwise: .english) == .hindi)
+        #expect(UILanguage.forSpeaking("谢谢", otherwise: .english) == .chineseSimplified)
+        #expect(UILanguage.forSpeaking("Merci", otherwise: .french) == .french)
+        #expect(UILanguage.forSpeaking("Não", otherwise: .portuguese) == .portuguese)
+        #expect(UILanguage.forSpeaking("Merci", otherwise: .arabic) == .english)
+        #expect(UILanguage.forSpeaking("10:30", otherwise: .german) == .german)
+    }
+
+    @Test("every language's ready-made phrases are read by that language's voice")
+    func quickPhrasesSpeakInTheirOwnLanguage() {
+        for language in UILanguage.allCases {
+            for phrase in AppSettings.defaultQuickPhrases(for: language) {
+                #expect(UILanguage.forSpeaking(phrase, otherwise: language) == language, "\(language): \(phrase)")
+            }
+        }
+    }
+
+    @Test("text in a language the phone has no voice for is held back; Hebrew still follows the Hebrew voice")
+    @MainActor
+    func heldBackWithoutAVoice() {
+        let synthesizer = FakeSynthesizer()
+        #expect(synthesizer.canSay("שלום"))
+        synthesizer.hasHebrewVoice = false
+        #expect(!synthesizer.canSay("שלום"))
+        #expect(synthesizer.canSay("Thank you"))
+        #expect(synthesizer.canSay("شكرًا"))
     }
 
     @Test("dates are written in the app's language, not the phone's, keeping the phone's region")

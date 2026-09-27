@@ -17,16 +17,22 @@ public protocol SpeechSynthesizing: AnyObject {
     /// voice in iOS Settings and coming straight back would go unnoticed
     /// until the app relaunches.
     func refreshVoice()
+    /// Whether the phone has a voice for `language`; without one iOS reads
+    /// the text with another language's voice, which nobody understands.
+    func hasVoice(for language: UILanguage) -> Bool
     func speak(_ text: String, rate: Float)
     func stop()
 }
 
 extension SpeechSynthesizing {
-    /// Whether `text` would come out as speech someone can understand.
-    /// Without a Hebrew voice iOS mangles Hebrew, but English phrases
-    /// still have a voice of their own, so only Hebrew text is held back.
+    public func hasVoice(for language: UILanguage) -> Bool {
+        language == .hebrew ? hasHebrewVoice : true
+    }
+
+    /// Whether `text` would come out as speech someone can understand:
+    /// only text in a language the phone has no voice for is held back.
     public func canSay(_ text: String) -> Bool {
-        hasHebrewVoice || UILanguage.forSpeaking(text, otherwise: Localization.language) != .hebrew
+        hasVoice(for: UILanguage.forSpeaking(text, otherwise: Localization.language))
     }
 }
 

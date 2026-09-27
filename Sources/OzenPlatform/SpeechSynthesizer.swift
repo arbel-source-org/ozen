@@ -4,7 +4,7 @@ import Observation
 import OzenKit
 
 /// Type-to-speak: the reader types (or taps a ready-made phrase) and the
-/// phone says it aloud in Hebrew. Wraps `AVSpeechSynthesizer`, picks the
+/// phone says it aloud in its own language. Wraps `AVSpeechSynthesizer`, picks the
 /// best available Hebrew voice, and reports when speaking starts and stops
 /// so the caption pipeline can pause — otherwise the microphone would
 /// caption the phone's own voice.
@@ -30,6 +30,7 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
     /// For text with no Hebrew in it: English phrases on the Say screen, or
     /// anything typed in English. Spoken by the Hebrew voice they'd be mangled.
     @ObservationIgnored private var englishVoice: AVSpeechSynthesisVoice?
+    @ObservationIgnored private var otherVoices: [UILanguage: AVSpeechSynthesisVoice?] = [:]
     private static let englishLanguageCode = "en-US"
     private let languageCode: String
 
@@ -56,6 +57,7 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
         // on the main thread while the app draws its first screen. Captured
         // as a local so the detached task doesn't need to hop back to the
         // main actor just to read this instance's own immutable property.
+        otherVoices = [:]
         let languageCode = self.languageCode
         let englishCode = SpeechSynthesizer.englishLanguageCode
         Task { [weak self] in
@@ -92,10 +94,13 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
         let utterance = AVSpeechUtterance(string: trimmed)
         // Spoken before the voice list was read: ask for the language, so
         // Hebrew never falls back to an English voice.
-        if UILanguage.forSpeaking(trimmed, otherwise: Localization.language) == .hebrew {
+        switch UILanguage.forSpeaking(trimmed, otherwise: Localization.language) {
+        case .hebrew:
             utterance.voice = voice ?? AVSpeechSynthesisVoice(language: languageCode)
-        } else {
+        case .english:
             utterance.voice = englishVoice ?? AVSpeechSynthesisVoice(language: SpeechSynthesizer.englishLanguageCode)
+        case let other:
+            utterance.voice = otherVoice(for: other)
         }
         utterance.rate = min(max(rate, AVSpeechUtteranceMinimumSpeechRate), AVSpeechUtteranceMaximumSpeechRate)
         utterance.prefersAssistiveTechnologySettings = false
@@ -104,6 +109,25 @@ public final class SpeechSynthesizer: SpeechSynthesizing {
 
     public func stop() {
         synthesizer.stopSpeaking(at: .immediate)
+    }
+
+    public func hasVoice(for language: UILanguage) -> Bool {
+        switch language {
+        case .hebrew: return hasHebrewVoice
+        case .english: return true
+        default: return otherVoice(for: language) != nil
+        }
+    }
+
+    /// The interface languages beyond Hebrew and English: iOS's own voice
+    /// for each, looked up once. Amharic has none on most phones, and
+    /// its phrases are then held back rather than read by a wrong voice.
+    private func otherVoice(for language: UILanguage) -> AVSpeechSynthesisVoice? {
+        if let known = otherVoices[language] { return known }
+        let found = AVSpeechSynthesisVoice(language: language.speechVoiceCode)
+            .flatMap { $0.language.hasPrefix(language.speechVoiceCode.prefix(2)) ? $0 : nil }
+        otherVoices[language] = .some(found)
+        return found
     }
 }
 

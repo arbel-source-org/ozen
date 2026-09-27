@@ -16,11 +16,55 @@ public enum UILanguage: String, Codable, Sendable, CaseIterable {
 
     public var isRightToLeft: Bool { self == .hebrew || self == .arabic }
 
+    /// Which voice should read `text` aloud, from its letters. A script
+    /// only one app language uses decides by itself; Cyrillic picks
+    /// Ukrainian when it has letters Russian lacks; Latin letters keep the
+    /// app's language when that is written in Latin letters (a French
+    /// phrase gets the French voice), and are English otherwise. Text with
+    /// no letters at all (a time, a number) follows the app's language.
     public static func forSpeaking(_ text: String, otherwise fallback: UILanguage) -> UILanguage {
-        let scalars = text.unicodeScalars
-        if scalars.contains(where: { (0x0590...0x05FF).contains($0.value) }) { return .hebrew }
-        if scalars.contains(where: { ("a"..."z").contains($0) || ("A"..."Z").contains($0) }) { return .english }
+        let values = text.unicodeScalars.map(\.value)
+        func has(_ ranges: ClosedRange<UInt32>...) -> Bool {
+            values.contains { value in ranges.contains { $0.contains(value) } }
+        }
+        if has(0x0590...0x05FF) { return .hebrew }
+        if has(0x0600...0x06FF, 0x0750...0x077F, 0xFB50...0xFDFF, 0xFE70...0xFEFF) { return .arabic }
+        if has(0x1200...0x139F, 0x2D80...0x2DDF) { return .amharic }
+        if has(0x0900...0x097F) { return .hindi }
+        if has(0x3400...0x4DBF, 0x4E00...0x9FFF) { return .chineseSimplified }
+        if has(0x0400...0x04FF) {
+            if fallback == .ukrainian || text.contains(where: { "іїєґІЇЄҐ".contains($0) }) { return .ukrainian }
+            return .russian
+        }
+        if values.contains(where: { (0x41...0x5A).contains($0) || (0x61...0x7A).contains($0) || (0xC0...0x24F).contains($0) }) {
+            return fallback.writesInLatinLetters ? fallback : .english
+        }
         return fallback
+    }
+
+    var writesInLatinLetters: Bool {
+        switch self {
+        case .english, .french, .spanish, .german, .portuguese: return true
+        default: return false
+        }
+    }
+
+    /// The code the phone's voice list is searched with.
+    public var speechVoiceCode: String {
+        switch self {
+        case .hebrew: return "he-IL"
+        case .english: return "en-US"
+        case .arabic: return "ar-SA"
+        case .russian: return "ru-RU"
+        case .amharic: return "am-ET"
+        case .french: return "fr-FR"
+        case .spanish: return "es-ES"
+        case .ukrainian: return "uk-UA"
+        case .german: return "de-DE"
+        case .portuguese: return "pt-PT"
+        case .chineseSimplified: return "zh-CN"
+        case .hindi: return "hi-IN"
+        }
     }
 
     /// The two-letter code the platform's locale APIs expect. Simplified
