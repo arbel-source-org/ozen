@@ -1069,6 +1069,15 @@ struct TranscriptHistoryTitledExportTests {
         let record = TranscriptSessionRecord(startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [english, named])
         #expect(TranscriptHistoryStore.exportText(record) == "שיחה מתאריך 01.01.1970\n\n\u{200F}[00:00:00] OK, נתראה מחר\n[00:00:00] דנה: OK, נתראה מחר")
     }
+
+    @Test("a Hebrew name opening with an English word gets the mark too; an all-English name doesn't")
+    func rightToLeftTitle() {
+        var record = TranscriptSessionRecord(startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [])
+        record.title = "WhatsApp מהבנק"
+        #expect(TranscriptHistoryStore.exportText(record) == "\u{200F}WhatsApp מהבנק, 01.01.1970")
+        record.title = "Doctor"
+        #expect(TranscriptHistoryStore.exportText(record) == "Doctor, 01.01.1970")
+    }
 }
 
 @Suite("A conversation's length in the history list")

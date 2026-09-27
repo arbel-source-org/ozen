@@ -765,7 +765,11 @@ public struct TranscriptHistoryStore: Sendable {
         let date = formattedDate(record.startedAt, utcOffsetSeconds: utcOffsetSeconds)
         let heading: String
         if let title = record.title, !title.isEmpty {
-            heading = "\(title), \(date)"
+            // Like the lines below: "WhatsApp mehabank" pasted into a chat
+            // would otherwise be laid out left to right. An all-English
+            // name stays as it is.
+            let hebrew = title.unicodeScalars.contains { (0x05D0...0x05EA).contains($0.value) }
+            heading = (hebrew && CaptionLayout.opensLeftToRight(title) ? CaptionLayout.rightToLeftMark : "") + "\(title), \(date)"
         } else {
             heading = tr("שיחה מתאריך \(date)", "Conversation from \(date)")
         }
