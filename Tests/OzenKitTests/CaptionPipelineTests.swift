@@ -31,8 +31,22 @@ final class FakeAudioCapturer: AudioCapturing {
         return permissionAnswer
     }
 
-    func prepareSession(preferredInputUID: String?) throws {
+    /// When set, preparing waits here, like a real session activation
+    /// that takes a while, until the test resumes it.
+    var holdPrepare = false
+    private var heldPrepare: CheckedContinuation<Void, Never>?
+    var isHoldingPrepare: Bool { heldPrepare != nil }
+
+    func releasePrepare() {
+        heldPrepare?.resume()
+        heldPrepare = nil
+    }
+
+    func prepareSession(preferredInputUID: String?) async throws {
         calls.append("prepareSession")
+        if holdPrepare {
+            await withCheckedContinuation { heldPrepare = $0 }
+        }
         if let prepareError { throw prepareError }
         isPrepared = true
         selectedInputUID = AudioRoutePolicy.resolveSelection(
@@ -387,6 +401,24 @@ struct CaptionPipelineStartupTests {
         #expect(pipeline.phase.failure?.needsSystemSettings == true)
         #expect(engine.prepareCount == 0)
         #expect(!audio.calls.contains("prepareSession"))
+    }
+
+    @Test("stopped while the audio session is still being set up: nothing starts once it's ready")
+    func stoppedDuringSessionSetup() async {
+        let audio = FakeAudioCapturer()
+        audio.holdPrepare = true
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(audio: audio, engines: [.whisperKit: engine])
+
+        let starting = Task { await pipeline.start(settings: .default) }
+        #expect(await eventually { audio.isHoldingPrepare })
+        pipeline.stop()
+        audio.releasePrepare()
+        await starting.value
+
+        #expect(!audio.calls.contains("startCapture"))
+        #expect(engine.prepareCount == 0)
+        #expect(pipeline.phase.failure == nil)
     }
 
     @Test("an engine that reports itself unavailable produces a structured failure with a suggestion")

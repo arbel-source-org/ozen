@@ -312,11 +312,13 @@ public final class CaptionPipeline {
         }
 
         do {
-            try audio.prepareSession(preferredInputUID: settings.preferredInputUID)
+            try await audio.prepareSession(preferredInputUID: settings.preferredInputUID)
         } catch {
+            guard runID == run else { return }
             fail(.audioSessionFailed, detail: String(describing: error))
             return
         }
+        guard runID == run else { return }
         audio.onInputsChanged = { [weak self] in self?.inputsChanged() }
         syncInputs()
         guard !availableInputs.isEmpty else {
@@ -950,7 +952,7 @@ public final class CaptionPipeline {
         if let stream = try? audio.startCapture() { return stream }
         guard await audio.requestPermission() == .granted else { return nil }
         let preferredInput = activeSettings?.preferredInputUID ?? audio.selectedInputUID
-        guard (try? audio.prepareSession(preferredInputUID: preferredInput)) != nil else { return nil }
+        guard (try? await audio.prepareSession(preferredInputUID: preferredInput)) != nil else { return nil }
         return try? audio.startCapture()
     }
 

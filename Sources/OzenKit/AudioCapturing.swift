@@ -31,7 +31,7 @@ public protocol AudioCapturing: AnyObject {
     func requestPermission() async -> AudioPermission
     /// Configures and activates the audio session and enumerates inputs.
     /// Safe to call more than once.
-    func prepareSession(preferredInputUID: String?) throws
+    func prepareSession(preferredInputUID: String?) async throws
     /// Begins delivering 16 kHz mono Float32 chunks. Requires
     /// `prepareSession` first.
     func startCapture() throws -> AsyncStream<[Float]>

@@ -43,24 +43,31 @@ public final class AVAudioInputManager: AudioCapturing {
         await AVAudioApplication.requestRecordPermission() ? .granted : .denied
     }
 
-    public func prepareSession(preferredInputUID: String?) throws {
+    public func prepareSession(preferredInputUID: String?) async throws {
         self.preferredInputUID = preferredInputUID
-        // `.playAndRecord` rather than `.record` so the type-to-speak
-        // feature can play synthesized speech without tearing the session
-        // down; `.measurement` turns off the system's voice processing so
-        // Whisper gets the raw signal it was trained on; `.allowBluetooth`
-        // is what makes an AirPods *microphone* (HFP) selectable at all.
-        try session.setCategory(
-            .playAndRecord,
-            mode: .measurement,
-            options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
-        )
-        // iOS silences vibration while an app records, and captions are
-        // recording whenever an alert can happen: without this the buzz for
-        // a doorbell, her name, or someone starting to talk never comes.
-        // Not fatal if refused; the banners and flashes still show.
-        try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
-        try session.setActive(true)
+        // Off the main thread: activating the session waits on the audio
+        // server, which can take seconds while AirPods reconnect or another
+        // app lets go of the microphone, and captions start right at launch,
+        // when a blocked main thread gets the app killed by the watchdog.
+        try await Task.detached(priority: .userInitiated) {
+            let session = AVAudioSession.sharedInstance()
+            // `.playAndRecord` rather than `.record` so the type-to-speak
+            // feature can play synthesized speech without tearing the session
+            // down; `.measurement` turns off the system's voice processing so
+            // Whisper gets the raw signal it was trained on; `.allowBluetooth`
+            // is what makes an AirPods *microphone* (HFP) selectable at all.
+            try session.setCategory(
+                .playAndRecord,
+                mode: .measurement,
+                options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker]
+            )
+            // iOS silences vibration while an app records, and captions are
+            // recording whenever an alert can happen: without this the buzz for
+            // a doorbell, her name, or someone starting to talk never comes.
+            // Not fatal if refused; the banners and flashes still show.
+            try? session.setAllowHapticsAndSystemSoundsDuringRecording(true)
+            try session.setActive(true)
+        }.value
         sessionPrepared = true
         refreshAvailableInputs()
         try applySelection()
