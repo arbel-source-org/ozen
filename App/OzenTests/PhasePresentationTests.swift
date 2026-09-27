@@ -246,7 +246,11 @@ struct ScreenWordingTests {
         #expect(steps.map(\.id) == [1, 2, 3, 4])
         #expect(Set(steps.map(\.title)).count == 4)
         #expect(steps.allSatisfy { !$0.text.isEmpty })
-        #expect(steps[0].text.contains("NVIDIA") && steps[0].text.contains("6GB"))
+        #expect(steps[0].text.contains("NVIDIA") && steps[0].text.contains("6 ג׳יגה"))
+        // Latin glued to Hebrew came out in the wrong order on screen
+        // ("6GB" read as "6 עםGB"); the English menu name is kept whole.
+        #expect(!steps[0].text.contains("GB"))
+        #expect(steps[3].text.contains("\u{2068}Ozen - pair a phone\u{2069}"))
     }
 
     @Test("every auto-delete choice has its own name")

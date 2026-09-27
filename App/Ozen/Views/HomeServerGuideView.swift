@@ -13,7 +13,7 @@ struct HomeServerGuideView: View {
         Step(
             id: 1, systemImage: "desktopcomputer",
             title: tr("מחשב מתאים", "A suitable computer"),
-            text: tr("מחשב Windows בבית עם כרטיס מסך של NVIDIA, עם 6GB זיכרון לפחות (8GB ומעלה למדויק יותר). הוא צריך להישאר דלוק כשרוצים כתוביות ממנו.", "A Windows computer at home with an NVIDIA graphics card of at least 6 GB (8 GB or more for the more accurate captions). It has to be on when captions should come from it.")
+            text: tr("מחשב Windows בבית עם כרטיס מסך של NVIDIA, שיש לו לפחות 6 ג׳יגה זיכרון (8 ג׳יגה ומעלה לכתוביות מדויקות יותר). הוא צריך להישאר דלוק כשרוצים כתוביות ממנו.", "A Windows computer at home with an NVIDIA graphics card of at least 6 GB (8 GB or more for the more accurate captions). It has to be on when captions should come from it.")
         ),
         Step(
             id: 2, systemImage: "arrow.down.circle",
@@ -28,7 +28,7 @@ struct HomeServerGuideView: View {
         Step(
             id: 4, systemImage: "qrcode.viewfinder",
             title: tr("לסרוק את הריבוע במצלמת האייפון", "Scan the square code with the iPhone camera"),
-            text: tr("בסוף מופיע במחשב ריבוע שחור־לבן. פותחים את המצלמה באייפון, מכוונים אליו, לוחצים על הקישור של Ozen ומאשרים. אפשר להציג אותו שוב מתפריט התחל: ״Ozen - pair a phone״.", "At the end the computer shows a black-and-white square. Open the Camera on the iPhone, point it at the square, tap the Ozen link and confirm. To show it again: Start menu, “Ozen - pair a phone”.")
+            text: tr("בסוף מופיע במחשב ריבוע שחור־לבן. פותחים את המצלמה באייפון, מכוונים אליו, לוחצים על הקישור של Ozen ומאשרים. אפשר להציג אותו שוב מתפריט התחל, בשורה \u{2068}Ozen - pair a phone\u{2069}.", "At the end the computer shows a black-and-white square. Open the Camera on the iPhone, point it at the square, tap the Ozen link and confirm. To show it again: Start menu, “Ozen - pair a phone”.")
         ),
     ] }
 
