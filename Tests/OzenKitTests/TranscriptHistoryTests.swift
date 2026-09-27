@@ -926,6 +926,20 @@ struct TranscriptHistoryStarredExportTests {
         #expect(text == "14.09.2026\n[09:05:00] ד״ר כהן: כדור בבוקר\n[09:06:05] ושניים בערב\n\n28.02.2025\n[23:30:00] התור ביום שלישי")
     }
 
+    @Test("two named conversations on one day are headed by their names")
+    func starredNamedSameDay() {
+        let morning: TimeInterval = 1_789_376_700
+        let line = { (session: UUID, title: String?, text: String, at: TimeInterval) in
+            StarredLine(sessionID: session, sessionStartedAt: at, segment: SavedSegment(id: UUID(), text: text, speakerName: nil, speakerClusterID: nil, startTimestamp: at, isCommitted: true, isStarred: true), sessionTitle: title)
+        }
+        let text = TranscriptHistoryStore.exportStarredText([
+            line(UUID(), "אצל הרופא", "כדור בבוקר", morning),
+            line(UUID(), "עורך הדין", "לחתום עד חמישי", morning + 3_600),
+            line(UUID(), nil, "להתקשר לבנק", morning + 7_200),
+        ])
+        #expect(text == "אצל הרופא, 14.09.2026\n[09:05:00] כדור בבוקר\n\nעורך הדין, 14.09.2026\n[10:05:00] לחתום עד חמישי\n\n14.09.2026\n[11:05:00] להתקשר לבנק")
+    }
+
     @Test("the date follows the phone's time zone across midnight")
     func dateUsesOffset() {
         let lateUTC: TimeInterval = 1_740_785_400 // 2025-02-28 23:30 UTC

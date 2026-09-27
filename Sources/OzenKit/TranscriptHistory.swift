@@ -165,12 +165,15 @@ public struct StarredLine: Sendable, Equatable, Identifiable {
     public let sessionID: UUID
     public let sessionStartedAt: TimeInterval
     public let segment: SavedSegment
+    /// The conversation's name, if it was given one.
+    public let sessionTitle: String?
     public var id: UUID { segment.id }
 
-    public init(sessionID: UUID, sessionStartedAt: TimeInterval, segment: SavedSegment) {
+    public init(sessionID: UUID, sessionStartedAt: TimeInterval, segment: SavedSegment, sessionTitle: String? = nil) {
         self.sessionID = sessionID
         self.sessionStartedAt = sessionStartedAt
         self.segment = segment
+        self.sessionTitle = sessionTitle
     }
 }
 
@@ -668,7 +671,7 @@ public struct TranscriptHistoryStore: Sendable {
             .flatMap { record in
                 record.segments
                     .filter(\.isStarred)
-                    .map { StarredLine(sessionID: record.id, sessionStartedAt: record.startedAt, segment: $0) }
+                    .map { StarredLine(sessionID: record.id, sessionStartedAt: record.startedAt, segment: $0, sessionTitle: record.title) }
             }
     }
 
@@ -763,16 +766,7 @@ public struct TranscriptHistoryStore: Sendable {
                 return CaptionLayout.opensLeftToRight(line) ? CaptionLayout.rightToLeftMark + line : line
             }
         let date = formattedDate(record.startedAt, utcOffsetSeconds: utcOffsetSeconds)
-        let heading: String
-        if let title = record.title, !title.isEmpty {
-            // Like the lines below: "WhatsApp mehabank" pasted into a chat
-            // would otherwise be laid out left to right. An all-English
-            // name stays as it is.
-            let hebrew = title.unicodeScalars.contains { (0x05D0...0x05EA).contains($0.value) }
-            heading = (hebrew && CaptionLayout.opensLeftToRight(title) ? CaptionLayout.rightToLeftMark : "") + "\(title), \(date)"
-        } else {
-            heading = tr("שיחה מתאריך \(date)", "Conversation from \(date)")
-        }
+        let heading = namedHeading(title: record.title, date: date) ?? tr("שיחה מתאריך \(date)", "Conversation from \(date)")
         guard !formatted.isEmpty else { return heading }
         let transcript = formatted.joined(separator: "\n")
         let numbered = record.segments.count < numbersBlockMinimumLines ? [] : zip(record.segments, formatted)
@@ -804,7 +798,9 @@ public struct TranscriptHistoryStore: Sendable {
         for line in lines {
             if line.sessionID != currentSession {
                 if !block.isEmpty { blocks.append(block.joined(separator: "\n")) }
-                block = [formattedDate(line.sessionStartedAt, utcOffsetSeconds: utcOffsetSeconds)]
+                // Two conversations on one day read apart by their names.
+                let date = formattedDate(line.sessionStartedAt, utcOffsetSeconds: utcOffsetSeconds)
+                block = [namedHeading(title: line.sessionTitle, date: date) ?? date]
                 currentSession = line.sessionID
             }
             let time = formattedClockTime(line.segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
@@ -819,6 +815,16 @@ public struct TranscriptHistoryStore: Sendable {
         }
         if !block.isEmpty { blocks.append(block.joined(separator: "\n")) }
         return blocks.joined(separator: "\n\n")
+    }
+
+    /// "Name, date" for a named conversation, nil otherwise. Like the lines
+    /// under it: "WhatsApp mehabank" pasted into a chat would be laid out
+    /// left to right, so a Hebrew name opening with a Latin word gets a
+    /// right-to-left mark; an all-English name stays as it is.
+    private static func namedHeading(title: String?, date: String) -> String? {
+        guard let title, !title.isEmpty else { return nil }
+        let hebrew = title.unicodeScalars.contains { (0x05D0...0x05EA).contains($0.value) }
+        return (hebrew && CaptionLayout.opensLeftToRight(title) ? CaptionLayout.rightToLeftMark : "") + "\(title), \(date)"
     }
 
     /// Day.month.year of a timestamp in the given UTC offset.
