@@ -196,10 +196,10 @@ class Transcriber:
         self.failures = 0
         self.failures_before_exit = 3
 
-    async def transcribe(self, audio, language, prompt, final, hotwords=None):
+    async def transcribe(self, audio, language, prompt, final, hotwords=None, gate=True):
         async with self.lock:
             try:
-                result = await asyncio.to_thread(self._run, audio, language, prompt, final, hotwords)
+                result = await asyncio.to_thread(self._run, audio, language, prompt, final, hotwords, gate)
             except Exception:
                 self.failures += 1
                 if self.failures >= self.failures_before_exit:
@@ -213,8 +213,8 @@ class Transcriber:
             self.failures = 0
             return result
 
-    def _run(self, audio, language, prompt, final, hotwords=None):
-        if self.speech_gate and lacks_voice(audio, self.speech_gate):
+    def _run(self, audio, language, prompt, final, hotwords=None, gate=True):
+        if gate and self.speech_gate and lacks_voice(audio, self.speech_gate):
             return "", None, []
         model = self.final_model if final else self.model
         segments, _ = model.transcribe(
@@ -493,9 +493,12 @@ async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context, args.final_model or None,
                               args.speech_gate)
-    # Warm the model so the first sentence isn't slow.
-    await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, False)
-    await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, True)
+    # Warm the models so the first sentence isn't slow. Past the voice
+    # gate: silence would stop there and never reach the GPU.
+    started = time.monotonic()
+    await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, False, gate=False)
+    await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, True, gate=False)
+    log.info("models warmed in %.1f s", time.monotonic() - started)
     make_enhancer = None
     if args.enhance_mix > 0:
         from enhance import StreamingEnhancer
