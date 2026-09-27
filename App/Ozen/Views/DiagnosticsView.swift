@@ -216,8 +216,16 @@ struct DiagnosticsView: View {
             reportText = report
             // "Send report" shares this text as it stands: kept current
             // while the screen is open, not frozen at the moment it opened.
+            // The journal and the notification answer too, less often:
+            // the journal is a file read.
+            var ticks = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
+                ticks += 1
+                if ticks % 5 == 0 {
+                    journalLines = loadJournalLines()
+                    notificationsAllowed = await AlertNotifier.shared.isAllowed()
+                }
                 reportText = report
             }
         }
