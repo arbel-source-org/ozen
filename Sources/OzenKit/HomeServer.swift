@@ -20,7 +20,7 @@ public enum HomeServer {
     /// The home computer's setup, one file to double-click, attached to
     /// every release; "latest" always serves the newest one's copy.
     public static let setupFileName = "Ozen-Home-Setup.cmd"
-    public static let setupDownload = URL(string: "https://github.com/arbel-source-org/ozen/releases/latest/download/\(setupFileName)")!
+    public static let setupDownload = URL(string: "https://github.com/arbelonson-source/ozen/releases/latest/download/\(setupFileName)")!
     static let noAddress = "no valid server address"
     static let noCode = "no pairing code"
 

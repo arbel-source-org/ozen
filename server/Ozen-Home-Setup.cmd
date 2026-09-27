@@ -14,7 +14,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12;" ^
   "$d=Join-Path $env:TEMP 'ozen-setup'; Remove-Item -Recurse -Force $d -ErrorAction SilentlyContinue; New-Item -ItemType Directory $d | Out-Null;" ^
   "$z=Join-Path $d 'server.zip';" ^
-  "Invoke-WebRequest -UseBasicParsing 'https://github.com/arbel-source-org/ozen/releases/latest/download/ozen-home-server.zip' -OutFile $z;" ^
+  "Invoke-WebRequest -UseBasicParsing 'https://github.com/arbelonson-source/ozen/releases/latest/download/ozen-home-server.zip' -OutFile $z;" ^
   "Expand-Archive $z $d;" ^
   "& (Join-Path $d 'setup-windows.ps1')"
 if errorlevel 1 (

@@ -99,7 +99,7 @@ Each run of the release workflow attaches `Ozen.ipa` to a GitHub Release named
 number, which Settings shows in brackets). Download it from the repository's Releases page, or with the GitHub CLI:
 
 ```
-gh release download v0.2.N -R arbel-source-org/ozen -p Ozen.ipa --clobber
+gh release download v0.2.N -R arbelonson-source/ozen -p Ozen.ipa --clobber
 ```
 
 ## The command

@@ -126,7 +126,7 @@ public protocol ReleaseFileFetching: Sendable {
 public struct ReleaseModelDownloader: Sendable {
     /// Public on its own so the phone can download without signing in,
     /// whether or not the app's code repository is public.
-    public static let defaultRepository = "arbel-source-org/ozen-models"
+    public static let defaultRepository = "arbelonson-source/ozen-models"
 
     public var repository: String
     public var fetcher: any ReleaseFileFetching
