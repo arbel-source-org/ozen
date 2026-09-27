@@ -1005,6 +1005,24 @@ struct TranscriptHistoryTitleTests {
         #expect(store.search("שישי").map(\.id) == [id])
     }
 
+    @Test("two quick saves in a row, each skipping the caches, keep the name")
+    func quickSavesKeepName() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let id = UUID()
+        try store.save(record(id: id, lines: ["שלום"]))
+        try store.rename(id: id, title: "ביקור אצל הרופא")
+
+        // Leaving the screen, then going to the background: each is a
+        // save that waits for the disk and leaves the summary behind.
+        try store.save(record(id: id, lines: ["שלום", "מה נשמע"]), updateSearchCaches: false)
+        try store.save(record(id: id, lines: ["שלום", "מה נשמע", "בסדר"]), updateSearchCaches: false)
+
+        #expect(store.load(id: id)?.title == "ביקור אצל הרופא")
+        #expect(store.load(id: id)?.segments.count == 3)
+        #expect(store.listSummaries().first?.title == "ביקור אצל הרופא")
+    }
+
     @Test("an empty name removes it, and a later autosave doesn't bring it back")
     func clearName() throws {
         let (store, dir) = makeStore()

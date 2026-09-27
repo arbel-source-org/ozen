@@ -384,7 +384,14 @@ public struct TranscriptHistoryStore: Sendable {
         let url = fileURL(for: record.id)
         var record = record
         if record.title == nil {
-            record.title = cachedSummary(forRecordFile: url)?.title
+            // A save that skipped the caches leaves the summary older than
+            // the conversation, so the next save can't trust it: the name
+            // is then read from the conversation file itself.
+            if let summary = cachedSummary(forRecordFile: url) {
+                record.title = summary.title
+            } else if let data = try? Data(contentsOf: url) {
+                record.title = (try? JSONDecoder().decode(SavedTitle.self, from: data))?.title
+            }
         }
         let data = try JSONEncoder().encode(record)
         try data.write(to: url, options: .atomic)
@@ -395,6 +402,10 @@ public struct TranscriptHistoryStore: Sendable {
         writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
         writeSearchText(Self.searchableText(of: record), forRecordFile: url)
         return true
+    }
+
+    private struct SavedTitle: Decodable {
+        let title: String?
     }
 
     public func load(id: UUID) -> TranscriptSessionRecord? {

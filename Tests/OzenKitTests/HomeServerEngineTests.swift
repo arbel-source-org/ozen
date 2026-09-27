@@ -566,20 +566,18 @@ struct HomeServerCoverTests {
         captions.homeServerRecheckSeconds = 0.1
         captions.homeServerSwitchBackQuietSeconds = 0
         await captions.start(settings: serverSettings)
-        var waits: [Double] = []
-        for _ in 0..<4 {
+        // The wait is set just after the switch to the phone; read it once
+        // it has settled.
+        for wait in [0.1, 0.2, 0.4, 0.8] {
             #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
             server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "no reply for 35 s of speech"))
-            #expect(await eventually { captions.activeEngineKind == .whisperKit })
-            waits.append(captions.currentHomeServerRecheckSeconds)
+            #expect(await eventually { captions.activeEngineKind == .whisperKit && captions.currentHomeServerRecheckSeconds == wait })
         }
-        #expect(waits == [0.1, 0.2, 0.4, 0.8])
 
         #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
         captions.homeServerFlapWindowSeconds = 0
         server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
-        #expect(await eventually { captions.activeEngineKind == .whisperKit })
-        #expect(captions.currentHomeServerRecheckSeconds == 0.1)
+        #expect(await eventually { captions.activeEngineKind == .whisperKit && captions.currentHomeServerRecheckSeconds == 0.1 })
         captions.stop()
     }
 
