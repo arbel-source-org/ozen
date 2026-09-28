@@ -510,7 +510,7 @@ public struct SettingsStore: Sendable {
     public func save(_ settings: AppSettings) throws {
         let data = try JSONEncoder().encode(settings)
         try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try data.write(to: fileURL, options: .atomic)
+        try data.write(to: fileURL, options: .privateFile)
     }
 }
 

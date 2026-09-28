@@ -408,7 +408,7 @@ public struct TranscriptHistoryStore: Sendable {
             }
         }
         let data = try JSONEncoder().encode(record)
-        try data.write(to: url, options: .atomic)
+        try data.write(to: url, options: .privateFile)
         guard updateSearchCaches else { return true }
         // Written after the record, so a fresh summary is never older than
         // its conversation. If this write fails the conversation is still
@@ -474,7 +474,7 @@ public struct TranscriptHistoryStore: Sendable {
     func writeSummary(_ summary: TranscriptSessionSummary, forRecordFile url: URL, recordModifiedAt: Date?) {
         guard let data = try? JSONEncoder().encode(CachedSummary(format: Self.summaryFormat, summary: summary)) else { return }
         try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
-        try? data.write(to: summaryURL(forRecordFile: url), options: .atomic)
+        try? data.write(to: summaryURL(forRecordFile: url), options: .privateFile)
         removeCacheIfConversationChanged(summaryURL(forRecordFile: url), forRecordFile: url, since: recordModifiedAt)
     }
 
@@ -500,7 +500,7 @@ public struct TranscriptHistoryStore: Sendable {
 
     private func writeSearchText(_ text: String, forRecordFile url: URL, recordModifiedAt: Date?) {
         try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
-        try? Data(text.utf8).write(to: searchTextURL(forRecordFile: url), options: .atomic)
+        try? Data(text.utf8).write(to: searchTextURL(forRecordFile: url), options: .privateFile)
         removeCacheIfConversationChanged(searchTextURL(forRecordFile: url), forRecordFile: url, since: recordModifiedAt)
     }
 
@@ -722,7 +722,7 @@ public struct TranscriptHistoryStore: Sendable {
                 record.segments[index].speakerName = newName
             }
             let data = try JSONEncoder().encode(record)
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: .privateFile)
             let written = Self.modificationDate(of: url)
             writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url, recordModifiedAt: written)
             writeSearchText(Self.searchableText(of: record), forRecordFile: url, recordModifiedAt: written)
@@ -738,7 +738,7 @@ public struct TranscriptHistoryStore: Sendable {
         record.title = trimmed.isEmpty ? nil : trimmed
         let url = fileURL(for: id)
         let data = try JSONEncoder().encode(record)
-        try data.write(to: url, options: .atomic)
+        try data.write(to: url, options: .privateFile)
         let written = Self.modificationDate(of: url)
         writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url, recordModifiedAt: written)
         writeSearchText(Self.searchableText(of: record), forRecordFile: url, recordModifiedAt: written)
@@ -756,7 +756,7 @@ public struct TranscriptHistoryStore: Sendable {
         record.segments[index].isStarred.toggle()
         let url = fileURL(for: id)
         let data = try JSONEncoder().encode(record)
-        try data.write(to: url, options: .atomic)
+        try data.write(to: url, options: .privateFile)
         writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url, recordModifiedAt: Self.modificationDate(of: url))
         return record.segments[index].isStarred
     }

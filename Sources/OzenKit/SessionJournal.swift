@@ -93,7 +93,7 @@ public final class SessionJournal: @unchecked Sendable {
         let manager = FileManager.default
         if !manager.fileExists(atPath: fileURL.path) {
             try? manager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            manager.createFile(atPath: fileURL.path, contents: nil)
+            manager.createFile(atPath: fileURL.path, contents: nil, attributes: privateFileAttributes)
         }
         guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
         defer { try? handle.close() }
@@ -115,7 +115,7 @@ public final class SessionJournal: @unchecked Sendable {
                 if budget < 0 { break }
                 kept.append(line)
             }
-            try? Data(kept.reversed().joined().utf8).write(to: fileURL, options: .atomic)
+            try? Data(kept.reversed().joined().utf8).write(to: fileURL, options: .privateFile)
         }
     }
 
