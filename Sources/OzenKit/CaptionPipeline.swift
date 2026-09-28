@@ -686,7 +686,12 @@ public final class CaptionPipeline {
 
     private func scanForKeywords(in segment: TranscriptSegment) {
         let matches = keywordMatcher.matches(in: segment.text)
-        guard !matches.isEmpty else { return }
+        guard !matches.isEmpty else {
+            // The finished text can take back a word a live guess had: the
+            // line's bell and highlight follow what the line says now.
+            keywordHitSegmentIDs.remove(segment.id)
+            return
+        }
         let fresh = keywordDeduplicator.newMatches(utteranceID: segment.id, matches: matches)
         guard !fresh.isEmpty else { return }
         let timestamp = now()

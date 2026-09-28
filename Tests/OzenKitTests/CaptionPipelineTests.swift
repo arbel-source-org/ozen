@@ -1426,6 +1426,23 @@ struct CaptionPipelineAlertTests {
         #expect(await eventually { pipeline.keywordHits.count == 2 })
     }
 
+    @Test("a word the finished text takes back no longer marks the line")
+    func keywordTakenBack() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.keywordAlerts = [KeywordAlert(phrase: "סבתא")]
+        await pipeline.start(settings: settings)
+        let id = UUID()
+
+        engine.emit(token(id, "היום סבתא"))
+        #expect(await eventually { pipeline.keywordHitSegmentIDs == [id] })
+        engine.emit(token(id, "היום שבת אורחים", final: true))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+
+        #expect(pipeline.keywordHitSegmentIDs.isEmpty)
+    }
+
     @Test("changing the keyword list takes effect without a restart, and clearing the transcript clears hits")
     func keywordListChanges() async {
         let engine = FakeEngine()
