@@ -340,6 +340,25 @@ struct TranscriptHistoryTests {
         #expect(store.listSummaries().isEmpty)
     }
 
+    @Test("a summary made from a version read before the conversation was saved again is not kept as fresh")
+    func staleListingSummaryIsDropped() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        var conversation = record(startedAt: 100, segments: [segment(text: "אחד")])
+        try store.save(conversation)
+        let url = dir.appendingPathComponent("\(conversation.id.uuidString).json")
+        let readBefore = try FileManager.default.attributesOfItem(atPath: url.path)[.modificationDate] as? Date
+        let oldSummary = TranscriptSessionSummary(summarizing: conversation)
+
+        Thread.sleep(forTimeInterval: 0.02)
+        conversation.segments.append(segment(text: "שתיים"))
+        try store.save(conversation)
+        store.writeSummary(oldSummary, forRecordFile: url, recordModifiedAt: readBefore)
+
+        #expect(store.listSummaries().first?.segmentCount == 2)
+    }
+
     @Test("exported text matches the exact expected line format")
     func exportTextFormatIsExact() {
         let withName = segment(text: "שלום", speakerName: "סבתא", startTimestamp: 3_661)

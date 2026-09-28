@@ -402,8 +402,9 @@ public struct TranscriptHistoryStore: Sendable {
         // Written after the record, so a fresh summary is never older than
         // its conversation. If this write fails the conversation is still
         // saved; the list just rebuilds the summary next time.
-        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
-        writeSearchText(Self.searchableText(of: record), forRecordFile: url)
+        let written = Self.modificationDate(of: url)
+        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url, recordModifiedAt: written)
+        writeSearchText(Self.searchableText(of: record), forRecordFile: url, recordModifiedAt: written)
         return true
     }
 
@@ -459,18 +460,21 @@ public struct TranscriptHistoryStore: Sendable {
         return cached.summary
     }
 
-    private func writeSummary(_ summary: TranscriptSessionSummary, forRecordFile url: URL) {
+    func writeSummary(_ summary: TranscriptSessionSummary, forRecordFile url: URL, recordModifiedAt: Date?) {
         guard let data = try? JSONEncoder().encode(CachedSummary(format: Self.summaryFormat, summary: summary)) else { return }
         try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
         try? data.write(to: summaryURL(forRecordFile: url), options: .atomic)
-        removeCacheIfConversationIsGone(summaryURL(forRecordFile: url), forRecordFile: url)
+        removeCacheIfConversationChanged(summaryURL(forRecordFile: url), forRecordFile: url, since: recordModifiedAt)
     }
 
     /// A listing off the main thread can read a conversation just before
-    /// it is deleted and write its cache just after; the cache holds its
-    /// words, so it goes too.
-    private func removeCacheIfConversationIsGone(_ cacheURL: URL, forRecordFile url: URL) {
-        if !FileManager.default.fileExists(atPath: url.path) {
+    /// it is deleted, or saved again, and write its cache just after. A
+    /// cache for a deleted conversation still holds its words; one for an
+    /// older version is newer than the file and would pass as fresh. Either
+    /// way the cache goes, and the next listing rebuilds it.
+    private func removeCacheIfConversationChanged(_ cacheURL: URL, forRecordFile url: URL, since recordModifiedAt: Date?) {
+        let now = Self.modificationDate(of: url)
+        if now == nil || now != recordModifiedAt {
             try? FileManager.default.removeItem(at: cacheURL)
         }
     }
@@ -483,10 +487,10 @@ public struct TranscriptHistoryStore: Sendable {
         return String(data: data, encoding: .utf8)
     }
 
-    private func writeSearchText(_ text: String, forRecordFile url: URL) {
+    private func writeSearchText(_ text: String, forRecordFile url: URL, recordModifiedAt: Date?) {
         try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
         try? Data(text.utf8).write(to: searchTextURL(forRecordFile: url), options: .atomic)
-        removeCacheIfConversationIsGone(searchTextURL(forRecordFile: url), forRecordFile: url)
+        removeCacheIfConversationChanged(searchTextURL(forRecordFile: url), forRecordFile: url, since: recordModifiedAt)
     }
 
     static func searchableText(of record: TranscriptSessionRecord) -> String {
@@ -598,9 +602,10 @@ public struct TranscriptHistoryStore: Sendable {
         files
             .compactMap { url -> TranscriptSessionSummary? in
                 if let cached = cachedSummary(forRecordFile: url) { return cached }
+                let read = Self.modificationDate(of: url)
                 guard let record = Self.decodeRecord(at: url) else { return nil }
                 let summary = TranscriptSessionSummary(summarizing: record)
-                writeSummary(summary, forRecordFile: url)
+                writeSummary(summary, forRecordFile: url, recordModifiedAt: read)
                 return summary
             }
             .sorted { $0.startedAt > $1.startedAt }
@@ -638,11 +643,12 @@ public struct TranscriptHistoryStore: Sendable {
                 }
                 // Slow path, once per conversation: read it whole and write
                 // the files that make the next search fast.
+                let read = Self.modificationDate(of: url)
                 guard let record = Self.decodeRecord(at: url) else { return nil }
                 var summary = TranscriptSessionSummary(summarizing: record)
                 let text = Self.searchableText(of: record)
-                writeSummary(summary, forRecordFile: url)
-                writeSearchText(text, forRecordFile: url)
+                writeSummary(summary, forRecordFile: url, recordModifiedAt: read)
+                writeSearchText(text, forRecordFile: url, recordModifiedAt: read)
                 guard words.allSatisfy({ $0.found(in: text) }) else { return nil }
                 if let snippet = Self.matchingSnippet(for: query, in: text) {
                     summary.preview = snippet
@@ -694,8 +700,9 @@ public struct TranscriptHistoryStore: Sendable {
         let url = fileURL(for: id)
         let data = try JSONEncoder().encode(record)
         try data.write(to: url, options: .atomic)
-        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
-        writeSearchText(Self.searchableText(of: record), forRecordFile: url)
+        let written = Self.modificationDate(of: url)
+        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url, recordModifiedAt: written)
+        writeSearchText(Self.searchableText(of: record), forRecordFile: url, recordModifiedAt: written)
     }
 
     /// Stars a saved line, or takes its star away, after the conversation
@@ -711,7 +718,7 @@ public struct TranscriptHistoryStore: Sendable {
         let url = fileURL(for: id)
         let data = try JSONEncoder().encode(record)
         try data.write(to: url, options: .atomic)
-        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url)
+        writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url, recordModifiedAt: Self.modificationDate(of: url))
         return record.segments[index].isStarred
     }
 
