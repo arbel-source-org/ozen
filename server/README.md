@@ -127,8 +127,10 @@ address: `python pairing.py --address wss://<computer>.<tailnet>.ts.net`.
   server a public `wss://` address with a real certificate:
   `tailscale funnel --bg 8765` (on Windows, in the Windows command prompt;
   WSL's port shows up on Windows' own localhost), then enter
-  `wss://<computer>.<tailnet>.ts.net` in the phone. Only someone with the
-  pairing code gets captions.
+  `wss://<computer>.<tailnet>.ts.net` in the phone. The
+  `https://<computer>.<tailnet>.ts.net` that the funnel command prints works
+  too; the app turns it into `wss://`. Only someone with the pairing code
+  gets captions.
 
 ## Starting it with Windows
 
