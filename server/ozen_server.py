@@ -457,6 +457,12 @@ async def refuse(ws, code, detail):
         pass
 
 
+def worker_failed(error):
+    """A phone that hangs up while a line is on its way ends the worker
+    with ConnectionClosed; that is a goodbye, not a failed session."""
+    return error is not None and not isinstance(error, websockets.ConnectionClosed)
+
+
 async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     peer = ws.remote_address
     try:
@@ -484,7 +490,7 @@ async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     # open socket that never sends text again would keep the phone waiting
     # instead of switching to its own model.
     def worker_done(task):
-        if not task.cancelled() and task.exception() is not None:
+        if not task.cancelled() and worker_failed(task.exception()):
             log.error("session from %s failed: %r", peer, task.exception())
             asyncio.ensure_future(ws.close(code=1011, reason="transcription failed"))
 

@@ -121,6 +121,17 @@ class HungUp(unittest.TestCase):
         asyncio.run(S.handle(GoneSocket(), None, "code", 1.0))
 
 
+class WorkerEndings(unittest.TestCase):
+    def test_a_phone_hanging_up_mid_send_is_not_a_failure(self):
+        self.assertFalse(S.worker_failed(S.websockets.ConnectionClosed(None, None)))
+
+    def test_a_real_error_still_counts(self):
+        self.assertTrue(S.worker_failed(RuntimeError("CUDA failed")))
+
+    def test_a_clean_finish_is_not_a_failure(self):
+        self.assertFalse(S.worker_failed(None))
+
+
 class ModelsThatWontLoad(unittest.TestCase):
     def test_the_log_says_why_and_the_restart_waits(self):
         from unittest import mock
