@@ -123,7 +123,7 @@ same command again to refresh it (a paid developer account removes the limit).
 
 Ozen warns on its own caption screen two days before it stops opening, and sends
 a reminder notification the day before; Settings → About (odot) shows the exact moment
-under "Installation valid until" (ha-hatkana tkefa ad). Settings shows the installed build as "0.2.0 (N)", N being
+under "Install valid until" (ha-hatkana tkefa ad). Settings shows the installed build as "0.2.0 (N)", N being
 the release's build number.
 
 Refresh with the **same Apple ID** as last time, with Impactor (AltServer only

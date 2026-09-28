@@ -23,23 +23,23 @@ says so. Otherwise conversations never leave the phone.
 | "Listening · Cloud captions aren't available, carrying on with the phone's own" (makshiv · ha-ktuviyot ba-anan lo zminot, mamshich im ha-zihuy she-ba-telefon) | Cloud captions lost their key, credit or internet, and a Whisper model already on the phone took over. Captions keep coming, a little less accurate. | Nothing urgent. Fix the key, credit or internet; the cloud is tried again the next time captions start (after Stop, or reopening the app). A pause and resume stays on the phone's model. |
 | "Paused" (mushhe) | Paused by a tap. | Tap it to continue. |
 | "The phone is talking" (ha-telefon medaber) | The phone is saying a typed reply aloud; captions pause so they don't caption it. | Nothing. They continue by themselves when it finishes. Tapping it stops the phone talking. |
-| "Inactive" (lo pail) | Stopped (for example by Siri). | Tap it to start. |
-| "Captions paused because of a call" (ha-ktuviyot mushhot biglal sicha) | A phone call or another app has the microphone. | Nothing. They come back after the call. If they don't, a notification "Captions stopped" (ha-ktuviyot ne'etzru) arrives; open Ozen from it. |
+| "Captions are off" (ha-ktuviyot kvuyot) | Stopped (for example by Siri). | Tap it to start. |
+| "Captions paused for a call" (ha-ktuviyot mushhot biglal sicha) | A phone call or another app has the microphone. | Nothing. They come back after the call. If they don't, a notification "Captions stopped" (ha-ktuviyot ne'etzru) arrives; open Ozen from it. |
 | "Downloading the language model · N%" (morid et model ha-safa · N%) | First-time download of the speech model. | Keep the app open (the screen stays on by itself) until it finishes. |
 | "Waiting for Wi-Fi to download the language model" (mamtin le-Wi-Fi kdei lehorid et model ha-safa) | The model still has to download and the phone is on cellular data or Low Data Mode. | Connect to Wi-Fi and it starts by itself, or tap to download over cellular. |
 | "Not enough free space on the phone" (ein maspik makom panuy ba-telefon) | Not enough room for the model. It says how much to free. | Free space (Settings → General → iPhone Storage), then open Ozen again and it starts by itself. Or tap to pick a smaller model, or switch to Apple's engine, which needs no download. |
-| "Model download failed" (horadat ha-model nichshela) | The download failed, usually a dead connection. | It retries by itself for a while. Check the internet, then tap to try again. |
-| "Model loading failed" (te'inat ha-model nichshela) | The model is on the phone but didn't load. | Tap to try again. If it keeps failing, pick a smaller model in Settings. |
+| "Downloading the model failed" (horadat ha-model nichshela) | The download failed, usually a dead connection. | It retries by itself for a while. Check the internet, then tap to try again. |
+| "Loading the model failed" (te'inat ha-model nichshela) | The model is on the phone but didn't load. | Tap to try again. If it keeps failing, pick a smaller model in Settings. |
 | "Loading the model / almost ready" (to'en et ha-model / kim'at mukhan) | Starting up. The first time can take a minute or two. | Wait. |
 | "The microphone isn't responding" (ha-mikrofon lo megiv) | Audio stopped arriving (a Bluetooth microphone reconnecting, often). | It restarts by itself. If it keeps coming back, choose the microphone again with the button at the bottom right. |
 | "No microphone found" (lo nimtza mikrofon) | No microphone is available at all. | Reconnect the microphone, then tap. |
-| "No access to the microphone" (ein gisha la-mikrofon) | Microphone permission was turned off for Ozen. | Tap it: it opens iOS Settings. Turn Microphone on. |
-| "No permission for speech recognition" (ein ishur le-zihuy dibur) | Speech recognition permission is off (Apple's engine only). | Tap it: it opens iOS Settings. |
+| "No microphone access" (ein gisha la-mikrofon) | Microphone permission was turned off for Ozen. | Tap it: it opens iOS Settings. Turn Microphone on. |
+| "No speech recognition permission" (ein ishur le-zihuy dibur) | Speech recognition permission is off (Apple's engine only). | Tap it: it opens iOS Settings. |
 | "… not available in Hebrew on this device" (… lo zamin be-ivrit ba-machshir ha-ze) | Apple's engine has no on-device Hebrew on this iPhone. | Tap to switch to Whisper in Settings. |
-| "Cloud captions need a valid OpenRouter key" (ha-tamlul ba-anan tzarich mafte'ach OpenRouter takin) | Cloud captions are chosen but there is no key, or OpenRouter turned it down, and no Whisper model is on the phone to take over. | Tap it: Settings opens. Paste the key from openrouter.ai (Keys) and tap Save. |
-| "The OpenRouter key is out of credit" (nigmar ha-kredit shel mafte'ach OpenRouter) | The key used up its credit or its spending limit, and no Whisper model is on the phone to take over. | Add credit on openrouter.ai, or tap and switch back to Whisper. |
+| "Cloud transcription isn't set up" (ha-timlul ba-anan lo mugdar) | Cloud captions are chosen but there is no key, or OpenRouter turned it down, and no Whisper model is on the phone to take over. | Tap it: Settings opens. Paste the key from openrouter.ai (Keys) and tap Save. |
+| "Cloud transcription's budget ran out" (nigmar ha-taktziv le-timlul ba-anan) | The key used up its credit or its spending limit, and no Whisper model is on the phone to take over. | Add credit on openrouter.ai, or tap and switch back to Whisper. |
 | "No internet connection" (ein chibur la-internet) | Cloud captions can't reach the internet, and no Whisper model is on the phone to take over. | Check Wi-Fi or cellular data. It retries by itself; or switch to Whisper, which works offline. |
-| "Retrying by itself · tap to try now" (menase shuv le-vad · hakishu kedei lenasot achshav) | Something failed and a retry is already scheduled. | Wait a few seconds, or tap to retry now. |
+| "Trying again on its own · Tap to try now" (menase shuv le-vad · hakishu kedei lenasot achshav) | Something failed and a retry is already scheduled. | Wait a few seconds, or tap to retry now. |
 
 ## The home computer (Settings → Home computer → Test connection)
 
@@ -93,7 +93,7 @@ the same.
   ones she hasn't seen begin. The button at the top, "What was said
   meanwhile" (ma she-ne'emar beinta'yim), scrolls up to it.
 - **Captions on the lock screen.** The newest lines show there while
-  captions run, and stay (saying "paused because of a call" or "captions
+  captions run, and stay (saying "Captions paused for a call" or "Captions
   stopped") when something interrupts them. After a minute with nothing
   said, only the newest line stays, with "said N minutes ago" (ne'emar
   lifnei N dakot) under it; after a quarter of an hour it gives way to
@@ -134,8 +134,8 @@ the same.
   are told apart by how they sound, which is rough: expect a wrong label now
   and then, more often in a noisy room. Settings → Behaviour (hitnahagut) →
   "Speaker separation sensitivity" (regishut hafradat dovrim) adjusts it:
-  towards "merges more" (me'ached yoter) if the same person keeps getting a
-  new number, towards "separates more" (mafrid yoter) if two people are
+  towards "More merging" (me'ached yoter) if the same person keeps getting a
+  new number, towards "More separating" (mafrid yoter) if two people are
   joined. Build 13 and earlier put everyone under one label (and a
   saved voice's name on everybody's lines); updating fixes that, and saved
   voices keep working.
@@ -150,7 +150,7 @@ the same.
   The report's `levels:` line says how loud the microphone hears the room
   (quiet / middle / loud, in dBFS) and `speech:` how much of it counted as
   someone talking; the same numbers are in Diagnostics as "Sound levels"
-  (ramot kol) and "Heard as speech" (nishma ke-dibur). Speech needs to
+  (ramot kol) and "Sounded like speech" (nishma ke-dibur). Speech needs to
   reach about -60 dBFS: if "loud" stays below that through a conversation,
   the phone is too far from the people talking, or an external microphone
   helps. Build 14 and earlier ignored anything under -44 dBFS, which in
@@ -170,7 +170,7 @@ the same.
   that line right. Holding the line offers to ask the speaker to repeat it.
 - **No phone notifications when the screen is off.** Settings → Notifications (hatra'ot) shows
   a red warning if notifications are blocked for Ozen in iOS, with a button
-  to fix it. If there's no warning, tap "Check that a notification arrives when the phone is locked" (livdok she-hatra'a magi'a k'she-ha-telefon na'ul)
+  to fix it. If there's no warning, tap "Test that an alert arrives when the phone is locked" (livdok she-hatra'a magi'a k'she-ha-telefon na'ul)
   and lock the phone: a sample doorbell alert arrives within 10 seconds. If
   it doesn't, a Focus mode or Scheduled Summary in iOS is holding it back.
 - **The doorbell rang and no alert came at all.** First the report's
@@ -196,14 +196,14 @@ the same.
   alert feels" (eich kol hatra'a margisha) plays each one, to learn them together. If nothing vibrates
   at all, iOS Settings → Accessibility → Touch → Vibration has been turned
   off, which silences every app. If every alert gives the same plain buzz,
-  Diagnostics shows "Vibration for alerts: failed" (retet le-hatra'ot: nichshal) and the report says why.
+  Diagnostics shows "Alert vibration: Failed, using standard vibration instead" (retet le-hatra'ot: nichshal, retet ragil bimkom) and the report says why.
 - **A banner "Saving on the phone failed" (ha-shmira ba-telefon nichshela), or History says the last save failed.**
   The phone is out of storage, so new conversations and settings changes
   aren't being kept, though captions still work. Free some space (Settings →
   General → iPhone Storage) and saving resumes by itself; the banner comes
   back only if it fails again.
 - **A model in the model list is greyed out and can't be picked.** It says
-  "Not enough space on the phone" (ein maspik makom ba-telefon): its
+  "Not enough room on the phone" (ein maspik makom ba-telefon): its
   download wouldn't fit, and picking it would only stop the captions that
   work now. Free space and it can be picked; a model already on the phone,
   or half downloaded, can always be picked.
@@ -230,6 +230,6 @@ Ozen is sideloaded with a free Apple ID, so it stops opening after seven days.
 Two days before, the caption screen says when ("Ozen will stop opening
 tomorrow at 07:24" (Ozen tafsik lehipatach machar be-sha'a 07:24)), and a
 notification repeats it the day before; Settings → About (odot) and
-Diagnostics show the exact date under "Installation valid until" (ha-hatkana tkefa ad).
+Diagnostics show the exact date under "Install valid until" (ha-hatkana tkefa ad).
 See [sideloading-from-linux.md](sideloading-from-linux.md) for the command that
 refreshes it.
