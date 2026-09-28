@@ -2024,6 +2024,7 @@ struct CaptionPipelineDownloadNetworkTests {
             recovery: recovery,
             network: network
         )
+        pipeline.networkFirstReportWaitSeconds = 0.3
         return (pipeline, engine)
     }
 
@@ -2046,6 +2047,19 @@ struct CaptionPipelineDownloadNetworkTests {
         #expect(pipeline.scheduledRetry == nil)
         #expect(pipeline.phase.failure?.isRetryableInApp == true)
         #expect(pipeline.phase.failure?.suggestsOtherEngine == false)
+    }
+
+    @Test("a network the system reports only after captions start is still respected: cellular waits")
+    func lateFirstReportOnCellularWaits() async {
+        let monitor = FakeNetworkMonitor(nil)
+        let (pipeline, engine) = makePipeline(network: monitor)
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100))
+            monitor.current = .cellular
+        }
+        await pipeline.start(settings: settings())
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .waitingForWiFi)
+        #expect(engine.prepareCount == 0)
     }
 
     @Test("Low Data Mode waits the same way")

@@ -95,6 +95,8 @@ public final class CaptionPipeline {
     /// model for good -- the weaker, more battery-hungry choice -- until
     /// someone restarted the app.
     public var cloudRecheckSeconds: Double = 60
+    /// How long a download waits for the system's first word on the network.
+    public var networkFirstReportWaitSeconds: Double = 2
     /// Only switch back after this long without new words, so a sentence
     /// isn't cut in half.
     public var homeServerSwitchBackQuietSeconds: Double = 2
@@ -356,6 +358,16 @@ public final class CaptionPipeline {
         if let megabytes = await engine.pendingDownloadMegabytes() {
             guard runID == run else { return }
             let allowCellular = settings.allowCellularModelDownload || cellularDownloadApproved
+            // Right after launch the system may not have said yet whether
+            // this is Wi-Fi; hundreds of megabytes are worth a short wait
+            // for the answer rather than starting on a phone plan.
+            if let network, network.current == nil, !allowCellular {
+                let deadline = ContinuousClock.now + .seconds(networkFirstReportWaitSeconds)
+                while network.current == nil, ContinuousClock.now < deadline {
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+                guard runID == run else { return }
+            }
             switch ModelDownloadGate.decide(network: network?.current, allowCellular: allowCellular) {
             case .proceed:
                 break
