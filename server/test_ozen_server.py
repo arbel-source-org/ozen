@@ -146,6 +146,13 @@ class WrongCode(unittest.TestCase):
         self.assertNotIn(guess, ws.sent[0])
         self.assertNotIn("real-code-456", ws.sent[0])
 
+    def test_a_byte_order_mark_in_front_of_the_code_is_dropped_in_any_code_page(self):
+        bom = b"\xef\xbb\xbf"
+        for mark in ["\ufeff", bom.decode("cp862"), bom.decode("cp1252"), bom.decode("cp437")]:
+            self.assertEqual(S.pairing_code(mark + "example-code-123\r\n"), "example-code-123")
+        self.assertEqual(S.pairing_code("  example-code-123 "), "example-code-123")
+        self.assertEqual(S.pairing_code(""), "")
+
     def test_a_guess_with_letters_outside_ascii_is_refused_too(self):
         ws = HelloSocket(S.json.dumps({"type": "hello", "token": "קוד-שגוי"}))
         with self.assertLogs(S.log, "WARNING"):

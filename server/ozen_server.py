@@ -182,6 +182,14 @@ def speech_gain(audio, target_peak=0.5, maximum_gain=100.0):
     return np.clip(audio * gain, -1, 1).astype(np.float32)
 
 
+def pairing_code(raw):
+    """The code as run.cmd hands it over. Notepad saving pairing-code again can
+    put a byte-order mark in front, and `set /p` reads it in the console's code
+    page, so it arrives as three stray letters rather than U+FEFF. Codes are
+    ASCII, so anything else in front is dropped."""
+    return re.sub(r"^[^\x21-\x7e]+", "", raw.strip())
+
+
 def front_terms(terms, count_tokens, budget):
     """The words from the top of the list that fit `budget` tokens.
     faster-whisper keeps the END of a prompt that is too long, which would
@@ -550,8 +558,7 @@ async def main():
                    help="mix this share of GTCRN-cleaned audio with the original (see enhance.py); 0 turns it off")
     p.add_argument("--enhance-model", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "gtcrn_simple.onnx"))
     args = p.parse_args()
-    # Notepad saving pairing-code again adds a byte-order mark in front.
-    token = os.environ.get("OZEN_TOKEN", "").strip().lstrip("\ufeff")
+    token = pairing_code(os.environ.get("OZEN_TOKEN", ""))
     if not token:
         raise SystemExit("set OZEN_TOKEN to the pairing code the phone will send")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
