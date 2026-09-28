@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 r"""Checks every tr("hebrew", "english") call in the Swift sources, and the
 translation table that stands in for Hebrew and English in every other
 supported language.
@@ -298,7 +299,7 @@ def check_permission_prompts():
     project = Path("project.yml").read_text(encoding="utf-8")
     catalog = json.loads(Path("App/Ozen/InfoPlist.xcstrings").read_text(encoding="utf-8"))["strings"]
     problems = []
-    for key in sorted(set(re.findall(r"^\s+(NS\w+UsageDescription):", project, re.M))):
+    for key in sorted(set(re.findall(r"^\s+(NS\w+UsageDescription):", project, re.MULTILINE))):
         missing = [l for l in ["he"] + SYSTEM_LANGUAGES if l not in catalog.get(key, {}).get("localizations", {})]
         if missing:
             problems.append(f"App/Ozen/InfoPlist.xcstrings: {key} missing in {', '.join(missing)}")

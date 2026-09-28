@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -u
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 failed=()
 step() {
     local name=$1; shift

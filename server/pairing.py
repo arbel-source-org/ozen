@@ -12,7 +12,6 @@ import webbrowser
 import qrcode
 import qrcode.image.svg
 
-
 TAILSCALE_PATHS = [
     "tailscale",
     os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Tailscale", "tailscale.exe"),
@@ -22,7 +21,7 @@ TAILSCALE_PATHS = [
 def tailscale_address():
     for exe in TAILSCALE_PATHS:
         try:
-            out = subprocess.run([exe, "status", "--json"], capture_output=True, text=True, timeout=20,
+            out = subprocess.run([exe, "status", "--json"], capture_output=True, text=True, timeout=20, check=False,
                                  creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
             name = json.loads(out)["Self"]["DNSName"].rstrip(".")
         except (OSError, ValueError, KeyError, subprocess.SubprocessError):
