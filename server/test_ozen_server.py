@@ -121,5 +121,24 @@ class HungUp(unittest.TestCase):
         asyncio.run(S.handle(GoneSocket(), None, "code", 1.0))
 
 
+class ModelsThatWontLoad(unittest.TestCase):
+    def test_the_log_says_why_and_the_restart_waits(self):
+        from unittest import mock
+
+        def broken(*args, **kwargs):
+            raise RuntimeError("CUDA failed with error out of memory")
+
+        with mock.patch.object(S, "Transcriber", broken), \
+                mock.patch.object(S.time, "sleep") as sleep, \
+                mock.patch.object(sys, "argv", ["ozen_server.py"]), \
+                mock.patch.dict("os.environ", {"OZEN_TOKEN": "x"}), \
+                self.assertLogs(S.log, "CRITICAL") as logged:
+            with self.assertRaises(SystemExit):
+                asyncio.run(S.main())
+        sleep.assert_called_once_with(S.LOAD_RETRY_SECONDS)
+        self.assertIn("out of memory", logged.output[0])
+        self.assertIn("graphics card", logged.output[0])
+
+
 if __name__ == "__main__":
     unittest.main()

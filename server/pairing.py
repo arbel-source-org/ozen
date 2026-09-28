@@ -13,13 +13,22 @@ import qrcode
 import qrcode.image.svg
 
 
+TAILSCALE_PATHS = [
+    "tailscale",
+    os.path.join(os.environ.get("ProgramFiles", r"C:\Program Files"), "Tailscale", "tailscale.exe"),
+]
+
+
 def tailscale_address():
-    try:
-        out = subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, timeout=20).stdout
-        name = json.loads(out)["Self"]["DNSName"].rstrip(".")
-    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
-        return None
-    return f"wss://{name}" if name else None
+    for exe in TAILSCALE_PATHS:
+        try:
+            out = subprocess.run([exe, "status", "--json"], capture_output=True, text=True, timeout=20).stdout
+            name = json.loads(out)["Self"]["DNSName"].rstrip(".")
+        except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+            continue
+        if name:
+            return f"wss://{name}"
+    return None
 
 
 def lan_address():
@@ -44,6 +53,10 @@ def main():
     args = p.parse_args()
 
     address = args.address or (lan_address() if args.lan else tailscale_address())
+    if not address and not args.lan:
+        address = lan_address()
+        if address:
+            print("Tailscale gave no address; this QR code works on the home Wi-Fi only.", file=sys.stderr)
     if not address:
         sys.exit("Couldn't work out this computer's address; pass --address wss://... or --address 192.168.1.20")
     with open(args.code_file, encoding="utf-8") as f:

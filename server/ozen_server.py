@@ -140,6 +140,7 @@ SPEECH_OPTIONS = VadOptions(min_silence_duration_ms=100, speech_pad_ms=0)
 
 
 MIN_VOICE_SECONDS = 0.2
+LOAD_RETRY_SECONDS = 60
 
 
 def voice_samples(audio):
@@ -530,8 +531,18 @@ async def main():
     if not token:
         raise SystemExit("set OZEN_TOKEN to the pairing code the phone will send")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context, args.final_model or None,
-                              args.speech_gate)
+    try:
+        transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context, args.final_model or None,
+                                  args.speech_gate)
+    except Exception as error:
+        # run.cmd starts the server again at once: without the wait a card
+        # that can't take the models would fill the log every few seconds,
+        # and the log would never say why the phone finds nothing.
+        log.critical("could not load the speech models on the graphics card (%s). Another program may be using its "
+                     "memory, or the card or its driver may be too old. Trying again in %d seconds.", error, LOAD_RETRY_SECONDS)
+        logging.shutdown()
+        time.sleep(LOAD_RETRY_SECONDS)
+        raise SystemExit(4)
     # Warm the models so the first sentence isn't slow. Past the voice
     # gate: silence would stop there and never reach the GPU.
     started = time.monotonic()

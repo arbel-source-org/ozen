@@ -46,6 +46,7 @@ foreach ($smi in $smiCandidates) {
 if (-not $gpu) {
     Tell ("This computer has no NVIDIA graphics card that Windows can use, so it can't write captions for Ozen.`n`n" +
         "Ozen needs an NVIDIA card with at least 6 GB of memory (for example an RTX 2060 or 3060) and its normal NVIDIA driver.`n`n" +
+        "If this computer does have an NVIDIA card, its driver is probably missing: install it from nvidia.com/drivers, restart, and run this setup again.`n`n" +
         "Nothing was installed. The phone keeps writing captions by itself.") 'Warning'
     exit 1
 }
@@ -134,6 +135,19 @@ $run = @(
 # Windows' firewall blocks unless it's let in (home networks only).
 if (-not (Get-NetFirewallRule -DisplayName 'Ozen server' -ErrorAction SilentlyContinue)) {
     New-NetFirewallRule -DisplayName 'Ozen server' -Direction Inbound -Protocol TCP -LocalPort 8765 -Profile Private -Action Allow | Out-Null
+}
+# Windows often files a home Wi-Fi as "Public", where the rule above
+# doesn't apply and the phone at home finds nothing.
+$publicNets = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue | Where-Object { $_.NetworkCategory -eq 'Public' })
+if ($publicNets.Count -gt 0 -and (Ask ("Windows treats this computer's network ($($publicNets[0].Name)) as a public one, so the phone on the home Wi-Fi can't reach it.`n`n" +
+        "Is this your home network? Choose Yes to mark it as a home (private) network. Choose No if this is a cafe, office or other shared network."))) {
+    $publicNets | ForEach-Object { Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private -ErrorAction SilentlyContinue }
+}
+# Asleep, the computer answers nothing, and nothing wakes it for the phone.
+if (Ask ("Captions from this computer only work while it is awake.`n`n" +
+        "Choose Yes to stop it going to sleep by itself while it is plugged in (the screen can still turn off). Choose No to keep your current sleep setting.")) {
+    powercfg /change standby-timeout-ac 0 | Out-Null
+    powercfg /change hibernate-timeout-ac 0 | Out-Null
 }
 
 $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\cmd.exe" -Argument "/c `"$Dir\run.cmd`""
