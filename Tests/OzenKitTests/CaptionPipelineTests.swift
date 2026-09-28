@@ -1289,6 +1289,41 @@ struct CaptionPipelineEnrollmentTests {
         #expect(audio.calls.filter { $0 == "startCapture" }.count == 3)
     }
 
+    @Test("stopping a voice recording ends it at once, not after its full length", .timeLimit(.minutes(1)))
+    func enrollmentCancelledStopsAtOnce() async {
+        let (pipeline, audio, _) = makePipeline()
+        let recording = Task { @MainActor in
+            await pipeline.captureEnrollmentSamples(seconds: 30)
+        }
+        #expect(await eventually { audio.calls.contains("startCapture") })
+        audio.push([Float](repeating: 0.1, count: 1_600))
+        recording.cancel()
+        let started = Date()
+        let samples = await recording.value
+
+        #expect(Date().timeIntervalSince(started) < 2)
+        #expect(samples.count <= 1_600)
+        #expect(audio.calls.last == "stopCapture")
+    }
+
+    @Test("a start or resume asked for during a voice recording leaves the recording its microphone", .timeLimit(.minutes(1)))
+    func startDuringEnrollmentWaits() async {
+        let (pipeline, audio, _) = makePipeline()
+        let recording = Task { @MainActor in
+            await pipeline.captureEnrollmentSamples(seconds: 0.5)
+        }
+        #expect(await eventually { audio.calls.contains("startCapture") })
+        let startsBefore = audio.calls.filter { $0 == "startCapture" }.count
+
+        await pipeline.start(settings: .default)
+        await pipeline.resume(settings: .default)
+
+        #expect(audio.calls.filter { $0 == "startCapture" }.count == startsBefore)
+        audio.push([Float](repeating: 0.1, count: 8_000))
+        #expect(await recording.value.count == 8_000)
+        #expect(pipeline.isRecordingVoice == false)
+    }
+
     @Test("enrollment while idle leaves the pipeline idle afterwards")
     func enrollmentFromIdle() async {
         let (pipeline, audio, _) = makePipeline()

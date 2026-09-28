@@ -59,6 +59,8 @@ public final class CaptionPipeline {
     public private(set) var keywordHits: [KeywordHit] = []
     /// Segments that contain at least one keyword hit, for highlighting.
     public private(set) var keywordHitSegmentIDs: Set<UUID> = []
+    /// A voice sample for a speaker profile is being recorded.
+    public private(set) var isRecordingVoice = false
     /// An external microphone went away mid-conversation and the phone's
     /// own took over: said on screen, since captions get worse quietly.
     public private(set) var microphoneDrop = MicrophoneDropNotice()
@@ -269,7 +271,7 @@ public final class CaptionPipeline {
     }
 
     public func start(settings: AppSettings) async {
-        guard !phase.isListening, !phase.isTransitioning else { return }
+        guard !phase.isListening, !phase.isTransitioning, !isRecordingVoice else { return }
         // Only a second model loading on the phone is worth waiting for: the
         // home computer, the cloud and Apple's recognizer load nothing here,
         // and waiting kept captions on "loading model" after the home
@@ -556,7 +558,7 @@ public final class CaptionPipeline {
     /// paused would otherwise vanish on resume, silently restarting with
     /// whatever was in effect before the pause.
     public func resume(settings: AppSettings? = nil) async {
-        guard phase == .paused, var effective = settings ?? activeSettings else { return }
+        guard phase == .paused, !isRecordingVoice, var effective = settings ?? activeSettings else { return }
         // A pause is not a new start: the phone's model that was covering
         // for the cloud or the home computer (the caller's settings still
         // say so) carries on, rather than trying it again with nothing
@@ -955,6 +957,10 @@ public final class CaptionPipeline {
 
         var collected: [Float] = []
         let target = Int(seconds * Self.sampleRate)
+        // A Siri "start captions" meanwhile would take the microphone from
+        // the recording; it waits for the recording to end instead.
+        isRecordingVoice = true
+        defer { isRecordingVoice = false }
         if let stream = await enrollmentCapture() {
             // A microphone that stops delivering would keep the recording
             // screen up for good, its cancel button disabled. Stopping
@@ -974,6 +980,7 @@ public final class CaptionPipeline {
             audio.stopCapture()
         }
 
+        isRecordingVoice = false
         if wasListening {
             await resume()
         }
