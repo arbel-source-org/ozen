@@ -18,5 +18,7 @@ struct PrivateFileWritesTests {
             #expect(text.contains("options: .privateFile)"), "\(name)")
         }
         #expect(try source("SessionJournal.swift").contains("attributes: privateFileAttributes"))
+        let journal = try source("SessionJournal.swift")
+        #expect(journal.components(separatedBy: "excludeFromBackup(fileURL)").count - 1 == 2)
     }
 }

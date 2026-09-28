@@ -94,6 +94,7 @@ public final class SessionJournal: @unchecked Sendable {
         if !manager.fileExists(atPath: fileURL.path) {
             try? manager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             manager.createFile(atPath: fileURL.path, contents: nil, attributes: privateFileAttributes)
+            excludeFromBackup(fileURL)
         }
         guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
         defer { try? handle.close() }
@@ -116,7 +117,20 @@ public final class SessionJournal: @unchecked Sendable {
                 kept.append(line)
             }
             try? Data(kept.reversed().joined().utf8).write(to: fileURL, options: .privateFile)
+            // The atomic rewrite is a new file, without the old one's flag.
+            excludeFromBackup(fileURL)
         }
+    }
+
+    /// Marked problems carry caption lines, and the screen says they stay
+    /// on the phone, like the audio clips: no iCloud or computer backup.
+    private static func excludeFromBackup(_ fileURL: URL) {
+        #if canImport(Darwin)
+        var url = fileURL
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
+        #endif
     }
 
     private static func read(_ fileURL: URL) -> [Entry] {

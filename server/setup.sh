@@ -39,7 +39,15 @@ if [[ $cpu == 0 ]]; then
     export LD_LIBRARY_PATH="\$(venv/bin/python -c 'import os, nvidia.cublas.lib, nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))'):\${LD_LIBRARY_PATH:-}"
 fi
 export OZEN_TOKEN="\$(cat pairing-code)"
-exec venv/bin/python ozen_server.py $defaults "\$@"
+# The server exits with 3 when the graphics card stops working (every
+# pass failing); a fresh start clears it. Any other exit is left alone.
+while true; do
+    status=0
+    venv/bin/python ozen_server.py $defaults "\$@" || status=\$?
+    [[ \$status == 3 ]] || exit \$status
+    echo "Ozen server stopped after repeated failures; starting it again" >&2
+    sleep 5
+done
 EOF
 chmod 700 "$home_dir/run.sh"
 

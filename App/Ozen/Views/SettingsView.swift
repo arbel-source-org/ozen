@@ -98,7 +98,7 @@ struct SettingsView: View {
             .accessibilityIdentifier("settingsScreen")
             .modifier(ScrollsToFocus(focus: focus, proxy: proxy))
             }
-            .onDisappear(perform: saveUnsavedHomeServerEntries)
+            .onDisappear(perform: saveUnsavedEntries)
             .navigationTitle(tr("הגדרות", "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -516,11 +516,12 @@ struct SettingsView: View {
 
     /// Typed but never saved with Return or the button: kept as Settings
     /// closes instead of silently dropped.
-    private func saveUnsavedHomeServerEntries() {
+    private func saveUnsavedEntries() {
         if HomeServer.unsavedAddress(draft: homeServerAddressDraft, saved: viewModel.settings.homeServerAddress) != nil {
             saveHomeServerAddress()
         }
         saveHomeServerCode()
+        saveCloudKey()
     }
 
     private func forgetHomeServerCheck() {

@@ -19,6 +19,8 @@ struct BigTextView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     static let fontSize: CGFloat = 52
+    /// Never smaller than her own captions, which can be set larger.
+    private var fontSize: CGFloat { max(Self.fontSize, CGFloat(display.fontSize)) }
 
     @Environment(\.colorScheme) private var systemScheme
     @Environment(\.colorSchemeContrast) private var contrast
@@ -52,7 +54,7 @@ struct BigTextView: View {
             GeometryReader { geometry in
                 ScrollView {
                     Text(text)
-                        .font(.system(size: Self.fontSize, weight: .bold))
+                        .font(.system(size: fontSize, weight: .bold))
                         .foregroundStyle(theme.text)
                         .frame(maxWidth: .infinity, minHeight: geometry.size.height, alignment: .center)
                         .padding(24)
@@ -69,14 +71,14 @@ struct BigTextView: View {
             ZStack(alignment: .topLeading) {
                 if isEmpty {
                     Text(tr("כתבו כאן…", "Type here…"))
-                        .font(.system(size: Self.fontSize, weight: .bold))
+                        .font(.system(size: fontSize, weight: .bold))
                         .foregroundStyle(theme.pendingText)
                         .padding(.horizontal, 29)
                         .padding(.vertical, 32)
                         .accessibilityHidden(true)
                 }
                 TextEditor(text: $text)
-                    .font(.system(size: Self.fontSize, weight: .bold))
+                    .font(.system(size: fontSize, weight: .bold))
                     .foregroundStyle(theme.text)
                     .scrollContentBackground(.hidden)
                     .focused($isTyping)

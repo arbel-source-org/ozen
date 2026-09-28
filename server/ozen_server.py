@@ -28,7 +28,7 @@ Protocol, version 1. Text frames are JSON, binary frames are audio.
                                               {"type": "report_saved"})
   server -> phone
     {"type": "ready", "model": "...", "version": 1}
-    {"type": "error", "code": "unauthorized" | "bad_request" | "busy", "detail": "..."}
+    {"type": "error", "code": "unauthorized" | "bad_request", "detail": "..."}
     {"type": "text", "utterance": 7, "text": "...", "final": false,
      "confidence": 0.93, "end_s": 12.4,
      "segments": [{"text": "...", "no_speech": 0.02, "logprob": -0.3, "compression": 1.4}]}
@@ -226,7 +226,7 @@ class Transcriber:
                 self.failures += 1
                 if self.failures >= self.failures_before_exit:
                     # A broken CUDA context fails every pass from here on while
-                    # the process looks alive; exiting lets run.cmd start a
+                    # the process looks alive; exiting lets run.cmd (or run.sh) start a
                     # fresh one instead of every phone staying on its own model.
                     log.critical("%d passes failed in a row; exiting to restart", self.failures)
                     logging.shutdown()

@@ -70,7 +70,8 @@ the same.
   the card switches to the recommended model and downloads it once, over
   Wi-Fi (the status button shows the download); captions come back by
   themselves when it has arrived. "Not now" (the x) puts the card away for
-  good; the model can still be picked later in Settings → Whisper model.
+  three days, then for longer each time; the model can also be picked in
+  Settings → Whisper model.
 - **The buttons at the bottom disappeared.** While captions run and follow
   the newest line, they slide away after a few seconds so they don't cover
   it. Touch the screen, or the small arrow at the bottom, to bring them back.
