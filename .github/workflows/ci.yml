@@ -42,13 +42,13 @@ jobs:
       - run: swift build
       - run: swift test
       # The home server's own checks: faster-whisper and the GPU are stood
-      # in for, so numpy is all they need.
+      # in for, so numpy (and qrcode, for pairing) is all they need.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Home server tests
         working-directory: server
-        run: pip install numpy && python -m unittest test_ozen_server test_pairing -v
+        run: pip install numpy qrcode && python -m unittest test_ozen_server test_pairing -v
 
   app:
     name: Ozen app (iOS Simulator)
