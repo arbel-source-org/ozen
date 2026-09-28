@@ -94,6 +94,17 @@ struct CloudSpeechEngineTests {
         #expect(seconds < 2.0)
     }
 
+    @Test("a line ends after the same quiet as on the home computer")
+    func pauseMatchesTheHomeServer() throws {
+        let server = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("server/ozen_server.py")
+        let source = try String(contentsOf: server, encoding: .utf8)
+        let line = try #require(source.split(separator: "\n").first { $0.trimmingCharacters(in: .whitespaces).hasPrefix("pause = ") })
+        let value = try #require(Double(line.split(separator: "=")[1].split(separator: "#")[0].trimmingCharacters(in: .whitespaces)))
+        #expect(CloudSpeechEngine.pauseSeconds == value)
+    }
+
     @Test("two voices in one reply become two lines")
     func twoSpeakers() async throws {
         let http = FakeCloudHTTP(answers: [.text("A: מה שלומך?\nB: טוב, תודה")])

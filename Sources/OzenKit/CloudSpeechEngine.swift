@@ -14,7 +14,10 @@ public actor CloudSpeechEngine: TranscriptionEngine {
     public nonisolated let kind: TranscriptionEngineKind = .cloud
 
     public static let sampleRate = 16_000
-    public static let pauseSeconds = 0.8
+    /// The phone's model and the home computer end a line after 0.7 s of
+    /// quiet (measured in `WhisperKitEngine`); this was left at 0.8 when
+    /// they moved, which ran separate turns together into one line.
+    public static let pauseSeconds = 0.7
     public static let livePassSeconds = 2.0
     public static let maxUtteranceSeconds = 28.0
     public static let failuresBeforeStopping = 4
