@@ -233,10 +233,31 @@ public enum HebrewText {
     /// `stripAttachedPrefix`), which left "did you take the medicines?"
     /// and "the doctor (she) said" silent for alerts on "medicine" and
     /// "doctor". A closed list for the same reason as `affectionateVariants`.
+    /// A doctor's title is also said and written both in full and as the
+    /// abbreviation ("ד״ר", which normalizes to "דר"), so an alert on
+    /// "Dr. Cohen" saved one way stayed silent when the caption used the
+    /// other.
     public static let otherForms: [String: Set<String>] = [
         "תרופה": ["תרופות", "תרופת"],
         "רופא": ["רופאה", "רופאים", "רופאות", "רופאת"],
+        "דר": ["דוקטור"],
+        "דוקטור": ["דר"],
     ]
+
+    static let finalLetters: [Character: Character] = ["ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ"]
+
+    /// Small words that follow a noun far more often than they finish a
+    /// name: "שיר לי" ("a song for me") must not read as "שירלי".
+    static let wordsThatNeverEndAName: Set<String> = [
+        "לי", "לו", "לה", "לך", "לנו", "לכם", "להם", "של", "את", "עם", "על", "אל", "כי", "גם", "זה", "זו", "לא",
+    ]
+
+    /// A word with each final letter written as its ordinary form, the
+    /// shape it takes inside a longer word: "בן" + "ציון" joined is
+    /// "בנציון", not "בןציון".
+    static func foldingFinalLetters(_ word: String) -> String {
+        String(word.map { finalLetters[$0] ?? $0 })
+    }
 
     static func alternateForms(of stem: String) -> Set<String> {
         (affectionateVariants[stem] ?? []).union(otherForms[stem] ?? [])
@@ -335,6 +356,31 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
                 let match = KeywordMatch(alertID: alert.id, phrase: alert.phrase, matchedText: matchedText, wordIndex: start)
                 unordered.append((match, sequence))
                 sequence += 1
+            }
+
+            // A two-part name is written both as one word and as two
+            // ("בנציון", "בן ציון", "בן-ציון"): whichever way it was saved,
+            // the caption may use the other.
+            let joinedPhrase = HebrewText.foldingFinalLetters(phraseWords.joined())
+            if phraseWords.count == 2 {
+                for index in normalizedWords.indices
+                where HebrewText.stripAttachedPrefix(from: HebrewText.foldingFinalLetters(normalizedWords[index]), leaving: joinedPhrase) {
+                    let match = KeywordMatch(alertID: alert.id, phrase: alert.phrase, matchedText: trimmedWords[index], wordIndex: index)
+                    unordered.append((match, sequence))
+                    sequence += 1
+                }
+            } else if phraseWords.count == 1, joinedPhrase.count >= 4 {
+                for index in normalizedWords.indices.dropLast()
+                where !normalizedWords[index].isEmpty && !normalizedWords[index + 1].isEmpty
+                    && !HebrewText.wordsThatNeverEndAName.contains(normalizedWords[index + 1])
+                    && HebrewText.stripAttachedPrefix(
+                        from: HebrewText.foldingFinalLetters(normalizedWords[index] + normalizedWords[index + 1]), leaving: joinedPhrase
+                    ) {
+                    let matchedText = trimmedWords[index] + " " + trimmedWords[index + 1]
+                    let match = KeywordMatch(alertID: alert.id, phrase: alert.phrase, matchedText: matchedText, wordIndex: index)
+                    unordered.append((match, sequence))
+                    sequence += 1
+                }
             }
         }
 

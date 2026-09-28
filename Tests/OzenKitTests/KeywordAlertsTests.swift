@@ -256,6 +256,38 @@ struct KeywordAlertMatcherTests {
         #expect(hits("תרופה", "איפה התרופה") == 1)
         #expect(hits("סבתא", "סבתות") == 0)
     }
+
+    @Test("a two-part name matches whether the caption writes it as one word or two, and the other way round")
+    func compoundNamesEitherSpelling() {
+        func hits(_ name: String, _ caption: String) -> Int {
+            KeywordAlertMatcher(alerts: [KeywordAlert(phrase: name)]).matches(in: caption).count
+        }
+        #expect(hits("בן ציון", "בנציון הגיע") == 1)
+        #expect(hits("בן-ציון", "בנציון הגיע") == 1)
+        #expect(hits("בנציון", "בן ציון הגיע") == 1)
+        #expect(hits("בנציון", "בן-ציון הגיע") == 1)
+        #expect(hits("בנציון", "תגידו לבן ציון") == 1)
+        #expect(hits("בן ציון", "תגידו לבנציון") == 1)
+        #expect(hits("בן ציון", "בן ציון הגיע") == 1)
+        #expect(hits("בנציון", "בנציון הגיע") == 1)
+        #expect(hits("בן", "בנציון הגיע") == 0)
+        #expect(hits("ציון", "בנציון הגיע") == 0)
+        #expect(hits("בן ציון", "בנציונה הגיעה") == 0)
+        #expect(hits("שירלי", "תכתוב שיר לי") == 0)
+        #expect(hits("שירלי", "שירלי באה") == 1)
+    }
+
+    @Test("a doctor's title matches whether the caption writes it in full or abbreviated")
+    func doctorTitleEitherSpelling() {
+        func hits(_ name: String, _ caption: String) -> Int {
+            KeywordAlertMatcher(alerts: [KeywordAlert(phrase: name)]).matches(in: caption).count
+        }
+        #expect(hits("ד״ר כהן", "דוקטור כהן אמר") == 1)
+        #expect(hits("דוקטור כהן", "ד\"ר כהן אמר") == 1)
+        #expect(hits("דוקטור כהן", "אצל ד״ר כהן") == 1)
+        #expect(hits("ד״ר כהן", "תתקשרי לדוקטור כהן") == 1)
+        #expect(hits("ד״ר כהן", "דוקטור לוי אמר") == 0)
+    }
 }
 
 @Suite("KeywordAlertDeduplicator")
