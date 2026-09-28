@@ -243,6 +243,19 @@ struct KeywordAlertMatcherTests {
         #expect(hits("דן", "תגידו לדן") == 1)
         #expect(hits("גיל", "תביאו לגיל ולמיכל") == 0)
     }
+
+    @Test("the suggested words 'medicine' and 'doctor' also fire on their plural and feminine forms, with a prefix too")
+    func suggestedWordsMatchTheirForms() {
+        func hits(_ word: String, _ caption: String) -> Int {
+            KeywordAlertMatcher(alerts: [KeywordAlert(phrase: word)]).matches(in: caption).count
+        }
+        #expect(hits("תרופה", "לקחת את התרופות?") == 1)
+        #expect(hits("רופא", "הרופאה אמרה שזה בסדר") == 1)
+        #expect(hits("רופא", "היינו אצל הרופאים") == 1)
+        #expect(hits("רופא", "תור לרופאת משפחה") == 1)
+        #expect(hits("תרופה", "איפה התרופה") == 1)
+        #expect(hits("סבתא", "סבתות") == 0)
+    }
 }
 
 @Suite("KeywordAlertDeduplicator")

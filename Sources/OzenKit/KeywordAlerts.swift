@@ -228,6 +228,20 @@ public enum HebrewText {
         "אימא": ["אמא"],
     ]
 
+    /// The plural, feminine and construct forms of the everyday words the
+    /// app suggests as alerts. Endings are otherwise never matched (see
+    /// `stripAttachedPrefix`), which left "did you take the medicines?"
+    /// and "the doctor (she) said" silent for alerts on "medicine" and
+    /// "doctor". A closed list for the same reason as `affectionateVariants`.
+    public static let otherForms: [String: Set<String>] = [
+        "תרופה": ["תרופות", "תרופת"],
+        "רופא": ["רופאה", "רופאים", "רופאות", "רופאת"],
+    ]
+
+    static func alternateForms(of stem: String) -> Set<String> {
+        (affectionateVariants[stem] ?? []).union(otherForms[stem] ?? [])
+    }
+
     /// True if `normalizedWord` is a recognized affectionate form of
     /// `stem`: `stem` itself, `rawWord` with a diminutive marker glued onto
     /// it (see `diminutiveCore`), or one of `affectionateVariants`' fixed
@@ -237,7 +251,7 @@ public enum HebrewText {
     public static func isAffectionateVariant(rawWord: String, normalizedWord: String, of stem: String) -> Bool {
         if normalizedWord == stem { return true }
         if diminutiveCore(rawWord) == stem { return true }
-        return affectionateVariants[stem]?.contains(normalizedWord) ?? false
+        return alternateForms(of: stem).contains(normalizedWord)
     }
 
     /// `stripAttachedPrefix`, extended to also accept an affectionate
@@ -248,7 +262,7 @@ public enum HebrewText {
         if let core = diminutiveCore(rawWord) {
             return stripAttachedPrefix(from: core, leaving: stem)
         }
-        guard let variants = affectionateVariants[stem] else { return false }
+        let variants = alternateForms(of: stem)
         return variants.contains(normalizedWord)
             || variants.contains { stripAttachedPrefix(from: normalizedWord, leaving: $0) }
     }
