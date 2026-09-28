@@ -10,8 +10,10 @@ Settings → Diagnostics (avchun) → **Send the report** (shlichat ha-doch). It
 it can go straight to WhatsApp. The report ends with a timeline of what
 happened to the captions, with clock times ("microphone stopped delivering
 audio", "failed: …", "retry 1 in 2s", "listening"), so "it stopped at lunch"
-can be read off it. Nothing in it is what was said; conversations never
-leave the phone.
+can be read off it. Nothing in it is what was said, with one exception:
+**Mark a problem** (in the same screen) adds the last few caption lines
+around the moment it was tapped, so the wrong words can be seen; the screen
+says so. Otherwise conversations never leave the phone.
 
 ## What the status button says
 

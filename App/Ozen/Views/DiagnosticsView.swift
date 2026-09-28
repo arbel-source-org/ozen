@@ -322,6 +322,14 @@ struct DiagnosticsView: View {
         }
     }
 
+    /// The address only: the pairing code never goes into a report, just
+    /// whether one is saved.
+    private var appAndHomeServerLine: String {
+        let address = viewModel.settings.homeServerAddress
+        let homeServer = address.isEmpty ? "-" : "\(address) code saved: \(HomeServerCodeStore.hasKey)"
+        return "app language: \(viewModel.settings.appLanguage) showing: \(viewModel.uiLanguage) home server: \(homeServer)"
+    }
+
     private var report: String {
         let stats = viewModel.stats
         return """
@@ -329,6 +337,7 @@ struct DiagnosticsView: View {
         phase: \(Self.describe(viewModel.phase))
         failure: \(viewModel.phase.failure?.detail ?? "-")
         engine: \(viewModel.pipeline.activeEngineKind?.rawValue ?? "-") chosen: \(viewModel.settings.engine.rawValue) covering for cloud: \(viewModel.pipeline.isCoveringForCloud) model: \(viewModel.settings.whisperModelVariant) lang: \(viewModel.settings.languageCode)
+        \(appAndHomeServerLine)
         input: \(viewModel.selectedInput?.portName ?? "-") chosen: \(Self.chosenInputText(viewModel)) of \(viewModel.availableInputs.map { "\($0.portName) [\($0.portType.rawValue)]" }.joined(separator: ", "))
         audio chunks: \(stats.audioChunksReceived) seconds: \(String(format: "%.1f", stats.audioSecondsReceived)) input changes: \(stats.inputChanges) stalls: \(stats.audioStalls) damaged: \(stats.glitchedAudioChunks)
         levels: \(stats.inputLevels.summary ?? "-") speech: \(stats.speechShare.map { String(format: "%.1f%%", $0 * 100) } ?? "-") floor: \(stats.noiseFloorDecibels.map { String(format: "%.1f", $0) } ?? "-") margin: \(stats.noiseMarginDecibels.map { String(format: "%.1f dB", $0) } ?? "-")
@@ -343,7 +352,7 @@ struct DiagnosticsView: View {
         model state: \(String(describing: modelState)) tokenizer cached: \(store.hasCachedTokenizer()) vocabulary: \(viewModel.vocabulary.count)
         thermal: \(ProcessInfo.processInfo.thermalState.rawValue) low power: \(ProcessInfo.processInfo.isLowPowerModeEnabled) battery: \(Self.batteryText) free space: \(Self.freeSpaceText)
         memory: used \(DeviceMemory.footprintBytes().map(Self.format(bytes:)) ?? "-") left \(DeviceMemory.availableBytes().map(Self.format(bytes:)) ?? "-")
-        device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString) install expires: \(InstallExpiryStatus.shared.expiresAt.map { String(describing: $0) } ?? "-")
+        device: \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) app \(SettingsView.versionString) install expires: \(InstallExpiryStatus.shared.expiresAt.map { $0.formatted(inAppLanguage: .abbreviated, time: .shortened) } ?? "-")
         events (oldest first):
         \(eventLines)
         journal, previous runs included (oldest first):
