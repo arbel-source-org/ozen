@@ -109,6 +109,35 @@ struct CloudCoverTests {
         #expect(built.count == builtBefore)
     }
 
+    @Test("a home computer address changed while paused is tried on resume, instead of the phone's model covering for the old one")
+    func addressChangedWhilePausedEndsCover() async {
+        let old = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "test"))
+        let fixed = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                guard settings.engine == .homeServer else { return phone }
+                return settings.homeServerAddress == "10.0.0.9" ? fixed : old
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        var settings = AppSettings.default
+        settings.engine = .homeServer
+        settings.homeServerAddress = "10.0.0.5"
+        await captions.start(settings: settings)
+        #expect(await eventually { captions.isCoveringForCloud && captions.phase == .listening })
+        captions.pause()
+        settings.homeServerAddress = "10.0.0.9"
+        captions.settingsChangedWhilePaused()
+        await captions.resume(settings: settings)
+        #expect(captions.phase == .listening)
+        #expect(!captions.isCoveringForCloud)
+        #expect(captions.activeEngineKind == .homeServer)
+        #expect(fixed.prepareCount == 1)
+    }
+
     @Test("an engine already on the phone is never swapped")
     func onlyCloudIsCovered() {
         let failure = PipelineFailure(kind: .engineUnavailable, detail: "", engineUnavailability: EngineUnavailability(kind: .noInternet, detail: ""))

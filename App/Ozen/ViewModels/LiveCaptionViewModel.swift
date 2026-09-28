@@ -985,7 +985,10 @@ public final class LiveCaptionViewModel {
 
     private func restartIfRunning() async {
         switch pipeline.phase {
-        case .idle, .paused:
+        case .idle:
+            return
+        case .paused:
+            pipeline.settingsChangedWhilePaused()
             return
         default:
             await pipeline.restart(settings: settings)

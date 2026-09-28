@@ -564,6 +564,23 @@ public final class CaptionPipeline {
         await start(settings: effective)
     }
 
+    /// Her settings changed while captions were paused (the home computer's
+    /// address or code, the engine, a model). The phone's model covering
+    /// for the computer or the cloud is let go, so resuming tries what she
+    /// chose now: kept, the cover carried on and its recheck kept trying
+    /// the address from before the change, never switching over.
+    public func settingsChangedWhilePaused() {
+        guard phase == .paused, isCoveringForCloud else { return }
+        isCoveringForCloud = false
+        nextStartCoversCloud = false
+        coverReason = nil
+        coveredSettings = nil
+        homeServerRecheck?.cancel()
+        homeServerRecheck = nil
+        cloudRecheck?.cancel()
+        cloudRecheck = nil
+    }
+
     /// Stops and starts again with new settings — the engine, model, or
     /// language changed. The transcript is kept; a switch mid-conversation
     /// shouldn't wipe what was already read.
