@@ -49,6 +49,15 @@ says so. Otherwise conversations never leave the phone.
 | "No answer from the computer" | The phone can't reach it: it is off, asleep, not on the internet, or (at home) Windows treats the Wi-Fi as a public network. | Wake or turn on the computer. At home, see "When the phone can't reach it" in `server/README.md`. Captions carry on from the phone's own model meanwhile. |
 | "The computer answered but didn't accept the code" | The code on the phone isn't the one in `C:\ozen\pairing-code` (setup was run on a new computer, or the code was typed wrong). | Scan the QR code again from "Ozen - pair a phone" in the computer's Start menu. |
 
+## Sound alerts at night
+
+A locked phone in Sleep or Do Not Disturb holds back Ozen's notifications,
+including a smoke detector or siren: Ozen can't mark them urgent enough to
+break through (that needs an Apple permission a free account doesn't get).
+Add Ozen to each Focus's allowed apps: iPhone Settings → Focus → (Sleep, Do
+Not Disturb, …) → Allowed Apps → Add → Ozen. The Sounds at home screen says
+the same.
+
 ## Things that are working as intended
 
 - **A card on the empty caption screen offers "much more accurate Hebrew
