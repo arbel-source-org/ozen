@@ -463,6 +463,16 @@ public struct TranscriptHistoryStore: Sendable {
         guard let data = try? JSONEncoder().encode(CachedSummary(format: Self.summaryFormat, summary: summary)) else { return }
         try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
         try? data.write(to: summaryURL(forRecordFile: url), options: .atomic)
+        removeCacheIfConversationIsGone(summaryURL(forRecordFile: url), forRecordFile: url)
+    }
+
+    /// A listing off the main thread can read a conversation just before
+    /// it is deleted and write its cache just after; the cache holds its
+    /// words, so it goes too.
+    private func removeCacheIfConversationIsGone(_ cacheURL: URL, forRecordFile url: URL) {
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try? FileManager.default.removeItem(at: cacheURL)
+        }
     }
 
     private func cachedSearchText(forRecordFile url: URL) -> String? {
@@ -476,6 +486,7 @@ public struct TranscriptHistoryStore: Sendable {
     private func writeSearchText(_ text: String, forRecordFile url: URL) {
         try? FileManager.default.createDirectory(at: summariesURL, withIntermediateDirectories: true)
         try? Data(text.utf8).write(to: searchTextURL(forRecordFile: url), options: .atomic)
+        removeCacheIfConversationIsGone(searchTextURL(forRecordFile: url), forRecordFile: url)
     }
 
     static func searchableText(of record: TranscriptSessionRecord) -> String {
@@ -716,8 +727,14 @@ public struct TranscriptHistoryStore: Sendable {
         for url in recordFiles() {
             try FileManager.default.removeItem(at: url)
         }
-        if FileManager.default.fileExists(atPath: summariesURL.path) {
-            try FileManager.default.removeItem(at: summariesURL)
+        // The caches are rebuilt from the conversations. A folder that can't
+        // go at once (a listing writing into it at that moment) must not make
+        // deleting fail after the conversations themselves are gone; what
+        // can be removed of it is.
+        if (try? FileManager.default.removeItem(at: summariesURL)) == nil {
+            for name in (try? FileManager.default.contentsOfDirectory(atPath: summariesURL.path)) ?? [] {
+                try? FileManager.default.removeItem(at: summariesURL.appendingPathComponent(name))
+            }
         }
     }
 

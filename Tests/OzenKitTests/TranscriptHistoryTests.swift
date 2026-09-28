@@ -323,6 +323,23 @@ struct TranscriptHistoryTests {
         #expect(store.listSummaries().isEmpty)
     }
 
+    @Test("delete all still deletes every conversation when the cache folder can't be removed")
+    func deleteAllSurvivesAStuckCacheFolder() throws {
+        let dir = makeTempDirectory()
+        let summaries = dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName, isDirectory: true)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: summaries.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        try store.save(record(startedAt: 100, segments: [segment(text: "אחד")]))
+        #expect(store.listSummaries().count == 1)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: summaries.path)
+
+        try store.deleteAll()
+        #expect(store.listSummaries().isEmpty)
+    }
+
     @Test("exported text matches the exact expected line format")
     func exportTextFormatIsExact() {
         let withName = segment(text: "שלום", speakerName: "סבתא", startTimestamp: 3_661)
