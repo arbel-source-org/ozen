@@ -94,15 +94,19 @@ struct CloudSpeechEngineTests {
         #expect(seconds < 2.0)
     }
 
-    @Test("a line ends after the same quiet as on the home computer")
-    func pauseMatchesTheHomeServer() throws {
-        let server = URL(fileURLWithPath: #filePath)
+    private func pause(in path: String, after prefix: String) throws -> Double {
+        let file = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("server/ozen_server.py")
-        let source = try String(contentsOf: server, encoding: .utf8)
-        let line = try #require(source.split(separator: "\n").first { $0.trimmingCharacters(in: .whitespaces).hasPrefix("pause = ") })
-        let value = try #require(Double(line.split(separator: "=")[1].split(separator: "#")[0].trimmingCharacters(in: .whitespaces)))
-        #expect(CloudSpeechEngine.pauseSeconds == value)
+            .appendingPathComponent(path)
+        let source = try String(contentsOf: file, encoding: .utf8)
+        let line = try #require(source.split(separator: "\n").first { $0.trimmingCharacters(in: .whitespaces).hasPrefix(prefix) })
+        return try #require(Double(line.split(separator: "=")[1].split(separator: "#")[0].trimmingCharacters(in: .whitespaces)))
+    }
+
+    @Test("a line ends after the same quiet as on the home computer and the phone's own model")
+    func pauseMatchesTheOtherEngines() throws {
+        #expect(CloudSpeechEngine.pauseSeconds == (try pause(in: "server/ozen_server.py", after: "pause = ")))
+        #expect(CloudSpeechEngine.pauseSeconds == (try pause(in: "Sources/OzenPlatform/WhisperKitEngine.swift", after: "private let pauseSeconds = ")))
     }
 
     @Test("two voices in one reply become two lines")
