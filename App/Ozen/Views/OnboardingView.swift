@@ -80,7 +80,11 @@ struct OnboardingView: View {
         OnboardingPage(symbol: "ear", title: tr("אוזן", "Ozen")) {
             Text(tr("כתוביות חיות לשיחה.", "Live captions for conversation."))
             Text(tr("מה שאומרים לידך מופיע על המסך, באותיות גדולות, תוך כדי הדיבור.", "What’s said near you appears on the screen, in large letters, as it’s spoken."))
-            Text(tr("הכל קורה בתוך הטלפון. שום דבר לא נשלח לאינטרנט.", "It all happens on the phone. Nothing is sent to the internet."))
+            if viewModel.settings.engine == .homeServer {
+                Text(tr("הקול נשלח רק למחשב של המשפחה בבית, ורק בזמן שהכתוביות פועלות.", "The audio goes only to the family’s computer at home, and only while captions are on."))
+            } else if !viewModel.settings.audioLeavesPhone {
+                Text(tr("הכל קורה בתוך הטלפון. שום דבר לא נשלח לאינטרנט.", "It all happens on the phone. Nothing is sent to the internet."))
+            }
         }
     }
 

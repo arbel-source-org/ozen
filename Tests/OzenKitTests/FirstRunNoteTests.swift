@@ -10,3 +10,21 @@ struct FirstRunNoteTests {
         #expect(TranscriptionEngineKind.cloud.firstRunNote == .none)
     }
 }
+
+struct AudioLeavesPhoneTests {
+    @Test("the first page's 'nothing is sent to the internet' holds only when the audio stays on the phone")
+    func leaves() {
+        var settings = AppSettings.default
+        settings.engine = .whisperKit
+        #expect(!settings.audioLeavesPhone)
+        settings.engine = .appleSpeech
+        settings.allowServerFallbackForAppleSpeech = false
+        #expect(!settings.audioLeavesPhone)
+        settings.allowServerFallbackForAppleSpeech = true
+        #expect(settings.audioLeavesPhone)
+        settings.engine = .homeServer
+        #expect(settings.audioLeavesPhone)
+        settings.engine = .cloud
+        #expect(settings.audioLeavesPhone)
+    }
+}

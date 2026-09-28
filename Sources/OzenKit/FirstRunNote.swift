@@ -15,3 +15,13 @@ extension TranscriptionEngineKind {
         }
     }
 }
+
+extension AppSettings {
+    public var audioLeavesPhone: Bool {
+        switch engine {
+        case .homeServer, .cloud: return true
+        case .appleSpeech: return allowServerFallbackForAppleSpeech
+        case .whisperKit: return false
+        }
+    }
+}
