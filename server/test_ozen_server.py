@@ -140,5 +140,15 @@ class ModelsThatWontLoad(unittest.TestCase):
         self.assertIn("graphics card", logged.output[0])
 
 
+class PromptBudget(unittest.TestCase):
+    def test_the_names_at_the_top_are_the_ones_kept(self):
+        terms = [f"name{i}" for i in range(100)]
+        kept = S.front_terms(terms, lambda text: len(text.split()), 10)
+        self.assertEqual(kept, terms[:10])
+
+    def test_a_short_list_is_kept_whole(self):
+        self.assertEqual(S.front_terms(["a", "b"], lambda text: len(text), 200), ["a", "b"])
+
+
 if __name__ == "__main__":
     unittest.main()

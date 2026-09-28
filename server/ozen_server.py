@@ -141,6 +141,8 @@ SPEECH_OPTIONS = VadOptions(min_silence_duration_ms=100, speech_pad_ms=0)
 
 MIN_VOICE_SECONDS = 0.2
 LOAD_RETRY_SECONDS = 60
+# Under Whisper's 223-token prompt half, with room for the model's own tokens.
+PROMPT_TOKENS = 200
 
 
 def voice_samples(audio):
@@ -180,6 +182,18 @@ def speech_gain(audio, target_peak=0.5, maximum_gain=100.0):
     return np.clip(audio * gain, -1, 1).astype(np.float32)
 
 
+def front_terms(terms, count_tokens, budget):
+    """The words from the top of the list that fit `budget` tokens.
+    faster-whisper keeps the END of a prompt that is too long, which would
+    drop the names the family put first; cutting here keeps those."""
+    kept = []
+    for term in terms:
+        if count_tokens(", ".join(kept + [term]) + ".") > budget:
+            break
+        kept.append(term)
+    return kept
+
+
 class Transcriber:
     """The models on the GPU, shared by every connection, one pass at a time.
 
@@ -198,6 +212,9 @@ class Transcriber:
         self.beam = beam
         self.context = context
         self.lock = asyncio.Lock()
+        tokenizer = getattr(self.final_model, "hf_tokenizer", None)
+        self.count_tokens = (lambda text: len(tokenizer.encode(text, add_special_tokens=False).ids)) if tokenizer \
+            else (lambda text: len(text) // 2)
         self.failures = 0
         self.failures_before_exit = 3
 
@@ -308,7 +325,7 @@ class Session:
     def prompt(self):
         parts = []
         if self.vocabulary:
-            parts.append(", ".join(self.vocabulary) + ".")
+            parts.append(", ".join(front_terms(self.vocabulary, self.t.count_tokens, PROMPT_TOKENS)) + ".")
         if self.t.context and self.previous_text:
             parts.append(self.previous_text[-200:])
         return " ".join(parts) or None

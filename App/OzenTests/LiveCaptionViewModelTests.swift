@@ -513,6 +513,14 @@ struct LiveCaptionViewModelVocabularyTests {
         #expect(engine.vocabularySeen.last == ["רותי"])
     }
 
+    @Test("a word just added goes to the top, where a long list is never cut")
+    func newTermFirst() throws {
+        let (viewModel, _, _) = try makeViewModel()
+        viewModel.addVocabularyTerm("אבי")
+        viewModel.addVocabularyTerm("רותי")
+        #expect(viewModel.vocabulary == ["רותי", "אבי"])
+    }
+
     @Test("speaker profile names can be added in one go, without duplicating names already listed")
     func addSpeakers() throws {
         let (viewModel, _, _) = try makeViewModel()

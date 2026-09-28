@@ -1301,8 +1301,11 @@ public final class LiveCaptionViewModel {
 
     public var vocabulary: [String] { settings.vocabulary }
 
+    /// A new word goes first: the engines read the list from the top and
+    /// drop what doesn't fit, and the word just added is the one the family
+    /// is waiting to see spelled right.
     public func addVocabularyTerm(_ term: String) {
-        let cleaned = VocabularyHints.normalized(settings.vocabulary + [term])
+        let cleaned = VocabularyHints.normalized([term] + settings.vocabulary)
         guard cleaned != settings.vocabulary else { return }
         settings.vocabulary = cleaned
         vocabularyChanged()
