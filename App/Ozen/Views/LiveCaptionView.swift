@@ -61,6 +61,7 @@ struct LiveCaptionView: View {
     /// edge to edge, which otherwise makes lines too long to track by eye
     /// and pushes the buttons into the screen's far corners.
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @Environment(\.colorScheme) private var systemScheme
@@ -332,6 +333,7 @@ struct LiveCaptionView: View {
         // for the next word.
         .onChange(of: viewModel.display.fontSize) { _, _ in scrollToLatestIfPinned() }
         .onChange(of: horizontalSizeClass) { _, _ in scrollToLatestIfPinned() }
+        .onChange(of: verticalSizeClass) { _, _ in scrollToLatestIfPinned() }
         .onChange(of: dynamicTypeSize) { _, _ in scrollToLatestIfPinned() }
         .onChange(of: viewModel.segments.isEmpty) { _, _ in
             announceNewLines()
