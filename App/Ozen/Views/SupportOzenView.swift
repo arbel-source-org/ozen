@@ -36,7 +36,7 @@ struct SupportOzenView: View {
 
     private func addressRow(_ donation: DonationAddress) -> some View {
         VStack(spacing: 12) {
-            if let code = Self.qrCode(donation.paymentURI) {
+            if let code = Self.qrCodes[donation.id] ?? nil {
                 Image(uiImage: code)
                     .interpolation(.none)
                     .resizable()
@@ -48,15 +48,21 @@ struct SupportOzenView: View {
             }
             Text(donation.address)
                 .font(.callout.monospaced())
-                .multilineTextAlignment(.center)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
                 .environment(\.layoutDirection, .leftToRight)
+                .accessibilityLabel(Self.spokenAddress(donation.address))
             Button {
                 UIPasteboard.general.string = donation.address
                 copied = donation.id
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    if copied == donation.id { copied = nil }
+                }
             } label: {
                 Label(
-                    copied == donation.id ? tr("הועתק", "Copied") : tr("העתקת הכתובת", "Copy address"),
+                    copied == donation.id ? tr("הועתק", "Copied") : tr("העתקת כתובת ה־%1", "Copy the %1 address", args: ["\(donation.coin)"]),
                     systemImage: copied == donation.id ? "checkmark" : "doc.on.doc"
                 )
             }
@@ -64,6 +70,14 @@ struct SupportOzenView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
+    }
+
+    @MainActor private static let qrCodes = Dictionary(uniqueKeysWithValues: SupportOzen.addresses.map { ($0.id, qrCode($0.paymentURI)) })
+
+    private static func spokenAddress(_ address: String) -> String {
+        stride(from: 0, to: address.count, by: 4)
+            .map { start in String(address.dropFirst(start).prefix(4)).map(String.init).joined(separator: " ") }
+            .joined(separator: ", ")
     }
 
     private static func qrCode(_ text: String) -> UIImage? {

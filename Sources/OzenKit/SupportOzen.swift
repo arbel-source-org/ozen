@@ -4,9 +4,10 @@ public struct DonationAddress: Sendable, Hashable, Identifiable {
     public let coin: String
     public let address: String
     public let scheme: String
+    public var chainSuffix = ""
 
     public var id: String { coin }
-    public var paymentURI: String { "\(scheme):\(address)" }
+    public var paymentURI: String { "\(scheme):\(address)\(chainSuffix)" }
 }
 
 public enum SupportOzen {
@@ -18,7 +19,8 @@ public enum SupportOzen {
     public static let ethereum = DonationAddress(
         coin: "Ethereum (ETH, USDC, USDT)",
         address: "0x0Ea2210fcB0BbF2C3202d9663dB762F1f51b1BBC",
-        scheme: "ethereum"
+        scheme: "ethereum",
+        chainSuffix: "@1"
     )
     public static let monero = DonationAddress(
         coin: "Monero (XMR)",

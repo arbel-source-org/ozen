@@ -55,6 +55,7 @@ struct SupportOzenTests {
     func paymentURIs() {
         #expect(SupportOzen.bitcoin.paymentURI == "bitcoin:bc1qk5aym0mch042200s2wrc366r3hsxxmgc9nu7tm")
         #expect(SupportOzen.addresses.map(\.scheme) == ["bitcoin", "ethereum", "monero"])
+        #expect(SupportOzen.ethereum.paymentURI == "ethereum:0x0Ea2210fcB0BbF2C3202d9663dB762F1f51b1BBC@1")
         #expect(Set(SupportOzen.addresses.map(\.id)).count == 3)
     }
 }
