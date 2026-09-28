@@ -898,8 +898,7 @@ public final class CaptionPipeline {
         // with enough speech in them, averaged. One print of the whole
         // recording mixed the pauses between sentences into the voice,
         // and a recording nobody spoke in still became a "voice".
-        var sum: [Float] = []
-        var count = 0
+        var prints: [[Float]] = []
         for window in windows {
             // A print with a NaN in it can't be compared, and can't be
             // saved either (JSON has no NaN): one would make every later
@@ -907,17 +906,32 @@ public final class CaptionPipeline {
             guard let embedding = embedder.embed(samples: window, sampleRate: sampleRate),
                   !embedding.isEmpty,
                   embedding.allSatisfy(\.isFinite),
-                  sum.isEmpty || embedding.count == sum.count
+                  prints.isEmpty || embedding.count == prints[0].count
             else { continue }
-            if sum.isEmpty {
-                sum = embedding
-            } else {
-                for index in sum.indices { sum[index] += embedding[index] }
-            }
-            count += 1
+            prints.append(embedding)
         }
-        guard count >= minimumEnrollmentWindows else { return nil }
-        return sum.map { $0 / Float(count) }
+        guard prints.count >= minimumEnrollmentWindows else { return nil }
+        return consistentAverage(of: prints)
+    }
+
+    /// Below this likeness to the recording's own average, a window is
+    /// taken for someone else: the TV, or a relative talking over her.
+    nonisolated static let enrollmentOutlierBelow: Float = 0.3
+
+    /// The average voice, leaving out the windows that don't sound like
+    /// the rest. Without it the TV the enrolling screen invites her to
+    /// leave on was blended into the saved voice. When most windows would
+    /// go, the whole average is kept: it was the only answer before.
+    nonisolated static func consistentAverage(of prints: [[Float]]) -> [Float] {
+        func mean(_ list: [[Float]]) -> [Float] {
+            var sum = [Float](repeating: 0, count: list[0].count)
+            for print in list { for index in sum.indices { sum[index] += print[index] } }
+            return sum.map { $0 / Float(list.count) }
+        }
+        let all = mean(prints)
+        let alike = prints.filter { cosineSimilarity($0, all) >= enrollmentOutlierBelow }
+        guard alike.count >= minimumEnrollmentWindows, alike.count * 2 > prints.count else { return all }
+        return mean(alike)
     }
 
     /// How far past its length an enrollment recording may run before it

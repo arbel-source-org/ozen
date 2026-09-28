@@ -110,6 +110,22 @@ struct EnrollmentSpeechOnlyTests {
         [Float](repeating: 0, count: Int(seconds * 16_000))
     }
 
+    @Test("windows of another voice (the TV, a relative) are left out of the saved voice")
+    func enrollmentLeavesOutOtherVoices() {
+        let her: [Float] = [1, 0, 0]
+        let tv: [Float] = [0, 1, 0]
+        let print = CaptionPipeline.consistentAverage(of: Array(repeating: her, count: 7) + [tv, tv])
+        #expect(cosineSimilarity(print, her) > 0.999)
+    }
+
+    @Test("when most of the recording disagrees, the plain average stands")
+    func enrollmentKeepsTheAverageWhenSplit() {
+        let one: [Float] = [1, 0, 0]
+        let other: [Float] = [0, 1, 0]
+        let print = CaptionPipeline.consistentAverage(of: [one, one, one, other, other, other])
+        #expect(abs(print[0] - 0.5) < 0.001 && abs(print[1] - 0.5) < 0.001)
+    }
+
     @Test("a recording nobody spoke in makes no voice print")
     func silentRecording() {
         #expect(pipeline().embedding(forEnrollmentSamples: silence(seconds: 30)) == nil)
