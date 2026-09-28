@@ -34,6 +34,25 @@ public enum HomeServer {
         return address
     }
 
+    /// A host reached without crossing the open internet: a private or
+    /// tailnet address, a name with no dots, or a local or tailnet name.
+    public static func isPrivate(host: String) -> Bool {
+        let host = host.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        if host == "localhost" || host.hasSuffix(".local") || host.hasSuffix(".lan") || host.hasSuffix(".home.arpa") || host.hasSuffix(".ts.net") {
+            return true
+        }
+        let octets = host.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
+        if octets.count == 4, octets.allSatisfy({ $0 != nil && (0...255).contains($0!) }) {
+            let a = octets[0]!, b = octets[1]!
+            return a == 10 || a == 127 || (a == 192 && b == 168) || (a == 172 && (16...31).contains(b))
+                || (a == 100 && (64...127).contains(b)) || (a == 169 && b == 254)
+        }
+        if host.contains(":") {
+            return host == "::1" || host.hasPrefix("fe80:") || host.hasPrefix("fd") || host.hasPrefix("fc")
+        }
+        return !host.contains(".")
+    }
+
     /// "192.168.1.20", "grandma-pc:8765", "ws://…" or "wss://…" all work;
     /// a bare host gets the default port and plain `ws`.
     public static func url(from address: String) -> URL? {
@@ -117,9 +136,13 @@ public struct HomeServerPairing: Sendable, Equatable {
     public init?(address: String, code: String) {
         let address = address.trimmingCharacters(in: .whitespacesAndNewlines)
         let code = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard HomeServer.url(from: address) != nil,
+        guard let url = HomeServer.url(from: address),
               !code.isEmpty, code.count <= 200, !code.contains(where: \.isWhitespace)
         else { return nil }
+        // Unencrypted audio may only go to a computer on the home network
+        // or the family's tailnet: setup makes a ws:// link only for those,
+        // so one naming a computer out on the internet isn't the family's.
+        guard url.scheme?.lowercased() == "wss" || HomeServer.isPrivate(host: url.host ?? "") else { return nil }
         self.address = address
         self.code = code
     }

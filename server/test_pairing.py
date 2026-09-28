@@ -15,10 +15,10 @@ class TailscaleAddress(unittest.TestCase):
         def run(command, **_):
             if command[0] == "tailscale":
                 raise FileNotFoundError("not on PATH yet")
-            return Done(json.dumps({"Self": {"DNSName": "desktop.tail7029f2.ts.net."}}))
+            return Done(json.dumps({"Self": {"DNSName": "desktop.tail0example.ts.net."}}))
 
         with mock.patch("subprocess.run", run):
-            self.assertEqual(pairing.tailscale_address(), "wss://desktop.tail7029f2.ts.net")
+            self.assertEqual(pairing.tailscale_address(), "wss://desktop.tail0example.ts.net")
 
     def test_no_tailscale_anywhere_gives_no_address(self):
         def run(command, **_):

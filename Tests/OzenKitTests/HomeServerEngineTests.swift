@@ -134,10 +134,10 @@ struct HomeServerEngineTests {
 
     @Test("a pairing link from the QR code gives the address and code; anything else is refused")
     func pairingLinks() throws {
-        let link = try #require(URL(string: "ozen://pair?address=wss://desktop.tail.ts.net&code=xmr60RT8pjNyeTT_"))
+        let link = try #require(URL(string: "ozen://pair?address=wss://desktop.tail.ts.net&code=example-code-123"))
         let pairing = try #require(HomeServerPairing(url: link))
         #expect(pairing.address == "wss://desktop.tail.ts.net")
-        #expect(pairing.code == "xmr60RT8pjNyeTT_")
+        #expect(pairing.code == "example-code-123")
         #expect(pairing.computerName == "desktop.tail.ts.net")
         #expect(HomeServerPairing(url: pairing.url) == pairing)
 
@@ -156,6 +156,16 @@ struct HomeServerEngineTests {
             #expect(HomeServerPairing(url: try #require(URL(string: bad))) == nil, "\(bad)")
         }
         #expect(HomeServerPairing(address: "10.0.0.5", code: "two words") == nil)
+
+        // Unencrypted audio only to a computer at home or on the tailnet;
+        // setup never makes a ws:// link for anything else.
+        for home in ["ws://192.168.1.20:8765", "10.0.0.5", "ws://172.20.1.2:8765", "ws://100.68.164.117:8765", "ws://desktop:8765", "ws://grandma-pc.local:8765", "ws://desktop.tail0example.ts.net:8765"] {
+            #expect(HomeServerPairing(address: home, code: "abc") != nil, "\(home)")
+        }
+        for away in ["ws://203.0.113.9:8765", "ws://evil.example.com:8765", "8.8.8.8", "ws://172.32.0.1:8765", "ws://100.128.0.1:8765"] {
+            #expect(HomeServerPairing(address: away, code: "abc") == nil, "\(away)")
+        }
+        #expect(HomeServerPairing(address: "wss://captions.example.com", code: "abc") != nil)
 
         #expect(HomeServerPairing.isPairingLink(link))
         #expect(HomeServerPairing.isPairingLink(try #require(URL(string: "OZEN://Pair?code="))))
