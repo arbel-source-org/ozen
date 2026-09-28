@@ -46,7 +46,8 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
             english: Localization.language == .english,
             appName: tr("אוזן", "Ozen"),
             listening: tr("מקשיב…", "Listening…"),
-            notUpdating: tr("הכתוביות לא מתעדכנות. פתחו את אוזן.", "Captions aren’t updating. Open Ozen.")
+            notUpdating: tr("הכתוביות לא מתעדכנות. פתחו את אוזן.", "Captions aren’t updating. Open Ozen."),
+            appRightToLeft: content.language.isRightToLeft
         )
         let staleDate = Date().addingTimeInterval(Self.staleAfterSeconds)
         if let activityID, Self.isRunning(id: activityID) {

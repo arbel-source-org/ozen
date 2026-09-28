@@ -117,12 +117,20 @@ struct CaptionLinesView: View {
             .foregroundStyle(color)
             .lineLimit(2)
             .minimumScaleFactor(0.8)
+            .inAppDirection(appDirection)
+    }
+
+    /// The captions read right to left whatever the app's language; its own
+    /// words follow the app's language.
+    private var appDirection: LayoutDirection {
+        (state.appRightToLeft ?? !state.english) ? .rightToLeft : .leftToRight
     }
 
     private var listeningLabel: some View {
         Label(state.listening ?? (state.english ? "Listening…" : "מקשיב…"), systemImage: "ear")
             .font(.system(size: fontSize, weight: .semibold))
             .foregroundStyle(.white.opacity(0.8))
+            .inAppDirection(appDirection)
     }
 
     /// Only the newest line under a note (two caption lines fill the lock
@@ -143,5 +151,12 @@ struct CaptionLinesView: View {
             .foregroundColor(line.isFinal ? .white : .white.opacity(0.7))
         guard let speaker = line.speaker else { return words }
         return Text("\(speaker): ").foregroundColor(.yellow) + words
+    }
+}
+
+private extension View {
+    func inAppDirection(_ direction: LayoutDirection) -> some View {
+        frame(maxWidth: .infinity, alignment: .leading)
+            .environment(\.layoutDirection, direction)
     }
 }

@@ -32,12 +32,16 @@ nonisolated struct CaptionActivityAttributes: ActivityAttributes {
         var appName: String? = nil
         var listening: String? = nil
         var notUpdating: String? = nil
+        /// Whether the app's own words read right to left. The captions
+        /// always do (Hebrew speech); a note in English or French doesn't.
+        /// Absent from an older build's state, when `english` decides.
+        var appRightToLeft: Bool? = nil
     }
 }
 
 nonisolated extension CaptionActivityAttributes.ContentState {
     enum CodingKeys: String, CodingKey {
-        case lines, status, ageNote, large, english, appName, listening, notUpdating
+        case lines, status, ageNote, large, english, appName, listening, notUpdating, appRightToLeft
     }
 
     /// Lines sent by an older build, still on the lock screen after an
@@ -53,7 +57,8 @@ nonisolated extension CaptionActivityAttributes.ContentState {
             english: try container.decodeIfPresent(Bool.self, forKey: .english) ?? false,
             appName: try container.decodeIfPresent(String.self, forKey: .appName),
             listening: try container.decodeIfPresent(String.self, forKey: .listening),
-            notUpdating: try container.decodeIfPresent(String.self, forKey: .notUpdating)
+            notUpdating: try container.decodeIfPresent(String.self, forKey: .notUpdating),
+            appRightToLeft: try container.decodeIfPresent(Bool.self, forKey: .appRightToLeft)
         )
     }
 }
