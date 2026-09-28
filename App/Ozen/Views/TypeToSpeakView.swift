@@ -96,8 +96,9 @@ struct TypeToSpeakView: View {
                 // -- otherwise "Play again" can replay a stale, unrelated
                 // phrase after this screen speaks a different one.
                 onSpeak: { phrase in
-                    viewModel.speak(phrase)
-                    lastTyped = phrase
+                    if viewModel.speak(phrase) {
+                        lastTyped = phrase
+                    }
                 }
             )
             .alertOverlay(for: viewModel)
@@ -193,7 +194,7 @@ struct TypeToSpeakView: View {
     private func speakTyped() {
         let phrase = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !phrase.isEmpty else { return }
-        viewModel.speak(phrase)
+        guard viewModel.speak(phrase) else { return }
         lastTyped = phrase
         // Left in the field, editable, rather than cleared: a typo caught
         // right after speaking otherwise meant retyping the whole

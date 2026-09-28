@@ -729,6 +729,20 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(await eventually { viewModel.phase.isListening })
     }
 
+    @Test("a call cuts off the phone's voice even when captions were already off")
+    func callDuringPhraseWithCaptionsOff() async {
+        let (viewModel, synthesizer) = makeViewModel()
+        #expect(viewModel.speak("רגע"))
+        synthesizer.startNext()
+        #expect(synthesizer.isBusy)
+
+        viewModel.systemInterruptionChanged(began: true)
+        #expect(synthesizer.isBusy == false)
+        synthesizer.deliverCallbacks()
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(viewModel.phase.isListening == false)
+    }
+
     @Test("launched by Siri to say something: the phone talks first, then captions start")
     func launchWithSpeech() async throws {
         let (viewModel, synthesizer) = makeViewModel()

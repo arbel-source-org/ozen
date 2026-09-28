@@ -411,7 +411,7 @@ public final class LiveCaptionViewModel {
         // hold captions paused for good. The rest of a phrase said after
         // the call is no use to anyone, so end it; captions then come back
         // the way running captions do after a call.
-        if began, speechPause.isHoldingCaptions {
+        if began, speechPause.isHoldingCaptions || synthesizer?.isBusy == true {
             synthesizer?.stop()
         }
         if !began {
@@ -1336,14 +1336,17 @@ public final class LiveCaptionViewModel {
     /// Says `text` aloud. Captions pause while the phone talks so the
     /// microphone doesn't caption the phone's own voice, and resume by
     /// themselves when it's done.
-    public func speak(_ text: String) {
-        guard let synthesizer else { return }
+    /// Returns false when nothing was said (no voice for it, or blank).
+    @discardableResult
+    public func speak(_ text: String) -> Bool {
+        guard let synthesizer else { return false }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, synthesizer.canSay(trimmed) else { return }
+        guard !trimmed.isEmpty, synthesizer.canSay(trimmed) else { return false }
         if speechPause.willSpeak(captionsListening: pipeline.phase.isListening) {
             pipeline.pause()
         }
         synthesizer.speak(trimmed, rate: settings.speechRate)
+        return true
     }
 
     /// What the phone says for "ask them to repeat that" on a caption line.
