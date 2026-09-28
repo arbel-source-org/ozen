@@ -289,6 +289,26 @@ def check_system_strings():
     return problems
 
 
+def check_permission_prompts():
+    """iOS's own permission prompts and the languages the app declares:
+    each *UsageDescription in project.yml needs every language in
+    App/Ozen/InfoPlist.xcstrings, and every declared bundle localization
+    list must name all the languages the catalogs carry, or iOS ignores
+    those translations."""
+    project = Path("project.yml").read_text(encoding="utf-8")
+    catalog = json.loads(Path("App/Ozen/InfoPlist.xcstrings").read_text(encoding="utf-8"))["strings"]
+    problems = []
+    for key in sorted(set(re.findall(r"^\s+(NS\w+UsageDescription):", project, re.M))):
+        missing = [l for l in ["he"] + SYSTEM_LANGUAGES if l not in catalog.get(key, {}).get("localizations", {})]
+        if missing:
+            problems.append(f"App/Ozen/InfoPlist.xcstrings: {key} missing in {', '.join(missing)}")
+    for declared in re.findall(r"CFBundleLocalizations: \[([^\]]*)\]", project):
+        missing = set(["he"] + SYSTEM_LANGUAGES) - {l.strip() for l in declared.split(",")}
+        if missing:
+            problems.append(f"project.yml: CFBundleLocalizations lacks {', '.join(sorted(missing))}")
+    return problems
+
+
 def main():
     list_untranslated = "--untranslated" in sys.argv
     skip_table = "--no-table" in sys.argv
@@ -308,6 +328,7 @@ def main():
     if not skip_table:
         all_problems += check_translation_table(keys)
         all_problems += check_system_strings()
+        all_problems += check_permission_prompts()
     for problem in all_problems:
         print(problem)
     sys.exit(1 if all_problems else 0)

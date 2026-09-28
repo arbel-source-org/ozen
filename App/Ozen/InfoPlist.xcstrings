@@ -1,0 +1,237 @@
+{
+  "sourceLanguage": "he",
+  "strings": {
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "am": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen የማይክሮፎኑን ድምፅ ከስልኩ በፍጥነት ካፕሽን ወደሚሰራው የቤትዎ ኮምፒውተር መላክ ይችላል።"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يمكن لـ Ozen إرسال صوت الميكروفون إلى حاسوبك في المنزل، الذي يكتب الترجمة النصية أسرع من الهاتف."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen kann den Ton des Mikrofons an Ihren Computer zu Hause senden, der schneller untertitelt als das Telefon."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen can send the microphone to your own computer at home, which captions faster than the phone."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen puede enviar el sonido del micrófono a tu ordenador de casa, que subtitula más rápido que el teléfono."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen peut envoyer le son du micro à votre ordinateur à la maison, qui sous-titre plus vite que le téléphone."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוזן יכולה לשלוח את הקול למחשב שלכם בבית, שכותב כתוביות מהר יותר מהטלפון."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen माइक्रोफ़ोन की आवाज़ आपके घर के कंप्यूटर पर भेज सकता है, जो फ़ोन से तेज़ कैप्शन बनाता है।"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ozen pode enviar o som do microfone para o seu computador em casa, que legenda mais depressa do que o telemóvel."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen может отправлять звук с микрофона на ваш домашний компьютер, который делает субтитры быстрее телефона."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen може надсилати звук із мікрофона на ваш домашній комп’ютер, який робить субтитри швидше за телефон."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen 可以把麦克风的声音发送到你家里的电脑，它生成字幕比手机更快。"
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "am": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen ውይይትን በቀጥታ በካፕሽን ለማሳየት ማይክሮፎኑን ይፈልጋል።"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحتاج Ozen إلى الميكروفون لعرض ترجمة نصية فورية للمحادثة."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen braucht das Mikrofon, um Gespräche live zu untertiteln."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen needs the microphone to caption conversation live."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen necesita el micrófono para subtitular la conversación en directo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen a besoin du micro pour sous-titrer la conversation en direct."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוזן צריכה את המיקרופון כדי להציג כתוביות לשיחה בזמן אמת."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बातचीत के लाइव कैप्शन दिखाने के लिए Ozen को माइक्रोफ़ोन चाहिए।"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ozen precisa do microfone para legendar a conversa em direto."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen нужен микрофон, чтобы показывать субтитры разговора в реальном времени."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen потрібен мікрофон, щоб показувати субтитри розмови в реальному часі."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen 需要使用麦克风来实时显示对话字幕。"
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "am": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen ውይይትን በቀጥታ በካፕሽን ለማሳየት በስልኩ ላይ ያለውን የንግግር ማወቂያ ይጠቀማል። ምንም ነገር ከስልኩ አይላክም።"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يستخدم Ozen التعرّف على الكلام على الجهاز لعرض ترجمة نصية فورية للمحادثة. لا يُرسل أي شيء خارج الهاتف."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen nutzt die Spracherkennung auf dem Gerät, um Gespräche live zu untertiteln. Nichts verlässt das Telefon."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen uses on-device speech recognition to caption conversation live. Nothing is sent off the phone."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen usa el reconocimiento de voz del propio teléfono para subtitular la conversación en directo. No se envía nada fuera del teléfono."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen utilise la reconnaissance vocale sur l’appareil pour sous-titrer la conversation en direct. Rien ne quitte le téléphone."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוזן משתמשת בזיהוי הדיבור שבטלפון כדי להציג כתוביות לשיחה בזמן אמת. שום דבר לא נשלח מהטלפון."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बातचीत के लाइव कैप्शन दिखाने के लिए Ozen फ़ोन पर ही बोली पहचान का उपयोग करता है। फ़ोन से कुछ भी बाहर नहीं भेजा जाता।"
+          }
+        },
+        "pt-PT": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ozen usa o reconhecimento de voz no próprio telemóvel para legendar a conversa em direto. Nada sai do telemóvel."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen распознаёт речь на самом телефоне, чтобы показывать субтитры разговора в реальном времени. Ничего не отправляется с телефона."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen розпізнає мовлення на самому телефоні, щоб показувати субтитри розмови в реальному часі. Нічого не надсилається з телефона."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ozen 使用手机上的语音识别来实时显示对话字幕。不会有任何内容离开手机。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

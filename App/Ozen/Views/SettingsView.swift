@@ -56,7 +56,7 @@ struct SettingsView: View {
     }
     @Environment(\.scenePhase) private var scenePhase
 
-    private static let voiceSample = "שלום, זה קול הטלפון. ככה אני נשמע."
+    private static var voiceSample: String { tr("שלום, זה קול הטלפון. ככה אני נשמע.", "Hello, this is the phone's voice. This is how I sound.") }
 
     var body: some View {
         NavigationStack {
@@ -790,10 +790,14 @@ struct SettingsView: View {
             } label: {
                 Label(tr("להשמיע דוגמה", "Play a sample"), systemImage: "speaker.wave.2")
             }
-            // Without a Hebrew voice the sample is never said; the line
-            // below says what to install.
+            // Without a voice for the app's language the sample is never
+            // said; the line below says what to install.
             .disabled(!viewModel.canSay(Self.voiceSample))
-            if !viewModel.hasHebrewVoice {
+            if !viewModel.hasVoiceForAppLanguage {
+                Text(tr("אין בטלפון קול ל%1, ולכן אי אפשר להקריא את המשפטים. אפשר להוסיף אחד בהגדרות ← נגישות ← תוכן מדובר ← קולות.", "No voice for %1 is installed on this phone, so these phrases can’t be read aloud. Add one in Settings → Accessibility → Spoken Content → Voices.", args: ["\(viewModel.uiLanguage.nativeName)"]))
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            } else if viewModel.uiLanguage == .hebrew, !viewModel.hasHebrewVoice {
                 Text(tr("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice is installed. Add one in the device settings → Accessibility → Spoken Content → Voices → Hebrew."))
                     .font(.footnote)
                     .foregroundStyle(.orange)
