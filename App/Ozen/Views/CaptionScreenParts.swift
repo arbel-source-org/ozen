@@ -108,6 +108,10 @@ struct CaptionRow: View {
     private var accessibilityText: String {
         var line = speakerName.map { "\($0): \(segment.text)" } ?? segment.text
         if isUncertain { line = tr("ייתכן שלא נשמע נכון. ", "May not have been heard correctly. ") + line }
+        let doubtful = UncertainWords.spoken(in: segment.text, words: marksUncertainWords && segment.isCommitted ? segment.uncertainWords : [])
+        if !doubtful.isEmpty {
+            line += " " + tr("מילים שאולי לא נשמעו נכון: %1", "Words that may be wrong: %1", args: ["\(doubtful.joined(separator: ", "))"])
+        }
         return isStarred ? tr("מסומן כחשוב. %1", "Marked as important. %1", args: ["\(line)"]) : line
     }
 }

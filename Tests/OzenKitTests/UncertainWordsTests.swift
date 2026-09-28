@@ -52,4 +52,12 @@ struct UncertainWordsTests {
         stabilizer.ingest(TranscriptToken(utteranceID: id, text: "at 10:30", isFinal: true, timestamp: 2))
         #expect(stabilizer.segments[0].uncertainWords.isEmpty)
     }
+
+    @Test("VoiceOver hears the doubtful words as written, in order, without their punctuation")
+    func spokenWords() {
+        let text = "Meet the doctor at 10:30, room nine."
+        let words = [UncertainWords.normalize("nine."), UncertainWords.normalize("10:30,")]
+        #expect(UncertainWords.spoken(in: text, words: words) == ["10:30", "nine"])
+        #expect(UncertainWords.spoken(in: text, words: []).isEmpty)
+    }
 }

@@ -57,6 +57,14 @@ public enum UncertainWords {
         return ranges
     }
 
+    /// The doubtful words as they are written in `text`, in order, for
+    /// VoiceOver, which can't see the dotted underline.
+    public static func spoken(in text: String, words: [String]) -> [String] {
+        ranges(in: text, words: words).map {
+            String(text[$0]).trimmingCharacters(in: .punctuationCharacters)
+        }
+    }
+
     static func normalize(_ word: String) -> String {
         WhisperResultFilter.normalize(word)
             .trimmingCharacters(in: .whitespacesAndNewlines)
