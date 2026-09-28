@@ -146,6 +146,13 @@ class WrongCode(unittest.TestCase):
         self.assertNotIn(guess, ws.sent[0])
         self.assertNotIn("real-code-456", ws.sent[0])
 
+    def test_a_guess_with_letters_outside_ascii_is_refused_too(self):
+        ws = HelloSocket(S.json.dumps({"type": "hello", "token": "קוד-שגוי"}))
+        with self.assertLogs(S.log, "WARNING"):
+            asyncio.run(S.handle(ws, None, "real-code-456", 1.0))
+        self.assertEqual(len(ws.sent), 1)
+        self.assertIn("unauthorized", ws.sent[0])
+
 
 class WorkerEndings(unittest.TestCase):
     def test_a_phone_hanging_up_mid_send_is_not_a_failure(self):

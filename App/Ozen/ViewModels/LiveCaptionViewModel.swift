@@ -77,7 +77,7 @@ public final class LiveCaptionViewModel {
     var reclaimRetryDelays: [Duration] = [.seconds(5), .seconds(15), .seconds(45)]
     /// Tries to take the audio session back after an interruption whose
     /// end was never announced; true when it worked.
-    private let reclaimAudioSession: (@MainActor () -> Bool)?
+    private let reclaimAudioSession: (@MainActor () async -> Bool)?
     private var historySessionID = UUID()
     private var historySessionStartedAt: TimeInterval?
     /// Lines before this index in `pipeline.segments` belong to an earlier
@@ -173,7 +173,7 @@ public final class LiveCaptionViewModel {
         postNotification: ((AlertNotificationContent) -> Void)? = nil,
         withdrawNotification: ((String) -> Void)? = nil,
         phoneCalls: PhoneCallMonitor? = nil,
-        reclaimAudioSession: (@MainActor () -> Bool)? = nil,
+        reclaimAudioSession: (@MainActor () async -> Bool)? = nil,
         lockScreen: (any LockScreenCaptionsDisplaying)? = nil,
         journal: SessionJournal? = nil,
         problemAudio: ProblemAudioStore? = nil
@@ -195,7 +195,7 @@ public final class LiveCaptionViewModel {
         if let reclaimAudioSession {
             self.reclaimAudioSession = reclaimAudioSession
         } else if let audioManager {
-            self.reclaimAudioSession = { @MainActor in audioManager.reclaimSessionAfterInterruption() }
+            self.reclaimAudioSession = { @MainActor in await audioManager.reclaimSessionAfterInterruption() }
         } else {
             self.reclaimAudioSession = nil
         }
@@ -402,8 +402,12 @@ public final class LiveCaptionViewModel {
         if isActive, Date().timeIntervalSince1970 - lastRetentionCheck > Self.retentionCheckIntervalSeconds {
             Task { await deleteExpiredHistory() }
         }
-        if isActive, isInterruptedBySystem, reclaimAudioSession?() == true {
-            systemInterruptionChanged(began: false)
+        if isActive, isInterruptedBySystem, let reclaimAudioSession {
+            Task {
+                if await reclaimAudioSession(), isInterruptedBySystem {
+                    systemInterruptionChanged(began: false)
+                }
+            }
         }
         // Back from freeing up room in the Settings app: the model download
         // starts by itself if it fits now.
@@ -494,10 +498,16 @@ public final class LiveCaptionViewModel {
             systemInterruptionChanged(began: false)
             return
         }
-        if reclaimAudioSession?() == true {
-            systemInterruptionChanged(began: false)
-        } else {
+        guard let reclaimAudioSession else {
             checkCaptionsStillRunning()
+            return
+        }
+        Task {
+            if await reclaimAudioSession() {
+                if isInterruptedBySystem { systemInterruptionChanged(began: false) }
+            } else {
+                checkCaptionsStillRunning()
+            }
         }
     }
 

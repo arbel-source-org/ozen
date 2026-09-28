@@ -199,15 +199,24 @@ public final class AVAudioInputManager: AudioCapturing {
     /// the app is back on screen while still marked interrupted. Taking
     /// the session back fails while the call still holds it, so success
     /// means the interruption is over. Returns whether it is.
-    public func reclaimSessionAfterInterruption() -> Bool {
+    public func reclaimSessionAfterInterruption() async -> Bool {
         guard sessionPrepared else { return true }
         do {
-            try session.setActive(true)
+            try await Self.activateSessionOffMain()
         } catch {
             return false
         }
         resumeCaptureAfterInterruption()
         return true
+    }
+
+    /// Right after a call is exactly when a headset or hearing aid is
+    /// reconnecting and activation can wait seconds on the audio server;
+    /// on the main thread that is a watchdog kill (see `prepareSession`).
+    private static func activateSessionOffMain() async throws {
+        try await Task.detached(priority: .userInitiated) {
+            try AVAudioSession.sharedInstance().setActive(true)
+        }.value
     }
 
     /// Starts capture again once an interruption is over. The microphone
@@ -374,7 +383,7 @@ public final class AVAudioInputManager: AudioCapturing {
                 case .ended:
                     let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                     if options.contains(.shouldResume) || self.activeTap != nil {
-                        try? self.session.setActive(true)
+                        try? await Self.activateSessionOffMain()
                         self.resumeCaptureAfterInterruption()
                     }
                     self.onInterruption?(false)

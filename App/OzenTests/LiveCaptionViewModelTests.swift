@@ -1113,8 +1113,8 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
 
         viewModel.sceneActivityChanged(isActive: true)
 
-        #expect(reclaimer.calls == 1)
-        #expect(viewModel.isInterruptedBySystem == false)
+        #expect(await eventually { reclaimer.calls == 1 })
+        #expect(await eventually { viewModel.isInterruptedBySystem == false })
         #expect(await eventually { viewModel.pipeline.phase.isListening })
     }
 
@@ -1126,7 +1126,8 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
 
         viewModel.sceneActivityChanged(isActive: true)
 
-        #expect(reclaimer.calls == 1)
+        #expect(await eventually { reclaimer.calls == 1 })
+        await Task.yield()
         #expect(viewModel.isInterruptedBySystem)
     }
 
@@ -1152,8 +1153,8 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
 
         viewModel.reclaimMicrophoneAfterCall()
 
-        #expect(reclaimer.calls == 1)
-        #expect(viewModel.isInterruptedBySystem == false)
+        #expect(await eventually { reclaimer.calls == 1 })
+        #expect(await eventually { viewModel.isInterruptedBySystem == false })
     }
 
     @Test("the tap changes nothing while the call is genuinely still going")
@@ -1166,7 +1167,8 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
 
         viewModel.reclaimMicrophoneAfterCall()
 
-        #expect(reclaimer.calls == 1)
+        #expect(await eventually { reclaimer.calls == 1 })
+        await Task.yield()
         #expect(viewModel.isInterruptedBySystem)
     }
 }

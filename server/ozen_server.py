@@ -472,7 +472,7 @@ async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     if not isinstance(hello, dict):
         await refuse(ws, "bad_request", "hello expected")
         return
-    if hello.get("type") != "hello" or not hmac.compare_digest(str(hello.get("token", "")), token):
+    if hello.get("type") != "hello" or not hmac.compare_digest(str(hello.get("token", "")).encode(), token.encode()):
         log.warning("refused %s", peer)
         await refuse(ws, "unauthorized", "")
         return
@@ -550,7 +550,8 @@ async def main():
                    help="mix this share of GTCRN-cleaned audio with the original (see enhance.py); 0 turns it off")
     p.add_argument("--enhance-model", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "gtcrn_simple.onnx"))
     args = p.parse_args()
-    token = os.environ.get("OZEN_TOKEN")
+    # Notepad saving pairing-code again adds a byte-order mark in front.
+    token = os.environ.get("OZEN_TOKEN", "").strip().lstrip("\ufeff")
     if not token:
         raise SystemExit("set OZEN_TOKEN to the pairing code the phone will send")
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
