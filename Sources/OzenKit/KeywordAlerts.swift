@@ -163,11 +163,31 @@ public enum HebrewText {
     /// left unmatched.
     public static func stripAttachedPrefix(from word: String, leaving stem: String) -> Bool {
         if word == stem { return true }
+        if everydayWordsNotNames[stem]?.contains(word) == true { return false }
         for prefix in attachedPrefixes where word == prefix + stem {
             return true
         }
         return false
     }
+
+    /// Short names that, with a prefix glued on, spell an everyday word far
+    /// more often than they mean the person: an alert for "Li" fired on
+    /// every "sheli" ("mine") and "bli" ("without"), "Ben" on every "lavan"
+    /// ("white"). Kept as a closed list per name, like
+    /// `affectionateVariants`, so the prefix rule still finds "and Tal" or
+    /// "to Dan" everywhere else.
+    public static let everydayWordsNotNames: [String: Set<String>] = [
+        "לי": ["שלי", "בלי", "כלי", "ולי"],
+        "בן": ["לבן", "הבן"],
+        "טל": ["בטל"],
+        "חן": ["לחן"],
+        "גל": ["הגל"],
+        "ים": ["הים", "לים", "בים"],
+        "גיל": ["בגיל", "הגיל", "לגיל"],
+        "אור": ["האור", "באור", "לאור"],
+        "שיר": ["השיר", "לשיר", "בשיר"],
+        "אביב": ["באביב", "האביב"],
+    ]
 
     /// The Hebrew geresh, and the plain and typographic apostrophes a
     /// transcript sometimes uses in its place, when they mark a diminutive

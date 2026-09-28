@@ -225,6 +225,24 @@ struct KeywordAlertMatcherTests {
         #expect(matches[1].alertID == ambulance.id)
         #expect(matches[1].wordIndex == 2)
     }
+
+    @Test("a short name glued to a prefix that spells an everyday word does not fire; the name itself and other prefixes still do")
+    func shortNamesSkipEverydayWords() {
+        func hits(_ name: String, _ caption: String) -> Int {
+            KeywordAlertMatcher(alerts: [KeywordAlert(phrase: name)]).matches(in: caption).count
+        }
+        #expect(hits("לי", "זה הספר שלי") == 0)
+        #expect(hits("לי", "קפה בלי סוכר") == 0)
+        #expect(hits("בן", "חולצה לבן") == 0)
+        #expect(hits("שיר", "היא אוהבת לשיר") == 0)
+        #expect(hits("גיל", "בגיל שמונים") == 0)
+        #expect(hits("לי", "לי, בואי רגע") == 1)
+        #expect(hits("לי", "תגידו לְלי שלום") == 1)
+        #expect(hits("טל", "אמא וטל באו") == 1)
+        #expect(hits("טל", "הטיסה בטל") == 0)
+        #expect(hits("דן", "תגידו לדן") == 1)
+        #expect(hits("גיל", "תביאו לגיל ולמיכל") == 0)
+    }
 }
 
 @Suite("KeywordAlertDeduplicator")
