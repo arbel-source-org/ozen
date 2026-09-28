@@ -12,6 +12,7 @@ struct LiveCaptionView: View {
     @Bindable var viewModel: LiveCaptionViewModel
     @State private var showingMicPicker = false
     @State private var showingSettings = false
+    @State private var settingsFocus: SettingsView.Focus?
     @State private var showingTypeToSpeak = false
     @State private var confirmingClear = false
     @State private var namingSegment: TranscriptSegment?
@@ -413,8 +414,8 @@ struct LiveCaptionView: View {
                 .alertOverlay(for: viewModel)
                 .pageSized()
         }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView(viewModel: viewModel)
+        .sheet(isPresented: $showingSettings, onDismiss: { settingsFocus = nil }) {
+            SettingsView(viewModel: viewModel, focus: settingsFocus)
                 .alertOverlay(for: viewModel)
                 .pageSized()
         }
@@ -1372,6 +1373,9 @@ struct LiveCaptionView: View {
                 openURL(url)
             }
         case .openEngineSettings:
+            showingSettings = true
+        case .openBackupSettings:
+            settingsFocus = .homeServerBackup
             showingSettings = true
         case .confirmCellularDownload:
             confirmingCellularDownload = true

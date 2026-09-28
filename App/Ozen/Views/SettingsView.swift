@@ -6,7 +6,13 @@ import OzenKit
 import OzenPlatform
 
 struct SettingsView: View {
+    /// A place to open scrolled to, instead of the top.
+    enum Focus: Hashable {
+        case homeServerBackup
+    }
+
     @Bindable var viewModel: LiveCaptionViewModel
+    var focus: Focus?
     @State private var showingEnrollment = false
     @State private var showingRecordingImporter = false
     @State private var importingRecordings = false
@@ -67,6 +73,7 @@ struct SettingsView: View {
             // the language and her saved conversations. The engine, models
             // and keys, which the gear used to open onto, come after a
             // line saying they are for whoever set up the phone.
+            ScrollViewReader { proxy in
             Form {
                 displaySection
                 alertsSection
@@ -89,6 +96,8 @@ struct SettingsView: View {
                 aboutSection
             }
             .accessibilityIdentifier("settingsScreen")
+            .modifier(ScrollsToFocus(focus: focus, proxy: proxy))
+            }
             .onDisappear(perform: saveUnsavedHomeServerEntries)
             .navigationTitle(tr("הגדרות", "Settings"))
             .navigationBarTitleDisplayMode(.inline)
@@ -408,6 +417,7 @@ struct SettingsView: View {
             }
             if viewModel.settings.engine == .homeServer {
                 HomeServerBackupRow(viewModel: viewModel)
+                    .id(Focus.homeServerBackup)
             }
             VStack(alignment: .leading, spacing: 8) {
                 sliderLabelLayout {
@@ -1091,5 +1101,20 @@ struct SettingsView: View {
 
     private static func hourLabel(_ hour: Int) -> String {
         String(format: "%02d:00", hour)
+    }
+}
+
+/// Scrolls once the Form has laid out: straight away, the rows below the
+/// first screen don't exist yet and the scroll does nothing.
+private struct ScrollsToFocus: ViewModifier {
+    let focus: SettingsView.Focus?
+    let proxy: ScrollViewProxy
+
+    func body(content: Content) -> some View {
+        content.task {
+            guard let focus else { return }
+            try? await Task.sleep(for: .milliseconds(350))
+            withAnimation { proxy.scrollTo(focus, anchor: .center) }
+        }
     }
 }

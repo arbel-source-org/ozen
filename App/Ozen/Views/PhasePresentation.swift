@@ -18,6 +18,8 @@ struct PhasePresentation {
         case retry
         case openSystemSettings
         case openEngineSettings
+        /// Settings, opened where the phone's own backup model is offered.
+        case openBackupSettings
         /// Ask before downloading the model over cellular data.
         case confirmCellularDownload
     }
@@ -139,7 +141,7 @@ struct PhasePresentation {
                     systemImage: systemImage,
                     tint: .orange,
                     isBusy: scheduledRetry != nil,
-                    action: .openEngineSettings
+                    action: .openBackupSettings
                 )
             }
         }

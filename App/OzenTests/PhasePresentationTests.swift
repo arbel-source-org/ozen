@@ -226,13 +226,13 @@ struct PhasePresentationTests {
         let plain = PhasePresentation(phase: phase, engine: .homeServer, interruptedBySystem: false)
         #expect(plain.action == .retry)
         let offered = PhasePresentation(phase: phase, engine: .homeServer, interruptedBySystem: false, offerBackup: true)
-        #expect(offered.action == .openEngineSettings)
+        #expect(offered.action == .openBackupSettings)
         #expect(offered.detail != plain.detail)
         let retrying = PhasePresentation(
             phase: phase, engine: .homeServer, interruptedBySystem: false,
             scheduledRetry: ScheduledRetry(at: 0, attempt: 1), offerBackup: true
         )
-        #expect(retrying.action == .openEngineSettings)
+        #expect(retrying.action == .openBackupSettings)
         #expect(retrying.isBusy)
         let rejected = PhasePresentation(
             phase: failure(EngineUnavailability(kind: .homeServerRejected, detail: "")),
