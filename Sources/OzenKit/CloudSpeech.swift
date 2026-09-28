@@ -168,8 +168,9 @@ public enum CloudSpeech {
     }
 
     /// "A:", "Speaker 2:", "דובר ב:". Hebrew only as a single letter, so a
-    /// sentence that opens with a short word and a colon keeps its word.
-    private nonisolated(unsafe) static let speakerLabel = /^(?:(?:speaker|דוברת|דובר)\s*)?([A-Za-z0-9]{1,2}|[א-ת])\s*[:：]\s*/.ignoresCase()
+    /// sentence that opens with a short word and a colon keeps its word, and
+    /// never a colon before a digit, so a time like "10:30" keeps its hour.
+    private nonisolated(unsafe) static let speakerLabel = /^(?:(?:speaker|דוברת|דובר)\s*)?([A-Za-z0-9]{1,2}|[א-ת])\s*[:：](?!\d)\s*/.ignoresCase()
 
     private static func withoutAnnotations(_ text: String) -> String {
         text.replacing(/[\[(<][A-Za-z _-]*[\])>]/, with: "")
@@ -188,6 +189,7 @@ public enum CloudSpeech {
     private static let languageNames = [
         "he": "Hebrew", "en": "English", "ar": "Arabic", "ru": "Russian", "fr": "French",
         "es": "Spanish", "am": "Amharic", "de": "German", "it": "Italian", "pt": "Portuguese",
+        "uk": "Ukrainian", "zh": "Chinese", "hi": "Hindi",
     ]
 }
 

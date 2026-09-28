@@ -191,7 +191,7 @@ struct ModelManagerView: View {
         .foregroundStyle(.primary)
         .disabled(wontFit)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if (isInstalled || isPartial) && !(isSelected && (viewModel.isListening || viewModel.phase.isTransitioning)) {
+            if (isInstalled || isPartial) && !(isSelected && (viewModel.isListening || viewModel.phase == .paused || viewModel.phase.isTransitioning)) {
                 Button(role: .destructive) {
                     pendingDelete = option
                 } label: {

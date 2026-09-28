@@ -44,12 +44,12 @@ struct NameAlertForm: View {
     }
 
     private var addedText: String {
-        tr("הטלפון ירטוט על: ", "The phone will vibrate for: ") + viewModel.settings.keywordAlerts.map(\.phrase).joined(separator: ", ")
+        tr("הטלפון ירטוט על: ", "The phone will vibrate for: ") + viewModel.settings.keywordAlerts.filter(\.isEnabled).map(\.phrase).joined(separator: ", ")
     }
 
     private func suggestionButton(_ word: String) -> some View {
         let added = viewModel.settings.keywordAlerts.contains {
-            HebrewText.normalize($0.phrase) == HebrewText.normalize(word)
+            $0.isEnabled && HebrewText.normalize($0.phrase) == HebrewText.normalize(word)
         }
         return Button {
             viewModel.addKeywordAlert(phrase: word)

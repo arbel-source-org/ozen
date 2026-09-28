@@ -46,10 +46,12 @@ struct CaptionLiveActivity: Widget {
                     CaptionLinesView(state: context.state, isStale: context.isStale, fontSize: 17, newestOnly: true)
                 }
             } compactLeading: {
-                // Marks only: VoiceOver reads the activity's lines instead.
+                // Named like the minimal mark: the lines themselves are
+                // only in the expanded island, so hiding it left nothing
+                // for VoiceOver to find.
                 Image(systemName: "captions.bubble.fill")
                     .foregroundStyle(.yellow)
-                    .accessibilityHidden(true)
+                    .accessibilityLabel(context.state.appName ?? (context.state.english ? "Ozen" : "אוזן"))
             } compactTrailing: {
                 Image(systemName: "ear")
                     .accessibilityHidden(true)

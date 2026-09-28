@@ -656,6 +656,7 @@ public final class CaptionPipeline {
     /// toggled here changes which alert phrases belong in its hint list.
     public func setKeywordAlerts(_ alerts: [KeywordAlert]) {
         keywordMatcher = KeywordAlertMatcher(alerts: alerts)
+        activeSettings?.keywordAlerts = alerts
         keywordDeduplicator.forgetAll()
         let userVocabulary = activeSettings?.vocabulary ?? []
         Task { [weak self] in
@@ -1178,8 +1179,9 @@ public final class CaptionPipeline {
         // "still settling" until the stale-commit safety net catches up.
         guard silencePhraseGuard.admits(token, at: now()) else {
             if token.isFinal, let segment = stabilizer.commit(id: token.utteranceID) {
+                let wasCommitted = segments.last { $0.id == segment.id }?.isCommitted ?? false
                 upsert(segment)
-                countCommittedLine()
+                if !wasCommitted { countCommittedLine() }
                 stats.hasOpenLine = stabilizer.hasOpenLine
             }
             return
@@ -1265,6 +1267,7 @@ public final class CaptionPipeline {
             if let index = segments.lastIndex(where: { $0.id == currentUtteranceID }),
                segments[index].speakerClusterID != clusterID {
                 segments[index].speakerClusterID = clusterID
+                onCaptionsChanged?()
             }
         }
     }
@@ -1276,6 +1279,12 @@ public final class CaptionPipeline {
 
     private func upsert(_ segment: TranscriptSegment) {
         if let index = segments.lastIndex(where: { $0.id == segment.id }) {
+            // The voice analysis names the speaker on the shown line only;
+            // the stabilizer's copy, committed after a pause, doesn't carry it.
+            var segment = segment
+            if segment.speakerClusterID == nil {
+                segment.speakerClusterID = segments[index].speakerClusterID
+            }
             segments[index] = segment
         } else {
             segments.append(segment)
@@ -1626,8 +1635,9 @@ public final class CaptionPipeline {
         let finished = stabilizer.commitAll()
         guard !finished.isEmpty else { return }
         for segment in finished {
+            let wasCommitted = segments.last { $0.id == segment.id }?.isCommitted ?? false
             upsert(segment)
-            countCommittedLine()
+            if !wasCommitted { countCommittedLine() }
         }
         stats.hasOpenLine = false
     }

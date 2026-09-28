@@ -48,7 +48,7 @@ jobs:
           python-version: "3.12"
       - name: Home server tests
         working-directory: server
-        run: pip install numpy && python -m unittest test_ozen_server -v
+        run: pip install numpy && python -m unittest test_ozen_server test_pairing -v
 
   app:
     name: Ozen app (iOS Simulator)

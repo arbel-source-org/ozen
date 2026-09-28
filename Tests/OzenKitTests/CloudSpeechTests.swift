@@ -38,6 +38,12 @@ struct CloudSpeechTests {
         #expect(CloudSpeech.turns(in: "אז: הלכנו הביתה") == ["אז: הלכנו הביתה"])
     }
 
+    @Test("a line that opens with a time keeps the whole time")
+    func lineOpeningWithTime() {
+        #expect(CloudSpeech.turns(in: "10:30 תבואי למרפאה") == ["10:30 תבואי למרפאה"])
+        #expect(CloudSpeech.turns(in: "A: 9:15 בבוקר\nB: 10:30 טוב") == ["9:15 בבוקר", "10:30 טוב"])
+    }
+
     @Test("notes about sounds are taken out, and a reply of only notes is no line")
     func annotations() {
         #expect(CloudSpeech.turns(in: "[inaudible] שלום (music) לכולם") == ["שלום לכולם"])

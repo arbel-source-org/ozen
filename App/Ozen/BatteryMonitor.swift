@@ -73,6 +73,10 @@ struct BatteryBanner: View {
         return false
     }
 
+    private var advice: String {
+        isCritical ? tr("הטלפון עלול להיכבות באמצע השיחה. חברו למטען.", "The phone might shut down mid-conversation. Plug in a charger.") : tr("כדאי לחבר למטען.", "Consider plugging in a charger.")
+    }
+
     var body: some View {
         Button(action: onDismiss) {
             HStack(spacing: 12) {
@@ -81,7 +85,7 @@ struct BatteryBanner: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(tr("הסוללה ב-%1%", "Battery at %1%", args: ["\(notice.warning.percent)"]))
                         .font(.headline)
-                    Text(isCritical ? tr("הטלפון עלול להיכבות באמצע השיחה. חברו למטען.", "The phone might shut down mid-conversation. Plug in a charger.") : tr("כדאי לחבר למטען.", "Consider plugging in a charger."))
+                    Text(advice)
                         .font(.subheadline)
                         .opacity(0.9)
                 }
@@ -100,7 +104,7 @@ struct BatteryBanner: View {
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(tr("הסוללה ב-%1 אחוזים", "Battery at %1 percent", args: ["\(notice.warning.percent)"]))
+        .accessibilityLabel(tr("הסוללה ב-%1 אחוזים", "Battery at %1 percent", args: ["\(notice.warning.percent)"]) + ". " + advice)
         .accessibilityHint(tr("הקישו לסגירה", "Tap to close"))
     }
 }

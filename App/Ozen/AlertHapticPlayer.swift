@@ -14,6 +14,9 @@ final class AlertHapticPlayer {
     static let shared = AlertHapticPlayer()
 
     private var engine: CHHapticEngine?
+    /// Kept until the next alert, so a long pattern is never cut short by
+    /// its player being released.
+    private var player: CHHapticPatternPlayer?
     let supportsHaptics = CHHapticEngine.capabilitiesForHardware().supportsHaptics
     /// Why the latest alert vibration fell back to the plain warning buzz,
     /// or nil when it played as designed. For Diagnostics: the fallback
@@ -41,7 +44,9 @@ final class AlertHapticPlayer {
     private func start(_ vibration: AlertVibration) throws {
         let engine = try runningEngine()
         let pattern = try CHHapticPattern(events: vibration.pulses.map(Self.event), parameters: [])
-        try engine.makePlayer(with: pattern).start(atTime: CHHapticTimeImmediate)
+        let player = try engine.makePlayer(with: pattern)
+        try player.start(atTime: CHHapticTimeImmediate)
+        self.player = player
     }
 
     private func runningEngine() throws -> CHHapticEngine {

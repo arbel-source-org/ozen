@@ -206,6 +206,37 @@ struct CaptionConfidenceTests {
 
 @Suite("CaptionStabilizer finishing every open line")
 struct CaptionStabilizerCommitAllTests {
+    @Test("stopping settles lines committed only by a pause, as written, and returns them for the screen")
+    func commitAllSettlesProvisionalLines() {
+        var stabilizer = CaptionStabilizer(silenceCommitThreshold: 6)
+        let quiet = UUID()
+        let reopened = UUID()
+        stabilizer.ingest(TranscriptToken(utteranceID: quiet, text: "התקשרי ל-050", isFinal: false, timestamp: 0))
+        stabilizer.ingest(TranscriptToken(utteranceID: reopened, text: "עוד", isFinal: false, timestamp: 0))
+        _ = stabilizer.commitStale(now: 7)
+        stabilizer.ingest(TranscriptToken(utteranceID: reopened, text: "עוד משהו", isFinal: false, timestamp: 8))
+
+        let finished = stabilizer.commitAll()
+        #expect(Set(finished.map(\.id)) == [quiet, reopened])
+        let allSettled = stabilizer.segments.allSatisfy(\.isSettled)
+        #expect(allSettled)
+        #expect(stabilizer.segments.first?.text == "התקשרי ל-050")
+    }
+
+    @Test("a final whose words were suppressed settles a line committed only by a pause")
+    func commitByIDSettlesProvisionalLine() {
+        var stabilizer = CaptionStabilizer(silenceCommitThreshold: 6)
+        let id = UUID()
+        stabilizer.ingest(TranscriptToken(utteranceID: id, text: "תודה", isFinal: false, timestamp: 0))
+        _ = stabilizer.commitStale(now: 7)
+
+        #expect(stabilizer.commit(id: id)?.isSettled == true)
+        #expect(stabilizer.commit(id: id) == nil)
+        let late = stabilizer.ingest(TranscriptToken(utteranceID: id, text: "תודה רבה", isFinal: false, timestamp: 8))
+        #expect(late.isSettled)
+        #expect(late.text == "תודה")
+    }
+
     @Test("commitAll finishes open lines only, and returns just those")
     func commitAll() {
         var stabilizer = CaptionStabilizer()

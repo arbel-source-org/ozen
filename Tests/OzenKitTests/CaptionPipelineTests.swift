@@ -667,6 +667,22 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.displayName(for: pipeline.segments[0]) != pipeline.displayName(for: pipeline.segments[1]))
     }
 
+    @Test("a speaker found while a line is being written stays on it when the line is closed after a pause")
+    func speakerSurvivesStaleCommit() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+
+        engine.emit(token(UUID(), "מי מדבר"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.segments.first?.speakerClusterID != nil })
+
+        pipeline.commitStaleSegments(now: Date().timeIntervalSince1970 + 3_600)
+        #expect(pipeline.segments.first?.isCommitted == true)
+        #expect(pipeline.segments.first?.speakerClusterID != nil)
+    }
+
     @Test("a custom embedder's own recommended threshold is used at the untouched app default, not CAM++'s")
     func embedderRecommendedThresholdUsedAtDefault() async {
         struct ThresholdTestEmbedder: SpeakerEmbedding {
@@ -1495,6 +1511,20 @@ struct CaptionPipelineAlertTests {
         pipeline.clearTranscript()
         #expect(pipeline.keywordHits.isEmpty)
         #expect(pipeline.keywordHitSegmentIDs.isEmpty)
+    }
+
+    @Test("a keyword added while listening still alerts after captions start again on their own")
+    func keywordAddedMidSessionSurvivesRestart() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        pipeline.setKeywordAlerts([KeywordAlert(phrase: "דנה")])
+
+        pipeline.pause()
+        await pipeline.resume()
+        #expect(await eventually { pipeline.phase.isListening })
+        engine.emit(token(UUID(), "דנה הגיעה"))
+        #expect(await eventually { pipeline.keywordHits.count == 1 })
     }
 
     @Test("sound observations become alerts through the policy, and audio reaches the detector")

@@ -190,12 +190,13 @@ public struct CaptionStabilizer: Sendable {
     /// (see `SilencePhraseGuard`) but whose finality still needs to reach
     /// the reader, instead of leaving the line "still settling" until
     /// `commitStale`'s safety net eventually catches up. Nil (nothing to
-    /// react to) if there's no such segment, or it's already committed.
+    /// react to) if there's no such segment, or it's already settled.
     @discardableResult
     public mutating func commit(id: UUID) -> TranscriptSegment? {
-        guard let index = segments.lastIndex(where: { $0.id == id }), !segments[index].isCommitted else { return nil }
+        guard let index = segments.lastIndex(where: { $0.id == id }), !segments[index].isSettled else { return nil }
         segments[index].isCommitted = true
         segments[index].isProvisionalCommit = false
+        provisionalCommits.remove(id)
         openIndices.remove(index)
         return segments[index]
     }
@@ -228,15 +229,23 @@ public struct CaptionStabilizer: Sendable {
     /// was writing them has gone (pause, stop, a failure). Nothing will
     /// ever finish them otherwise: a new engine starts new lines. They end
     /// in `cutOffMark`, since whatever came after the last pass is lost.
+    /// Lines committed only because the engine went quiet settle too, as
+    /// written, and are returned with them: they can no longer reopen.
     @discardableResult
     public mutating func commitAll() -> [TranscriptSegment] {
         var justCommitted: [TranscriptSegment] = []
+        let provisionalIndices = provisionalCommits.compactMap { id in segments.lastIndex { $0.id == id } }
+        for index in provisionalIndices.sorted() {
+            segments[index].isProvisionalCommit = false
+            justCommitted.append(segments[index])
+        }
         for index in openIndices.sorted() {
             let text = segments[index].text.trimmingCharacters(in: .whitespaces)
             if !text.isEmpty, !text.hasSuffix(Self.cutOffMark) {
                 segments[index].text = text + Self.cutOffMark
             }
             segments[index].isCommitted = true
+            segments[index].isProvisionalCommit = false
             justCommitted.append(segments[index])
         }
         openIndices.removeAll()

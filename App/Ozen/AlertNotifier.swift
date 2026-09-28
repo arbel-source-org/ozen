@@ -39,7 +39,7 @@ nonisolated final class AlertNotifier: Sendable {
     /// Delivers `content` at `date`, replacing anything already scheduled
     /// under the same identifier.
     func schedule(_ content: AlertNotificationContent, at date: Date) {
-        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+        let components = Calendar.current.dateComponents([.calendar, .timeZone, .year, .month, .day, .hour, .minute], from: date)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         add(UNNotificationRequest(identifier: content.identifier, content: Self.body(for: content), trigger: trigger))
     }
