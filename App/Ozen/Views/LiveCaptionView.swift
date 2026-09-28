@@ -37,7 +37,6 @@ struct LiveCaptionView: View {
     @State private var awakeClock = Date().timeIntervalSince1970
     @State private var visibleSoundAlert: SoundAlert?
     @State private var visibleKeywordHit: KeywordHit?
-    @State private var hasLaunched = false
     @State private var fontSizeTrigger = 0
     @State private var battery = BatteryMonitor()
     private let installExpiry = InstallExpiryStatus.shared
@@ -268,8 +267,7 @@ struct LiveCaptionView: View {
             // changing `serial` cancels this closure, and that must not
             // cancel a model download that is halfway through.
             let pending = PendingAppAction.shared.takeAll()
-            let isFirstAppearance = !hasLaunched
-            hasLaunched = true
+            let isFirstAppearance = viewModel.takeFirstAppearance()
             guard isFirstAppearance || !pending.isEmpty else { return }
             Task {
                 await viewModel.handle(pending: pending, isFirstAppearance: isFirstAppearance)

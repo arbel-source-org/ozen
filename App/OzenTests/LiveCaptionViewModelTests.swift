@@ -743,6 +743,14 @@ struct LiveCaptionViewModelSpeechTests {
         #expect(viewModel.phase.isListening == false)
     }
 
+    @Test("only the first caption screen of a run counts as the launch, even when a language switch rebuilds it")
+    func firstAppearanceOnce() {
+        let (viewModel, _) = makeViewModel()
+        #expect(viewModel.takeFirstAppearance())
+        #expect(viewModel.takeFirstAppearance() == false)
+        #expect(viewModel.takeFirstAppearance() == false)
+    }
+
     @Test("launched by Siri to say something: the phone talks first, then captions start")
     func launchWithSpeech() async throws {
         let (viewModel, synthesizer) = makeViewModel()

@@ -37,6 +37,11 @@ public final class LiveCaptionViewModel {
     var awayCatchUp = AwayCatchUp()
     @ObservationIgnored private var keywordAttention = KeywordAttentionPolicy()
     @ObservationIgnored private var handledKeywordHitIDs: Set<UUID> = []
+    /// Kept here, not in the caption screen: switching the app's language
+    /// rebuilds that screen, and a flag of its own would take the next
+    /// Siri request (or nothing at all) for the launch again, restarting
+    /// captions paused by hand or ignoring "stop".
+    @ObservationIgnored private var hasHandledLaunch = false
     /// The latest keyword hit that got her attention, for screens covering
     /// the captions to show its pill too.
     public private(set) var attentionKeywordHit: KeywordHit?
@@ -659,6 +664,12 @@ public final class LiveCaptionViewModel {
     /// request that launched the app shapes it: "stop" starts nothing,
     /// "say" talks first and only then opens the microphone, anything
     /// else starts captions as usual.
+    /// True once, for the first appearance of the caption screen in this run.
+    public func takeFirstAppearance() -> Bool {
+        defer { hasHandledLaunch = true }
+        return !hasHandledLaunch
+    }
+
     /// Siri and Shortcuts requests that arrived together, in order. On the
     /// first appearance the first one decides how the app starts (see
     /// `launch(pending:)`); the rest follow as ordinary requests.
