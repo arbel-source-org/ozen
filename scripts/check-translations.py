@@ -267,6 +267,28 @@ def check_translation_table(keys):
     return problems
 
 
+SYSTEM_STRING_FILES = ["App/Ozen/OzenIntents.swift", "App/Shared/StartCaptionsIntent.swift", "App/OzenWidget/OzenWidgetBundle.swift"]
+SYSTEM_CATALOG = Path("App/Shared/Localizable.xcstrings")
+SYSTEM_LANGUAGES = ["en", "ar", "ru", "am", "fr", "es", "uk", "de", "pt-PT", "zh-Hans", "hi"]
+SYSTEM_STRING = re.compile(r'(?:LocalizedStringResource = |IntentDescription\(|@Parameter\(title: |Summary\(|shortTitle: |\.displayName\(|\.description\(|Label\()"([^"]*[\u0590-\u05FF][^"]*)"')
+
+
+def check_system_strings():
+    """Texts iOS itself shows (Siri and Shortcuts, the Control Center button)
+    are translated by Apple's string catalog in the phone's language, not by
+    tr(): each Hebrew one needs an entry there in every language."""
+    catalog = json.loads(SYSTEM_CATALOG.read_text(encoding="utf-8"))["strings"]
+    problems = []
+    for name in SYSTEM_STRING_FILES:
+        for number, line in enumerate(Path(name).read_text(encoding="utf-8").splitlines(), 1):
+            for text in SYSTEM_STRING.findall(line):
+                key = re.sub(r"\\\(\\\.\$(\w+)\)", r"${\1}", text)
+                missing = [l for l in SYSTEM_LANGUAGES if l not in catalog.get(key, {}).get("localizations", {})]
+                if missing:
+                    problems.append(f"{name}:{number}: {key!r} missing from {SYSTEM_CATALOG} in {', '.join(missing)}")
+    return problems
+
+
 def main():
     list_untranslated = "--untranslated" in sys.argv
     skip_table = "--no-table" in sys.argv
@@ -285,6 +307,7 @@ def main():
                 print(f"{path}: {len(untranslated)} Hebrew literals outside tr (lines {', '.join(map(str, untranslated[:12]))}{' ...' if len(untranslated) > 12 else ''})")
     if not skip_table:
         all_problems += check_translation_table(keys)
+        all_problems += check_system_strings()
     for problem in all_problems:
         print(problem)
     sys.exit(1 if all_problems else 0)
