@@ -287,20 +287,30 @@ extension TranscriptSessionSummary {
             .map { $0 }
     }
 
-    /// "dover 3" ("speaker 3"), "dover lo yadu'a" ("unknown speaker"), and the
-    /// English labels older builds saved.
+    /// "dover 3" ("speaker 3"), "dover lo yadu'a" ("unknown speaker"), in
+    /// any of the app's languages.
     public static func isGenericLabel(_ name: String) -> Bool {
-        // Checked against both languages' literal text, not the current
-        // language's `EmbeddingClusterer.unknownSpeakerName`: a session
-        // saved while the app was in Hebrew keeps that Hebrew placeholder
-        // forever (SavedSegment.speakerName is a snapshot), so comparing
-        // against whatever language the app happens to be in *now* stops
-        // recognizing it as generic the moment the language is switched.
-        if name == "דובר לא ידוע" || name == "Unknown speaker" { return true }
-        for prefix in ["דובר ", "Speaker "] where name.hasPrefix(prefix) {
-            if Int(name.dropFirst(prefix.count)) != nil { return true }
+        if isUnknownSpeakerLabel(name) { return true }
+        return numberedLabels.contains { prefix, suffix in
+            name.hasPrefix(prefix) && name.hasSuffix(suffix) && name.count > prefix.count + suffix.count
+                && Int(name.dropFirst(prefix.count).dropLast(suffix.count)) != nil
         }
-        return false
+    }
+
+    /// Checked against every language's text, not the current language's
+    /// `EmbeddingClusterer.unknownSpeakerName`: a saved line keeps the
+    /// placeholder of the language it was saved in (SavedSegment.speakerName
+    /// is a snapshot), so the current language alone stops recognizing it
+    /// the moment the language is switched.
+    public static func isUnknownSpeakerLabel(_ name: String) -> Bool {
+        unknownLabels.contains(name)
+    }
+
+    private static let unknownLabels = Set(UILanguage.allCases.map { tr("דובר לא ידוע", "Unknown speaker", in: $0) })
+    private static let numberedLabels: [(String, String)] = UILanguage.allCases.compactMap { language in
+        let template = tr("דובר %1", "Speaker %1", in: language)
+        guard let range = template.range(of: "%1") else { return nil }
+        return (String(template[..<range.lowerBound]), String(template[range.upperBound...]))
     }
 
     /// Shared by the default line-1 preview and by `TranscriptHistoryStore`'s

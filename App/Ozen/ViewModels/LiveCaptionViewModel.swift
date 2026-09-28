@@ -640,6 +640,9 @@ public final class LiveCaptionViewModel {
         guard uiLanguage != language else { return }
         uiLanguage = language
         refreshLockScreen()
+        // The expiry reminder is written out when scheduled; a week-long run
+        // would otherwise deliver it in the language it was scheduled in.
+        InstallExpiryStatus.shared.refreshReminder()
     }
 
     public func setAppLanguage(_ language: AppLanguage) {

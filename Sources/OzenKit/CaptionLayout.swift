@@ -199,8 +199,7 @@ extension CaptionLayout {
     private static func labelName(_ segment: SavedSegment) -> String? {
         guard let name = segment.speakerName?.trimmingCharacters(in: .whitespacesAndNewlines),
               !name.isEmpty,
-              name != EmbeddingClusterer.unknownSpeakerName,
-              name != "Unknown speaker"
+              !TranscriptSessionSummary.isUnknownSpeakerLabel(name)
         else { return nil }
         return name
     }

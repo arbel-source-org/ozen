@@ -539,6 +539,22 @@ struct TranscriptHistoryTests {
         }
     }
 
+    @Test("placeholders saved in any of the app's languages stay generic; real names don't")
+    func genericLabelsInEveryLanguage() {
+        Localization.$override.withValue(.english) {
+            for label in ["Unbekannter Sprecher", "未知说话人", "متحدث غير معروف", "Sprecher 3", "说话人 12", "Speaker 2"] {
+                #expect(TranscriptSessionSummary.isGenericLabel(label), "\(label)")
+            }
+            for name in ["Dana", "Sprecher", "Speaker two", "דנה"] {
+                #expect(!TranscriptSessionSummary.isGenericLabel(name), "\(name)")
+            }
+        }
+        Localization.$override.withValue(.german) {
+            #expect(TranscriptSessionSummary.isUnknownSpeakerLabel("דובר לא ידוע"))
+            #expect(!TranscriptSessionSummary.isUnknownSpeakerLabel("Sprecher 3"))
+        }
+    }
+
     @Test("top speaker names rank by how many sessions they appeared in, ties broken alphabetically")
     func topSpeakerNamesRanking() {
         func summary(_ names: [String]) -> TranscriptSessionSummary {
