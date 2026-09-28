@@ -333,6 +333,17 @@ struct TranscriptHistoryTests {
         #expect(text == "שיחה מתאריך 01.01.1970\n\n[01:01:01] סבתא: שלום\n[01:01:05] מה נשמע")
     }
 
+    @Test("shared text keeps each line's own clock time across daylight saving")
+    func exportUsesOffsetAtEachTimestamp() throws {
+        let israel = try #require(TimeZone(identifier: "Asia/Jerusalem"))
+        let offset: (TimeInterval) -> Int = { israel.secondsFromGMT(for: Date(timeIntervalSince1970: $0)) }
+        let summer = record(startedAt: 1_782_905_400, segments: [segment(text: "בקיץ", startTimestamp: 1_782_905_400)])
+        let winter = record(startedAt: 1_768_476_600, segments: [segment(text: "בחורף", startTimestamp: 1_768_476_600)])
+
+        #expect(TranscriptHistoryStore.exportText(summer, utcOffsetAt: offset).hasSuffix("[14:30:00] בקיץ"))
+        #expect(TranscriptHistoryStore.exportText(winter, utcOffsetAt: offset).hasSuffix("[13:30:00] בחורף"))
+    }
+
     @Test("the export heading and numbers block are in English when the app is")
     func exportTextEnglishHeading() {
         Localization.$override.withValue(.english) {

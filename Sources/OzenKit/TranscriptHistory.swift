@@ -744,16 +744,22 @@ public struct TranscriptHistoryStore: Sendable {
     /// by hand from the raw seconds plus a caller-supplied UTC offset
     /// rather than through `DateFormatter`, which is locale-sensitive and
     /// would otherwise make this render differently on a test machine than
-    /// on the phone. The app passes `TimeZone.current.secondsFromGMT()`;
+    /// on the phone. The app passes the phone's offset at each timestamp;
     /// tests pass 0.
     ///
     /// Opens with the conversation's name, if it has one, and its date:
     /// pasted into a chat or a note, the lines alone never say which day
     /// the doctor said it.
     public static func exportText(_ record: TranscriptSessionRecord, utcOffsetSeconds: Int = 0) -> String {
+        exportText(record, utcOffsetAt: { _ in utcOffsetSeconds })
+    }
+
+    /// As above, with the offset looked up per timestamp: a summer
+    /// conversation shared in winter keeps the clock times it was said at.
+    public static func exportText(_ record: TranscriptSessionRecord, utcOffsetAt offset: (TimeInterval) -> Int) -> String {
         let formatted = record.segments
             .map { segment in
-                let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
+                let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: offset(segment.startTimestamp))
                 let star = segment.isStarred ? "★ " : ""
                 let line: String
                 if let name = segment.speakerName, !name.isEmpty {
@@ -765,7 +771,7 @@ public struct TranscriptHistoryStore: Sendable {
                 // would be laid out left to right and read out of order.
                 return CaptionLayout.opensLeftToRight(line) ? CaptionLayout.rightToLeftMark + line : line
             }
-        let date = formattedDate(record.startedAt, utcOffsetSeconds: utcOffsetSeconds)
+        let date = formattedDate(record.startedAt, utcOffsetSeconds: offset(record.startedAt))
         let heading = namedHeading(title: record.title, date: date) ?? tr("שיחה מתאריך %1", "Conversation from %1", args: ["\(date)"])
         guard !formatted.isEmpty else { return heading }
         let transcript = formatted.joined(separator: "\n")
@@ -791,6 +797,10 @@ public struct TranscriptHistoryStore: Sendable {
     /// who said it. Dates are computed by hand for the same reason as the
     /// clock times: identical output on the phone and in tests.
     public static func exportStarredText(_ lines: [StarredLine], utcOffsetSeconds: Int = 0) -> String {
+        exportStarredText(lines, utcOffsetAt: { _ in utcOffsetSeconds })
+    }
+
+    public static func exportStarredText(_ lines: [StarredLine], utcOffsetAt offset: (TimeInterval) -> Int) -> String {
         var blocks: [String] = []
         var currentSession: UUID?
         var block: [String] = []
@@ -798,11 +808,11 @@ public struct TranscriptHistoryStore: Sendable {
             if line.sessionID != currentSession {
                 if !block.isEmpty { blocks.append(block.joined(separator: "\n")) }
                 // Two conversations on one day read apart by their names.
-                let date = formattedDate(line.sessionStartedAt, utcOffsetSeconds: utcOffsetSeconds)
+                let date = formattedDate(line.sessionStartedAt, utcOffsetSeconds: offset(line.sessionStartedAt))
                 block = [namedHeading(title: line.sessionTitle, date: date) ?? date]
                 currentSession = line.sessionID
             }
-            let time = formattedClockTime(line.segment.startTimestamp, utcOffsetSeconds: utcOffsetSeconds)
+            let time = formattedClockTime(line.segment.startTimestamp, utcOffsetSeconds: offset(line.segment.startTimestamp))
             let text: String
             if let name = line.segment.speakerName, !name.isEmpty, !TranscriptSessionSummary.isGenericLabel(name) {
                 text = "[\(time)] \(name): \(line.segment.text)"

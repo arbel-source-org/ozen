@@ -74,7 +74,7 @@ struct StarredLinesView: View {
             if !lines.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
                     ShareLink(
-                        item: TranscriptHistoryStore.exportStarredText(lines, utcOffsetSeconds: TimeZone.current.secondsFromGMT()),
+                        item: TranscriptHistoryStore.exportStarredText(lines, utcOffsetAt: { TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: $0)) }),
                         subject: Text(tr("שורות מסומנות מאוזן", "Starred lines from Ozen"))
                     ) {
                         Label(tr("שיתוף", "Share"), systemImage: "square.and.arrow.up")

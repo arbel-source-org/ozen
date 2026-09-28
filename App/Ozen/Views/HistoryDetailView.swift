@@ -182,7 +182,7 @@ struct HistoryDetailView: View {
         if let record {
             ToolbarItem(placement: .primaryAction) {
                 ShareLink(
-                    item: TranscriptHistoryStore.exportText(record, utcOffsetSeconds: TimeZone.current.secondsFromGMT()),
+                    item: TranscriptHistoryStore.exportText(record, utcOffsetAt: { TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: $0)) }),
                     subject: Text(tr("שיחה מאוזן", "Conversation from Ozen")),
                     message: Text(Date(timeIntervalSince1970: record.startedAt).formatted(inAppLanguage: .abbreviated, time: .shortened))
                 ) {
