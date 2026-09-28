@@ -1133,6 +1133,7 @@ struct LiveCaptionViewModelMissedInterruptionEndTests {
 struct LiveCaptionViewModelStoppedCaptionsTests {
     private final class Phone {
         var reclaimAnswer: Bool
+        var reclaimWorksFromTry: Int?
         var reclaims = 0
         var posted: [AlertNotificationContent] = []
         var withdrawn: [String] = []
@@ -1160,11 +1161,48 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
             withdrawNotification: { phone.withdrawn.append($0) },
             reclaimAudioSession: {
                 phone.reclaims += 1
+                if let first = phone.reclaimWorksFromTry { return phone.reclaims >= first }
                 return phone.reclaimAnswer
             }
         )
         viewModel.callEndGrace = .zero
+        viewModel.reclaimRetryDelays = []
         return viewModel
+    }
+
+    @Test("a microphone still held right after the call is tried again, and captions return with the phone still locked", .timeLimit(.minutes(1)))
+    func retriesAfterCall() async {
+        let phone = Phone(reclaimAnswer: false)
+        phone.reclaimWorksFromTry = 3
+        let viewModel = makeViewModel(phone: phone)
+        viewModel.reclaimRetryDelays = [.milliseconds(10), .milliseconds(10), .milliseconds(10)]
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.systemInterruptionChanged(began: true)
+        viewModel.phoneCallsChanged(inProgress: true)
+        viewModel.phoneCallsChanged(inProgress: false)
+        await viewModel.finishReclaimAfterCall()
+
+        #expect(phone.reclaims == 3)
+        #expect(viewModel.isInterruptedBySystem == false)
+    }
+
+    @Test("a new call during the retries stops them", .timeLimit(.minutes(1)))
+    func newCallStopsRetries() async {
+        let phone = Phone(reclaimAnswer: false)
+        let viewModel = makeViewModel(phone: phone)
+        viewModel.reclaimRetryDelays = [.seconds(30)]
+        await viewModel.start()
+        viewModel.sceneActivityChanged(isActive: false)
+        viewModel.systemInterruptionChanged(began: true)
+        viewModel.phoneCallsChanged(inProgress: true)
+        viewModel.phoneCallsChanged(inProgress: false)
+        #expect(await eventually { phone.reclaims == 1 })
+        viewModel.phoneCallsChanged(inProgress: true)
+        await viewModel.finishReclaimAfterCall()
+
+        #expect(phone.reclaims == 1)
+        #expect(viewModel.isInterruptedBySystem)
     }
 
     @Test("after a call iOS never ended, running captions take the microphone back by themselves")

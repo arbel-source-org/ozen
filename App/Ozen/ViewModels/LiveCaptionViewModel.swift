@@ -67,6 +67,9 @@ public final class LiveCaptionViewModel {
     /// How long after a call ends iOS gets to hand the microphone back by
     /// itself before the app asks for it.
     var callEndGrace: Duration = .seconds(2)
+    /// Further tries after a call when the first one finds the microphone
+    /// still held: a locked phone has nobody to open the app and take it.
+    var reclaimRetryDelays: [Duration] = [.seconds(5), .seconds(15), .seconds(45)]
     /// Tries to take the audio session back after an interruption whose
     /// end was never announced; true when it worked.
     private let reclaimAudioSession: (@MainActor () -> Bool)?
@@ -439,11 +442,18 @@ public final class LiveCaptionViewModel {
             return
         }
         guard isInterruptedBySystem else { return }
-        reclaimAfterCallTask = Task { [weak self, callEndGrace] in
+        reclaimAfterCallTask = Task { [weak self, callEndGrace, reclaimRetryDelays] in
             try? await Task.sleep(for: callEndGrace)
-            guard let self, !Task.isCancelled else { return }
-            self.reclaimAfterCallTask = nil
-            self.reclaimMicrophoneAfterCall()
+            for (attempt, delay) in ([Duration.zero] + reclaimRetryDelays).enumerated() {
+                if attempt > 0 {
+                    try? await Task.sleep(for: delay)
+                }
+                guard let viewModel = self, !Task.isCancelled else { return }
+                viewModel.reclaimMicrophoneAfterCall()
+                guard viewModel.isInterruptedBySystem else { break }
+            }
+            guard !Task.isCancelled else { return }
+            self?.reclaimAfterCallTask = nil
         }
     }
 
