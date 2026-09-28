@@ -1014,6 +1014,56 @@ public final class LiveCaptionViewModel {
         return HomeServerCheck(availability: availability, seconds: seconds)
     }
 
+    // MARK: - Backup model
+
+    /// The phone's own model, fetched while captions come from the home
+    /// computer: covering for a computer that doesn't answer is skipped
+    /// while that model still needs a download, so without it captions
+    /// just stop.
+    public private(set) var backupModelProgress: Double?
+    public private(set) var backupModelFailed = false
+    /// Bumped after a download ends so the installed check is read again.
+    private var backupModelChecks = 0
+
+    public var backupModelStatus: BackupModelStatus {
+        _ = backupModelChecks
+        let variant = settings.whisperModelVariant
+        let option = WhisperModelCatalog.option(for: variant)
+        return BackupModel.status(
+            engine: settings.engine,
+            installed: WhisperModelStore().isInstalled(variant),
+            sizeMegabytes: option?.sizeMB ?? 0,
+            downloading: backupModelProgress,
+            failed: backupModelFailed,
+            shortfallMegabytes: option.flatMap {
+                StorageSpaceGate.shortfallMegabytes(downloadMegabytes: $0.installMegabytes, availableBytes: DeviceStorage.availableBytes())
+            },
+            network: pipeline.networkConditions,
+            allowCellular: settings.allowCellularModelDownload
+        )
+    }
+
+    public func downloadBackupModel() {
+        guard BackupModel.canStart(backupModelStatus) else { return }
+        let variant = settings.whisperModelVariant
+        backupModelFailed = false
+        backupModelProgress = 0
+        Task {
+            do {
+                _ = try await WhisperModelStore().download(variant: variant) { fraction in
+                    Task { @MainActor [weak self] in
+                        guard let self, self.backupModelProgress != nil else { return }
+                        self.backupModelProgress = fraction
+                    }
+                }
+            } catch {
+                backupModelFailed = true
+            }
+            backupModelProgress = nil
+            backupModelChecks += 1
+        }
+    }
+
     /// The home server's pairing code was saved or removed in Settings.
     public func homeServerCodeChanged() async {
         beamRestart?.cancel()

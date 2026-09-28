@@ -406,6 +406,9 @@ struct SettingsView: View {
                     homeServerCheckLabel(homeServerCheck)
                 }
             }
+            if viewModel.settings.engine == .homeServer {
+                HomeServerBackupRow(viewModel: viewModel)
+            }
             VStack(alignment: .leading, spacing: 8) {
                 sliderLabelLayout {
                     Text(tr("מהירות מול דיוק", "Speed or accuracy"))
@@ -454,7 +457,7 @@ struct SettingsView: View {
         } header: {
             Text(tr("המחשב בבית", "Home computer"))
         } footer: {
-            Text(tr("הדרך הקלה: מצלמת האייפון על קוד ה‑QR שהמחשב מציג, והכול מתמלא לבד. הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד. \"מהירות מול דיוק\": כשמשפט נגמר, המחשב בודק כמה ניסוחים אפשריים ובוחר את הנכון ביותר. פחות ניסוחים מביאים את המשפט מהר יותר, אבל עם יותר טעויות.", "The easy way: point the iPhone’s Camera at the QR code the computer shows, and everything fills in by itself. The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself. “Speed or accuracy”: when a sentence ends, the computer weighs several possible wordings and picks the best. Fewer wordings bring the sentence sooner, with more mistakes."))
+            Text(tr("הדרך הקלה: מצלמת האייפון על קוד ה‑QR שהמחשב מציג, והכול מתמלא לבד. הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד, אחרי שהגיבוי למעלה הורד. \"מהירות מול דיוק\": כשמשפט נגמר, המחשב בודק כמה ניסוחים אפשריים ובוחר את הנכון ביותר. פחות ניסוחים מביאים את המשפט מהר יותר, אבל עם יותר טעויות.", "The easy way: point the iPhone’s Camera at the QR code the computer shows, and everything fills in by itself. The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself, once the backup above has been downloaded. “Speed or accuracy”: when a sentence ends, the computer weighs several possible wordings and picks the best. Fewer wordings bring the sentence sooner, with more mistakes."))
         }
         .onChange(of: viewModel.homeServerBeam) { forgetHomeServerCheck() }
     }
