@@ -465,7 +465,7 @@ public final class LiveCaptionViewModel {
                     try? await Task.sleep(for: delay)
                 }
                 guard let viewModel = self, !Task.isCancelled else { return }
-                viewModel.reclaimMicrophoneAfterCall()
+                await viewModel.reclaimMicrophone()
                 guard viewModel.isInterruptedBySystem else { break }
             }
             guard !Task.isCancelled else { return }
@@ -482,6 +482,11 @@ public final class LiveCaptionViewModel {
     /// promise to say when a call ends, so without this she could be stuck
     /// on the paused screen with nothing to do until she force-quits.
     public func reclaimMicrophoneAfterCall() {
+        Task { await reclaimMicrophone() }
+    }
+
+    /// Returns once the microphone was taken back or found still held.
+    func reclaimMicrophone() async {
         guard isInterruptedBySystem else { return }
         callEndedDuringInterruption = true
         // Only for captions that were running: taking the audio session
@@ -502,12 +507,10 @@ public final class LiveCaptionViewModel {
             checkCaptionsStillRunning()
             return
         }
-        Task {
-            if await reclaimAudioSession() {
-                if isInterruptedBySystem { systemInterruptionChanged(began: false) }
-            } else {
-                checkCaptionsStillRunning()
-            }
+        if await reclaimAudioSession() {
+            if isInterruptedBySystem { systemInterruptionChanged(began: false) }
+        } else {
+            checkCaptionsStillRunning()
         }
     }
 

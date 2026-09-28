@@ -1286,7 +1286,7 @@ struct LiveCaptionViewModelStoppedCaptionsTests {
         // She opens the app from the notification; now it works.
         phone.reclaimAnswer = true
         viewModel.sceneActivityChanged(isActive: true)
-        #expect(viewModel.isInterruptedBySystem == false)
+        #expect(await eventually { viewModel.isInterruptedBySystem == false })
         #expect(phone.posted.count == 1)
         #expect(phone.withdrawn == [StoppedCaptionsNotice.identifier])
     }
