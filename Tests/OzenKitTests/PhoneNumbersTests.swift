@@ -17,6 +17,16 @@ struct PhoneNumbersTests {
         #expect(dialed("050-1234567 או 04-8123456") == ["0501234567", "048123456"])
     }
 
+    @Test("1-700 and 1-800 numbers dial; star numbers stay text, since iOS refuses to dial a link with a star")
+    func serviceNumbers() {
+        #expect(dialed("המוקד 1-700-50-50-50 פתוח") == ["1700505050"])
+        #expect(dialed("1800123456") == ["1800123456"])
+        #expect(dialed("1-599-123-456 או 050-1234567") == ["1599123456", "0501234567"])
+        for text in ["תתקשרי לקופה *2700", "1700", "בשנת 1800", "1-900-123-456", "*1-700-50-50-50"] {
+            #expect(dialed(text).isEmpty, "\(text)")
+        }
+    }
+
     @Test("the span covers exactly the number, so only it becomes tappable")
     func range() throws {
         let text = "הטלפון 050-1234567."
