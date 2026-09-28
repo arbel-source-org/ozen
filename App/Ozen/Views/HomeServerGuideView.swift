@@ -60,7 +60,7 @@ struct HomeServerGuideView: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(tr("מחשב שנכנס למצב שינה לא עונה, כמו מחשב כבוי. ההתקנה מציעה למנוע ממנו להירדם מעצמו כשהוא מחובר לחשמל.", "A computer that has gone to sleep doesn’t answer, just like one that is off. Setup offers to stop it from falling asleep by itself while it is plugged in."))
-                    Text(tr("כשהמחשב כבוי או רחוק, הטלפון ממשיך לכתוב כתוביות לבד, וחוזר למחשב כשהוא עונה שוב.", "When the computer is off or out of reach, the phone keeps writing captions by itself, and goes back to the computer once it answers again."))
+                    Text(tr("כשהמחשב כבוי או רחוק, טלפון שמודל העברית כבר הורד אליו ממשיך לכתוב כתוביות לבד, וחוזר למחשב כשהוא עונה שוב. בלי המודל, הכתוביות מחכות למחשב.", "When the computer is off or out of reach, a phone that already has the Hebrew model downloaded keeps writing captions by itself, and goes back to the computer once it answers again. Without the model, captions wait for the computer."))
                 }
             }
         }
