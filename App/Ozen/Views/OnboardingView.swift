@@ -95,6 +95,17 @@ struct OnboardingView: View {
 
     private var enginePage: some View {
         OnboardingPage(symbol: "cpu", title: tr("הכנה חד-פעמית", "One-time setup")) {
+            // Scanning the home computer's QR code on a new phone lands here
+            // with that engine already chosen; without its own card nothing
+            // looked selected, and "recommended" quietly undid the pairing.
+            if viewModel.settings.engine == .homeServer {
+                EngineCard(
+                    title: tr("המחשב בבית", "Home computer"),
+                    subtitle: Self.pairedNote,
+                    symbol: "desktopcomputer",
+                    selected: true
+                ) {}
+            }
             EngineCard(
                 title: tr("עברית מדויקת (מומלץ)", "Accurate Hebrew (recommended)"),
                 subtitle: tr("מוריד פעם אחת קובץ של כ-%1, ב-Wi-Fi, ומכין אותו לטלפון במשך כמה דקות. אחר כך עובד בלי אינטרנט.", "Downloads a file of about %1 once, over Wi‑Fi, and takes a few minutes to set it up for the phone. After that it works without the internet.", args: ["\(modelSizeText)"]),
@@ -235,10 +246,15 @@ struct OnboardingView: View {
 
     private var readyPage: some View {
         OnboardingPage(symbol: "checkmark.seal", title: tr("מוכן", "Ready")) {
-            if viewModel.settings.engine == .whisperKit {
+            switch viewModel.settings.engine.firstRunNote {
+            case .modelDownload:
                 Text(tr("בהפעלה הראשונה אוזן תוריד את מודל השפה. זה לוקח כמה דקות ומוצג על המסך. אחר כך — מיד.", "The first time it runs, Ozen will download the language model. This takes a few minutes and shows on the screen. After that — instantly."))
-            } else {
+            case .speechPermission:
                 Text(tr("בהפעלה הראשונה iOS עשוי לבקש אישור לזיהוי דיבור.", "The first time it runs, iOS may ask for permission to recognize speech."))
+            case .homeComputer:
+                Text(Self.pairedNote)
+            case .none:
+                EmptyView()
             }
             Text(tr("הכפתור למטה מתחיל את הכתוביות. בהצלחה, סבתא.", "The button below starts the captions. Good luck, Grandma."))
         }
@@ -289,6 +305,10 @@ struct OnboardingView: View {
 
     private func finish() {
         withAnimation { viewModel.completeOnboarding() }
+    }
+
+    private static var pairedNote: String {
+        tr("מחובר בקוד שסרקתם. הכתוביות מגיעות מהמחשב בבית.", "Connected with the code you scanned. Captions come from the computer at home.")
     }
 
     private var modelSizeText: String {
