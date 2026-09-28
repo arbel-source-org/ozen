@@ -201,6 +201,15 @@ struct HomeServerEngineTests {
         #expect(alivePings >= 10)
     }
 
+    @Test("an address typed but never saved is kept as Settings closes, unless it is unchanged, empty or not an address")
+    func unsavedAddress() {
+        #expect(HomeServer.unsavedAddress(draft: " wss://pc.example.ts.net\n", saved: "10.0.0.5") == "wss://pc.example.ts.net")
+        #expect(HomeServer.unsavedAddress(draft: "192.168.1.20", saved: "") == "192.168.1.20")
+        #expect(HomeServer.unsavedAddress(draft: "10.0.0.5 ", saved: "10.0.0.5") == nil)
+        #expect(HomeServer.unsavedAddress(draft: "", saved: "10.0.0.5") == nil)
+        #expect(HomeServer.unsavedAddress(draft: "my computer", saved: "10.0.0.5") == nil)
+    }
+
     @Test("audio goes out as little-endian 16-bit samples, clipped, with a broken sample sent as silence")
     func pcm() {
         let bytes = [UInt8](HomeServer.pcm16([0, 1, -1, 2, .nan]))

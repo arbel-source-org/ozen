@@ -24,6 +24,16 @@ public enum HomeServer {
     static let noAddress = "no valid server address"
     static let noCode = "no pairing code"
 
+    /// An address typed in Settings but never saved with Return or the
+    /// button, worth saving as Settings closes: going back used to drop it,
+    /// and captions carried on with the address from before. Nil when
+    /// there is nothing new, or when it isn't an address at all.
+    public static func unsavedAddress(draft: String, saved: String) -> String? {
+        let address = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard address != saved, url(from: address) != nil else { return nil }
+        return address
+    }
+
     /// "192.168.1.20", "grandma-pc:8765", "ws://…" or "wss://…" all work;
     /// a bare host gets the default port and plain `ws`.
     public static func url(from address: String) -> URL? {

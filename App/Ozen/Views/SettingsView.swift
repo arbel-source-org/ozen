@@ -86,6 +86,7 @@ struct SettingsView: View {
                 aboutSection
             }
             .accessibilityIdentifier("settingsScreen")
+            .onDisappear(perform: saveUnsavedHomeServerEntries)
             .navigationTitle(tr("הגדרות", "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -489,6 +490,15 @@ struct SettingsView: View {
         case .notSetUp:
             tr("חסרים כתובת או קוד", "The address or code is missing")
         }
+    }
+
+    /// Typed but never saved with Return or the button: kept as Settings
+    /// closes instead of silently dropped.
+    private func saveUnsavedHomeServerEntries() {
+        if HomeServer.unsavedAddress(draft: homeServerAddressDraft, saved: viewModel.settings.homeServerAddress) != nil {
+            saveHomeServerAddress()
+        }
+        saveHomeServerCode()
     }
 
     private func saveHomeServerAddress() {
