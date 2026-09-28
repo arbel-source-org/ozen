@@ -57,7 +57,10 @@ struct HomeServerGuideView: View {
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
             } footer: {
-                Text(tr("כשהמחשב כבוי או רחוק, הטלפון ממשיך לכתוב כתוביות לבד, וחוזר למחשב כשהוא עונה שוב.", "When the computer is off or out of reach, the phone keeps writing captions by itself, and goes back to the computer once it answers again."))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(tr("מחשב שנכנס למצב שינה לא עונה, כמו מחשב כבוי. ההתקנה מציעה למנוע ממנו להירדם מעצמו כשהוא מחובר לחשמל.", "A computer that has gone to sleep doesn’t answer, just like one that is off. Setup offers to stop it from falling asleep by itself while it is plugged in."))
+                    Text(tr("כשהמחשב כבוי או רחוק, הטלפון ממשיך לכתוב כתוביות לבד, וחוזר למחשב כשהוא עונה שוב.", "When the computer is off or out of reach, the phone keeps writing captions by itself, and goes back to the computer once it answers again."))
+                }
             }
         }
         .navigationTitle(tr("הכנת המחשב בבית", "Setting up the home computer"))
