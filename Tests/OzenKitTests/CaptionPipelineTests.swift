@@ -1119,6 +1119,44 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .listening)
     }
 
+    @Test("two model switches while an abandoned load finishes: the last choice starts, not the one in between", .timeLimit(.minutes(1)))
+    func lastModelChoiceWins() async {
+        let slow = FakeEngine()
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let middle = FakeEngine()
+        let last = FakeEngine()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                switch settings.whisperModelVariant {
+                case "middle": return middle
+                case "last": return last
+                default: return slow
+                }
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        let first = Task { await pipeline.start(settings: .default) }
+        while slow.prepareCount == 0 { await Task.yield() }
+        var middleSettings = AppSettings.default
+        middleSettings.whisperModelVariant = "middle"
+        var lastSettings = AppSettings.default
+        lastSettings.whisperModelVariant = "last"
+        let second = Task { await pipeline.restart(settings: middleSettings) }
+        for _ in 0..<50 { await Task.yield() }
+        let third = Task { await pipeline.restart(settings: lastSettings) }
+        for _ in 0..<50 { await Task.yield() }
+        await gate.open()
+        await first.value
+        await second.value
+        await third.value
+        #expect(last.prepareCount == 1)
+        #expect(middle.prepareCount == 0)
+        #expect(pipeline.phase == .listening)
+    }
+
     @Test("a start waiting on an abandoned load says the model is loading, and a stop meanwhile is kept")
     func waitingStartShowsAndCanBeStopped() async {
         let slow = FakeEngine()

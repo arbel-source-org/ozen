@@ -200,6 +200,10 @@ public final class CaptionPipeline {
     /// waiting start gives up instead of starting captions she stopped.
     private var isPreparingEngine = false
     private var preparationWaiters: [CheckedContinuation<Void, Never>] = []
+    /// The newest start waiting on an abandoned load. Two model switches in
+    /// a row both waited, and the older one, a model she had already
+    /// switched away from, went ahead while her last choice was dropped.
+    private var newestWaitingStart: UUID?
     private var stopCount = 0
     private var recovery: AutoRecoveryPolicy
     /// Notices capture that died while the screen still says "listening".
@@ -273,12 +277,14 @@ public final class CaptionPipeline {
         // closed.
         if isPreparingEngine, settings.engine == .whisperKit {
             let stops = stopCount
+            let mine = UUID()
+            newestWaitingStart = mine
             let waiting = EnginePreparationProgress(stage: .loadingModel)
             phase = .preparingEngine(waiting)
             while isPreparingEngine {
                 await withCheckedContinuation { preparationWaiters.append($0) }
             }
-            guard stopCount == stops, phase == .preparingEngine(waiting) else { return }
+            guard stopCount == stops, newestWaitingStart == mine, phase == .preparingEngine(waiting) else { return }
             phase = .idle
         }
         cancelScheduledRetry()

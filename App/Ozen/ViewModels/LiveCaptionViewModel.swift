@@ -885,6 +885,9 @@ public final class LiveCaptionViewModel {
         guard settings.homeServerAddress != trimmed else { return }
         settings.homeServerAddress = trimmed
         persist()
+        // This restart carries the current beam too: one still settling
+        // from the slider would only reconnect a second time.
+        beamRestart?.cancel()
         if settings.engine == .homeServer {
             await restartIfRunning()
         }
@@ -931,6 +934,7 @@ public final class LiveCaptionViewModel {
         settings.homeServerAddress = pairing.address
         settings.engine = .homeServer
         persist()
+        beamRestart?.cancel()
         await restartIfRunning()
         return true
     }
@@ -979,6 +983,7 @@ public final class LiveCaptionViewModel {
 
     /// The home server's pairing code was saved or removed in Settings.
     public func homeServerCodeChanged() async {
+        beamRestart?.cancel()
         if settings.engine == .homeServer {
             await restartIfRunning()
         }
