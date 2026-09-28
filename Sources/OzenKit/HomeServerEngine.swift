@@ -163,7 +163,7 @@ public actor HomeServerEngine: TranscriptionEngine {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(self.pingSeconds))
                 if Task.isCancelled { return }
-                switch await self.heartbeatStep() {
+                switch self.heartbeatStep() {
                 case .wait:
                     continue
                 case .lost:
@@ -172,7 +172,7 @@ public actor HomeServerEngine: TranscriptionEngine {
                 case .ping:
                     Task {
                         guard (try? await socket.ping()) != nil else { return }
-                        await self.notePong()
+                        self.notePong()
                     }
                 }
             }

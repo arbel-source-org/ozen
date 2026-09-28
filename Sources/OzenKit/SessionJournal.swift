@@ -93,7 +93,7 @@ public final class SessionJournal: @unchecked Sendable {
         let manager = FileManager.default
         if !manager.fileExists(atPath: fileURL.path) {
             try? manager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-            manager.createFile(atPath: fileURL.path, contents: nil, attributes: privateFileAttributes)
+            _ = manager.createFile(atPath: fileURL.path, contents: nil, attributes: privateFileAttributes)
             excludeFromBackup(fileURL)
         }
         guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
