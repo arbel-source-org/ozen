@@ -61,6 +61,7 @@ public struct ProblemAudioStore: Sendable {
     public func save(_ samples: [Float], sampleRate: Int, at date: Date) -> URL? {
         guard !samples.isEmpty else { return nil }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        excludeFromBackup()
         let url = directory.appendingPathComponent("problem-\(Self.nameFormatter().string(from: date)).wav")
         do {
             try WAVFile.pcm16(samples, sampleRate: sampleRate).write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
@@ -82,6 +83,31 @@ public struct ProblemAudioStore: Sendable {
 
     public func remove(_ url: URL) {
         try? FileManager.default.removeItem(at: url)
+    }
+
+    /// Every clip, for "delete all saved conversations": a clip is her
+    /// voice, and deleting everything must not leave it behind.
+    public func deleteAll() {
+        for clip in clips() { remove(clip) }
+    }
+
+    /// The screen says clips stay on the phone only; an iCloud or computer
+    /// backup would otherwise copy them off it.
+    public var isExcludedFromBackup: Bool {
+        #if canImport(Darwin)
+        return (try? directory.resourceValues(forKeys: [.isExcludedFromBackupKey]))?.isExcludedFromBackup == true
+        #else
+        return false
+        #endif
+    }
+
+    private func excludeFromBackup() {
+        #if canImport(Darwin)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var url = directory
+        try? url.setResourceValues(values)
+        #endif
     }
 
     /// Clips are her voice: they follow the same "delete after" choice as

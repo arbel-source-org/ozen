@@ -126,6 +126,33 @@ struct LiveCaptionViewModelTests {
         #expect(SessionJournal(fileURL: journalURL).entries().contains { $0.text.hasPrefix("  sound saved: problem-") })
     }
 
+    @Test("with saving conversations off, marking a problem keeps no sound; delete all removes clips already kept")
+    func problemSoundFollowsHistoryChoice() async throws {
+        let audio = FakeAudioCapturer()
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-vm-problem-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: temporaryStore(),
+            pipeline: fakePipeline(audio: audio),
+            journal: SessionJournal(fileURL: directory.appendingPathComponent("journal.log")),
+            problemAudio: ProblemAudioStore(directory: directory.appendingPathComponent("clips"))
+        )
+        await viewModel.start()
+        audio.push([0.1, 0.2, 0.3])
+        #expect(await eventually { viewModel.pipeline.recentAudioSamples.count == 3 })
+        viewModel.markProblem()
+        #expect(viewModel.problemKeptSound)
+        #expect(viewModel.problemAudio?.clips().count == 1)
+
+        try viewModel.deleteAllConversations()
+        #expect(viewModel.problemAudio?.clips().isEmpty == true)
+
+        viewModel.saveHistory = false
+        viewModel.markProblem()
+        #expect(!viewModel.problemKeptSound)
+        #expect(viewModel.problemAudio?.clips().isEmpty == true)
+    }
+
     @Test("start() drives the pipeline to listening")
     func startListens() async {
         let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())

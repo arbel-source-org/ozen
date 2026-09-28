@@ -297,6 +297,9 @@ public final class LiveCaptionViewModel {
     public let problemAudio: ProblemAudioStore?
     /// When a problem was last marked, for the caption screen to confirm.
     public private(set) var problemMarkedAt: TimeInterval?
+    /// Whether the last marked problem also kept the last 30 s of sound,
+    /// for the confirmation to say so.
+    public private(set) var problemKeptSound = false
     @ObservationIgnored private var journalObservers: [NSObjectProtocol] = []
 
     private func note(_ text: String) {
@@ -343,8 +346,12 @@ public final class LiveCaptionViewModel {
         for line in lines {
             journal?.append(line, at: now)
         }
-        if let clip = problemAudio?.save(pipeline.recentAudioSamples, sampleRate: 16_000, at: Date(timeIntervalSince1970: now)) {
+        // With saving conversations off, the room's sound isn't kept either.
+        problemKeptSound = false
+        if settings.saveHistory,
+           let clip = problemAudio?.save(pipeline.recentAudioSamples, sampleRate: 16_000, at: Date(timeIntervalSince1970: now)) {
             journal?.append("  sound saved: \(clip.lastPathComponent)", at: now)
+            problemKeptSound = true
         }
         problemMarkedAt = now
         Task { [weak self] in
@@ -1753,6 +1760,7 @@ public final class LiveCaptionViewModel {
     /// Deletes every saved conversation, including the one in progress.
     public func deleteAllConversations() throws {
         try historyWriter.deleteAllNow()
+        problemAudio?.deleteAll()
         closedHistorySessions = []
         forgetCurrentConversation()
     }

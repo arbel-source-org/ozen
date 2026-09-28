@@ -13,7 +13,11 @@ audio", "failed: …", "retry 1 in 2s", "listening"), so "it stopped at lunch"
 can be read off it. Nothing in it is what was said, with one exception:
 **Mark a problem** (in the same screen) adds the last few caption lines
 around the moment it was tapped, so the wrong words can be seen; the screen
-says so. Otherwise conversations never leave the phone.
+says so. It also keeps the last 30 seconds of sound on the phone (only while
+saving conversations is on, never in a backup); Diagnostics lists these
+clips, and one is only sent if someone taps it and shares it. "Delete all
+saved conversations" deletes them too. Otherwise conversations never leave
+the phone.
 
 ## What the status button says
 

@@ -54,6 +54,29 @@ struct RecentAudioTests {
         #expect(store.clips().count == 1)
     }
 
+    @Test("deleting everything removes every clip")
+    func deleteAll() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-problem-audio-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ProblemAudioStore(directory: directory, keep: 5)
+        for second in 0..<3 {
+            try #require(store.save([0.1], sampleRate: 16_000, at: Date(timeIntervalSince1970: 1_790_000_000 + Double(second))))
+        }
+        store.deleteAll()
+        #expect(store.clips().isEmpty)
+    }
+
+    #if canImport(Darwin)
+    @Test("clips stay out of iCloud and computer backups, as the screen promises")
+    func notBackedUp() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-problem-audio-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ProblemAudioStore(directory: directory)
+        try #require(store.save([0.1], sampleRate: 16_000, at: Date()))
+        #expect(store.isExcludedFromBackup)
+    }
+    #endif
+
     @Test("clips older than the chosen keep-for time are deleted; newer ones stay")
     func clipsExpire() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-problem-audio-\(UUID())")
