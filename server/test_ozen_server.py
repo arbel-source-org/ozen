@@ -121,6 +121,32 @@ class HungUp(unittest.TestCase):
         asyncio.run(S.handle(GoneSocket(), None, "code", 1.0))
 
 
+class HelloSocket:
+    remote_address = ("203.0.113.9", 4444)
+
+    def __init__(self, hello):
+        self.hello = hello
+        self.sent = []
+
+    async def recv(self):
+        return self.hello
+
+    async def send(self, text):
+        self.sent.append(text)
+
+
+class WrongCode(unittest.TestCase):
+    def test_the_refusal_never_repeats_either_code(self):
+        guess = "guessed-code-123"
+        ws = HelloSocket(S.json.dumps({"type": "hello", "token": guess}))
+        with self.assertLogs(S.log, "WARNING"):
+            asyncio.run(S.handle(ws, None, "real-code-456", 1.0))
+        self.assertEqual(len(ws.sent), 1)
+        self.assertIn("unauthorized", ws.sent[0])
+        self.assertNotIn(guess, ws.sent[0])
+        self.assertNotIn("real-code-456", ws.sent[0])
+
+
 class WorkerEndings(unittest.TestCase):
     def test_a_phone_hanging_up_mid_send_is_not_a_failure(self):
         self.assertFalse(S.worker_failed(S.websockets.ConnectionClosed(None, None)))
