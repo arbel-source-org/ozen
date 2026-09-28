@@ -2053,6 +2053,9 @@ struct CaptionPipelineDownloadNetworkTests {
     func lateFirstReportOnCellularWaits() async {
         let monitor = FakeNetworkMonitor(nil)
         let (pipeline, engine) = makePipeline(network: monitor)
+        // The wait ends as soon as the report comes; a short one lost the
+        // race on a busy machine running every suite at once.
+        pipeline.networkFirstReportWaitSeconds = 5
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(100))
             monitor.current = .cellular
