@@ -44,6 +44,11 @@ struct KeywordAlertsView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                if HebrewText.isInOtherLetters(newPhrase, captionLanguage: viewModel.settings.languageCode) {
+                    Text(otherLettersNote)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
             } footer: {
                 Text(tr("כשמילה מהרשימה נאמרת, הטלפון ירטוט והשורה תודגש בצהוב עם פעמון. גם צורות כמו \"לסבתא\" או \"וסבתא\" נחשבות. כדאי לכתוב מילים בלי ה׳ בהתחלה: \"רופא\" ולא \"הרופא\", כדי שגם \"לרופא\" ייחשב.", "When a word from the list is said, the phone will vibrate and the line will be highlighted in yellow with a bell. Forms like “to grandma” or “and grandma” count too. It’s best to write words without a leading “the”: “doctor” instead of “the doctor”, so “to the doctor” counts too."))
             }
@@ -58,8 +63,16 @@ struct KeywordAlertsView: View {
                         get: { alert.isEnabled },
                         set: { viewModel.setKeywordAlert(id: alert.id, enabled: $0) }
                     )) {
-                        Text(alert.phrase)
-                            .foregroundStyle(alert.isEnabled ? .primary : .secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(alert.phrase)
+                                .foregroundStyle(alert.isEnabled ? .primary : .secondary)
+                            // Added before the screen said so: it has never buzzed.
+                            if HebrewText.isInOtherLetters(alert.phrase, captionLanguage: viewModel.settings.languageCode) {
+                                Text(otherLettersNote)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                     // A full swipe while scrolling deleted a name for good;
                     // now the swipe only shows the button (as in History).
@@ -141,6 +154,10 @@ struct KeywordAlertsView: View {
             return !viewModel.keywordAlerts.contains { HebrewText.normalize($0.phrase) == normalized }
         }
         return Array(candidates.prefix(8))
+    }
+
+    private var otherLettersNote: String {
+        tr("הכתוביות באותיות עבריות, ולכן מילה שנכתבה באותיות אחרות עלולה לא להימצא אף פעם.", "Captions are in Hebrew letters, so a word written in other letters may never be found.")
     }
 
     private func add() {

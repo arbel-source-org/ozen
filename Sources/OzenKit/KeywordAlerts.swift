@@ -122,6 +122,16 @@ public enum HebrewText {
             .joined(separator: " ")
     }
 
+    /// A word typed only in another alphabet ("Sarah", "Саша") while the
+    /// captions come out in Hebrew letters: its alert stays silent, so the
+    /// screens that add one say so. Digits alone are left alone.
+    public static func isInOtherLetters(_ phrase: String, captionLanguage: String) -> Bool {
+        guard captionLanguage.hasPrefix("he") else { return false }
+        let scalars = phrase.unicodeScalars
+        let hasHebrew = scalars.contains { (0x05D0...0x05F2).contains($0.value) || (0xFB1D...0xFB4F).contains($0.value) }
+        return !hasHebrew && scalars.contains { $0.properties.isAlphabetic }
+    }
+
     /// `normalize`, split into individual words. Used for a phrase, where
     /// only the resulting word list matters — not each word's position in
     /// the original phrase text.

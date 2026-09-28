@@ -503,3 +503,26 @@ struct KeywordAttentionPolicyTests {
         #expect(otherWordASecondLater)
     }
 }
+
+@Suite("A word in other letters")
+struct OtherLettersTests {
+    @Test("a word with no Hebrew letters is flagged while the captions are Hebrew")
+    func flagged() {
+        #expect(HebrewText.isInOtherLetters("Sarah", captionLanguage: "he"))
+        #expect(HebrewText.isInOtherLetters("Саша", captionLanguage: "he"))
+        #expect(HebrewText.isInOtherLetters(" Dr. Cohen ", captionLanguage: "he"))
+        #expect(HebrewText.isInOtherLetters("سارة", captionLanguage: "he"))
+    }
+
+    @Test("Hebrew letters anywhere, no letters at all, or captions in another language are not flagged")
+    func notFlagged() {
+        #expect(!HebrewText.isInOtherLetters("שרה", captionLanguage: "he"))
+        #expect(!HebrewText.isInOtherLetters("ד״ר Cohen", captionLanguage: "he"))
+        #expect(!HebrewText.isInOtherLetters("שָׂרָה", captionLanguage: "he"))
+        #expect(!HebrewText.isInOtherLetters("\u{FB2A}רה", captionLanguage: "he"))
+        #expect(!HebrewText.isInOtherLetters("", captionLanguage: "he"))
+        #expect(!HebrewText.isInOtherLetters("   ", captionLanguage: "he"))
+        #expect(!HebrewText.isInOtherLetters("112", captionLanguage: "he"))
+        #expect(!HebrewText.isInOtherLetters("Sarah", captionLanguage: "en"))
+    }
+}

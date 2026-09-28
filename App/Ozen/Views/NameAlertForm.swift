@@ -28,6 +28,11 @@ struct NameAlertForm: View {
                     .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : nil)
                     .disabled(nameDraft.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+            if HebrewText.isInOtherLetters(nameDraft, captionLanguage: viewModel.settings.languageCode) {
+                Text(tr("הכתוביות באותיות עבריות, ולכן מילה שנכתבה באותיות אחרות עלולה לא להימצא אף פעם.", "Captions are in Hebrew letters, so a word written in other letters may never be found."))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             formLayout {
                 ForEach(AlertSuggestions.names, id: \.self) { word in
                     suggestionButton(word)
