@@ -331,10 +331,13 @@ struct LiveCaptionView: View {
         // Bigger text or a turned phone reflows every line; following the
         // newest one, it has to be brought back into view without waiting
         // for the next word.
-        .onChange(of: viewModel.display.fontSize) { _, _ in scrollToLatestIfPinned() }
-        .onChange(of: horizontalSizeClass) { _, _ in scrollToLatestIfPinned() }
-        .onChange(of: verticalSizeClass) { _, _ in scrollToLatestIfPinned() }
-        .onChange(of: dynamicTypeSize) { _, _ in scrollToLatestIfPinned() }
+        .modifier(OnReflow(
+            fontSize: viewModel.display.fontSize,
+            horizontal: horizontalSizeClass,
+            vertical: verticalSizeClass,
+            typeSize: dynamicTypeSize,
+            action: scrollToLatestIfPinned
+        ))
         .onChange(of: viewModel.segments.isEmpty) { _, _ in
             announceNewLines()
         }
@@ -1377,4 +1380,22 @@ struct LiveCaptionView: View {
 private struct OpenedConversation: Identifiable {
     let id: UUID
     var lineID: UUID? = nil
+}
+
+/// Its own modifier so the caption screen's long chain stays within what
+/// the compiler can type-check in time.
+private struct OnReflow: ViewModifier {
+    let fontSize: Double
+    let horizontal: UserInterfaceSizeClass?
+    let vertical: UserInterfaceSizeClass?
+    let typeSize: DynamicTypeSize
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: fontSize) { _, _ in action() }
+            .onChange(of: horizontal) { _, _ in action() }
+            .onChange(of: vertical) { _, _ in action() }
+            .onChange(of: typeSize) { _, _ in action() }
+    }
 }
