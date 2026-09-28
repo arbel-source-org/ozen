@@ -308,9 +308,10 @@ extension TranscriptSessionSummary {
 
     private static let unknownLabels = Set(UILanguage.allCases.map { tr("דובר לא ידוע", "Unknown speaker", in: $0) })
     private static let numberedLabels: [(String, String)] = UILanguage.allCases.compactMap { language in
-        let template = tr("דובר %1", "Speaker %1", in: language)
-        guard let range = template.range(of: "%1") else { return nil }
-        return (String(template[..<range.lowerBound]), String(template[range.upperBound...]))
+        let marker = "\u{E000}"
+        let label = tr("דובר %1", "Speaker %1", args: ["\(marker)"], in: language)
+        guard let range = label.range(of: marker) else { return nil }
+        return (String(label[..<range.lowerBound]), String(label[range.upperBound...]))
     }
 
     /// Shared by the default line-1 preview and by `TranscriptHistoryStore`'s
