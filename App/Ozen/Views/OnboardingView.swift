@@ -249,8 +249,11 @@ struct OnboardingView: View {
     private var footer: some View {
         HStack {
             if page < Self.pageCount - 1 {
-                Button(tr("דילוג", "Skip")) {
+                Button {
                     finish()
+                } label: {
+                    Text(tr("דילוג", "Skip"))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .foregroundStyle(.secondary)
                 Spacer()
@@ -258,6 +261,8 @@ struct OnboardingView: View {
                     withAnimation { page += 1 }
                 } label: {
                     Text(tr("הבא", "Next"))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(minWidth: 120)
                 }
                 // Before the glass button style, not after: applied on

@@ -43,6 +43,7 @@ struct HomeServerGuideView: View {
                         }
                     } icon: {
                         Image(systemName: step.systemImage)
+                            .accessibilityHidden(true)
                     }
                     .accessibilityElement(children: .combine)
                 }

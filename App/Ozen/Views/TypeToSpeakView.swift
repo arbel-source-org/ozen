@@ -17,6 +17,15 @@ struct TypeToSpeakView: View {
     @State private var showingBigText = false
     @FocusState private var isTyping: Bool
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// Stop and Play side by side, stacked when the text is too big to
+    /// share one row.
+    private var playButtonsLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(spacing: 12))
+            : AnyLayout(HStackLayout(spacing: 12))
+    }
 
     var body: some View {
         NavigationStack {
@@ -115,12 +124,13 @@ struct TypeToSpeakView: View {
                 .onSubmit(speakTyped)
                 .textFieldStyle(.roundedBorder)
 
-            HStack(spacing: 12) {
+            playButtonsLayout {
                 if viewModel.isSpeaking {
                     Button {
                         viewModel.stopSpeaking()
                     } label: {
                         Label(tr("עצירה", "Stop"), systemImage: "stop.fill")
+                            .fixedSize(horizontal: false, vertical: true)
                             .frame(maxWidth: .infinity)
                     }
                     .ozenGlassButton()
@@ -128,6 +138,7 @@ struct TypeToSpeakView: View {
                 }
                 Button(action: speakTyped) {
                     Label(tr("להשמיע", "Play"), systemImage: "speaker.wave.3.fill")
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity)
                 }
                 .ozenGlassButton(prominent: true)
