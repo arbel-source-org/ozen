@@ -330,6 +330,32 @@ struct HomeServerEngineTests {
         for try await _ in tokens {}
     }
 
+    @Test("a name added while the connection is still being set up reaches the server once it is ready", .timeLimit(.minutes(1)))
+    func vocabularyDuringHandshake() async throws {
+        let socket = ScriptedSocket(helloReply: nil)
+        let server = engine(socket)
+        await server.setVocabulary(["Avi"])
+        let (audio, feed) = AsyncStream<[Float]>.makeStream()
+        let tokens = server.stream(languageCode: "he", audio: audio)
+        var waited = 0
+        while await socket.sentTexts.isEmpty, waited < 400 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        #expect(await socket.sentTexts.first?.contains("Avi") == true)
+        await server.setVocabulary(["Avi", "Ruti"])
+        await socket.deliver(ready)
+        feed.yield([0.1])
+        waited = 0
+        while await !socket.sentTexts.contains(HomeServer.vocabularyUpdate(["Avi", "Ruti"])), waited < 400 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        #expect(await socket.sentTexts.contains(HomeServer.vocabularyUpdate(["Avi", "Ruti"])))
+        feed.finish()
+        for try await _ in tokens {}
+    }
+
     @Test("a server that answers ready is available, and the hello carries the code, language and names")
     func pairs() async throws {
         let socket = ScriptedSocket(helloReply: ready)

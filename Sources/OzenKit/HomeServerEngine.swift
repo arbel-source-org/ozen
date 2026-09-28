@@ -78,7 +78,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
         if let verified, verified.url == target.url, verified.token == target.token { return .available }
         do {
-            let socket = try await handshake(target, languageCode: languageCode, purpose: "check")
+            let socket = try await handshake(target, languageCode: languageCode, purpose: "check", vocabulary: vocabulary)
             await socket.close()
             verified = target
             return .available
@@ -103,7 +103,7 @@ public actor HomeServerEngine: TranscriptionEngine {
     /// reports folder. True once the server says it was saved.
     public func sendReport(_ text: String, languageCode: String) async -> Bool {
         guard case .success(let target) = destination(),
-              let socket = try? await handshake(target, languageCode: languageCode, purpose: "report")
+              let socket = try? await handshake(target, languageCode: languageCode, purpose: "report", vocabulary: vocabulary)
         else { return false }
         defer { Task { await socket.close() } }
         guard (try? await socket.send(text: HomeServer.report(text))) != nil,
@@ -132,14 +132,20 @@ public actor HomeServerEngine: TranscriptionEngine {
             return
         }
         let socket: any HomeServerSocket
+        let helloVocabulary = vocabulary
         do {
-            socket = try await handshake(target, languageCode: languageCode, purpose: "captions")
+            socket = try await handshake(target, languageCode: languageCode, purpose: "captions", vocabulary: helloVocabulary)
         } catch {
             verified = nil
             continuation.finish(throwing: error as? EngineUnavailability ?? .homeServerUnreachable("\(error)"))
             return
         }
         liveSocket = socket
+        // A name added while the hello waited for its answer found no live
+        // socket to send on; the server would keep the old list all session.
+        if vocabulary != helloVocabulary {
+            try? await socket.send(text: HomeServer.vocabularyUpdate(vocabulary))
+        }
         endSent = false
         stalled = false
         pongLost = false
@@ -329,7 +335,7 @@ public actor HomeServerEngine: TranscriptionEngine {
     /// Opens a connection, says hello and waits for the server's answer.
     /// A server that never answers is closed after `handshakeSeconds`, so
     /// a dead address doesn't leave captions waiting.
-    private func handshake(_ target: (url: URL, token: String), languageCode: String, purpose: String) async throws -> any HomeServerSocket {
+    private func handshake(_ target: (url: URL, token: String), languageCode: String, purpose: String, vocabulary terms: [String]) async throws -> any HomeServerSocket {
         let socket: any HomeServerSocket
         do {
             socket = try await connector.open(target.url)
@@ -338,7 +344,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
         do {
             try await socket.send(text: HomeServer.hello(
-                token: target.token, languageCode: languageCode, vocabulary: vocabulary, purpose: purpose, client: client, beam: beam
+                token: target.token, languageCode: languageCode, vocabulary: terms, purpose: purpose, client: client, beam: beam
             ))
             let reply = try await Self.firstReply(from: socket, within: handshakeSeconds)
             switch HomeServerMessage(json: reply) {
