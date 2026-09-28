@@ -20,7 +20,7 @@ public enum VocabularyHints {
             let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
             let clipped = String(trimmed.prefix(maximumTermLength))
-            let key = HebrewText.normalize(clipped).lowercased()
+            let key = dedupKey(clipped)
             guard !key.isEmpty, !seen.contains(key) else { continue }
             seen.insert(key)
             result.append(clipped)
@@ -34,9 +34,23 @@ public enum VocabularyHints {
     /// clearing the field as if the word had been added.
     public static func listedEntry(matching term: String, in terms: [String]) -> String? {
         let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        let key = HebrewText.normalize(String(trimmed.prefix(maximumTermLength))).lowercased()
+        let key = dedupKey(String(trimmed.prefix(maximumTermLength)))
         guard !key.isEmpty else { return nil }
-        return terms.first { HebrewText.normalize($0).lowercased() == key }
+        return terms.first { dedupKey($0) == key }
+    }
+
+    /// Case and niqqud don't make a different word, but a geresh does:
+    /// צ׳יפס isn't ציפס, and stripping it as punctuation made the second
+    /// impossible to add once the first was listed. A typed apostrophe
+    /// counts as the same mark.
+    static func dedupKey(_ term: String) -> String {
+        let marked = term
+            .replacingOccurrences(of: "\u{05F3}", with: "\u{02B9}")
+            .replacingOccurrences(of: "'", with: "\u{02B9}")
+            .replacingOccurrences(of: "\u{2019}", with: "\u{02B9}")
+            .replacingOccurrences(of: "\u{05F4}", with: "\u{02BA}")
+            .replacingOccurrences(of: "\"", with: "\u{02BA}")
+        return HebrewText.normalize(marked).lowercased()
     }
 
     /// The terms to actually prime a recognizer with: the person's own

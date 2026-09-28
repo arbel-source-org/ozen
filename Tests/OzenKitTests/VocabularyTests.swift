@@ -9,6 +9,15 @@ struct VocabularyTests {
         #expect(cleaned == ["רותי", "אבי", "Dani"])
     }
 
+    @Test("a geresh makes a different word, and a typed apostrophe is the same mark")
+    func geresh() {
+        #expect(VocabularyHints.normalized(["ציפס", "צ׳יפס"]) == ["ציפס", "צ׳יפס"])
+        #expect(VocabularyHints.normalized(["צ׳יפס", "צ'יפס"]) == ["צ׳יפס"])
+        #expect(VocabularyHints.listedEntry(matching: "צ'יפס", in: ["צ׳יפס"]) == "צ׳יפס")
+        #expect(VocabularyHints.listedEntry(matching: "ציפס", in: ["צ׳יפס"]) == nil)
+        #expect(VocabularyHints.normalized(["ד״ר כהן", "דר כהן"]).count == 2)
+    }
+
     @Test("an over-long entry is clipped and the list is capped")
     func caps() {
         let long = String(repeating: "א", count: 100)
