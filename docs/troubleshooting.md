@@ -39,6 +39,14 @@ leave the phone.
 | "No internet connection" (ein chibur la-internet) | Cloud captions can't reach the internet, and no Whisper model is on the phone to take over. | Check Wi-Fi or cellular data. It retries by itself; or switch to Whisper, which works offline. |
 | "Retrying by itself · tap to try now" (menase shuv le-vad · hakishu kedei lenasot achshav) | Something failed and a retry is already scheduled. | Wait a few seconds, or tap to retry now. |
 
+## The home computer (Settings → Home computer → Test connection)
+
+| It says | What it means | What to do |
+| --- | --- | --- |
+| "Connected" with a time in ms | The computer answered and took the code. | Nothing. |
+| "No answer from the computer" | The phone can't reach it: it is off, asleep, not on the internet, or (at home) Windows treats the Wi-Fi as a public network. | Wake or turn on the computer. At home, see "When the phone can't reach it" in `server/README.md`. Captions carry on from the phone's own model meanwhile. |
+| "The computer answered but didn't accept the code" | The code on the phone isn't the one in `C:\ozen\pairing-code` (setup was run on a new computer, or the code was typed wrong). | Scan the QR code again from "Ozen - pair a phone" in the computer's Start menu. |
+
 ## Things that are working as intended
 
 - **A card on the empty caption screen offers "much more accurate Hebrew

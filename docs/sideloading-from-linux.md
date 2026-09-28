@@ -126,8 +126,8 @@ a reminder notification the day before; Settings → About (odot) shows the exac
 under "Installation valid until" (ha-hatkana tkefa ad). Settings shows the installed build as "0.2.0 (N)", N being
 the release's build number.
 
-Refresh with the **same Apple ID** as last time: AltServer then installs over
-the existing app, and her settings, enrolled voices, saved conversations and
+Refresh with the **same Apple ID** as last time, with Impactor (AltServer only
+on iOS/iPadOS 25 or earlier, see above): it then installs over the existing app, and her settings, enrolled voices, saved conversations and
 the downloaded speech model (hundreds of MB) all stay. A different Apple ID
 gives the app a different bundle identifier, so it installs as a second, empty
 copy.

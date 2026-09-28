@@ -4,7 +4,7 @@
     python try_server.py ws://localhost:8765 CODE speech.wav [reference.txt]
 
 For every finished line it prints how long after that line's last word
-was sent the final text arrived. This includes the one second of quiet
+was sent the final text arrived. This includes the 0.7 s of quiet
 the server waits for before it calls a line finished.
 """
 import asyncio

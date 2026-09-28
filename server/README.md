@@ -5,15 +5,16 @@ a computer with an NVIDIA graphics card, and captions the phone's microphone
 over the network. The phone keeps its own model as a fallback: when this
 server can't be reached, captions carry on from the phone by themselves.
 
-Measured on an RTX 2080 Ti: the first words of a line appear about 0.15 s
-behind the speaker, and the finished line is on the phone about 1 s after it
-was said (0.7 s of that is the quiet the server waits for before it calls a
-line finished).
+Measured on an RTX 2080 Ti: the first words of a line appear about a quarter
+of a second behind the speaker, and the finished line is on the phone about
+0.8-1 s after it was said (0.7 s of that is the quiet the server waits for
+before it calls a line finished). The main README has measurements for other
+cards.
 
 ## Running it on Windows
 
 Needs an NVIDIA graphics card with at least 6 GB (8 GB or more for the
-accurate finished lines; measured only on an RTX 2080 Ti so far).
+accurate finished lines), GTX 16-series / RTX 20-series or newer.
 
 The easy way: download `Ozen-Home-Setup.cmd` from the newest release and
 double-click it. It asks Windows for permission, checks the graphics card
@@ -38,6 +39,36 @@ stops (also when three passes in a row fail, as after a graphics-driver
 fault). With 8 GB or more it also runs the accurate model for finished
 lines. Running it again updates the server and keeps the code. The log is
 `C:\ozen\server.log`.
+
+### When the phone can't reach it
+
+- **Asleep.** A sleeping computer answers nothing. Setup offers to stop it
+  sleeping while plugged in; by hand: Settings → System → Power → "When
+  plugged in, put my device to sleep after" → Never.
+- **"Public" network.** The firewall only lets the phone in on a network
+  Windows calls private. Setup asks when it sees a public one (a `-Quiet`
+  re-run doesn't ask); by hand: Settings → Network & internet → Wi-Fi (or
+  Ethernet) → your network → Network profile type → Private network.
+- **Models won't load.** `C:\ozen\server.log` says so in plain words ("could
+  not load the speech models on the graphics card") and the server tries
+  again every minute. Close games or other programs using the card, or update
+  the NVIDIA driver.
+
+### Removing it
+
+In PowerShell as administrator:
+
+```
+Unregister-ScheduledTask -TaskName 'Ozen server' -Confirm:$false
+Get-CimInstance Win32_Process -Filter "name='python.exe'" | Where-Object { $_.CommandLine -like '*C:\ozen\*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+Remove-NetFirewallRule -DisplayName 'Ozen server'
+Remove-Item -Recurse -Force C:\ozen
+```
+
+Then delete "Ozen - pair a phone" from the Start menu, and uninstall
+Tailscale from Settings → Apps if it was only there for Ozen. On the phone,
+Settings → Home computer → delete the code; captions go back to the phone's
+own model.
 
 ## Running it on Linux
 
