@@ -913,6 +913,16 @@ public final class LiveCaptionViewModel {
     @discardableResult
     public func acceptPendingPairing() async -> Bool {
         guard let pairing = pendingPairing else { return false }
+        return await accept(pairing)
+    }
+
+    /// The pairing the confirmation showed, handed over by its button. Read
+    /// back from `pendingPairing` instead, "Connect" did nothing: closing
+    /// the alert clears it before the button's task runs. And a second code
+    /// scanned while the alert was up would have been the one used, under
+    /// the first computer's name.
+    @discardableResult
+    public func accept(_ pairing: HomeServerPairing) async -> Bool {
         pendingPairing = nil
         guard saveHomeServerCode(pairing.code) else {
             pairingSaveFailed = true

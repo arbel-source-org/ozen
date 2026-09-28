@@ -201,6 +201,15 @@ struct HomeServerEngineTests {
         #expect(alivePings >= 10)
     }
 
+    @Test("a pairing link that lost its slashes on the way is still recognised as one, so the phone can say it's damaged")
+    func damagedPairingLink() throws {
+        #expect(HomeServerPairing.isPairingLink(try #require(URL(string: "ozen://pair?address=wss://x.net&code=abc"))))
+        #expect(HomeServerPairing.isPairingLink(try #require(URL(string: "ozen:pair?address=wss://x.net&code=abc"))))
+        #expect(!HomeServerPairing.isPairingLink(try #require(URL(string: "ozen://settings"))))
+        #expect(!HomeServerPairing.isPairingLink(try #require(URL(string: "ozen:settings"))))
+        #expect(!HomeServerPairing.isPairingLink(try #require(URL(string: "https://example.com/pair"))))
+    }
+
     @Test("an address typed but never saved is kept as Settings closes, unless it is unchanged, empty or not an address")
     func unsavedAddress() {
         #expect(HomeServer.unsavedAddress(draft: " wss://pc.example.ts.net\n", saved: "10.0.0.5") == "wss://pc.example.ts.net")

@@ -53,6 +53,20 @@ struct LiveCaptionViewModelTests {
         #expect(HomeServerCodeStore.read() == "testcode123")
     }
 
+    @Test("Connect pairs with the computer the alert named, even though closing the alert already cleared it, and not with one scanned since")
+    func connectUsesTheShownPairing() async throws {
+        let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())
+        viewModel.openURL(try #require(URL(string: "ozen://pair?address=wss://first.tail.ts.net&code=firstcode")))
+        let shown = try #require(viewModel.pendingPairing)
+        viewModel.openURL(try #require(URL(string: "ozen://pair?address=wss://second.tail.ts.net&code=secondcode")))
+        viewModel.pendingPairing = nil
+        defer { HomeServerCodeStore.remove() }
+        #expect(await viewModel.accept(shown))
+        #expect(viewModel.settings.engine == .homeServer)
+        #expect(viewModel.settings.homeServerAddress == "wss://first.tail.ts.net")
+        #expect(HomeServerCodeStore.read() == "firstcode")
+    }
+
     @Test("a reply typed but not yet said outlives the speaking sheet, captions stopping and starting, and is never saved to disk")
     func typedReplyIsKept() async throws {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-draft-\(UUID()).json")

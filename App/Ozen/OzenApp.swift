@@ -71,9 +71,9 @@ struct OzenApp: App {
                     set: { if !$0 { viewModel.pendingPairing = nil } }
                 ),
                 presenting: viewModel.pendingPairing
-            ) { _ in
+            ) { pairing in
                 Button(tr("להתחבר", "Connect")) {
-                    Task { await viewModel.acceptPendingPairing() }
+                    Task { await viewModel.accept(pairing) }
                 }
                 Button(tr("ביטול", "Cancel"), role: .cancel) {}
             } message: { pairing in

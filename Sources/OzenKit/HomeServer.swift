@@ -124,7 +124,9 @@ public struct HomeServerPairing: Sendable, Equatable {
     /// Meant as a pairing link, whether or not it survived the trip: a
     /// damaged one has to be reported, not silently ignored.
     public static func isPairingLink(_ url: URL) -> Bool {
-        url.scheme?.lowercased() == scheme && url.host?.lowercased() == "pair"
+        guard url.scheme?.lowercased() == scheme else { return false }
+        // "ozen:pair?…": the "//" lost on the way leaves no host at all.
+        return url.host?.lowercased() == "pair" || (url.host == nil && url.absoluteString.lowercased().hasPrefix("\(scheme):pair"))
     }
 
     public init?(url: URL) {
