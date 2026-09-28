@@ -159,8 +159,8 @@ things, for Hebrew conversation, entirely on-device.
   still has to download while captions run asks first, since captions
   stop until it arrives.
 - **Type to speak.** The other half of a conversation: type a reply, or
-  tap one of the ready-made phrases ("Wait, I didn't understand" (rega, lo
-  hevanti), "Can you repeat that?" (efshar lachzor al ze?), "Please speak
+  tap one of the ready-made phrases ("Wait, I didn't catch that" (rega, lo
+  hevanti), "Could you say that again?" (efshar lachzor al ze?), "Please speak
   closer to the phone" (dabru karov yoter la-telefon), which helps the
   captions most), and the phone
   says it in Hebrew. The last typed sentence stays under the field, to say

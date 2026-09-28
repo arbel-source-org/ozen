@@ -39,7 +39,7 @@ the phone.
 | "No microphone found" (lo nimtza mikrofon) | No microphone is available at all. | Reconnect the microphone, then tap. |
 | "No microphone access" (ein gisha la-mikrofon) | Microphone permission was turned off for Ozen. | Tap it: it opens iOS Settings. Turn Microphone on. |
 | "No speech recognition permission" (ein ishur le-zihuy dibur) | Speech recognition permission is off (Apple's engine only). | Tap it: it opens iOS Settings. |
-| "… not available in Hebrew on this device" (… lo zamin be-ivrit ba-machshir ha-ze) | Apple's engine has no on-device Hebrew on this iPhone. | Tap to switch to Whisper in Settings. |
+| "… isn't available in Hebrew on this device" (… lo zamin be-ivrit ba-machshir ha-ze) | Apple's engine has no on-device Hebrew on this iPhone. | Tap to switch to Whisper in Settings. |
 | "Cloud transcription isn't set up" (ha-timlul ba-anan lo mugdar) | Cloud captions are chosen but there is no key, or OpenRouter turned it down, and no Whisper model is on the phone to take over. | Tap it: Settings opens. Paste the key from openrouter.ai (Keys) and tap Save. |
 | "Cloud transcription's budget ran out" (nigmar ha-taktziv le-timlul ba-anan) | The key used up its credit or its spending limit, and no Whisper model is on the phone to take over. | Add credit on openrouter.ai, or tap and switch back to Whisper. |
 | "No internet connection" (ein chibur la-internet) | Cloud captions can't reach the internet, and no Whisper model is on the phone to take over. | Check Wi-Fi or cellular data. It retries by itself; or switch to Whisper, which works offline. |
@@ -182,7 +182,7 @@ the same.
   means only alarms and sirens alert, `fainter` counts sounds set to alert
   when fainter, and `muted` counts sounds switched off one by one (Settings → Sounds at home (tzlilim ba-bayit)). Then its
   `sounds heard below the alert level:` line, or Diagnostics → "Sounds heard
-  too faintly to alert" (tzlilim she-nishme'u chalash midai le-hatra'a). A
+  too faint to alert" (tzlilim she-nishme'u chalash midai le-hatra'a). A
   doorbell listed there was heard, but under the 60% sureness an alert
   needs: the phone is too far from the door, so keep it closer or in the
   same room, or under that doorbell in Settings → Sounds at home tap
