@@ -164,7 +164,24 @@ for ($i = 0; $i -lt 5 -and (Get-ScheduledTask -TaskName $TaskName).State -ne 'Ru
     Start-ScheduledTask -TaskName $TaskName
     Start-Sleep 2
 }
-if ((Get-ScheduledTask -TaskName $TaskName).State -ne 'Running') { throw 'the Ozen server task did not start' }
+# Running before anyone signs in (S4U) can be refused for a Microsoft
+# account, the usual sign-in on a home PC. Then it starts at sign-in
+# instead, which works for every account: the computer only has to be
+# signed in, as it is after a normal start-up with auto sign-in.
+if ((Get-ScheduledTask -TaskName $TaskName).State -ne 'Running') {
+    $atLogon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+    $interactive = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $atLogon -Principal $interactive -Settings $settings -Force | Out-Null
+    for ($i = 0; $i -lt 5 -and (Get-ScheduledTask -TaskName $TaskName).State -ne 'Running'; $i++) {
+        Start-ScheduledTask -TaskName $TaskName
+        Start-Sleep 2
+    }
+    if ((Get-ScheduledTask -TaskName $TaskName).State -ne 'Running') {
+        throw 'the Ozen server could not be started by Windows (Task Scheduler refused it)'
+    }
+    Tell ("The Ozen server runs whenever $env:USERNAME is signed in to this computer.`n`n" +
+        "Windows wouldn't let it start before anyone signs in, so after a restart someone has to sign in (or turn on automatic sign-in) for the phone to get captions from it.") 'Warning'
+}
 
 # Away from home the phone needs an address it can reach from anywhere.
 # Tailscale Funnel gives the computer one with a real certificate; only
