@@ -22,7 +22,8 @@ before downloading anything (and says plainly when it isn't enough),
 installs everything into `C:\ozen`, asks whether to use the computer away
 from home too (Tailscale, one browser sign-in), and ends by showing the QR
 code for the phone. The Start menu then has "Ozen - pair a phone" to show
-the code again.
+the code again; it looks up the computer's address each time, so it stays
+right after a new router.
 
 By hand, in PowerShell as administrator, from this folder:
 
@@ -37,7 +38,9 @@ through the firewall on home networks, and registers a task that starts
 the server when Windows starts, before anyone logs in, and restarts it if it
 stops (also when three passes in a row fail, as after a graphics-driver
 fault). With 8 GB or more it also runs the accurate model for finished
-lines. Running it again updates the server and keeps the code. The log is
+lines. Running it again updates the server and keeps the code; a computer
+whose server starts at sign-in (Windows refused the before-sign-in start
+the first time) keeps starting it that way without asking again. The log is
 `C:\ozen\server.log`.
 
 ### When the phone can't reach it
@@ -47,7 +50,7 @@ lines. Running it again updates the server and keeps the code. The log is
   plugged in, put my device to sleep after" → Never.
 - **"Public" network.** The firewall only lets the phone in on a network
   Windows calls private. Setup asks when it sees a public one (a `-Quiet`
-  re-run doesn't ask); by hand: Settings → Network & internet → Wi-Fi (or
+  re-run only prints a warning); by hand: Settings → Network & internet → Wi-Fi (or
   Ethernet) → your network → Network profile type → Private network.
 - **Models won't load.** `C:\ozen\server.log` says so in plain words ("could
   not load the speech models on the graphics card") and the server tries
