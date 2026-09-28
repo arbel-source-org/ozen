@@ -219,6 +219,28 @@ struct PhasePresentationTests {
         #expect(PhasePresentation.remainingText(seconds: 1_500) == "עוד כ-25 דקות")
         #expect(PhasePresentation.remainingText(seconds: 3_600) == "עוד יותר משעה")
     }
+
+    @Test("a home computer that can't be reached, with no backup on the phone, points to the backup instead of only retrying")
+    func homeServerUnreachableOffersBackup() {
+        let phase = failure(EngineUnavailability(kind: .homeServerUnreachable, detail: ""))
+        let plain = PhasePresentation(phase: phase, engine: .homeServer, interruptedBySystem: false)
+        #expect(plain.action == .retry)
+        let offered = PhasePresentation(phase: phase, engine: .homeServer, interruptedBySystem: false, offerBackup: true)
+        #expect(offered.action == .openEngineSettings)
+        #expect(offered.detail != plain.detail)
+        let retrying = PhasePresentation(
+            phase: phase, engine: .homeServer, interruptedBySystem: false,
+            scheduledRetry: ScheduledRetry(at: 0, attempt: 1), offerBackup: true
+        )
+        #expect(retrying.action == .openEngineSettings)
+        #expect(retrying.isBusy)
+        let rejected = PhasePresentation(
+            phase: failure(EngineUnavailability(kind: .homeServerRejected, detail: "")),
+            engine: .homeServer, interruptedBySystem: false, offerBackup: true
+        )
+        #expect(rejected.action == .openEngineSettings)
+        #expect(rejected.detail?.contains("QR") == true)
+    }
 }
 
 /// Small pieces of wording she reads on the screen.
@@ -258,27 +280,5 @@ struct ScreenWordingTests {
         let names = HistoryRetention.allCases.map(HistoryView.name(for:))
         #expect(Set(names).count == HistoryRetention.allCases.count)
         #expect(HistoryView.name(for: .forever) == "אף פעם")
-    }
-
-    @Test("a home computer that can't be reached, with no backup on the phone, points to the backup instead of only retrying")
-    func homeServerUnreachableOffersBackup() {
-        let phase = failure(EngineUnavailability(kind: .homeServerUnreachable, detail: ""))
-        let plain = PhasePresentation(phase: phase, engine: .homeServer, interruptedBySystem: false)
-        #expect(plain.action == .retry)
-        let offered = PhasePresentation(phase: phase, engine: .homeServer, interruptedBySystem: false, offerBackup: true)
-        #expect(offered.action == .openEngineSettings)
-        #expect(offered.detail != plain.detail)
-        let retrying = PhasePresentation(
-            phase: phase, engine: .homeServer, interruptedBySystem: false,
-            scheduledRetry: ScheduledRetry(at: 0, attempt: 1), offerBackup: true
-        )
-        #expect(retrying.action == .openEngineSettings)
-        #expect(retrying.isBusy)
-        let rejected = PhasePresentation(
-            phase: failure(EngineUnavailability(kind: .homeServerRejected, detail: "")),
-            engine: .homeServer, interruptedBySystem: false, offerBackup: true
-        )
-        #expect(rejected.action == .openEngineSettings)
-        #expect(rejected.detail?.contains("QR") == true)
     }
 }
