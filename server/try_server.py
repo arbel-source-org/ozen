@@ -9,6 +9,7 @@ the server waits for before it calls a line finished.
 """
 import asyncio
 import json
+import re
 import sys
 import time
 
@@ -19,6 +20,13 @@ import websockets
 RATE = 16_000
 CHUNK = 688
 
+
+
+def normalized(text):
+    """Scored like the accuracy benches: punctuation, quotes and niqqud
+    aren't words, so "שוב." against "שוב" isn't a mistake."""
+    text = re.sub("[\u0591-\u05c7]", "", text).replace("\u05be", " ").replace("-", " ")
+    return " ".join(re.sub(r"[^\w\s]", " ", text).lower().split())
 
 async def main(url, token, wav, reference=None):
     audio, rate = sf.read(wav, dtype="float32")
@@ -69,7 +77,7 @@ async def main(url, token, wav, reference=None):
     if reference:
         import jiwer
         ref = open(reference, encoding="utf-8").read()
-        print(f"words wrong: {jiwer.wer(ref, ' '.join(finals)) * 100:.1f}%")
+        print(f"words wrong: {jiwer.wer(normalized(ref), normalized(' '.join(finals))) * 100:.1f}%")
 
 
 if __name__ == "__main__":
