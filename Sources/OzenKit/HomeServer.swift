@@ -39,6 +39,9 @@ public enum HomeServer {
     public static func url(from address: String) -> URL? {
         let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.contains(" ") else { return nil }
+        // "wss://wss://…", an address pasted into one already there, would
+        // otherwise pass with the host "wss" and only ever fail to connect.
+        guard trimmed.components(separatedBy: "://").count <= 2 else { return nil }
         let withScheme = trimmed.contains("://") ? trimmed : "ws://" + trimmed
         guard var parts = URLComponents(string: withScheme),
               let scheme = parts.scheme?.lowercased(), scheme == "ws" || scheme == "wss",

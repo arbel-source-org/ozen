@@ -36,6 +36,9 @@ struct SettingsView: View {
     @State private var homeServerCodeDraft = ""
     @State private var hasHomeServerCode = HomeServerCodeStore.hasKey
     @State private var homeServerCheck: HomeServerCheck?
+    /// Bumped whenever what a check tested changes, so an answer still on
+    /// its way for the old address, code or setting is thrown away.
+    @State private var homeServerCheckGeneration = 0
     @State private var isCheckingHomeServer = false
     @State private var confirmingHomeServerCodeDelete = false
     @State private var confirmingCloudKeyDelete = false
@@ -178,7 +181,10 @@ struct SettingsView: View {
     private var engineBinding: Binding<TranscriptionEngineKind> {
         Binding(
             get: { viewModel.settings.engine },
-            set: { kind in Task { await viewModel.setEngine(kind) } }
+            set: { kind in
+                forgetHomeServerCheck()
+                Task { await viewModel.setEngine(kind) }
+            }
         )
     }
 
@@ -376,11 +382,13 @@ struct SettingsView: View {
             if hasHomeServerCode, HomeServer.url(from: viewModel.settings.homeServerAddress) != nil {
                 Button {
                     isCheckingHomeServer = true
-                    homeServerCheck = nil
+                    forgetHomeServerCheck()
+                    let generation = homeServerCheckGeneration
                     Task {
                         let check = await viewModel.checkHomeServer()
-                        homeServerCheck = check
                         isCheckingHomeServer = false
+                        guard generation == homeServerCheckGeneration else { return }
+                        homeServerCheck = check
                         UIAccessibility.post(notification: .announcement, argument: Self.homeServerCheckText(check))
                     }
                 } label: {
@@ -436,7 +444,7 @@ struct SettingsView: View {
                     Button(tr("למחוק", "Delete"), role: .destructive) {
                         HomeServerCodeStore.remove()
                         hasHomeServerCode = false
-                        homeServerCheck = nil
+                        forgetHomeServerCheck()
                         Task { await viewModel.homeServerCodeChanged() }
                     }
                 } message: {
@@ -448,6 +456,7 @@ struct SettingsView: View {
         } footer: {
             Text(tr("הדרך הקלה: מצלמת האייפון על קוד ה‑QR שהמחשב מציג, והכול מתמלא לבד. הקול נשלח למחשב שלכם, שכותב את הכתוביות ומחזיר אותן, רק בזמן שהכתוביות פועלות. באותה רשת Wi‑Fi כותבים את כתובת המחשב (למשל ‎192.168.1.20‎); מכל מקום אחר, כתובת שמתחילה ב‑wss://. הקוד נשמר רק בטלפון. כשאין חיבור למחשב, מודל ה‑Whisper שבטלפון ממשיך לבד. \"מהירות מול דיוק\": כשמשפט נגמר, המחשב בודק כמה ניסוחים אפשריים ובוחר את הנכון ביותר. פחות ניסוחים מביאים את המשפט מהר יותר, אבל עם יותר טעויות.", "The easy way: point the iPhone’s Camera at the QR code the computer shows, and everything fills in by itself. The audio goes to your own computer, which writes the captions and sends them back, only while captions are on. On the same Wi‑Fi, enter the computer’s address (for example 192.168.1.20); from anywhere else, an address starting with wss://. The code is saved only on the phone. When the computer can’t be reached, the Whisper model on the phone carries on by itself. “Speed or accuracy”: when a sentence ends, the computer weighs several possible wordings and picks the best. Fewer wordings bring the sentence sooner, with more mistakes."))
         }
+        .onChange(of: viewModel.homeServerBeam) { forgetHomeServerCheck() }
     }
 
     static func homeServerBeamDescription(_ beam: Int) -> String {
@@ -501,10 +510,15 @@ struct SettingsView: View {
         saveHomeServerCode()
     }
 
+    private func forgetHomeServerCheck() {
+        homeServerCheck = nil
+        homeServerCheckGeneration += 1
+    }
+
     private func saveHomeServerAddress() {
         let address = homeServerAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         homeServerAddressDraft = address
-        homeServerCheck = nil
+        forgetHomeServerCheck()
         Task { await viewModel.setHomeServerAddress(address) }
     }
 
@@ -515,7 +529,7 @@ struct SettingsView: View {
         homeServerCodeSaveFailed = !saved
         guard saved else { return }
         homeServerCodeDraft = ""
-        homeServerCheck = nil
+        forgetHomeServerCheck()
         hasHomeServerCode = true
         Task { await viewModel.homeServerCodeChanged() }
     }

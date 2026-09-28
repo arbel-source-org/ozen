@@ -124,6 +124,14 @@ struct HomeServerEngineTests {
         #expect(HomeServer.url(from: "two words") == nil)
     }
 
+    @Test("an address pasted into one already there is refused, not saved with the host \"wss\"")
+    func doubledScheme() {
+        #expect(HomeServer.url(from: "wss://wss://desktop.tail.ts.net") == nil)
+        #expect(HomeServer.url(from: "wss://10.0.0.5wss://10.0.0.5") == nil)
+        #expect(HomeServer.unsavedAddress(draft: "wss://wss://desktop.tail.ts.net", saved: "") == nil)
+        #expect(HomeServer.url(from: "wss://desktop.tail.ts.net") != nil)
+    }
+
     @Test("a pairing link from the QR code gives the address and code; anything else is refused")
     func pairingLinks() throws {
         let link = try #require(URL(string: "ozen://pair?address=wss://desktop.tail.ts.net&code=xmr60RT8pjNyeTT_"))
