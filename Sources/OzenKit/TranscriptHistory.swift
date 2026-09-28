@@ -703,6 +703,34 @@ public struct TranscriptHistoryStore: Sendable {
             }
     }
 
+    /// A saved voice was renamed: every saved conversation that said the
+    /// old name now says the new one, so fixing a misspelling reaches the
+    /// days before it too, and a search for the new name finds them. A
+    /// conversation whose search text doesn't hold the old name is skipped
+    /// without being opened. Returns how many conversations changed.
+    @discardableResult
+    public func renameSpeaker(from oldName: String, to newName: String) throws -> Int {
+        guard !oldName.isEmpty, !newName.isEmpty, oldName != newName else { return 0 }
+        let needle = Self.normalizedForSearch(oldName)
+        var changed = 0
+        for url in recordFiles() {
+            if let cached = cachedSearchText(forRecordFile: url), !cached.contains(needle) { continue }
+            guard var record = Self.decodeRecord(at: url),
+                  record.segments.contains(where: { $0.speakerName == oldName })
+            else { continue }
+            for index in record.segments.indices where record.segments[index].speakerName == oldName {
+                record.segments[index].speakerName = newName
+            }
+            let data = try JSONEncoder().encode(record)
+            try data.write(to: url, options: .atomic)
+            let written = Self.modificationDate(of: url)
+            writeSummary(TranscriptSessionSummary(summarizing: record), forRecordFile: url, recordModifiedAt: written)
+            writeSearchText(Self.searchableText(of: record), forRecordFile: url, recordModifiedAt: written)
+            changed += 1
+        }
+        return changed
+    }
+
     /// Names a saved conversation, or removes its name with an empty one.
     public func rename(id: UUID, title: String) throws {
         guard var record = load(id: id) else { return }

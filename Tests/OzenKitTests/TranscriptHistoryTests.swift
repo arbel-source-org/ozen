@@ -58,6 +58,28 @@ struct TranscriptHistoryTests {
         #expect(loaded == original)
     }
 
+    @Test("renaming a voice rewrites every saved conversation that used the old name, and search finds the new one")
+    func renameSpeakerAcrossHistory() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let old = record(startedAt: 100, segments: [
+            segment(text: "שלום", speakerName: "רותיי", startTimestamp: 100),
+            segment(text: "מה נשמע", speakerName: "דני", startTimestamp: 105),
+        ])
+        let other = record(startedAt: 200, segments: [segment(text: "בוקר טוב", speakerName: "דני", startTimestamp: 200)])
+        try store.save(old)
+        try store.save(other)
+
+        #expect(try store.renameSpeaker(from: "רותיי", to: "רותי") == 1)
+        #expect(store.load(id: old.id)?.segments.map(\.speakerName) == ["רותי", "דני"])
+        #expect(store.load(id: other.id) == other)
+        #expect(store.search("רותי").map(\.id) == [old.id])
+        #expect(store.search("רותיי").isEmpty)
+        #expect(try store.renameSpeaker(from: "רותיי", to: "רותי") == 0)
+    }
+
     @Test("a session with no segments is not written and reports it wasn't saved")
     func emptyRecordIsNotSaved() throws {
         let dir = makeTempDirectory()

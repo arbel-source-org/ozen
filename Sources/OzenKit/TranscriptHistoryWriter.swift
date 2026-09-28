@@ -68,6 +68,16 @@ public final class TranscriptHistoryWriter: Sendable {
         }
     }
 
+    /// Renames a voice across every saved conversation, queued behind the
+    /// saves already waiting so none of them lands the old name back.
+    public func renameSpeakerInBackground(from oldName: String, to newName: String, finished: (@Sendable () -> Void)? = nil) {
+        queue.async { [store, failure, lastWritten] in
+            lastWritten.record = nil
+            failure.capture { try store.renameSpeaker(from: oldName, to: newName) }
+            finished?()
+        }
+    }
+
     /// Stars or unstars a line of a saved conversation, in order with the
     /// saves already queued. Nil when the line wasn't found or couldn't be
     /// saved.

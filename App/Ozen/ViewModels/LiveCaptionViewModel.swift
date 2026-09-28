@@ -1650,6 +1650,7 @@ public final class LiveCaptionViewModel {
         }
         pipeline.renameSpeakers(named: oldName, to: trimmed)
         speakerLabelsChanged()
+        historyWriter.renameSpeakerInBackground(from: oldName, to: trimmed)
     }
 
     /// A name was given, changed or removed. The lines on screen show the
