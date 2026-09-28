@@ -159,7 +159,7 @@ struct HomeServerEngineTests {
 
         // Unencrypted audio only to a computer at home or on the tailnet;
         // setup never makes a ws:// link for anything else.
-        for home in ["ws://192.168.1.20:8765", "10.0.0.5", "ws://172.20.1.2:8765", "ws://100.68.164.117:8765", "ws://desktop:8765", "ws://grandma-pc.local:8765", "ws://desktop.tail0example.ts.net:8765"] {
+        for home in ["ws://192.168.1.20:8765", "10.0.0.5", "ws://172.20.1.2:8765", "ws://100.64.0.7:8765", "ws://desktop:8765", "ws://grandma-pc.local:8765", "ws://desktop.tail0example.ts.net:8765"] {
             #expect(HomeServerPairing(address: home, code: "abc") != nil, "\(home)")
         }
         for away in ["ws://203.0.113.9:8765", "ws://evil.example.com:8765", "8.8.8.8", "ws://172.32.0.1:8765", "ws://100.128.0.1:8765"] {
