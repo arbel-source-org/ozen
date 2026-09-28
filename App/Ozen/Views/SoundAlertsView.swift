@@ -144,6 +144,7 @@ private struct SoundEventRow: View {
             Toggle(isOn: $isOn) {
                 HStack(spacing: 12) {
                     Image(systemName: event.systemImage)
+                        .accessibilityHidden(true)
                         .foregroundStyle(SoundAlertsView.tint(event.importance))
                         .frame(width: 28)
                     VStack(alignment: .leading, spacing: 2) {

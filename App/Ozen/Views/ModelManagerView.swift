@@ -131,6 +131,7 @@ struct ModelManagerView: View {
                     Spacer()
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
+                            .accessibilityHidden(true)
                             .foregroundStyle(.green)
                     }
                 }
@@ -151,21 +152,25 @@ struct ModelManagerView: View {
                         Text(tr("· מוריד %1%", "· downloading %1%", args: ["\(Int((progress * 100).rounded()))"]))
                     } else if isInstalled {
                         Image(systemName: "checkmark")
+                            .accessibilityHidden(true)
                         Text(tr("מותקן", "Installed"))
                         if let size = sizesOnDisk[option.variant] {
                             Text(tr("· %1 בפועל", "· %1 actual", args: ["\(Self.format(bytes: size))"]))
                         }
                     } else if isPartial {
                         Image(systemName: "exclamationmark.arrow.circlepath")
+                            .accessibilityHidden(true)
                         Text(tr("ההורדה נקטעה · תימשך מאיפה שנעצרה בבחירה", "Download interrupted · will resume from where it stopped when selected"))
                         if let size = sizesOnDisk[option.variant] {
                             Text(tr("· %1 כבר ירדו", "· %1 already downloaded", args: ["\(Self.format(bytes: size))"]))
                         }
                     } else if StorageSpaceGate.shortfallMegabytes(downloadMegabytes: option.installMegabytes, availableBytes: freeBytes) != nil {
                         Image(systemName: "externaldrive.badge.exclamationmark")
+                            .accessibilityHidden(true)
                         Text(tr("אין מספיק מקום בטלפון", "Not enough room on the phone"))
                     } else {
                         Image(systemName: "icloud.and.arrow.down")
+                            .accessibilityHidden(true)
                         Text(tr("יורד בבחירה", "Downloads when selected"))
                     }
                 }

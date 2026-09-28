@@ -138,6 +138,7 @@ private struct InputRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: MicPickerView.icon(for: input.portType))
+                .accessibilityHidden(true)
                 .font(.title3)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
@@ -149,6 +150,7 @@ private struct InputRow: View {
             Spacer()
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
+                    .accessibilityHidden(true)
                     .foregroundStyle(.green)
                     .font(.title3)
             }

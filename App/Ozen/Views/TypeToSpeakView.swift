@@ -171,7 +171,8 @@ struct TypeToSpeakView: View {
                 viewModel.speak(phrase)
             } label: {
                 Label(phrase, systemImage: "arrow.counterclockwise")
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .ozenGlassButton()
