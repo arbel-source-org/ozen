@@ -327,6 +327,12 @@ struct LiveCaptionView: View {
         .onChange(of: viewModel.committedLineCount) { _, _ in
             announceNewLines()
         }
+        // Bigger text or a turned phone reflows every line; following the
+        // newest one, it has to be brought back into view without waiting
+        // for the next word.
+        .onChange(of: viewModel.display.fontSize) { _, _ in scrollToLatestIfPinned() }
+        .onChange(of: horizontalSizeClass) { _, _ in scrollToLatestIfPinned() }
+        .onChange(of: dynamicTypeSize) { _, _ in scrollToLatestIfPinned() }
         .onChange(of: viewModel.segments.isEmpty) { _, _ in
             announceNewLines()
         }
