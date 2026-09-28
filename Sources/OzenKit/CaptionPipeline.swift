@@ -266,7 +266,12 @@ public final class CaptionPipeline {
 
     public func start(settings: AppSettings) async {
         guard !phase.isListening, !phase.isTransitioning else { return }
-        if isPreparingEngine {
+        // Only a second model loading on the phone is worth waiting for: the
+        // home computer, the cloud and Apple's recognizer load nothing here,
+        // and waiting kept captions on "loading model" after the home
+        // computer's address was entered during a load, until the app was
+        // closed.
+        if isPreparingEngine, settings.engine == .whisperKit {
             let stops = stopCount
             let waiting = EnginePreparationProgress(stage: .loadingModel)
             phase = .preparingEngine(waiting)
@@ -373,7 +378,8 @@ public final class CaptionPipeline {
         // microphone listens from now, and what is said meanwhile waits in
         // its stream for the model instead of being lost.
         let earlySource = isCoveringForCloud ? try? audio.startCapture() : nil
-        isPreparingEngine = true
+        let loadsModelOnPhone = settings.engine == .whisperKit
+        if loadsModelOnPhone { isPreparingEngine = true }
         let availability = await engine.prepare(languageCode: settings.languageCode) { [weak self] progress in
             Task { @MainActor [weak self] in
                 guard let self, self.runID == run, case .preparingEngine(let shown) = self.phase else { return }
@@ -384,10 +390,12 @@ public final class CaptionPipeline {
                 self.trackDownload(progress, at: time)
             }
         }
-        isPreparingEngine = false
-        let waiting = preparationWaiters
-        preparationWaiters = []
-        waiting.forEach { $0.resume() }
+        if loadsModelOnPhone {
+            isPreparingEngine = false
+            let waiting = preparationWaiters
+            preparationWaiters = []
+            waiting.forEach { $0.resume() }
+        }
         guard runID == run else { return }
         if case .unavailable(let why) = availability {
             fail(.engineUnavailable, detail: why.detail, engineUnavailability: why)

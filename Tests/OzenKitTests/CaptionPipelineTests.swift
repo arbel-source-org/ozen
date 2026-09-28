@@ -1093,6 +1093,32 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .listening)
     }
 
+    @Test("switching to the home computer while the phone's model still loads starts at once, and a later phone start still waits for that load", .timeLimit(.minutes(1)))
+    func homeServerDoesNotWaitForAPhoneModel() async {
+        let slow = FakeEngine()
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let home = FakeEngine(kind: .homeServer)
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: slow, .homeServer: home])
+        let first = Task { await pipeline.start(settings: .default) }
+        while slow.prepareCount == 0 { await Task.yield() }
+        var homeSettings = AppSettings.default
+        homeSettings.engine = .homeServer
+        await pipeline.restart(settings: homeSettings)
+        #expect(pipeline.phase == .listening)
+        #expect(home.prepareCount == 1)
+
+        pipeline.stop()
+        let phoneAgain = Task { await pipeline.start(settings: .default) }
+        for _ in 0..<50 { await Task.yield() }
+        #expect(slow.prepareCount == 1)
+        await gate.open()
+        await first.value
+        await phoneAgain.value
+        #expect(slow.prepareCount == 2)
+        #expect(pipeline.phase == .listening)
+    }
+
     @Test("a start waiting on an abandoned load says the model is loading, and a stop meanwhile is kept")
     func waitingStartShowsAndCanBeStopped() async {
         let slow = FakeEngine()
