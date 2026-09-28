@@ -269,7 +269,9 @@ things, for Hebrew conversation, entirely on-device.
   shared as text. A search result opens at the lines it found,
   highlighted.
 - **Saved speakers can be renamed**, and the new name follows onto lines
-  already on screen and into the names list.
+  already on screen, into the names list and into every saved
+  conversation, so fixing a misspelled name also fixes last week's
+  conversations and a search for the new name finds them.
 - **First-launch walkthrough** in large type that explains the engines and
   the one-time model download before it happens, asks for the
   microphone with a reason, and asks for her name (with "Grandma" (savta) one tap
