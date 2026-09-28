@@ -115,6 +115,14 @@ public final class CaptionPipeline {
     public var currentHomeServerRecheckSeconds: Double {
         homeServerRecheckSeconds * Double(1 << homeServerFlaps)
     }
+    /// The same for the cloud: a connection that answers the check but
+    /// drops again soon after switching back doubles the wait, up to 16x.
+    public var cloudFlapWindowSeconds: Double = 300
+    private var cloudSwitchedBackAt: ContinuousClock.Instant?
+    private var cloudFlaps = 0
+    public var currentCloudRecheckSeconds: Double {
+        cloudRecheckSeconds * Double(1 << cloudFlaps)
+    }
     private var coveredSettings: AppSettings?
     /// The last half-minute of microphone sound, in memory only, so that
     /// "mark a problem" can keep what was actually heard. Cleared when
@@ -1346,6 +1354,12 @@ public final class CaptionPipeline {
             recheckHomeServer()
         }
         if coverReason == .noInternet || coverReason == .temporarilyUnavailable, coveredSettings?.engine == .cloud {
+            if let back = cloudSwitchedBackAt, back.duration(to: .now) < .seconds(cloudFlapWindowSeconds) {
+                cloudFlaps = min(cloudFlaps + 1, 4)
+            } else {
+                cloudFlaps = 0
+            }
+            cloudSwitchedBackAt = nil
             recheckCloud()
         }
     }
@@ -1391,7 +1405,7 @@ public final class CaptionPipeline {
         cloudRecheck = Task { [weak self] in
             var answered = 0
             while !Task.isCancelled {
-                guard let seconds = self?.cloudRecheckSeconds else { return }
+                guard let seconds = self?.currentCloudRecheckSeconds else { return }
                 try? await Task.sleep(for: .seconds(seconds))
                 guard !Task.isCancelled, let self, self.isCoveringForCloud,
                       let chosen = self.coveredSettings, chosen.engine == .cloud
@@ -1408,6 +1422,7 @@ public final class CaptionPipeline {
                 guard self.canSwitchBack(answeredChecks: answered) else { continue }
                 self.logEvent(.note("the cloud answers again, switching back to it"))
                 self.cloudRecheck = nil
+                self.cloudSwitchedBackAt = .now
                 await self.restart(settings: chosen)
                 return
             }

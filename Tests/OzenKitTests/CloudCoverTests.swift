@@ -184,6 +184,27 @@ struct CloudCoverTests {
         #expect(captions.coverReason == nil)
     }
 
+    @Test("a connection that keeps dropping right after switching back is tried less and less often; a drop after a good stretch starts over")
+    func flappingCloudBacksOff() async {
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone)
+        captions.cloudRecheckSeconds = 0.1
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: cloudSettings)
+        for wait in [0.1, 0.2, 0.4, 0.8] {
+            #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+            cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+            #expect(await eventually { captions.activeEngineKind == .whisperKit && captions.currentCloudRecheckSeconds == wait })
+        }
+
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        captions.cloudFlapWindowSeconds = 0
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { captions.activeEngineKind == .whisperKit && captions.currentCloudRecheckSeconds == 0.1 })
+        captions.stop()
+    }
+
     @Test("a key or credit problem is left for a person, never asked again on its own")
     func doesNotRecheckWhenAPersonMustAct() async throws {
         for kind in [EngineUnavailability.Kind.cloudKeyNeeded, .cloudOutOfCredit] {
