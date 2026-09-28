@@ -43,6 +43,12 @@ def lan_address():
         probe.close()
 
 
+def phone_address(address):
+    if address.lower().startswith("https://"):
+        return "wss://" + address[len("https://"):]
+    return address
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     p = argparse.ArgumentParser(description="Makes the QR code the phone scans to pair with this computer.")
@@ -60,6 +66,7 @@ def main():
             print("Tailscale gave no address; this QR code works on the home Wi-Fi only.", file=sys.stderr)
     if not address:
         sys.exit("Couldn't work out this computer's address; pass --address wss://... or --address 192.168.1.20")
+    address = phone_address(address)
     with open(args.code_file, encoding="utf-8") as f:
         code = f.read().strip()
     link = "ozen://pair?" + urllib.parse.urlencode({"address": address, "code": code})

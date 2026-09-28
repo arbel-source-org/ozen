@@ -30,3 +30,13 @@ class TailscaleAddress(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PhoneAddress(unittest.TestCase):
+    def test_the_funnel_https_address_becomes_wss(self):
+        self.assertEqual(pairing.phone_address("https://pc.tail0example.ts.net"), "wss://pc.tail0example.ts.net")
+        self.assertEqual(pairing.phone_address("HTTPS://pc.tail0example.ts.net"), "wss://pc.tail0example.ts.net")
+
+    def test_other_addresses_are_left_alone(self):
+        for address in ["wss://pc.tail0example.ts.net", "192.168.1.20", "ws://100.64.0.7:8765"]:
+            self.assertEqual(pairing.phone_address(address), address)
