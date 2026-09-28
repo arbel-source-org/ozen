@@ -120,6 +120,10 @@ struct HomeServerEngineTests {
         #expect(HomeServer.url(from: " grandma-pc:9000 ")?.absoluteString == "ws://grandma-pc:9000")
         #expect(HomeServer.url(from: "wss://captions.example.org/ozen")?.absoluteString == "wss://captions.example.org/ozen")
         #expect(HomeServer.url(from: "http://10.0.0.5") == nil)
+        #expect(HomeServer.url(from: "https://desktop.tail0example.ts.net")?.absoluteString == "wss://desktop.tail0example.ts.net")
+        #expect(HomeServer.url(from: "HTTPS://captions.example.org/ozen")?.absoluteString == "wss://captions.example.org/ozen")
+        #expect(HomeServerPairing(address: "https://captions.example.org", code: "example-code-123") != nil)
+        #expect(HomeServer.url(from: "https://wss://desktop.tail0example.ts.net") == nil)
         #expect(HomeServer.url(from: "") == nil)
         #expect(HomeServer.url(from: "two words") == nil)
     }

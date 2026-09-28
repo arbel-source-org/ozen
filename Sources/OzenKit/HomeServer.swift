@@ -61,7 +61,10 @@ public enum HomeServer {
         // "wss://wss://…", an address pasted into one already there, would
         // otherwise pass with the host "wss" and only ever fail to connect.
         guard trimmed.components(separatedBy: "://").count <= 2 else { return nil }
-        let withScheme = trimmed.contains("://") ? trimmed : "ws://" + trimmed
+        var withScheme = trimmed.contains("://") ? trimmed : "ws://" + trimmed
+        // Tailscale and browsers show the home computer as https://; the
+        // same server answers there as wss://.
+        if withScheme.lowercased().hasPrefix("https://") { withScheme = "wss://" + withScheme.dropFirst(8) }
         guard var parts = URLComponents(string: withScheme),
               let scheme = parts.scheme?.lowercased(), scheme == "ws" || scheme == "wss",
               let host = parts.host, !host.isEmpty
