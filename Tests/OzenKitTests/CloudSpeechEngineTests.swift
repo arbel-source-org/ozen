@@ -13,6 +13,7 @@ final class FakeCloudHTTP: CloudHTTP, @unchecked Sendable {
     private var answers: [Answer]
     private var keyChecks: [Answer]
     private var sent: [CloudHTTPRequest] = []
+    private var transcriptionTimes: [ContinuousClock.Instant] = []
 
     init(answers: [Answer] = [], keyChecks: [Answer] = []) {
         self.answers = answers
@@ -21,10 +22,12 @@ final class FakeCloudHTTP: CloudHTTP, @unchecked Sendable {
 
     var requests: [CloudHTTPRequest] { lock.withLock { sent } }
     var transcriptionRequests: [CloudHTTPRequest] { requests.filter { $0.url == CloudSpeech.completionsURL } }
+    var transcriptionSentAt: [ContinuousClock.Instant] { lock.withLock { transcriptionTimes } }
 
     func send(_ request: CloudHTTPRequest) async throws -> CloudHTTPResponse {
         let answer: Answer = lock.withLock {
             sent.append(request)
+            if request.url == CloudSpeech.completionsURL { transcriptionTimes.append(.now) }
             if request.url == CloudSpeech.keyURL {
                 return keyChecks.isEmpty ? .status(200, #"{"data":{"limit_remaining":null}}"#) : keyChecks.removeFirst()
             }
@@ -54,8 +57,8 @@ struct CloudSpeechEngineTests {
         (0..<Int(seconds * 16_000) / chunk).map { _ in [Float](repeating: 0, count: chunk) }
     }
 
-    private func engine(_ http: FakeCloudHTTP, key: String? = "sk-test") -> CloudSpeechEngine {
-        CloudSpeechEngine(http: http, apiKey: { key })
+    private func engine(_ http: FakeCloudHTTP, key: String? = "sk-test", pause: Double = 0.001) -> CloudSpeechEngine {
+        CloudSpeechEngine(http: http, failedSegmentPauseSeconds: pause, apiKey: { key })
     }
 
     private func transcribe(_ engine: CloudSpeechEngine, _ chunks: [[Float]]) async throws -> [TranscriptToken] {
@@ -179,6 +182,20 @@ struct CloudSpeechEngineTests {
         // Two attempts per retried final segment, until failuresInARow
         // reaches the limit.
         #expect(http.transcriptionRequests.count == CloudSpeechEngine.failuresBeforeStopping * 2)
+    }
+
+    @Test("the same audio is sent again only after a growing pause, not in a burst")
+    func failedSegmentsBackOff() async {
+        let http = FakeCloudHTTP(answers: [.offline])
+        _ = try? await transcribe(engine(http, pause: 0.25), speech(seconds: 1) + silence(seconds: 1))
+        let times = http.transcriptionSentAt
+        #expect(times.count == CloudSpeechEngine.failuresBeforeStopping * 2)
+        // Each failed segment is two attempts; between one segment's second
+        // attempt and the next segment's first, the pause grows: 1, 2, 3 steps.
+        guard times.count == 8 else { return }
+        #expect(times[1].duration(to: times[2]) >= .seconds(0.2))
+        #expect(times[3].duration(to: times[4]) >= .seconds(0.45))
+        #expect(times[5].duration(to: times[6]) >= .seconds(0.7))
     }
 
     @Test("a short utterance's final request failing outright, with nothing shown yet, is retried rather than lost")

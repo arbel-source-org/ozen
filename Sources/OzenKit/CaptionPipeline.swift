@@ -1320,7 +1320,7 @@ public final class CaptionPipeline {
     /// See `isCoveringForCloud`. Only a model that is already on the phone
     /// takes over: a surprise download of hundreds of megabytes is not a
     /// fair way to find out the cloud stopped.
-    private func coverForCloud(with settings: AppSettings, after failure: PipelineFailure) async {
+    private func coverForCloud(with settings: AppSettings, after failure: PipelineFailure, retryIfNotCovered: Bool = true) async {
         // Someone may have stopped, retried or restarted captions since
         // the failure; then the engine cache is theirs to fill, not ours.
         guard case .failed(let before) = phase, before == failure else { return }
@@ -1328,7 +1328,7 @@ public final class CaptionPipeline {
         let needsDownload = await engine.pendingDownloadMegabytes() != nil
         guard case .failed(let current) = phase, current == failure else { return }
         guard !needsDownload else {
-            scheduleAutoRecovery(for: failure)
+            if retryIfNotCovered { scheduleAutoRecovery(for: failure) }
             return
         }
         logEvent(.note("cloud unavailable, the phone's own model took over"))
@@ -1345,7 +1345,7 @@ public final class CaptionPipeline {
             homeServerSwitchedBackAt = nil
             recheckHomeServer()
         }
-        if coverReason == .noInternet, coveredSettings?.engine == .cloud {
+        if coverReason == .noInternet || coverReason == .temporarilyUnavailable, coveredSettings?.engine == .cloud {
             recheckCloud()
         }
     }
@@ -1516,7 +1516,11 @@ public final class CaptionPipeline {
         }
         listeningSince = nil
         cancelScheduledRetry()
-        guard !systemInterrupted, let delay = recovery.nextDelay(for: failure) else { return }
+        guard !systemInterrupted else { return }
+        guard let delay = recovery.nextDelay(for: failure) else {
+            coverOnceRetriesRunOut(after: failure)
+            return
+        }
 
         let token = UUID()
         retryToken = token
@@ -1533,6 +1537,18 @@ public final class CaptionPipeline {
             self.scheduledRetry = nil
             await self.retry()
         }
+    }
+
+    /// A cloud that stays busy or broken through every retry is covered
+    /// like a lost connection: captions stopping for good, with a phone
+    /// model already downloaded, left her with nothing until someone
+    /// tapped retry. A single hiccup is still only retried.
+    private func coverOnceRetriesRunOut(after failure: PipelineFailure) {
+        guard failure.engineUnavailability?.kind == .temporarilyUnavailable,
+              var onPhone = activeSettings, onPhone.engine == .cloud
+        else { return }
+        onPhone.engine = .whisperKit
+        Task { [weak self] in await self?.coverForCloud(with: onPhone, after: failure, retryIfNotCovered: false) }
     }
 
     private func cancelScheduledRetry() {

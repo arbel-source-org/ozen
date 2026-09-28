@@ -31,13 +31,19 @@ public actor CloudSpeechEngine: TranscriptionEngine {
     private var echo: PromptEchoDetector?
     /// The key the last check approved, so a restart doesn't ask again.
     private var approvedKey: String?
+    /// How long a failed final segment waits, per failure in a row, before
+    /// its audio is sent again: without it a busy or broken service got
+    /// the same audio up to eight times in a few seconds, each one paid for.
+    private let failedSegmentPauseSeconds: Double
 
     public init(
         model: String = CloudSpeech.accurateModel,
         http: any CloudHTTP = URLSessionCloudHTTP(),
         filter: WhisperResultFilter = WhisperResultFilter(),
+        failedSegmentPauseSeconds: Double = 1,
         apiKey: @escaping @Sendable () -> String?
     ) {
+        self.failedSegmentPauseSeconds = failedSegmentPauseSeconds
         self.model = model
         self.http = http
         self.filter = filter
@@ -229,6 +235,7 @@ public actor CloudSpeechEngine: TranscriptionEngine {
                     // would lose these words outright with no trace of a
                     // failure; retrying with the same audio, bounded by the
                     // failuresInARow check above, is the only way not to.
+                    try await Task.sleep(for: .seconds(failedSegmentPauseSeconds * Double(failuresInARow)))
                     continue
                 }
                 for (index, turn) in finalTurns.enumerated() {

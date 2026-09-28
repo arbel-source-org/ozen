@@ -46,14 +46,38 @@ struct CloudCoverTests {
         #expect(phone.prepareCount == 0)
     }
 
+    private func pipeline(cloud: FakeEngine, phone: FakeEngine, retryAfter delays: [Double]) -> CaptionPipeline {
+        CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .cloud ? cloud : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: delays, downloadDelays: [])
+        )
+    }
+
     @Test("a passing cloud problem is retried as before, not covered")
-    func passingTroubleIsNotCovered() async {
+    func passingTroubleIsNotCovered() async throws {
         let cloud = FakeEngine(kind: .cloud, availability: .unavailable(.temporarilyUnavailable, "test"))
         let phone = FakeEngine(kind: .whisperKit)
-        let captions = pipeline(cloud: cloud, phone: phone)
+        let captions = pipeline(cloud: cloud, phone: phone, retryAfter: [60])
         await captions.start(settings: cloudSettings)
         #expect(captions.phase.failure?.engineUnavailability?.kind == .temporarilyUnavailable)
+        #expect(captions.scheduledRetry != nil)
+        try await Task.sleep(for: .milliseconds(200))
         #expect(phone.prepareCount == 0)
+        #expect(!captions.isCoveringForCloud)
+    }
+
+    @Test("a cloud still busy after every retry is covered, not left stopped")
+    func troubleOutlastingRetriesIsCovered() async {
+        let cloud = FakeEngine(kind: .cloud, availability: .unavailable(.temporarilyUnavailable, "test"))
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone, retryAfter: [0.01, 0.01])
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.isCoveringForCloud })
+        #expect(captions.activeEngineKind == .whisperKit)
+        #expect(captions.coverReason == .temporarilyUnavailable)
+        #expect(cloud.prepareCount >= 3)
     }
 
     @Test("starting again with her own settings ends the cover")
