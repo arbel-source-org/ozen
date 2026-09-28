@@ -797,7 +797,9 @@ public struct TranscriptHistoryStore: Sendable {
                 let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: offset(segment.startTimestamp))
                 let star = segment.isStarred ? "★ " : ""
                 let line: String
-                if let name = segment.speakerName, !name.isEmpty {
+                // "Unknown speaker:" on every unrecognised line says nothing;
+                // numbered voices ("Speaker 2") still tell turns apart.
+                if let name = segment.speakerName, !name.isEmpty, !TranscriptSessionSummary.isUnknownSpeakerLabel(name) {
                     line = "\(star)[\(time)] \(name): \(segment.text)"
                 } else {
                     line = "\(star)[\(time)] \(segment.text)"

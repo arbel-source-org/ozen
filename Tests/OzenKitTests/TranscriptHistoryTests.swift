@@ -369,6 +369,17 @@ struct TranscriptHistoryTests {
         #expect(text == "שיחה מתאריך 01.01.1970\n\n[01:01:01] סבתא: שלום\n[01:01:05] מה נשמע")
     }
 
+    @Test("shared text drops 'Unknown speaker' in any language but keeps real and numbered names")
+    func exportTextDropsUnknownSpeaker() {
+        let session = record(startedAt: 3_661, segments: [
+            segment(text: "שלום", speakerName: "סבתא", startTimestamp: 3_661),
+            segment(text: "מה נשמע", speakerName: "דובר לא ידוע", startTimestamp: 3_662),
+            segment(text: "טוב", speakerName: "Unknown speaker", startTimestamp: 3_663),
+            segment(text: "יופי", speakerName: "דובר 2", startTimestamp: 3_664),
+        ])
+        #expect(TranscriptHistoryStore.exportText(session) == "שיחה מתאריך 01.01.1970\n\n[01:01:01] סבתא: שלום\n[01:01:02] מה נשמע\n[01:01:03] טוב\n[01:01:04] דובר 2: יופי")
+    }
+
     @Test("shared text keeps each line's own clock time across daylight saving")
     func exportUsesOffsetAtEachTimestamp() throws {
         let israel = try #require(TimeZone(identifier: "Asia/Jerusalem"))
