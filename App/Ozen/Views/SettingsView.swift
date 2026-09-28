@@ -1029,6 +1029,11 @@ struct SettingsView: View {
                 // installed again, for whoever does that.
                 LabeledContent(tr("ההתקנה תקפה עד", "Install valid until"), value: expiresAt.formatted(inAppLanguage: .abbreviated, time: .shortened))
             }
+            NavigationLink {
+                SupportOzenView()
+            } label: {
+                Label(tr("תמיכה באוזן (רק אם תרצו)", "Support Ozen (only if you want to)"), systemImage: "heart")
+            }
             Link(destination: URL(string: "https://github.com/arbelonson-source/ozen")!) {
                 Label(tr("קוד המקור בגיטהאב", "Source code on GitHub"), systemImage: "chevron.left.forwardslash.chevron.right")
             }

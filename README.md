@@ -396,6 +396,28 @@ The app installs and launches on a real iPhone 15 Pro Max. Actual Hebrew
 transcription quality, external-mic behaviour and speaker separation in a
 real room are being verified by hand — see the design doc's checklist.
 
+## Support Ozen
+
+Ozen is free and will stay free, with no ads and nothing locked. Donating is
+entirely optional: please never feel obligated, and only donate if you are in
+a financial position where you can comfortably afford it. Using Ozen and
+telling others about it already helps a lot.
+
+How to donate:
+
+1. Open your crypto wallet app and choose Send.
+2. Pick the same coin as listed here. A coin sent to another coin's address is lost.
+3. Scan the QR code with the wallet, or copy the address and paste it.
+4. Before sending, check that the first and last few characters of the address match.
+
+| Coin | Address | QR |
+|---|---|---|
+| Bitcoin (BTC) | `bc1qk5aym0mch042200s2wrc366r3hsxxmgc9nu7tm` | <img src="docs/support/bitcoin.png" width="140" alt="Bitcoin QR code"> |
+| Ethereum (ETH, plus USDC and USDT on the Ethereum network only) | `0x0Ea2210fcB0BbF2C3202d9663dB762F1f51b1BBC` | <img src="docs/support/ethereum.png" width="140" alt="Ethereum QR code"> |
+| Monero (XMR) | `46otohcpNKQfFi9F21ZHTcSiNVrLMw4yMS1SFM5hbDfu5LZCzLGkEZ2Vx4YD5kwK3nKUG6GjMf37z7i6sFQR2NEC1W9ubhb` | <img src="docs/support/monero.png" width="140" alt="Monero QR code"> |
+
+The same addresses and codes are in the app under Settings, About, Support Ozen.
+
 ## License
 
 GNU Affero General Public License v3.0 — see [LICENSE](LICENSE).
