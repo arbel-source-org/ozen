@@ -495,7 +495,7 @@ struct SettingsView: View {
         case .codeRefused:
             tr("המחשב ענה, אבל לא קיבל את הקוד. סרקו שוב את קוד ה‑QR או הקלידו את הקוד מחדש.", "The computer answered but didn’t accept the code. Scan the QR code again or retype the code.")
         case .unreachable:
-            tr("אין תשובה מהמחשב. בדקו שהוא דלוק ומחובר לאינטרנט.", "No answer from the computer. Check that it’s on and connected to the internet.")
+            tr("אין תשובה מהמחשב. בדקו שהוא דלוק, ער (לא במצב שינה) ומחובר לאינטרנט.", "No answer from the computer. Check that it’s on, awake (not asleep) and connected to the internet.")
         case .notSetUp:
             tr("חסרים כתובת או קוד", "The address or code is missing")
         }
