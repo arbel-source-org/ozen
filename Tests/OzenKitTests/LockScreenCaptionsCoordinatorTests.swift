@@ -83,6 +83,19 @@ struct LockScreenCaptionsCoordinatorTests {
         #expect(!display.isRunning && display.ends == 2)
     }
 
+    @Test("switching the app's language sends the lock screen again, lines unchanged")
+    func languageSwitchResends() {
+        let (coordinator, display, _) = make()
+        Localization.$override.withValue(.hebrew) { coordinator.refresh() }
+        let before = display.shown.count
+        Localization.$override.withValue(.hebrew) { coordinator.refresh() }
+        #expect(display.shown.count == before)
+
+        Localization.$override.withValue(.english) { coordinator.refresh() }
+        #expect(display.shown.count == before + 1)
+        #expect(display.shown.last?.language == .english)
+    }
+
     @Test("a call keeps them up with its note and room for the newest line only")
     func callKeepsThemWithOneLine() {
         let (coordinator, display, captions) = make()

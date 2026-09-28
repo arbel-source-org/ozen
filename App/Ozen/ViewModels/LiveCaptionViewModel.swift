@@ -625,7 +625,9 @@ public final class LiveCaptionViewModel {
     public func applyAppLanguage(preferredLanguages: [String] = Locale.preferredLanguages) {
         let language = settings.appLanguage.resolved(preferredLanguages: preferredLanguages)
         Localization.language = language
-        if uiLanguage != language { uiLanguage = language }
+        guard uiLanguage != language else { return }
+        uiLanguage = language
+        refreshLockScreen()
     }
 
     public func setAppLanguage(_ language: AppLanguage) {

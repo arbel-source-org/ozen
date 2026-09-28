@@ -124,12 +124,16 @@ public struct LockScreenCaptionContent: Sendable, Equatable {
     /// (`LockScreenCaptions.quiet`).
     public var ageNote: String?
     public var textSize: LockScreenTextSize
+    /// The app's language when this was made: the lock screen's own words
+    /// ("Listening…") follow it, so a switch counts as something new to send.
+    public var language: UILanguage
 
-    public init(lines: [LockScreenCaptionLine], status: String? = nil, ageNote: String? = nil, textSize: LockScreenTextSize = .regular) {
+    public init(lines: [LockScreenCaptionLine], status: String? = nil, ageNote: String? = nil, textSize: LockScreenTextSize = .regular, language: UILanguage = Localization.language) {
         self.lines = lines
         self.status = status
         self.ageNote = ageNote
         self.textSize = textSize
+        self.language = language
     }
 }
 
@@ -350,7 +354,7 @@ public struct LockScreenUpdateThrottle: Sendable, Equatable {
 
     public func decide(_ content: LockScreenCaptionContent, now: TimeInterval) -> Decision {
         guard content != lastSent else { return .nothingNew }
-        guard let lastSentAt, now >= lastSentAt, content.status == lastSent?.status else { return .send }
+        guard let lastSentAt, now >= lastSentAt, content.status == lastSent?.status, content.language == lastSent?.language else { return .send }
         let elapsed = now - lastSentAt
         return elapsed >= minimumInterval ? .send : .wait(minimumInterval - elapsed)
     }
