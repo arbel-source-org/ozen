@@ -99,6 +99,9 @@ public struct WhisperResultFilter: Sendable, Equatable {
         // parentheses are already gone by the time this is compared).
         "speaking in a foreign language", "please subscribe",
         "don't forget to subscribe", "like and subscribe",
+        // The same outros as Hebrew YouTube and subtitle files word them.
+        "תודה רבה שצפיתם", "תודה רבה לכם שצפיתם", "תודה שצפיתם בסרטון",
+        "הירשמו לערוץ", "תירשמו לערוץ", "אל תשכחו להירשם לערוץ",
     ]
 
     public static let defaultAmbiguousHallucinations: Set<String> = [
@@ -112,6 +115,7 @@ public struct WhisperResultFilter: Sendable, Equatable {
         // plausibly sound like this, so it only drops when the model was
         // also unsure of itself.
         "see you next time", "see you in the next video",
+        "נתראה בסרטון הבא", "צפייה מהנה", "צפיה מהנה",
     ]
 
     public init(

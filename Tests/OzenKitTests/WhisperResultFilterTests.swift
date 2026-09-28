@@ -224,6 +224,22 @@ struct WhisperResultFilterTests {
         #expect(filter.accepts(segment("תודה רבה, תודה רבה!", noSpeech: 0.05, logprob: -0.35)))
         #expect(filter.accepts(segment("לא לא לא")))
     }
+
+    @Test("Hebrew YouTube outros drop like their English twins; 'enjoy watching' only when the model was unsure")
+    func hebrewOutros() {
+        let filter = WhisperResultFilter()
+        func kept(_ text: String, noSpeech: Float = 0.1) -> Bool {
+            filter.accepts(WhisperSegmentSummary(text: text, noSpeechProb: noSpeech, avgLogprob: -0.3, compressionRatio: 1.2))
+        }
+        for text in ["תודה רבה שצפיתם", "תודה רבה לכם שצפיתם!", "תודה שצפיתם בסרטון", "הירשמו לערוץ", "אל תשכחו להירשם לערוץ"] {
+            #expect(!kept(text), "\(text)")
+        }
+        #expect(kept("צפייה מהנה!"))
+        #expect(!kept("צפייה מהנה!", noSpeech: 0.5))
+        #expect(!kept("נתראה בסרטון הבא", noSpeech: 0.5))
+        #expect(kept("תודה רבה שבאתם"))
+        #expect(kept("הוא נרשם לערוץ של הנכד"))
+    }
 }
 
 @Suite("Whisper repeated-word loops")
