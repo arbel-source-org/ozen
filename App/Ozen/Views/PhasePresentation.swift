@@ -50,7 +50,8 @@ struct PhasePresentation {
         pausedForSpeech: Bool = false,
         coveringForCloud: Bool = false,
         coveredEngine: TranscriptionEngineKind? = nil,
-        coverReason: EngineUnavailability.Kind? = nil
+        coverReason: EngineUnavailability.Kind? = nil,
+        offerBackup: Bool = false
     ) {
         if interruptedBySystem {
             // iOS doesn't promise to say when a call ends, and can simply
@@ -125,6 +126,20 @@ struct PhasePresentation {
                     tint: .orange,
                     isBusy: true,
                     action: .retry
+                )
+            }
+            if offerBackup, failure.engineUnavailability?.kind == .homeServerUnreachable {
+                // Without the phone's own model nothing can cover for the
+                // computer, so the way out is a backup, not another retry.
+                self = PhasePresentation(
+                    title: title,
+                    detail: scheduledRetry != nil
+                        ? tr("מנסה שוב לבד · הקישו להוספת גיבוי בטלפון", "Trying again on its own · Tap to add a backup on the phone")
+                        : tr("בדקו שהמחשב דלוק · הקישו להוספת גיבוי בטלפון", "Check that the computer is on · Tap to add a backup on the phone"),
+                    systemImage: systemImage,
+                    tint: .orange,
+                    isBusy: scheduledRetry != nil,
+                    action: .openEngineSettings
                 )
             }
         }

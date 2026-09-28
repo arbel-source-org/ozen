@@ -45,4 +45,16 @@ struct BackupModelTests {
         #expect(!BackupModel.canStart(status(downloading: 0.1)))
         #expect(!BackupModel.canStart(status(installed: true)))
     }
+
+    @Test("a computer that can't be reached offers the backup only while one could still be fetched")
+    func offer() {
+        #expect(BackupModel.shouldOffer(after: .homeServerUnreachable, status: .missing(megabytes: 626)))
+        #expect(BackupModel.shouldOffer(after: .homeServerUnreachable, status: .failed))
+        #expect(BackupModel.shouldOffer(after: .homeServerUnreachable, status: .waitingForWiFi))
+        #expect(!BackupModel.shouldOffer(after: .homeServerUnreachable, status: .ready))
+        #expect(!BackupModel.shouldOffer(after: .homeServerUnreachable, status: .downloading(fraction: 0.2)))
+        #expect(!BackupModel.shouldOffer(after: .homeServerUnreachable, status: .offline))
+        #expect(!BackupModel.shouldOffer(after: .homeServerRejected, status: .missing(megabytes: 626)))
+        #expect(!BackupModel.shouldOffer(after: nil, status: .missing(megabytes: 626)))
+    }
 }

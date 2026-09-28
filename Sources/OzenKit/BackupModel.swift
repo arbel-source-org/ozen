@@ -31,6 +31,14 @@ public enum BackupModel {
         }
     }
 
+    public static func shouldOffer(after unreachable: EngineUnavailability.Kind?, status: BackupModelStatus) -> Bool {
+        guard unreachable == .homeServerUnreachable else { return false }
+        switch status {
+        case .missing, .failed, .waitingForWiFi: return true
+        default: return false
+        }
+    }
+
     public static func canStart(_ status: BackupModelStatus) -> Bool {
         switch status {
         case .missing, .failed: return true
