@@ -106,7 +106,14 @@ $venvPython = Join-Path $Dir 'venv\Scripts\python.exe'
 if (-not (Test-Path $venvPython)) { & $python -m venv (Join-Path $Dir 'venv') }
 & $venvPython -m pip install --quiet --upgrade pip
 & $venvPython -m pip install --quiet -r (Join-Path $here 'requirements.txt') nvidia-cublas-cu12 'nvidia-cudnn-cu12==9.*'
-if ($LASTEXITCODE -ne 0) { throw 'pip install failed' }
+# A re-run after a setup closed halfway finds the venv already there and
+# skips the space check above, so a full disk shows up only here.
+if ($LASTEXITCODE -ne 0) {
+    $freeGB = [math]::Round((Get-PSDrive -Name $Dir.Substring(0, 1)).Free / 1GB, 1)
+    Tell ("Installing the parts Ozen needs didn't finish. Usually the disk is full (Ozen needs about $neededGB GB, and drive $($Dir.Substring(0, 2)) has $freeGB GB free) or the internet dropped.`n`n" +
+        "Free some space or check the internet, then run this setup again. The phone keeps writing captions by itself.") 'Warning'
+    exit 1
+}
 Copy-Item (Join-Path $here 'ozen_server.py'), (Join-Path $here 'try_server.py'), (Join-Path $here 'pairing.py') $Dir -Force
 
 $codeFile = Join-Path $Dir 'pairing-code'
@@ -139,9 +146,15 @@ if (-not (Get-NetFirewallRule -DisplayName 'Ozen server' -ErrorAction SilentlyCo
 # Windows often files a home Wi-Fi as "Public", where the rule above
 # doesn't apply and the phone at home finds nothing.
 $publicNets = @(Get-NetConnectionProfile -ErrorAction SilentlyContinue | Where-Object { $_.NetworkCategory -eq 'Public' })
-if ($publicNets.Count -gt 0 -and (Ask ("Windows treats this computer's network ($($publicNets[0].Name)) as a public one, so the phone on the home Wi-Fi can't reach it.`n`n" +
-        "Is this your home network? Choose Yes to mark it as a home (private) network. Choose No if this is a cafe, office or other shared network."))) {
-    $publicNets | ForEach-Object { Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private -ErrorAction SilentlyContinue }
+if ($publicNets.Count -gt 0) {
+    if (Ask ("Windows treats this computer's network ($($publicNets[0].Name)) as a public one, so the phone on the home Wi-Fi can't reach it.`n`n" +
+            "Is this your home network? Choose Yes to mark it as a home (private) network. Choose No if this is a cafe, office or other shared network.")) {
+        $publicNets | ForEach-Object { Set-NetConnectionProfile -InterfaceIndex $_.InterfaceIndex -NetworkCategory Private -ErrorAction SilentlyContinue }
+    } elseif ($Quiet) {
+        # A quiet re-run asks nothing, but a network Windows re-filed as
+        # public (after a new router, say) still has to be reported.
+        Tell "Warning: Windows treats the network $($publicNets[0].Name) as public, so a phone on it can't reach this computer. Run the setup without -Quiet to fix it." 'Warning'
+    }
 }
 # Asleep, the computer answers nothing, and nothing wakes it for the phone.
 if (Ask ("Captions from this computer only work while it is awake.`n`n" +
@@ -151,8 +164,13 @@ if (Ask ("Captions from this computer only work while it is awake.`n`n" +
 }
 
 $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\cmd.exe" -Argument "/c `"$Dir\run.cmd`""
-$trigger = New-ScheduledTaskTrigger -AtStartup
-$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -RunLevel Highest
+# A computer where Windows already refused the start-before-sign-in task
+# refuses it again on every re-run; it keeps its sign-in task, without
+# repeating the warning it was shown the first time.
+$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+$signInOnly = $existingTask -and "$($existingTask.Principal.LogonType)" -eq 'Interactive'
+$trigger = if ($signInOnly) { New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME } else { New-ScheduledTaskTrigger -AtStartup }
+$principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType $(if ($signInOnly) { 'Interactive' } else { 'S4U' }) -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
 Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
@@ -168,6 +186,9 @@ for ($i = 0; $i -lt 5 -and (Get-ScheduledTask -TaskName $TaskName).State -ne 'Ru
 # account, the usual sign-in on a home PC. Then it starts at sign-in
 # instead, which works for every account: the computer only has to be
 # signed in, as it is after a normal start-up with auto sign-in.
+if ((Get-ScheduledTask -TaskName $TaskName).State -ne 'Running' -and $signInOnly) {
+    throw 'the Ozen server could not be started by Windows (Task Scheduler refused it)'
+}
 if ((Get-ScheduledTask -TaskName $TaskName).State -ne 'Running') {
     $atLogon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
     $interactive = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
@@ -247,7 +268,12 @@ if ($LASTEXITCODE -ne 0) { throw 'could not make the pairing page' }
 
 $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Ozen - pair a phone.lnk'
 $link = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcut)
-$link.TargetPath = $pairingPage
+# The shortcut makes the page again each time rather than opening the one
+# saved now: after a new router the computer's home address changes, and
+# a saved page would send a new phone to the old one.
+$link.TargetPath = Join-Path $Dir 'venv\Scripts\pythonw.exe'
+$link.Arguments = (@("`"$(Join-Path $Dir 'pairing.py')`"", '--code-file', "`"$codeFile`"", '--out', "`"$pairingPage`"") + $pairArgs) -join ' '
+$link.WorkingDirectory = $Dir
 $link.Save()
 
 Write-Output ''

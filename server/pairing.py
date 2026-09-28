@@ -22,7 +22,8 @@ TAILSCALE_PATHS = [
 def tailscale_address():
     for exe in TAILSCALE_PATHS:
         try:
-            out = subprocess.run([exe, "status", "--json"], capture_output=True, text=True, timeout=20).stdout
+            out = subprocess.run([exe, "status", "--json"], capture_output=True, text=True, timeout=20,
+                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
             name = json.loads(out)["Self"]["DNSName"].rstrip(".")
         except (OSError, ValueError, KeyError, subprocess.SubprocessError):
             continue
