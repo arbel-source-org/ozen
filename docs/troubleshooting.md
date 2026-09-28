@@ -50,7 +50,7 @@ the phone.
 | It says | What it means | What to do |
 | --- | --- | --- |
 | "Connected" with a time in ms | The computer answered and took the code. | Nothing. |
-| "No answer from the computer" | The phone can't reach it: it is off, asleep, not on the internet, or (at home) Windows treats the Wi-Fi as a public network. | Wake or turn on the computer. At home, see "When the phone can't reach it" in `server/README.md`. Captions carry on from the phone's own model meanwhile. |
+| "No answer from the computer" | The phone can't reach it: it is off, asleep, not on the internet, or (at home) Windows treats the Wi-Fi as a public network. | Wake or turn on the computer. At home, see "When the phone can't reach it" in `server/README.md`. Captions carry on from the phone's own model meanwhile if its backup is downloaded (Settings → Home computer → "Download a backup to the phone"); without it they wait for the computer, and the status line says "Tap to add a backup on the phone". |
 | "The computer answered but didn't accept the code" | The code on the phone isn't the one in `C:\ozen\pairing-code` (setup was run on a new computer, or the code was typed wrong). | Scan the QR code again from "Ozen - pair a phone" in the computer's Start menu. |
 
 ## Sound alerts at night

@@ -63,7 +63,10 @@ things, for Hebrew conversation, entirely on-device.
   0.2 s after they are said; a finished sentence settles about 0.9 s after
   the speaker stops (on an RTX 2080 Ti). Setup is one double-click
   (`Ozen-Home-Setup.cmd` from the latest release) and pairing is a QR
-  code; if the PC can't be reached, the phone's own model carries on.
+  code; if the PC can't be reached, the phone's own model carries on,
+  once it has been downloaded as a backup (Settings → Home computer →
+  "Download a backup to the phone"; without it captions wait for the PC,
+  and the status line offers the backup).
   See [Home computer requirements](#home-computer-requirements) and
   `server/README.md`.
 - **Optional cloud captions** for when the phone's models are too slow or
@@ -174,7 +177,10 @@ things, for Hebrew conversation, entirely on-device.
   dropped.
 - **Keyword alerts.** Her name, or any word she picks, buzzes the phone
   and highlights the line, matching through Hebrew's attached prefixes
-  ("ve-le-Ruti" still matches "Ruti"). Said over and over at the table, it
+  ("ve-le-Ruti" still matches "Ruti"), without firing a short name on the
+  everyday word it hides in ("Li" stays quiet on "sheli", mine; "Ben" on
+  "lavan", white). The suggested "medicine" and "doctor" also match
+  "the medicines" and a woman doctor. Said over and over at the table, it
   buzzes at most once every 15 seconds, while every line it's in stays
   highlighted.
 - **Sound alerts.** Doorbell, knocking, a baby crying, a smoke alarm, a
@@ -219,7 +225,10 @@ things, for Hebrew conversation, entirely on-device.
   harofe)), list who took part, and open with a summary: length, how much
   each person said, speaking pace, longest turn, and every line with a
   time, an amount or a phone number in it, each a tap from where it was
-  said. Holding a line copies just that line, to paste a phone number or
+  said. Phone numbers in captions, including the 1-700 and 1-800 numbers
+  health funds and pharmacies give out, are a tap from a call (star
+  numbers such as *2700 stay text: iOS won't dial them from a link).
+  Holding a line copies just that line, to paste a phone number or
   an address somewhere else.
   The list is grouped under "Today" (hayom), "Yesterday" (etmol), the
   weekday for the past week, and the date before that.
