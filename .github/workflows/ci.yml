@@ -34,6 +34,8 @@ jobs:
         run: python3 scripts/check-translations.py
       - name: Check that docs quote the app's current wording
         run: python3 scripts/check-doc-quotes.py
+      - name: Check that no real pairing code or tailnet name is in the repo
+        run: python3 scripts/check-no-real-values.py
       - uses: swift-actions/setup-swift@v2
         with:
           swift-version: "6.1"
