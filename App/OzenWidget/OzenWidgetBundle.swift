@@ -73,9 +73,10 @@ struct CaptionLinesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if state.lines.isEmpty {
-                // "Listening" under "captions are starting" or "paused
-                // because of a call" would say the opposite of the note.
-                if state.status == nil {
+                // "Listening" under "captions are starting", "paused
+                // because of a call" or "captions aren't updating" would
+                // say the opposite of the note.
+                if state.status == nil && !isStale {
                     listeningLabel
                 }
             } else {
