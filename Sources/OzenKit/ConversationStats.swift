@@ -125,7 +125,11 @@ public struct ConversationStats: Sendable, Equatable {
     }
 
     private static func speakerName(of segment: SavedSegment) -> String {
-        guard let name = segment.speakerName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else {
+        // A line saved while the app was in another language keeps that
+        // language's "Unknown speaker", which is still nobody in particular.
+        guard let name = segment.speakerName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty,
+              !TranscriptSessionSummary.isUnknownSpeakerLabel(name)
+        else {
             return unknownSpeakerName
         }
         return name

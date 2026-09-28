@@ -173,4 +173,17 @@ struct ConversationStatsTests {
             #expect(ConversationStats.unknownSpeakerName == "Unknown speaker")
         }
     }
+
+    @Test("'Unknown speaker' saved in another language is the same unknown speaker, not an extra person")
+    func unknownLabelsInEveryLanguageAreOneSpeaker() {
+        let stats = ConversationStats.compute(segments: [
+            line("שלום לכולם", "רותי", at: 0),
+            line("מה נשמע", "Unknown speaker", at: 5),
+            line("הכל טוב", nil, at: 9),
+            line("יופי", "דובר לא ידוע", at: 12),
+        ])
+        #expect(stats.speakers.count == 2)
+        #expect(stats.speakers.map(\.name).contains("רותי"))
+        #expect(stats.speakers.first { $0.name != "רותי" }?.words == 5)
+    }
 }
