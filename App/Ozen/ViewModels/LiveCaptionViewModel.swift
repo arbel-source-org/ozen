@@ -1832,6 +1832,10 @@ public final class LiveCaptionViewModel {
         if id == historySessionID {
             forgetCurrentConversation()
         }
+        // Deleting the conversation that couldn't be written ends its
+        // warning in the writer; the banner follows now, not at a save that
+        // may never come.
+        refreshSavingTrouble()
     }
 
     /// The saved conversation the line at `index` belongs to, so the
@@ -1858,6 +1862,7 @@ public final class LiveCaptionViewModel {
         deleteMarkedCaptionLines()
         closedHistorySessions = []
         forgetCurrentConversation()
+        refreshSavingTrouble()
     }
 
     /// Whether the journal still holds caption lines a marked problem kept.
