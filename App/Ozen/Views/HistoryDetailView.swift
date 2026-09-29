@@ -440,7 +440,7 @@ private struct SavedLineRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             if showsTime {
-                Text(Date(timeIntervalSince1970: segment.startTimestamp).formatted(inAppLanguage: .omitted, time: .shortened))
+                Text(timeText)
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
@@ -486,10 +486,13 @@ private struct SavedLineRow: View {
         markUncertain && CaptionConfidence.isUncertain(confidence: segment.confidence, isCommitted: segment.isCommitted)
     }
 
+    private var timeText: String {
+        Date(timeIntervalSince1970: segment.startTimestamp).formatted(inAppLanguage: .omitted, time: .shortened)
+    }
+
+    /// VoiceOver hears the time the screen shows above the line, and no
+    /// "Unknown speaker:" before every line of an unrecognised voice.
     private var accessibilityText: String {
-        let star = segment.isStarred ? tr("מסומן כחשוב. ", "Marked as important. ") : ""
-        let uncertain = isUncertain ? tr("ייתכן שלא נשמע נכון. ", "May not have been heard correctly. ") : ""
-        guard let name = segment.speakerName else { return star + uncertain + segment.text }
-        return star + uncertain + "\(name): \(segment.text)"
+        SavedLineSpeech.label(for: segment, time: showsTime ? timeText : nil, uncertain: isUncertain)
     }
 }
