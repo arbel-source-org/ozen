@@ -131,7 +131,8 @@ things, for Hebrew conversation, entirely on-device.
   last line that scrolled away. With VoiceOver on, each finished line is read
   out or sent to a braille display by itself, once, with the speaker's
   name when the speaker changes. Doorbell, alarm and name alerts are
-  read out the moment they happen.
+  read out the moment they happen, and so are captions stopping or coming
+  back, saving failing and a microphone disconnecting.
 - **Robust audio**: a live level meter per microphone, automatic recovery
   from phone-call interruptions and route changes (AirPods in/out, USB mic
   unplugged), Whisper-hallucination filtering on silence, no model runs on
