@@ -2370,6 +2370,24 @@ struct CaptionPipelineSilenceSpeakerTests {
         #expect(pipeline.segments.first?.speakerClusterID == voice)
     }
 
+    @Test("a short reply after someone else's line does not take that person's voice")
+    func shortReplyAfterAnotherLineStaysUnnamed() async {
+        let engine = FakeEngine()
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let question = UUID()
+        engine.emit(token(question, "תה?"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.segments.first?.speakerClusterID != nil })
+        engine.emit(token(question, "תה?", final: true))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+
+        engine.emit(token(UUID(), "כן", final: true))
+        #expect(await eventually { pipeline.segments.count == 2 })
+        #expect(pipeline.segments.last?.speakerClusterID == nil)
+    }
+
     @Test("a second speaker split out of the same audio doesn't take the voice heard just before")
     func splitTurnKeepsNoVoice() async {
         let engine = FakeEngine()

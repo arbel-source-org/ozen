@@ -226,9 +226,10 @@ public final class CaptionPipeline {
     /// began, and a switch back in that gap lost the sentence's start.
     private var lastSpeechAt: TimeInterval?
     private var silencePhraseGuard = SilencePhraseGuard()
-    /// The speaker of the most recent window that held speech. A short reply
-    /// ("ken" — "yes") is often over before its caption line exists, so a new
-    /// line with no speaker yet takes this one if it is recent.
+    /// The speaker of the most recent window that held speech while no line
+    /// was open. A short reply ("ken" — "yes") is often over before its
+    /// caption line exists, so a new line with no speaker yet takes this one
+    /// if it is recent.
     private var recentSpeechCluster: (id: Int, at: TimeInterval)?
     private static let minimumSpeechFractionForEmbedding = 0.4
     private static let recentSpeechClusterSeconds: TimeInterval = 4
@@ -1603,9 +1604,15 @@ public final class CaptionPipeline {
                 stats.speakerClustersOpened += 1
             }
             speakerClusters = clusterer.clusters
-            recentSpeechCluster = (clusterID, now())
 
-            guard let currentUtteranceID = heardDuring else { continue }
+            guard let currentUtteranceID = heardDuring else {
+                // Heard before any line was open: the line about to start
+                // takes this voice. A window an open line claimed is that
+                // line's speaker, not the next one's; passing it on named
+                // a short reply by someone else after the person asking.
+                recentSpeechCluster = (clusterID, now())
+                continue
+            }
             utteranceClusterAssignments[currentUtteranceID] = clusterID
             // Writing an unchanged value still tells every observer the
             // transcript changed and redraws the caption list, every 1.5 s
