@@ -252,13 +252,30 @@ public func tr(_ hebrewTemplate: String, _ englishTemplate: String, args: [Strin
     return substitutingPlaceholders(in: template, with: args)
 }
 
-/// Replaces `%1`, `%2`... with `args[0]`, `args[1]`... Walked from the
-/// highest number down so `%10` (if it ever comes up) isn't half-eaten by
-/// a `%1` replacement first.
+/// Replaces `%1`, `%2`... with `args[0]`, `args[1]`... in one pass from
+/// the left: replacing each number in turn over the whole result read the
+/// text already put in, so a caption line saying "50%1" in a shared
+/// conversation became "50" plus its heading. The longest number that has
+/// an argument wins, so `%10` (if it ever comes up) isn't read as `%1`.
 private func substitutingPlaceholders(in template: String, with args: [String]) -> String {
-    var result = template
-    for index in stride(from: args.count, through: 1, by: -1) {
-        result = result.replacingOccurrences(of: "%\(index)", with: args[index - 1])
+    guard !args.isEmpty else { return template }
+    var result = ""
+    var rest = Substring(template)
+    while let percent = rest.firstIndex(of: "%") {
+        result += rest[..<percent]
+        let afterPercent = rest.index(after: percent)
+        var digits = rest[afterPercent...].prefix { $0.isASCII && $0.isNumber }
+        while digits.count > 1, let number = Int(digits), number > args.count {
+            digits = digits.dropLast()
+        }
+        if let number = Int(digits), (1...args.count).contains(number) {
+            result += args[number - 1]
+            rest = rest[digits.endIndex...]
+        } else {
+            result += "%"
+            rest = rest[afterPercent...]
+        }
     }
+    result += rest
     return result
 }

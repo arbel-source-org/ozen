@@ -33,6 +33,14 @@ struct LocalizationTests {
         #expect(english == "Hello")
     }
 
+    @Test("text put into a placeholder is kept as it is, even when it holds a placeholder itself")
+    func insertedTextIsNotRescanned() {
+        #expect(tr("%1 בשעה %2", "%1 at %2", args: ["Today", "50%1"], in: .english) == "Today at 50%1")
+        #expect(tr("%1 בשעה %2", "%1 at %2", args: ["%2", "22:30"], in: .english) == "%2 at 22:30")
+        #expect(tr("%1 בשעה %2", "%1 at %2", args: ["Today", "50%1"], in: .spanish) == "Today a las 50%1")
+        #expect(tr("%1 בשעה %2", "%1 at %2", args: ["היום", "%1%2"], in: .hebrew) == "היום בשעה %1%2")
+    }
+
     @Test("every language beyond Hebrew and English is looked up in the translation table")
     func translatedLanguages() {
         #expect(tr("ביטול", "Cancel", in: .arabic) == "إلغاء")
