@@ -88,8 +88,12 @@ struct CaptionLinesView: View {
                         .font(.system(size: fontSize, weight: .semibold))
                         // The app cuts each line to about this many lines
                         // (`LockScreenCaptions`); a wide one shrinks a little
-                        // rather than lose its end, the newest words.
+                        // rather than lose its end, the newest words. One
+                        // still too long (the newest line takes the room a
+                        // short line above leaves) loses its start instead,
+                        // as the app's own cut does.
                         .lineLimit(isNewest ? 3 : (state.large ? 1 : 2))
+                        .truncationMode(isNewest ? .head : .tail)
                         .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -154,7 +158,10 @@ struct CaptionLinesView: View {
         let words = Text(line.text)
             .foregroundColor(line.isFinal ? .white : .white.opacity(0.7))
         guard let speaker = line.speaker else { return words }
-        return Text("\(speaker): ").foregroundColor(.yellow) + words
+        // The line's own direction mark goes in front of the name: a name in
+        // Latin letters ("Avi") first would set the paragraph left to right.
+        let mark = line.text.hasPrefix("\u{200F}") ? "\u{200F}" : ""
+        return Text("\(mark)\(speaker): ").foregroundColor(.yellow) + words
     }
 }
 
