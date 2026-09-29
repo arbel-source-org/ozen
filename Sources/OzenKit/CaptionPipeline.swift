@@ -1247,17 +1247,49 @@ public final class CaptionPipeline {
         text.split(whereSeparator: \.isWhitespace).map { $0.trimmingCharacters(in: .punctuationCharacters) }
     }
 
-    /// `text` without the leading words it shares with `cleared`, or nil
-    /// when nothing else is left.
+    /// `text` without the words that are the cleared ones said again, or
+    /// nil when nothing else is left.
+    ///
+    /// The finished line is often written a little differently from the
+    /// live one that was cleared (a stronger final pass changes a word's
+    /// gender or prefix), and cutting only the exactly shared first words
+    /// brought the rest of the cleared sentence back. The start of `text`
+    /// is lined up with `cleared` word by word instead, and the cut goes
+    /// where they match best, as long as no more than a third of the
+    /// cleared words differ. Rewritten further than that, the line comes
+    /// back whole: a repeat is better than a loss.
     private static func words(of text: String, after cleared: [String]) -> String? {
         let words = text.split(whereSeparator: \.isWhitespace)
-        var shared = 0
-        while shared < min(words.count, cleared.count),
-              words[shared].trimmingCharacters(in: .punctuationCharacters) == cleared[shared] {
-            shared += 1
+        guard !words.isEmpty else { return nil }
+        let comparable = words.map { $0.trimmingCharacters(in: .punctuationCharacters) }
+        // edits[i][k]: the words to change, add or drop to turn the first
+        // i cleared words into the first k words of `text`.
+        var edits = [Array(0...comparable.count)]
+        for (i, word) in cleared.enumerated() {
+            var row = [i + 1]
+            for k in 1...comparable.count {
+                row.append(min(edits[i][k] + 1, row[k - 1] + 1, edits[i][k - 1] + (comparable[k - 1] == word ? 0 : 1)))
+            }
+            edits.append(row)
         }
-        guard shared < words.count else { return nil }
-        return words[shared...].joined(separator: " ")
+        var best: (edits: Int, cut: Int)?
+        func consider(clearedWords: Int, cut: Int) {
+            let cost = edits[clearedWords][cut]
+            guard cost <= clearedWords / 3 else { return }
+            if let current = best, (current.edits, current.cut) <= (cost, cut) { return }
+            best = (cost, cut)
+        }
+        // Words after the cut are new only once all of the cleared ones
+        // are accounted for; a `text` that is all old may still stop short.
+        for cut in 0..<comparable.count {
+            consider(clearedWords: cleared.count, cut: cut)
+        }
+        for clearedWords in 0...cleared.count {
+            consider(clearedWords: clearedWords, cut: comparable.count)
+        }
+        guard let best else { return words.joined(separator: " ") }
+        guard best.cut < words.count else { return nil }
+        return words[best.cut...].joined(separator: " ")
     }
 
     private func handle(token incoming: TranscriptToken) {
@@ -1267,9 +1299,8 @@ public final class CaptionPipeline {
         var cleaned = HebrewText.removingDirectionMarks(incoming.text)
         // A sentence cleared from the screen mid-way keeps arriving with all
         // of its words so far. Dropping it whole lost everything said after
-        // the tap, on screen and in History; only the words it shared with
-        // what was cleared stay gone. Rewritten from its first word, it comes
-        // back whole: a repeat is better than a loss.
+        // the tap, on screen and in History; only the words that are the
+        // cleared ones again stay gone (see `words(of:after:)`).
         if let cleared = clearedUtterances[incoming.utteranceID] {
             guard let rest = Self.words(of: cleaned, after: cleared) else { return }
             cleaned = rest

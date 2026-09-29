@@ -822,7 +822,7 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.segments.map(\.text) == ["שלך"])
     }
 
-    @Test("a cleared sentence the engine rewrites from its first word comes back whole rather than losing what followed")
+    @Test("a cleared sentence the engine rewrites heavily comes back whole rather than losing what followed")
     func clearMidSentenceRewritten() async {
         let engine = FakeEngine()
         let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
@@ -832,9 +832,32 @@ struct CaptionPipelineTokenTests {
         #expect(await eventually { pipeline.segments.count == 1 })
 
         pipeline.clearTranscript()
-        engine.emit(token(open, "עם המספר של הרופא", final: true))
+        engine.emit(token(open, "עם מספר שלו הרופא", final: true))
         #expect(await eventually { pipeline.segments.count == 1 })
-        #expect(pipeline.segments.map(\.text) == ["עם המספר של הרופא"])
+        #expect(pipeline.segments.map(\.text) == ["עם מספר שלו הרופא"])
+    }
+
+    @Test("a cleared sentence finished with a word written differently still keeps the cleared words away, and shows only what came after")
+    func clearMidSentenceFinishedDifferently() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "אני צריך לקבוע תור לרופא עיניים"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "אני צריכה לקבוע תור לרופא עיניים ביום שלישי", final: true))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.map(\.text) == ["ביום שלישי"])
+
+        let other = UUID()
+        engine.emit(token(other, "את המספר של"))
+        #expect(await eventually { pipeline.segments.count == 2 })
+        pipeline.clearTranscript()
+        engine.emit(token(other, "עם המספר של", final: true))
+        engine.emit(token(UUID(), "שלום", final: true))
+        #expect(await eventually { pipeline.segments.map(\.text) == ["שלום"] })
     }
 }
 
