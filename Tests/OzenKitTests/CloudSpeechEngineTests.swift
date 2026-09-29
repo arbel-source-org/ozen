@@ -299,6 +299,38 @@ struct CloudSpeechEngineTests {
         #expect(http.requests.last?.headers["Authorization"] == "Bearer sk-two")
     }
 
+    @Test("an old approval is not trusted: a check after the internet dropped really asks")
+    func approvalRunsOut() async throws {
+        let http = FakeCloudHTTP(keyChecks: [.status(200, "{}"), .offline])
+        let engine = CloudSpeechEngine(http: http, approvalSeconds: 0.05, apiKey: { "sk-test" })
+        #expect(await engine.checkAvailability(languageCode: "he") == .available)
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(await engine.checkAvailability(languageCode: "he").unavailability?.kind == .noInternet)
+    }
+
+    @Test("captions coming back from the cloud keep the approval fresh, so a restart right after doesn't ask again")
+    func answeredRequestRenewsApproval() async throws {
+        let http = FakeCloudHTTP(answers: [.text("A: שלום")], keyChecks: [.status(200, "{}"), .offline])
+        let engine = CloudSpeechEngine(http: http, failedSegmentPauseSeconds: 0.001, approvalSeconds: 1, apiKey: { "sk-test" })
+        #expect(await engine.checkAvailability(languageCode: "he") == .available)
+        try await Task.sleep(for: .milliseconds(700))
+        _ = try await transcribe(engine, speech(seconds: 1) + silence(seconds: 1))
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(await engine.checkAvailability(languageCode: "he") == .available)
+    }
+
+    @Test("the approval lasts less than the wait between reconnect checks, so every check really asks the cloud")
+    @MainActor
+    func everyRecheckAsksTheCloud() {
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in FakeEngine(kind: .cloud) },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        #expect(CloudSpeechEngine.defaultApprovalSeconds < captions.cloudRecheckSeconds)
+    }
+
     @Test("a key check that fails says why")
     func keyCheckFailures() async {
         let rejected = await engine(FakeCloudHTTP(keyChecks: [.status(401, "{}")])).checkAvailability(languageCode: "he")
