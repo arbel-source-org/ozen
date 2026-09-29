@@ -299,4 +299,28 @@ struct TranscriptHistoryWriterTests {
         failing.saveNow(record(id: UUID(), lines: 1, ended: false))
         #expect(failing.lastFailure == nil)
     }
+
+    @Test("a voice rename the disk refused is finished by the next save once there is room, and is reported until then")
+    func refusedRenameCatchesUp() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.rename"))
+        let old = TranscriptSessionRecord(
+            id: UUID(), startedAt: 100, endedAt: 200, engine: .whisperKit, modelVariant: nil, inputName: nil,
+            segments: [SavedSegment(id: UUID(), text: "שלום", speakerName: "Avi", speakerClusterID: nil, startTimestamp: 100, isCommitted: true)]
+        )
+        writer.saveNow(old)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.renameSpeakerInBackground(from: "Avi", to: "Aviv")
+        writer.waitUntilIdle()
+        #expect(writer.lastFailure != nil)
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        writer.saveNow(record(id: UUID(), lines: 1, ended: false))
+        #expect(store.load(id: old.id)?.segments.first?.speakerName == "Aviv")
+        #expect(writer.lastFailure == nil)
+    }
 }

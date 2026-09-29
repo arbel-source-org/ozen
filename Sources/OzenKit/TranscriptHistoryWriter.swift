@@ -21,6 +21,7 @@ public final class TranscriptHistoryWriter: Sendable {
     private let queue: DispatchQueue
     private let failure = FailureBox()
     private let lastWritten = WrittenRecord()
+    private let pendingRenames = PendingRenames()
 
     /// Why the most recent save or rename didn't reach the disk (a full
     /// phone, most likely), or nil when it did. Autosaves have no one to
@@ -37,10 +38,11 @@ public final class TranscriptHistoryWriter: Sendable {
     /// writer's queue once the save is done, with `lastFailure` already
     /// saying how it went.
     public func saveInBackground(_ record: TranscriptSessionRecord, finished: (@Sendable () -> Void)? = nil) {
-        queue.async { [store, failure, lastWritten] in
+        queue.async { [store, failure, lastWritten, pendingRenames] in
             if lastWritten.record != record {
                 lastWritten.record = failure.capture { try store.save(record) } ? record : nil
             }
+            Self.retry(pendingRenames, store: store, failure: failure)
             finished?()
         }
     }
@@ -53,8 +55,9 @@ public final class TranscriptHistoryWriter: Sendable {
     /// the caller up only for the one write that must not be lost, not for
     /// the whole conversation's search index too.
     public func saveNow(_ record: TranscriptSessionRecord) {
-        queue.sync { [store, failure, lastWritten] in
+        queue.sync { [store, failure, lastWritten, pendingRenames] in
             lastWritten.record = failure.capture { try store.save(record, updateSearchCaches: false) } ? record : nil
+            Self.retry(pendingRenames, store: store, failure: failure)
         }
     }
 
@@ -71,10 +74,33 @@ public final class TranscriptHistoryWriter: Sendable {
     /// Renames a voice across every saved conversation, queued behind the
     /// saves already waiting so none of them lands the old name back.
     public func renameSpeakerInBackground(from oldName: String, to newName: String, finished: (@Sendable () -> Void)? = nil) {
-        queue.async { [store, failure, lastWritten] in
+        queue.async { [store, failure, lastWritten, pendingRenames] in
             lastWritten.record = nil
-            failure.capture { try store.renameSpeaker(from: oldName, to: newName) }
+            pendingRenames.list.append((oldName, newName))
+            failure.capture { try Self.runRenames(pendingRenames, store: store) }
             finished?()
+        }
+    }
+
+    /// A rename the disk refused part way (a full phone) left the rest of
+    /// the saved conversations with the old name, and the next save that
+    /// worked cleared the error. It stays waiting instead, is tried again
+    /// after every save until it goes through, and until then its error
+    /// is the one reported.
+    private static func retry(_ pending: PendingRenames, store: TranscriptHistoryStore, failure: FailureBox) {
+        guard !pending.list.isEmpty else { return }
+        do {
+            try runRenames(pending, store: store)
+        } catch {
+            failure.record(String(describing: error))
+        }
+    }
+
+    /// The waiting renames, oldest first; one refused stops the rest.
+    private static func runRenames(_ pending: PendingRenames, store: TranscriptHistoryStore) throws {
+        while let next = pending.list.first {
+            try store.renameSpeaker(from: next.from, to: next.to)
+            pending.list.removeFirst()
         }
     }
 
@@ -136,6 +162,12 @@ private final class FailureBox: @unchecked Sendable {
         return stored
     }
 
+    func record(_ error: String) {
+        lock.lock()
+        stored = error
+        lock.unlock()
+    }
+
     /// Runs `work`, keeps its error (or that there was none), and returns
     /// whether it succeeded.
     @discardableResult
@@ -152,6 +184,12 @@ private final class FailureBox: @unchecked Sendable {
         lock.unlock()
         return outcome == nil
     }
+}
+
+/// Voice renames not yet written to every saved conversation. Only
+/// touched on the writer's queue.
+private final class PendingRenames: @unchecked Sendable {
+    var list: [(from: String, to: String)] = []
 }
 
 /// The conversation as the writer last wrote it; nil after a failure or
