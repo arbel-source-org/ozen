@@ -407,6 +407,7 @@ struct LiveCaptionView: View {
                     }
                 }
             }
+            .alertOverlay(for: viewModel)
             .pageSized()
         }
         .sheet(isPresented: $showingMicPicker) {
@@ -438,10 +439,12 @@ struct LiveCaptionView: View {
         }
         .sheet(item: $namingSegment) { segment in
             NameSpeakerSheet(segment: segment, viewModel: viewModel)
+                .alertOverlay(for: viewModel)
                 .pageSized()
         }
         .sheet(item: $fixingWordFromSegment) { segment in
             FixVocabularyWordSheet(segment: segment, viewModel: viewModel)
+                .alertOverlay(for: viewModel)
                 .pageSized()
         }
         .confirmationDialog(
@@ -1314,6 +1317,7 @@ struct LiveCaptionView: View {
     /// vibration and the VoiceOver announcement still come from here, once.
     private var isCoveredByAlertScreen: Bool {
         showingMicPicker || showingSettings || showingTypeToSpeak || showingBigText || showingNameAlertForm
+            || openedConversation != nil || namingSegment != nil || fixingWordFromSegment != nil
     }
 
     /// Vibrates for an alert while the sound classifier looks away, so the
