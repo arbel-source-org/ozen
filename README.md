@@ -73,12 +73,15 @@ things, for Hebrew conversation, entirely on-device.
 - **Optional cloud captions** for when the phone's models are too slow or
   lose track of several people talking: each sentence goes to a speech
   model through [OpenRouter](https://openrouter.ai) with a key pasted into
-  Settings (stored only in the phone's Keychain). On Hebrew test recordings
+  Settings (stored only in the phone's Keychain), together with the names
+  and important words lists so it can spell them. On Hebrew test recordings
   the default cloud model got 24% of words wrong (the faster, cheaper one
   29%) against 39% for Whisper large-v3 turbo and 60% for Whisper small,
-  and puts each change of speaker on its own line. The faster one costs
-  about 15 cents per hour of continuous speech, the default more. See
-  `CloudSpeech`. If the key
+  and puts each change of speaker on its own line. A sentence is sent again
+  every few seconds while it is said, so the faster one costs about 15 cents
+  per hour of speech, the default about twice that, and unbroken talk like
+  the news up to three times as much; off Wi-Fi that is a few hundred MB of
+  mobile data an hour, up to about 1 GB. See `CloudSpeech`. If the key
   stops working, the credit runs out or the internet goes, a Whisper
   model already on the phone takes over and the status line says so
   (`CloudCover`); captions don't stop for a billing problem.
