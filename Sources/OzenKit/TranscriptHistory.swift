@@ -371,9 +371,16 @@ public struct TranscriptHistoryStore: Sendable {
     /// The searchable words of one conversation, already lowercased and
     /// stripped of niqqud, one caption line or speaker name per line. The
     /// format is in the file name, so a future change simply stops
-    /// finding the old files and rebuilds them.
+    /// finding the old files and rebuilds them. (v1 also held "speaker 2"
+    /// and "unknown speaker" labels.)
     private func searchTextURL(forRecordFile url: URL) -> URL {
-        summariesURL.appendingPathComponent(url.deletingPathExtension().lastPathComponent + ".search-v1.txt")
+        summariesURL.appendingPathComponent(url.deletingPathExtension().lastPathComponent + ".search-v2.txt")
+    }
+
+    /// Search files of earlier formats hold the conversation's words too,
+    /// so deleting it deletes them.
+    private func olderSearchTextURLs(forRecordFile url: URL) -> [URL] {
+        [summariesURL.appendingPathComponent(url.deletingPathExtension().lastPathComponent + ".search-v1.txt")]
     }
 
     /// Saves a session, overwriting any earlier save with the same id —
@@ -512,7 +519,9 @@ public struct TranscriptHistoryStore: Sendable {
         var lines: [String] = record.title.map { [normalizedForSearch($0)] } ?? []
         for segment in record.segments {
             lines.append(normalizedForSearch(segment.text))
-            if let name = segment.speakerName {
+            // Not "speaker 2" or "unknown speaker": searching for "2" found
+            // every conversation with a numbered voice.
+            if let name = segment.speakerName, !TranscriptSessionSummary.isGenericLabel(name) {
                 lines.append(normalizedForSearch(name))
             }
         }
@@ -769,6 +778,9 @@ public struct TranscriptHistoryStore: Sendable {
         let url = fileURL(for: id)
         try? FileManager.default.removeItem(at: summaryURL(forRecordFile: url))
         try? FileManager.default.removeItem(at: searchTextURL(forRecordFile: url))
+        for older in olderSearchTextURLs(forRecordFile: url) {
+            try? FileManager.default.removeItem(at: older)
+        }
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         try FileManager.default.removeItem(at: url)
     }

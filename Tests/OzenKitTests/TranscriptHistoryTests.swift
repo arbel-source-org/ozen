@@ -186,6 +186,29 @@ struct TranscriptHistoryTests {
         #expect(preview == shortText)
     }
 
+    @Test("search doesn't find a conversation by its numbered or unknown speaker labels, and a delete leaves no older search file")
+    func searchSkipsPlaceholderSpeakers() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+        let saved = record(startedAt: 100, segments: [
+            segment(text: "שלום", speakerName: "דובר 2", startTimestamp: 100),
+            segment(text: "מה נשמע", speakerName: "Unknown speaker", startTimestamp: 105),
+            segment(text: "כן", speakerName: "רותי", startTimestamp: 110),
+        ])
+        try store.save(saved)
+        #expect(store.search("2").isEmpty)
+        #expect(store.search("דובר").isEmpty)
+        #expect(store.search("unknown").isEmpty)
+        #expect(store.search("רותי").map(\.id) == [saved.id])
+
+        let older = dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName)
+            .appendingPathComponent("\(saved.id.uuidString).search-v1.txt")
+        try Data("שלום".utf8).write(to: older)
+        try store.delete(id: saved.id)
+        #expect(!FileManager.default.fileExists(atPath: older.path))
+    }
+
     @Test("search is case-insensitive over segment text")
     func searchIsCaseInsensitive() throws {
         let dir = makeTempDirectory()
@@ -787,7 +810,7 @@ struct TranscriptHistorySearchCacheTests {
     }
 
     private func searchFile(_ dir: URL, _ id: UUID) -> URL {
-        dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName).appendingPathComponent("\(id.uuidString).search-v1.txt")
+        dir.appendingPathComponent(TranscriptHistoryStore.summariesFolderName).appendingPathComponent("\(id.uuidString).search-v2.txt")
     }
 
     private func setModified(_ url: URL, _ date: Date) throws {
@@ -1123,7 +1146,7 @@ struct TranscriptHistoryTitleTests {
         #expect(store.search("רופא").map(\.id) == [id])
         #expect(store.search("סבתא").isEmpty)
         let remade = try FileManager.default.contentsOfDirectory(atPath: prepared.path)
-        #expect(remade.contains { $0.hasSuffix(".search-v1.txt") })
+        #expect(remade.contains { $0.hasSuffix(".search-v2.txt") })
         #expect(store.search("רופא").map(\.id) == [id])
     }
 
