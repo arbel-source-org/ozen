@@ -74,7 +74,7 @@ extension Color {
     /// These deeper shades of the same hues (and purple's and blue's) stay at least 5:1
     /// against white, which also holds for white words drawn on them.
     /// Any other colour comes back unchanged.
-    var deepShade: Color {
+    nonisolated var deepShade: Color {
         switch self {
         case .yellow: return Color(red: 0.55, green: 0.38, blue: 0)
         case .orange: return Color(red: 0.70, green: 0.30, blue: 0)
@@ -91,7 +91,7 @@ extension Color {
 
     /// This colour as text or an icon on a `scheme` background: unchanged on
     /// dark backgrounds, the deeper shade on light ones.
-    func readable(on scheme: ColorScheme) -> Color {
+    nonisolated func readable(on scheme: ColorScheme) -> Color {
         scheme == .light ? deepShade : self
     }
 }
