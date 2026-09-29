@@ -237,7 +237,7 @@ public actor CloudSpeechEngine: TranscriptionEngine {
                     if !shown.isEmpty {
                         continuation.yield(TranscriptToken(
                             utteranceID: utteranceID,
-                            text: shown.hasSuffix(CaptionStabilizer.cutOffMark) ? shown : shown + CaptionStabilizer.cutOffMark,
+                            text: CaptionStabilizer.markingCutOff(shown),
                             isFinal: true,
                             timestamp: Date().timeIntervalSince1970
                         ))

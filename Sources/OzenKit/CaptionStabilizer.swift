@@ -231,6 +231,12 @@ public struct CaptionStabilizer: Sendable {
     /// off by a dropped connection doesn't read like a complete sentence.
     public static let cutOffMark = "…"
 
+    /// `text` ending in `cutOffMark`, unless it already ends in one or in
+    /// three dots, which read the same: "...…" looked like a glitch.
+    public static func markingCutOff(_ text: String) -> String {
+        text.hasSuffix(cutOffMark) || text.hasSuffix("...") ? text : text + cutOffMark
+    }
+
     /// Finalizes every line still being written, for when the engine that
     /// was writing them has gone (pause, stop, a failure). Nothing will
     /// ever finish them otherwise: a new engine starts new lines. They end
@@ -247,8 +253,8 @@ public struct CaptionStabilizer: Sendable {
         }
         for index in openIndices.sorted() {
             let text = segments[index].text.trimmingCharacters(in: .whitespaces)
-            if !text.isEmpty, !text.hasSuffix(Self.cutOffMark) {
-                segments[index].text = text + Self.cutOffMark
+            if !text.isEmpty {
+                segments[index].text = Self.markingCutOff(text)
             }
             segments[index].isCommitted = true
             segments[index].isProvisionalCommit = false

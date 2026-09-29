@@ -252,4 +252,16 @@ struct CaptionStabilizerCommitAllTests {
         #expect(stabilizer.commitAll().isEmpty)
         #expect(stabilizer.segments.map(\.text) == ["שלום", "מה נש" + CaptionStabilizer.cutOffMark])
     }
+
+    @Test("a line that already trails off in three dots is not marked cut off a second time")
+    func cutOffMarkNotDoubled() {
+        #expect(CaptionStabilizer.markingCutOff("ואז הוא...") == "ואז הוא...")
+        #expect(CaptionStabilizer.markingCutOff("ואז הוא" + CaptionStabilizer.cutOffMark) == "ואז הוא" + CaptionStabilizer.cutOffMark)
+        #expect(CaptionStabilizer.markingCutOff("ואז הוא") == "ואז הוא" + CaptionStabilizer.cutOffMark)
+
+        var stabilizer = CaptionStabilizer()
+        stabilizer.ingest(TranscriptToken(utteranceID: UUID(), text: "ואז הוא...", isFinal: false, timestamp: 1))
+        _ = stabilizer.commitAll()
+        #expect(stabilizer.segments.map(\.text) == ["ואז הוא..."])
+    }
 }

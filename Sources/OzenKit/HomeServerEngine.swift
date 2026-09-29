@@ -242,7 +242,7 @@ public actor HomeServerEngine: TranscriptionEngine {
                         guard let id = ids[number], let words = shown[number]?.trimmingCharacters(in: .whitespaces), !words.isEmpty else { continue }
                         continuation.yield(TranscriptToken(
                             utteranceID: id,
-                            text: words.hasSuffix(CaptionStabilizer.cutOffMark) ? words : words + CaptionStabilizer.cutOffMark,
+                            text: CaptionStabilizer.markingCutOff(words),
                             isFinal: true,
                             timestamp: Date().timeIntervalSince1970
                         ))
