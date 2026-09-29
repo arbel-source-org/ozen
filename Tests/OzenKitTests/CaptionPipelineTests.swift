@@ -1692,6 +1692,24 @@ struct CaptionPipelineAlertTests {
         #expect(pipeline.screenSoundAlert?.event.identifier == "door_bell")
     }
 
+    @Test("a banner shown again after a covering screen closes gets only the rest of its time")
+    func bannerTimeLeft() async throws {
+        let clock = TestClock()
+        let detector = FakeSoundDetector()
+        let (pipeline, audio, _) = makePipeline(soundDetector: detector, now: { clock.now })
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.1, count: 1_024))
+        #expect(await eventually { detector.chunksSeen == 1 })
+
+        detector.push(SoundObservation(identifier: "civil_defense_siren", confidence: 0.95, timestamp: clock.now))
+        #expect(await eventually { pipeline.screenSoundAlert != nil })
+        let siren = try #require(pipeline.screenSoundAlert)
+        clock.advance(3)
+        #expect(abs(pipeline.bannerSecondsLeft(for: siren) - (siren.bannerSeconds - 3)) < 0.01)
+        clock.advance(60)
+        #expect(pipeline.bannerSecondsLeft(for: siren) == 0)
+    }
+
     @Test("while the phone vibrates for an alert, what the microphone hears of the buzz is not an alert")
     func ownVibrationIsNotAnAlert() async {
         let clock = TestClock()

@@ -73,6 +73,7 @@ public final class CaptionPipeline {
     /// stronger one's place. Dismissing a banner leaves it as it is, so the
     /// alert before it isn't replayed as if it had just been heard.
     public private(set) var screenSoundAlert: SoundAlert?
+    private var screenSoundAlertRaisedAt: TimeInterval?
 
     /// Tunable from Settings without a restart.
     public var soundPolicy: SoundEventPolicy
@@ -705,6 +706,17 @@ public final class CaptionPipeline {
     public func clearSoundAlerts() {
         soundAlerts = []
         screenSoundAlert = nil
+        screenSoundAlertRaisedAt = nil
+    }
+
+    /// How long `alert`'s banner still has: the rest of its time when it is
+    /// the screen's alert, its whole time otherwise. A banner shown over a
+    /// sheet went with the sheet; shown again on the caption screen, a
+    /// siren's keeps the rest of its time to the next alert, and a banner
+    /// whose time is up isn't shown again.
+    public func bannerSecondsLeft(for alert: SoundAlert) -> Double {
+        guard alert.id == screenSoundAlert?.id, let raised = screenSoundAlertRaisedAt else { return alert.bannerSeconds }
+        return max(0, alert.bannerSeconds - (now() - raised))
     }
 
     /// Stops taking a buzz for a sound while the phone vibrates for an
@@ -736,6 +748,7 @@ public final class CaptionPipeline {
         let weakerInSameReading = screenSoundAlert.map { $0.timestamp == alert.timestamp && $0.event.importance > alert.event.importance } ?? false
         if !weakerInSameReading {
             screenSoundAlert = alert
+            screenSoundAlertRaisedAt = now()
         }
         onSoundAlert?(alert)
         if soundAlerts.count > Self.maxSoundAlerts {

@@ -14,6 +14,7 @@ private struct AlertOverlay: ViewModifier {
                         if let shown {
                             SoundAlertBanner(alert: shown) {
                                 withAnimation { self.shown = nil }
+                                viewModel.dismissSoundAlert(id: shown.id)
                             }
                             .transition(.move(edge: .top).combined(with: .opacity))
                         }

@@ -276,6 +276,7 @@ struct LiveCaptionView: View {
                 await viewModel.handle(pending: pending, isFirstAppearance: isFirstAppearance)
             }
         }
+        .handsBackSoundBanner(afterCovering: isCoveredByAlertScreen, viewModel: viewModel, banner: $visibleSoundAlert)
         .onChange(of: viewModel.screenSoundAlert?.id) { _, _ in
             guard let alert = viewModel.screenSoundAlert else { return }
             if !isCoveredByAlertScreen, alert.takesBanner(from: visibleSoundAlert) {
@@ -286,7 +287,7 @@ struct LiveCaptionView: View {
         }
         .task(id: visibleSoundAlert?.id) {
             guard let alert = visibleSoundAlert else { return }
-            try? await Task.sleep(for: .seconds(alert.bannerSeconds))
+            try? await Task.sleep(for: .seconds(viewModel.bannerSecondsLeft(for: alert)))
             if visibleSoundAlert?.id == alert.id {
                 withAnimation { visibleSoundAlert = nil }
             }
