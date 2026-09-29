@@ -1777,6 +1777,10 @@ public final class LiveCaptionViewModel {
     public func toggleStarInHistory(sessionID: UUID, segmentID: UUID) {
         if let segment = pipeline.segments.first(where: { $0.id == segmentID }) {
             toggleStar(segment)
+            // The opened conversation reads its file straight back: before
+            // the queued save landed, the star looked untouched and a
+            // second tap took it off.
+            historyWriter.waitUntilIdle()
         } else {
             historyWriter.toggleStarNow(sessionID: sessionID, segmentID: segmentID)
         }

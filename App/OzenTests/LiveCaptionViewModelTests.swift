@@ -464,6 +464,7 @@ struct LiveCaptionViewModelAlertTests {
         let secondLine = try #require(viewModel.segments.last)
         viewModel.toggleStarInHistory(sessionID: second.id, segmentID: secondLine.id)
         #expect(viewModel.starredSegmentIDs.contains(secondLine.id))
+        #expect(history.load(id: second.id)?.segments.last?.isStarred == true, "the opened conversation reads its file straight back")
         viewModel.persistHistory(ended: true)
         viewModel.waitForHistorySaves()
         #expect(history.load(id: second.id)?.segments.last?.isStarred == true)
