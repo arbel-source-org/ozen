@@ -1365,8 +1365,14 @@ public final class CaptionPipeline {
         clearedTurnCarry = nil
         if let cleared = clearedUtterances[incoming.utteranceID] {
             let (rest, clearedWordsUsed) = Self.words(of: cleaned, after: cleared)
-            if incoming.isFinal, clearedWordsUsed < cleared.count {
-                clearedTurnCarry = (incoming.timestamp, Array(cleared[clearedWordsUsed...]))
+            if incoming.isFinal {
+                // A first line of only cleared words keeps what it showed
+                // after the tap, so the next speaker's line leaves it out too.
+                var carried = Array(cleared[clearedWordsUsed...])
+                if rest == nil, let shown = stabilizer.segments.last(where: { $0.id == incoming.utteranceID }) {
+                    carried += Self.comparableWords(shown.text)
+                }
+                if !carried.isEmpty { clearedTurnCarry = (incoming.timestamp, carried) }
             }
             guard let rest else {
                 // Only cleared words: a final still finishes what was shown

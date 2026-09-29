@@ -920,6 +920,25 @@ struct CaptionPipelineTokenTests {
         #expect(await eventually { pipeline.segments.count == 2 })
         #expect(pipeline.segments.map(\.text) == ["גמור", "איפה היית"])
     }
+
+    @Test("words shown after a clear are not shown twice when the cloud finishes the sentence with a second speaker")
+    func wordsShownAfterClearNotRepeatedBySpeakerTurn() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "שלום מה שלומך אני"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "שלום מה שלומך אני בסדר גמור"))
+        #expect(await eventually { pipeline.segments.map(\.text) == ["בסדר גמור"] })
+        engine.emit(token(open, "שלום מה", final: true))
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "שלומך אני בסדר גמור ואתה", isFinal: true, timestamp: 1_000, startsNewSpeakerTurn: true))
+        engine.emit(token(UUID(), "איפה היית", final: true))
+        #expect(await eventually { pipeline.segments.last?.text == "איפה היית" })
+        #expect(pipeline.segments.map(\.text) == ["בסדר גמור", "ואתה", "איפה היית"])
+    }
 }
 
 @Suite("CaptionPipeline lifecycle: stop, restart, retry, pause")
