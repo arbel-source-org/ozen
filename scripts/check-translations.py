@@ -259,6 +259,10 @@ def check_translation_table(keys):
             if not translation.strip():
                 problems.append(f"{TRANSLATIONS_PATH}: {language}[{key[:40]!r}] is empty")
                 continue
+            # A Swift escape copied into JSON as text shows on screen as
+            # a backslash and a letter instead of a line break or a quote.
+            if "\\n" in translation or '\\"' in translation:
+                problems.append(f"{TRANSLATIONS_PATH}: {language}[{key[:40]!r}] has a literal backslash escape")
             found_numbers = placeholders(translation)
             if found_numbers != expected_numbers:
                 problems.append(
