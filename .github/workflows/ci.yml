@@ -60,6 +60,21 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+      - name: Use the newest Xcode 26, as the release build does
+        # The runner's default Xcode is 16.x, which ignores the app's
+        # SWIFT_DEFAULT_ACTOR_ISOLATION and skips the `#if compiler(>=6.2)`
+        # code. A 2026-09-29 release failed on a main-actor error that this
+        # job, on Xcode 16, had passed three times.
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$XCODE" ]; then
+            echo "No Xcode 26 on this runner; the release build would not match this one." >&2
+            ls -d /Applications/Xcode*.app >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate Xcode project
