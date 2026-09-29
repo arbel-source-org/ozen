@@ -401,9 +401,14 @@ public struct KeywordAlertMatcher: Sendable, Equatable {
         // caption order regardless of which alert fired; `sequence` breaks
         // ties deterministically for two alerts that match at the same
         // word (rather than relying on `sorted` being a stable sort).
+        // Two alerts that found exactly the same words at the same place
+        // are one mention: a list holding both spellings of a two-part name
+        // (each now matches the other) buzzed and notified twice for it.
+        var seen = Set<String>()
         return unordered
             .sorted { $0.match.wordIndex != $1.match.wordIndex ? $0.match.wordIndex < $1.match.wordIndex : $0.sequence < $1.sequence }
             .map(\.match)
+            .filter { seen.insert("\($0.wordIndex) \($0.matchedText)").inserted }
     }
 
     /// Strips only leading and trailing punctuation/symbol characters, leaving

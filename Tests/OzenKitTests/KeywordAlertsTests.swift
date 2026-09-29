@@ -277,6 +277,15 @@ struct KeywordAlertMatcherTests {
         #expect(hits("שירלי", "שירלי באה") == 1)
     }
 
+    @Test("both spellings of a two-part name on the list fire once for one mention, not twice")
+    func bothSpellingsListedFireOnce() {
+        let both = KeywordAlertMatcher(alerts: [KeywordAlert(phrase: "בנציון"), KeywordAlert(phrase: "בן ציון")])
+        #expect(both.matches(in: "בנציון הגיע").count == 1)
+        #expect(both.matches(in: "בן ציון הגיע").count == 1)
+        let nested = KeywordAlertMatcher(alerts: [KeywordAlert(phrase: "סבתא"), KeywordAlert(phrase: "סבתא רחל")])
+        #expect(nested.matches(in: "סבתא רחל באה").count == 2)
+    }
+
     @Test("a doctor's title matches whether the caption writes it in full or abbreviated")
     func doctorTitleEitherSpelling() {
         func hits(_ name: String, _ caption: String) -> Int {
