@@ -1510,6 +1510,26 @@ struct CaptionPipelineAlertTests {
         #expect(pipeline.keywordHitSegmentIDs.isEmpty)
     }
 
+    @Test("a word a live guess dropped and the finished text brought back marks the line again, without a second alert")
+    func keywordBackInFinalText() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        var settings = AppSettings.default
+        settings.keywordAlerts = [KeywordAlert(phrase: "סבתא")]
+        await pipeline.start(settings: settings)
+        let id = UUID()
+
+        engine.emit(token(id, "שלום סבתא"))
+        #expect(await eventually { pipeline.keywordHitSegmentIDs == [id] })
+        engine.emit(token(id, "שלום סבתה"))
+        #expect(await eventually { pipeline.keywordHitSegmentIDs.isEmpty })
+        engine.emit(token(id, "שלום סבתא", final: true))
+        #expect(await eventually { pipeline.segments.first?.isCommitted == true })
+
+        #expect(pipeline.keywordHitSegmentIDs == [id])
+        #expect(pipeline.keywordHits.count == 1)
+    }
+
     @Test("changing the keyword list takes effect without a restart, and clearing the transcript clears hits")
     func keywordListChanges() async {
         let engine = FakeEngine()

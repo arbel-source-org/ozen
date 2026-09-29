@@ -740,6 +740,9 @@ public final class CaptionPipeline {
             keywordHitSegmentIDs.remove(segment.id)
             return
         }
+        // Marked whenever it says the word, even when that isn't news: a
+        // live guess can drop the word and the finished text bring it back.
+        keywordHitSegmentIDs.insert(segment.id)
         let fresh = keywordDeduplicator.newMatches(utteranceID: segment.id, matches: matches)
         guard !fresh.isEmpty else { return }
         let timestamp = now()
@@ -749,7 +752,6 @@ public final class CaptionPipeline {
         if keywordHits.count > Self.maxKeywordHits {
             keywordHits.removeFirst(keywordHits.count - Self.maxKeywordHits)
         }
-        keywordHitSegmentIDs.insert(segment.id)
     }
 
     // MARK: - Inputs
