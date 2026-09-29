@@ -236,7 +236,7 @@ struct LiveCaptionView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 if let title = viewModel.microphoneDrop.title {
-                    MicrophoneDropBanner(title: title) {
+                    MicrophoneDropBanner(title: title, detail: MicrophoneDropNotice.detail(listening: viewModel.phase.isListening)) {
                         withAnimation { viewModel.dismissMicrophoneDrop() }
                         showingMicPicker = true
                     } onDismiss: {
@@ -1344,7 +1344,7 @@ struct LiveCaptionView: View {
     }
 
     private var microphoneDropAnnouncement: String {
-        (viewModel.microphoneDrop.title ?? "") + ". " + MicrophoneDropNotice.detail
+        (viewModel.microphoneDrop.title ?? "") + ". " + MicrophoneDropNotice.detail(listening: viewModel.phase.isListening)
     }
 
     /// A screen with its own `alertOverlay` is over the captions. The

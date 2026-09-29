@@ -3,6 +3,7 @@ import OzenKit
 
 struct MicrophoneDropBanner: View {
     let title: String
+    let detail: String
     let onChooseMicrophone: () -> Void
     let onDismiss: () -> Void
 
@@ -15,7 +16,7 @@ struct MicrophoneDropBanner: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(title)
                             .font(.headline)
-                        Text(MicrophoneDropNotice.detail)
+                        Text(detail)
                             .font(.subheadline)
                             .opacity(0.9)
                     }

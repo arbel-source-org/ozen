@@ -25,8 +25,14 @@ public struct MicrophoneDropNotice: Sendable, Equatable {
         lost.map { tr("המיקרופון \u{2068}%1\u{2069} התנתק", "%1 disconnected", args: ["\($0.portName)"]) }
     }
 
-    public static var detail: String {
-        tr(
+    public static func detail(listening: Bool) -> String {
+        guard listening else {
+            return tr(
+                "כשהכתוביות יחזרו, הן יעברו דרך המיקרופון של הטלפון, ואולי יהיו פחות מדויקות. חברו אותו שוב כדי לחזור אליו.",
+                "When captions start again they will use the phone's own microphone and may be less accurate. Reconnect it to go back to it."
+            )
+        }
+        return tr(
             "הכתוביות ממשיכות דרך המיקרופון של הטלפון, ואולי יהיו פחות מדויקות. חברו אותו שוב כדי לחזור אליו.",
             "Captions carry on through the phone's own microphone and may be less accurate. Reconnect it to go back to it."
         )

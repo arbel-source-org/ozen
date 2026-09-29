@@ -1610,6 +1610,13 @@ struct CaptionPipelineInputTests {
         #expect(notice.lost == nil)
     }
 
+    @Test("with captions stopped, the drop notice does not say they carry on through the phone's microphone")
+    func dropNoticeWhileStopped() {
+        #expect(MicrophoneDropNotice.detail(listening: true).hasPrefix("הכתוביות ממשיכות"))
+        #expect(!MicrophoneDropNotice.detail(listening: false).contains("ממשיכות"))
+        #expect(MicrophoneDropNotice.detail(listening: false).contains("המיקרופון של הטלפון"))
+    }
+
     @Test("a system route change refreshes the list without restarting")
     func routeChangeRefreshesInputs() async {
         let (pipeline, audio, _) = makePipeline()
