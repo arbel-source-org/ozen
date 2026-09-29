@@ -79,7 +79,13 @@ public final class SessionJournal: @unchecked Sendable {
     /// called on `queue`.
     private static func flush(_ fileURL: URL) {
         guard let lines = pendingLines.removeValue(forKey: fileURL), !lines.isEmpty else { return }
-        write(lines.joined(), to: fileURL)
+        // A full phone refuses the write; a problem she just marked would
+        // go with it while the screen said it was saved. Kept for the next
+        // flush instead, no more than the file itself would keep.
+        guard write(lines.joined(), to: fileURL) else {
+            pendingLines[fileURL] = Array((lines + pendingLines[fileURL, default: []]).suffix(keptLines))
+            return
+        }
     }
 
     /// "2026-09-18 14:02:07 listening", oldest first.
@@ -89,18 +95,18 @@ public final class SessionJournal: @unchecked Sendable {
         }
     }
 
-    private static func write(_ line: String, to fileURL: URL) {
+    private static func write(_ line: String, to fileURL: URL) -> Bool {
         let manager = FileManager.default
         if !manager.fileExists(atPath: fileURL.path) {
             try? manager.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
             _ = manager.createFile(atPath: fileURL.path, contents: nil, attributes: privateFileAttributes)
             excludeFromBackup(fileURL)
         }
-        guard let handle = try? FileHandle(forWritingTo: fileURL) else { return }
+        guard let handle = try? FileHandle(forWritingTo: fileURL) else { return false }
         defer { try? handle.close() }
-        guard let end = try? handle.seekToEnd() else { return }
+        guard let end = try? handle.seekToEnd() else { return false }
         let data = Data(line.utf8)
-        try? handle.write(contentsOf: data)
+        guard (try? handle.write(contentsOf: data)) != nil else { return false }
         // Checked against the size after this write, not before: a
         // buffered flush can write many lines at once, and a batch alone
         // can carry the file past the limit in a single call.
@@ -120,6 +126,7 @@ public final class SessionJournal: @unchecked Sendable {
             // The atomic rewrite is a new file, without the old one's flag.
             excludeFromBackup(fileURL)
         }
+        return true
     }
 
     /// Marked problems carry caption lines, and the screen says they stay

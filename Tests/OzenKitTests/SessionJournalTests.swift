@@ -56,6 +56,20 @@ struct SessionJournalTests {
         #expect(size <= SessionJournal.maximumBytes + 1_000)
     }
 
+    @Test("lines that could not be written, say on a full phone, are kept and written once the disk takes them")
+    func failedWriteKeepsLines() throws {
+        let url = temporaryFile()
+        let folder = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: folder.path)
+        let journal = SessionJournal(fileURL: url)
+        journal.append("problem marked", at: 1_800_000_000)
+        _ = journal.entries()
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path)
+        journal.append("listening", at: 1_800_000_010)
+        #expect(journal.entries().map(\.text) == ["problem marked", "listening"])
+    }
+
     @Test("a file someone damaged loses the bad lines, not the rest")
     func damagedFile() throws {
         let url = temporaryFile()
