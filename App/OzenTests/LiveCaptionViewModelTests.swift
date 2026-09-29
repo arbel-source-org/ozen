@@ -639,6 +639,17 @@ struct LiveCaptionViewModelOnboardingTests {
         #expect(SettingsStore(fileURL: file).load().hasCompletedOnboarding == false)
     }
 
+    @Test("the walkthrough shown again from Settings ends by starting captions, as it says, like the first time")
+    func walkthroughAgainStartsCaptions() {
+        let (viewModel, _) = makeViewModel()
+        #expect(viewModel.takeFirstAppearance())
+        viewModel.completeOnboarding()
+        viewModel.showOnboardingAgain()
+        viewModel.completeOnboarding()
+        #expect(viewModel.takeFirstAppearance())
+        #expect(viewModel.takeFirstAppearance() == false)
+    }
+
     @Test("a Siri start / stop drives the pipeline like the buttons do")
     func appActions() async {
         let (viewModel, _) = makeViewModel()

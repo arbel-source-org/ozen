@@ -673,7 +673,9 @@ public final class LiveCaptionViewModel {
 
     /// Leaving the caption screen for the walkthrough: captions stop (and
     /// the conversation so far is saved) rather than keep the microphone
-    /// open behind a screen that isn't showing them.
+    /// open behind a screen that isn't showing them. Its Start button then
+    /// starts them again, as on the first run: the caption screen coming
+    /// back counts as a first appearance.
     public func showOnboardingAgain() {
         if pipeline.phase != .idle {
             speechPause.userTookControl()
@@ -682,6 +684,7 @@ public final class LiveCaptionViewModel {
         }
         settings.hasCompletedOnboarding = false
         persist()
+        hasHandledLaunch = false
     }
 
     /// What the caption screen does the first time it appears. A Siri
