@@ -1771,18 +1771,17 @@ public final class LiveCaptionViewModel {
               let startedAt = historyConversationStart
         else { return }
         // A save after captions stopped (going to the background, a star,
-        // a name) keeps the end the stop wrote. Without it the saved
-        // conversation turned open again, and History timed it to its
-        // last line instead of to the stop.
+        // a name, Clear, a start that failed) keeps the end the stop wrote.
+        // Without it the saved conversation turned open again, or ended at
+        // the time of that save: cleared a day later, it lasted a day.
+        let kept = historySessionEnd.flatMap { $0.id == historySessionID && !pipeline.phase.isListening ? $0.at : nil }
         let end: TimeInterval?
         if ended {
-            let at = endedAt ?? Date().timeIntervalSince1970
+            let at = endedAt ?? kept ?? Date().timeIntervalSince1970
             historySessionEnd = (historySessionID, at)
             end = at
-        } else if !pipeline.phase.isListening, let saved = historySessionEnd, saved.id == historySessionID {
-            end = saved.at
         } else {
-            end = nil
+            end = kept
         }
         let record = TranscriptSessionRecord.make(
             from: currentHistorySegments,
@@ -1971,6 +1970,8 @@ public final class LiveCaptionViewModel {
     public func historySessionDidChangePhase() {
         historySawListening = pipeline.phase.isListening
         if pipeline.phase.isListening {
+            // Talking again: the next stop writes a new end.
+            historySessionEnd = nil
             checkForConversationBreak()
             // A conversation that began after a break, while listening,
             // already has lines: it starts at the first, not at this resume.

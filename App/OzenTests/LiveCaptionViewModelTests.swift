@@ -518,6 +518,33 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.listSummaries().first { $0.id == stopped.id }?.endedAt == nil)
     }
 
+    @Test("a stopped conversation cleared later keeps its end; stopped again after more talk it gets the new end")
+    func stoppedConversationEndSurvivesClearAndMovesOnRestop() async throws {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        let now = Date().timeIntervalSince1970
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: now))
+        await eventually { !viewModel.segments.isEmpty }
+        await viewModel.togglePause()
+        let first = try #require(history.listSummaries().first)
+        let firstEnd = try #require(first.endedAt)
+
+        await viewModel.togglePause()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: now + 1))
+        await eventually { viewModel.segments.contains { $0.text.contains("ערב טוב") } }
+        await viewModel.togglePause()
+        let secondEnd = try #require(history.listSummaries().first { $0.id == first.id }?.endedAt)
+        #expect(secondEnd > firstEnd)
+
+        try await Task.sleep(for: .milliseconds(20))
+        viewModel.clearTranscript()
+        #expect(history.listSummaries().first { $0.id == first.id }?.endedAt == secondEnd)
+    }
+
     @Test("a low-memory warning saves what was said since the last autosave, before iOS may end the app")
     func memoryWarningSaves() async {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
