@@ -489,6 +489,35 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.listSummaries().count == 2)
     }
 
+    @Test("a stopped conversation keeps its end when it is saved again: going to the background, a new name")
+    func stoppedConversationKeepsItsEnd() async throws {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        let now = Date().timeIntervalSince1970
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: now))
+        await eventually { !viewModel.segments.isEmpty }
+
+        await viewModel.togglePause()
+        let stopped = try #require(history.listSummaries().first)
+        let end = try #require(stopped.endedAt)
+
+        viewModel.persistHistory(ended: false)
+        #expect(history.listSummaries().first { $0.id == stopped.id }?.endedAt == end)
+        viewModel.renameConversation(id: stopped.id, title: "Morning")
+        #expect(history.listSummaries().first { $0.id == stopped.id }?.endedAt == end)
+        #expect(history.listSummaries().first { $0.id == stopped.id }?.title == "Morning")
+
+        await viewModel.togglePause()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: now + 1))
+        await eventually { viewModel.segments.contains { $0.text.contains("ערב טוב") } }
+        viewModel.persistHistory(ended: false)
+        #expect(history.listSummaries().first { $0.id == stopped.id }?.endedAt == nil)
+    }
+
     @Test("a line starred from history sticks, whether its conversation is still on screen or long gone")
     func starFromHistory() async throws {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))

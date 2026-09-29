@@ -80,6 +80,9 @@ public final class LiveCaptionViewModel {
     private let reclaimAudioSession: (@MainActor () async -> Bool)?
     private var historySessionID = UUID()
     private var historySessionStartedAt: TimeInterval?
+    /// When the last stop ended the saved conversation, for the saves that
+    /// come after it.
+    @ObservationIgnored private var historySessionEnd: (id: UUID, at: TimeInterval)?
     /// Lines before this index in `pipeline.segments` belong to an earlier
     /// saved conversation (see `ConversationBreak`); the screen still
     /// shows them.
@@ -1767,12 +1770,26 @@ public final class LiveCaptionViewModel {
         guard settings.saveHistory,
               let startedAt = historyConversationStart
         else { return }
+        // A save after captions stopped (going to the background, a star,
+        // a name) keeps the end the stop wrote. Without it the saved
+        // conversation turned open again, and History timed it to its
+        // last line instead of to the stop.
+        let end: TimeInterval?
+        if ended {
+            let at = endedAt ?? Date().timeIntervalSince1970
+            historySessionEnd = (historySessionID, at)
+            end = at
+        } else if !pipeline.phase.isListening, let saved = historySessionEnd, saved.id == historySessionID {
+            end = saved.at
+        } else {
+            end = nil
+        }
         let record = TranscriptSessionRecord.make(
             from: currentHistorySegments,
             speakerName: { [pipeline] in pipeline.displayName(for: $0) },
             id: historySessionID,
             startedAt: startedAt,
-            endedAt: ended ? (endedAt ?? Date().timeIntervalSince1970) : nil,
+            endedAt: end,
             engine: transcribingSettings.engine,
             modelVariant: transcribingSettings.modelDescription,
             inputName: selectedInput?.portName,
