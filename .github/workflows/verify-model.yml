@@ -1,9 +1,5 @@
 name: Verify model release
 
-# A model published as release assets (see scripts/model-release) is
-# rebuilt on a Mac the way the phone rebuilds it, compiled, and made to
-# transcribe five Hebrew clips. Run it by hand with the release's tag
-# before the catalog points a phone at that release.
 on:
   workflow_dispatch:
     inputs:
@@ -41,7 +37,6 @@ jobs:
 
       - name: Build WhisperKit's command line
         run: |
-          # The same release the app is built against (Package.swift).
           git clone --depth 1 --branch v1.1.0 https://github.com/argmaxinc/argmax-oss-swift.git /tmp/WhisperKit
           cd /tmp/WhisperKit
           swift build -c release --product whisperkit-cli

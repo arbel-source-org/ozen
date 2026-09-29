@@ -1,9 +1,5 @@
 name: UI screenshots
 
-# Screenshots of the caption screen (see OzenUITests/ScreenshotFixtures),
-# run by hand rather than on every push: a Mac runner slot and a couple of
-# minutes, for something worth spending on only when a UI change is
-# actually being checked, not on every commit.
 on:
   workflow_dispatch:
     inputs:
