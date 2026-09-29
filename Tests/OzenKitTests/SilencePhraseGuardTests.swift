@@ -44,6 +44,16 @@ struct SilencePhraseGuardTests {
         ]) == [true, true])
     }
 
+    @Test("thanks with a name that is also a sound tag is someone talking, so it shows; a line of only sign-offs or only tags still doesn't")
+    func thanksToShira() {
+        #expect(admitted([
+            line("תודה שירה", at: 0),
+            line("שירה, תודה רבה!", at: 100),
+            line("מוזיקה. שירה.", at: 200),
+            line("תודה רבה, צפייה מהנה", at: 300),
+        ]) == [true, true, false, false])
+    }
+
     @Test("real words in between, or grown into a sentence, show as usual")
     func realSpeech() {
         let growing = UUID()

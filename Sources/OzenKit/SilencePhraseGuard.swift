@@ -3,6 +3,8 @@ import Foundation
 public struct SilencePhraseGuard: Sendable {
     public static let quietSeconds: TimeInterval = 15
 
+    static let soundTags: Set<String> = Set(["מוזיקה", "שירה", "צחוק"].map(WhisperResultFilter.normalize))
+
     private let phrases: [[Substring]]
     private var lastPhraseAt: TimeInterval?
     private var shownPhraseLine: UUID?
@@ -17,11 +19,12 @@ public struct SilencePhraseGuard: Sendable {
     public mutating func admits(_ token: TranscriptToken, at time: TimeInterval) -> Bool {
         let words = WhisperResultFilter.normalize(token.text).split(separator: " ")
         guard !words.isEmpty else { return true }
-        guard let count = phraseCount(in: words) else {
+        guard let matched = phrases(in: words), Set(matched.map(Self.soundTags.contains)).count == 1 else {
             lastPhraseAt = nil
             shownPhraseLine = nil
             return true
         }
+        let count = matched.count
         if token.utteranceID == shownPhraseLine, count == 1 {
             lastPhraseAt = time
             return true
@@ -33,14 +36,14 @@ public struct SilencePhraseGuard: Sendable {
         return true
     }
 
-    private func phraseCount(in words: [Substring]) -> Int? {
+    private func phrases(in words: [Substring]) -> [String]? {
         var index = 0
-        var count = 0
+        var matched: [String] = []
         while index < words.count {
             guard let phrase = phrases.first(where: { words[index...].starts(with: $0) }) else { return nil }
             index += phrase.count
-            count += 1
+            matched.append(phrase.joined(separator: " "))
         }
-        return count
+        return matched
     }
 }
