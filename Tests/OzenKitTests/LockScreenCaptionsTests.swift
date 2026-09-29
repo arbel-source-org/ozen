@@ -29,6 +29,22 @@ struct LockScreenCaptionsTests {
         #expect(LockScreenCaptions.lines(from: []) { _ in nil }.isEmpty)
     }
 
+    @Test("a line from before a quiet stretch doesn't sit above the words just said")
+    func quietStretchSplitsLines() {
+        func said(_ text: String, at start: TimeInterval) -> TranscriptSegment {
+            TranscriptSegment(id: UUID(), text: text, isCommitted: true, speakerClusterID: 1, startTimestamp: start, lastUpdateTimestamp: start + 3)
+        }
+        let evening = said("אל תשכחי את הכדור בבוקר", at: 0)
+        let morning = said("בוקר טוב", at: 8 * 3600)
+        #expect(LockScreenCaptions.lines(from: [evening, morning], name: names).map(\.text) == [CaptionLayout.directed("בוקר טוב")])
+
+        // A pause shorter than the caption screen's gap keeps them together.
+        let reply = said("בוקר אור", at: 8 * 3600 + 60)
+        #expect(LockScreenCaptions.lines(from: [evening, morning, reply], name: names).map(\.text) == [
+            CaptionLayout.directed("בוקר טוב"), CaptionLayout.directed("בוקר אור"),
+        ])
+    }
+
     @Test("a line ending in a Latin brand name reads right to left, its own mark included")
     func directionMarks() {
         let lines = LockScreenCaptions.lines(from: [line("תתקשר ב-WhatsApp")]) { _ in nil }

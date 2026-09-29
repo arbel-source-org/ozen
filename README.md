@@ -254,7 +254,8 @@ things, for Hebrew conversation, entirely on-device.
   be read without unlocking the phone. A call or a failure keeps it there
   and says why the lines stopped; if iOS closes the app it says the lines
   aren't updating rather than showing an old sentence as new, and after a
-  quiet minute it says how long ago the last line was said. Settings can
+  quiet minute it says how long ago the last line was said. A line from
+  before five quiet minutes never sits above a new one. Settings can
   turn it off, since anyone looking at the phone can read it.
 - **Picks up where she stopped reading.** Captions carry on with the phone
   locked or another app open; coming back, a line across the captions marks

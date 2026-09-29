@@ -29,7 +29,8 @@ public enum LockScreenCaptions {
     /// Never cut a line shorter than this for a long speaker name.
     static let minimumCharacters = 20
 
-    /// The newest `count` lines with text. `name` gives the label for a
+    /// The newest `count` lines with text, none from before a quiet
+    /// stretch (`CaptionLayout.quietGapSeconds`). `name` gives the label for a
     /// line's speaker, or nil to show none. The first line shown always
     /// carries its name, since on the lock screen there is nothing above
     /// it to say who is talking; after that a name is kept only where the
@@ -48,6 +49,10 @@ public enum LockScreenCaptions {
             index -= 1
             let segment = segments[index]
             guard !segment.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { continue }
+            // The caption screen puts a clock time between lines a quiet
+            // stretch apart; with no room for one here, the older line
+            // would read as the one just before the words just said.
+            if let later = picked.first, CaptionLayout.startsAfterQuiet(later, previous: segment) { break }
             picked.insert(segment, at: 0)
         }
         var previousName: String?
