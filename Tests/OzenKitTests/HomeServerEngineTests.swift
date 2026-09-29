@@ -137,8 +137,11 @@ struct HomeServerEngineTests {
         let started = ContinuousClock.now
         let answer = await withTaskGroup(of: EngineAvailability?.self) { group in
             group.addTask { await engine(socket).checkAvailability(languageCode: "he") }
+            // Far above the 1 s handshake wait and far below the system's
+            // minute: a CI simulator running every suite at once once held
+            // the 1 s timer back for over 5 s.
             group.addTask {
-                try? await Task.sleep(for: .seconds(5))
+                try? await Task.sleep(for: .seconds(30))
                 return nil
             }
             let first = await group.next() ?? nil
@@ -146,7 +149,7 @@ struct HomeServerEngineTests {
             return first
         }
         #expect(answer?.unavailability?.kind == .homeServerUnreachable)
-        #expect(started.duration(to: .now) < .seconds(4))
+        #expect(started.duration(to: .now) < .seconds(20))
     }
 
     @Test("an address without a scheme gets ws and the default port; a given port or wss is kept; nonsense is refused")
