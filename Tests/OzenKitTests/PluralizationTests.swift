@@ -221,6 +221,12 @@ struct PluralizationTests {
         #expect(Localization.$override.withValue(.arabic) { twoRecordings.summary }.contains("Savta (عدد التسجيلات: 2)"))
     }
 
+    @Test("Amharic says the phone's space is free, as the table's own \"Free space\" does")
+    func amharicFreeSpace() {
+        let freeSpace = tr("מקום פנוי", "Free space", in: .amharic)
+        #expect(tr("פנוי בטלפון: %1.", "Free on the phone: %1.", args: ["3 GB"], in: .amharic).contains(freeSpace))
+    }
+
     @Test("no function leaks a Hebrew word into another language's text")
     func noHebrewLeak() {
         for language in UILanguage.allCases where language != .hebrew {
