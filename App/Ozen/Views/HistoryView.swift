@@ -321,7 +321,7 @@ struct HistoryView: View {
         switch count {
         case 1: return tr("שיחה ישנה אחת תימחק עכשיו", "1 old conversation will be deleted now")
         case 2: return tr("שתי שיחות ישנות יימחקו עכשיו", "2 old conversations will be deleted now")
-        default: return tr("%1 שיחות ישנות יימחקו עכשיו", "%1 old conversations will be deleted now", args: ["\(count)"])
+        default: return ConversationStats.oldConversationsDeletedText(count)
         }
     }
 

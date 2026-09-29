@@ -272,6 +272,24 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    /// "12 old conversations will be deleted now" (3 or more). The table
+    /// has one wording per language, the form for 5 and up in Russian and
+    /// Ukrainian and for 3 to 10 in Arabic; the phrase is changed here for
+    /// the numbers that take another (the same forms as the table's own
+    /// "1" and "2" lines).
+    public static func oldConversationsDeletedText(_ count: Int) -> String {
+        let text = tr("%1 שיחות ישנות יימחקו עכשיו", "%1 old conversations will be deleted now", args: ["\(count)"])
+        let language = Localization.language
+        switch (language, pluralCategory(for: count, in: language)) {
+        case (.russian, .one): return text.replacingOccurrences(of: "старых разговоров будут удалены", with: "старый разговор будет удалён")
+        case (.russian, .few): return text.replacingOccurrences(of: "старых разговоров", with: "старых разговора")
+        case (.ukrainian, .one): return text.replacingOccurrences(of: "старих розмов", with: "стару розмову")
+        case (.ukrainian, .few): return text.replacingOccurrences(of: "старих розмов", with: "старі розмови")
+        case (.arabic, .many), (.arabic, .other): return text.replacingOccurrences(of: "محادثات قديمة", with: "محادثة قديمة")
+        default: return text
+        }
+    }
+
     /// "one second", "two seconds", "7 seconds", as VoiceOver reads a
     /// voice sample's recording progress.
     public static func secondsText(_ count: Int) -> String {

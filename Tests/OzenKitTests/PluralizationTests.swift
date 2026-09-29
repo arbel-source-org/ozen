@@ -106,6 +106,28 @@ struct PluralizationTests {
         }
     }
 
+    @Test("'N old conversations will be deleted now' agrees with the number in Russian, Ukrainian and Arabic")
+    func oldConversationsDeleted() {
+        let expected: [(UILanguage, Int, String)] = [
+            (.hebrew, 12, "12 שיחות ישנות יימחקו עכשיו"),
+            (.english, 21, "21 old conversations will be deleted now"),
+            (.russian, 3, "3 старых разговора будут удалены сейчас"),
+            (.russian, 5, "5 старых разговоров будут удалены сейчас"),
+            (.russian, 21, "21 старый разговор будет удалён сейчас"),
+            (.russian, 13, "13 старых разговоров будут удалены сейчас"),
+            (.ukrainian, 3, "3 старі розмови буде видалено зараз"),
+            (.ukrainian, 21, "21 стару розмову буде видалено зараз"),
+            (.ukrainian, 11, "11 старих розмов буде видалено зараз"),
+            (.arabic, 5, "سيتم الآن حذف 5 محادثات قديمة"),
+            (.arabic, 12, "سيتم الآن حذف 12 محادثة قديمة"),
+        ]
+        for (language, count, text) in expected {
+            Localization.$override.withValue(language) {
+                #expect(ConversationStats.oldConversationsDeletedText(count) == text, "\(language) \(count)")
+            }
+        }
+    }
+
     @Test("French treats zero the same as one, unlike everything else")
     func frenchEdgeNumbers() {
         Localization.$override.withValue(.french) {
