@@ -48,6 +48,31 @@ class Beam(unittest.TestCase):
         self.assertEqual(t.model.beams, [2, 5, 1])
 
 
+class OddScores:
+    def transcribe(self, audio, **kw):
+        segment = types.SimpleNamespace(text=" שלום לך", no_speech_prob=float("nan"),
+                                        avg_logprob=float("nan"), compression_ratio=1.2)
+        silence = types.SimpleNamespace(text=" תודה", no_speech_prob=0.9,
+                                        avg_logprob=float("-inf"), compression_ratio=1.0)
+        return [segment, silence], None
+
+
+class OddNumbers(unittest.TestCase):
+    def test_a_score_json_cannot_hold_still_leaves_a_frame_the_phone_can_read(self):
+        t = S.Transcriber.__new__(S.Transcriber)
+        t.model = t.final_model = OddScores()
+        t.beam, t.context, t.speech_gate = 5, 0, 0.0
+        text, confidence, pieces = t._run(np.zeros(1600, dtype=np.float32), "he", None, True)
+
+        def refuse(constant):
+            raise ValueError(constant)
+
+        frame = json.dumps({"text": text, "confidence": confidence, "segments": pieces}, ensure_ascii=False)
+        parsed = json.loads(frame, parse_constant=refuse)
+        self.assertEqual(parsed["text"], "שלום לך")
+        self.assertLess(parsed["segments"][1]["logprob"], -1.0)
+
+
 class BrokenGPU:
     def transcribe(self, audio, **kw):
         raise RuntimeError("CUDA error: an illegal memory access was encountered")

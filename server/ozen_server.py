@@ -195,6 +195,16 @@ def pairing_code(raw):
     return re.sub(r"^[^\x21-\x7e]+", "", raw.strip())
 
 
+def score(value, digits):
+    """A score as the phone can read it. JSON has no NaN or infinity, and
+    the phone drops a whole frame that holds one, and the line with it.
+    An unknown score is left out; the phone then keeps the words, as this
+    server does."""
+    if math.isnan(value):
+        return None
+    return round(max(min(value, 1e6), -1e6), digits)
+
+
 def front_terms(terms, count_tokens, budget):
     """The words from the top of the list that fit `budget` tokens.
     faster-whisper keeps the END of a prompt that is too long, which would
@@ -274,8 +284,8 @@ class Transcriber:
         for s in segments:
             piece = DIRECTION_MARKS.sub("", s.text).strip()
             if piece:
-                pieces.append({"text": piece, "no_speech": round(s.no_speech_prob, 4),
-                               "logprob": round(s.avg_logprob, 4), "compression": round(s.compression_ratio, 3)})
+                pieces.append({"text": piece, "no_speech": score(s.no_speech_prob, 4),
+                               "logprob": score(s.avg_logprob, 4), "compression": score(s.compression_ratio, 3)})
             if s.no_speech_prob > 0.6 and s.avg_logprob < -1.0:
                 continue
             if s.compression_ratio > 2.4:
@@ -286,8 +296,9 @@ class Transcriber:
                 logprobs.append(s.avg_logprob)
         text = DIRECTION_MARKS.sub("", " ".join(kept)).strip()
         confidence = None
-        if logprobs:
-            confidence = min(max(math.exp(sum(logprobs) / len(logprobs)), 0.0), 1.0)
+        mean = sum(logprobs) / len(logprobs) if logprobs else math.nan
+        if not math.isnan(mean):
+            confidence = min(max(math.exp(mean), 0.0), 1.0)
         self.model_ran = True
         return text, confidence, pieces
 
