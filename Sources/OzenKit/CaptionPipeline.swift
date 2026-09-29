@@ -775,6 +775,15 @@ public final class CaptionPipeline {
     /// sheet went with the sheet; shown again on the caption screen, a
     /// siren's keeps the rest of its time to the next alert, and a banner
     /// whose time is up isn't shown again.
+    /// `screenSoundAlert` while its banner time lasts, nil after. The
+    /// caption screen only sees what changed while the app was away once
+    /// she comes back to it: an alert heard then was already a notification,
+    /// and buzzing, flashing or reading it out now would pass it off as new.
+    public var currentScreenSoundAlert: SoundAlert? {
+        guard let alert = screenSoundAlert, bannerSecondsLeft(for: alert) > 0 else { return nil }
+        return alert
+    }
+
     public func bannerSecondsLeft(for alert: SoundAlert) -> Double {
         guard alert.id == screenSoundAlert?.id, let raised = screenSoundAlertRaisedAt else { return alert.bannerSeconds }
         // A clock set back since would otherwise add the jump to the time left.

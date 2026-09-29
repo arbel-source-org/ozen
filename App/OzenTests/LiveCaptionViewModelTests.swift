@@ -1048,6 +1048,27 @@ struct LiveCaptionViewModelBackgroundAlertTests {
         #expect(posted.first?.body == "סבתא, את ערה?")
     }
 
+    @Test("a name heard while the app was away was its notification; coming back does not buzz or show it again, a new mention still does")
+    func awayKeywordNotReplayed() async {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        var posted: [AlertNotificationContent] = []
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-away-hit-\(UUID()).json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, postNotification: { posted.append($0) })
+        viewModel.addKeywordAlert(phrase: "סבתא")
+        await viewModel.start()
+
+        viewModel.sceneActivityChanged(isActive: false)
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, את ערה?", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        await eventually { !posted.isEmpty }
+        viewModel.sceneActivityChanged(isActive: true)
+        #expect(viewModel.claimAttentionForNewKeywordHits() == nil)
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "סבתא, בואי לאכול", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        await eventually { viewModel.keywordHits.count == 2 }
+        #expect(viewModel.claimAttentionForNewKeywordHits() != nil)
+    }
+
     @Test("lines said while the app was away are marked from the first of them; clearing removes the mark")
     func awayLinesMarked() async {
         let engine = FakeEngine()

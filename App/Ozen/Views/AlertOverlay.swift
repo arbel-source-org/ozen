@@ -28,10 +28,10 @@ private struct AlertOverlay: ViewModifier {
                 }
             }
             .overlay {
-                AlertFlashOverlay(alert: viewModel.screenSoundAlert)
+                AlertFlashOverlay(alert: viewModel.currentScreenSoundAlert)
             }
             .onChange(of: viewModel.screenSoundAlert?.id) { _, _ in
-                guard let alert = viewModel.screenSoundAlert, alert.takesBanner(from: shown) else { return }
+                guard let alert = viewModel.currentScreenSoundAlert, alert.takesBanner(from: shown) else { return }
                 withAnimation { shown = alert }
             }
             .onChange(of: viewModel.attentionKeywordHit?.id) { _, _ in
@@ -40,7 +40,7 @@ private struct AlertOverlay: ViewModifier {
             }
             .task(id: shown?.id) {
                 guard let current = shown else { return }
-                try? await Task.sleep(for: .seconds(current.bannerSeconds))
+                try? await Task.sleep(for: .seconds(viewModel.bannerSecondsLeft(for: current)))
                 if shown?.id == current.id {
                     withAnimation { shown = nil }
                 }

@@ -1881,6 +1881,26 @@ struct CaptionPipelineAlertTests {
         #expect(pipeline.bannerSecondsLeft(for: siren) == 0)
     }
 
+    @Test("an alert past its banner time, like one heard while the app was away, is no longer the current one to buzz, flash or read out")
+    func staleAlertIsNotCurrent() async throws {
+        let clock = TestClock()
+        let detector = FakeSoundDetector()
+        let (pipeline, audio, _) = makePipeline(soundDetector: detector, now: { clock.now })
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.1, count: 1_024))
+        #expect(await eventually { detector.chunksSeen == 1 })
+
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: clock.now))
+        #expect(await eventually { pipeline.screenSoundAlert != nil })
+        let bell = try #require(pipeline.screenSoundAlert)
+        #expect(pipeline.currentScreenSoundAlert?.id == bell.id)
+        clock.advance(bell.bannerSeconds - 1)
+        #expect(pipeline.currentScreenSoundAlert?.id == bell.id)
+        clock.advance(2)
+        #expect(pipeline.screenSoundAlert?.id == bell.id)
+        #expect(pipeline.currentScreenSoundAlert == nil)
+    }
+
     @Test("a clock set back after an alert never makes its banner last longer than its own time")
     func bannerTimeLeftAfterClockSetBack() async throws {
         let clock = TestClock()

@@ -261,7 +261,7 @@ struct LiveCaptionView: View {
             // Removed rather than fed nil while covered, so closing the
             // covering screen doesn't replay the last flash.
             if !isCoveredByAlertScreen {
-                AlertFlashOverlay(alert: viewModel.screenSoundAlert)
+                AlertFlashOverlay(alert: viewModel.currentScreenSoundAlert)
             }
         }
         .preferredColorScheme(theme.preferredScheme)
@@ -286,7 +286,9 @@ struct LiveCaptionView: View {
         }
         .handsBackSoundBanner(afterCovering: isCoveredByAlertScreen, viewModel: viewModel, banner: $visibleSoundAlert)
         .onChange(of: viewModel.screenSoundAlert?.id) { _, _ in
-            guard let alert = viewModel.screenSoundAlert else { return }
+            // Only an alert still within its banner time: one heard while
+            // the app was away reaches this when she comes back to it.
+            guard let alert = viewModel.currentScreenSoundAlert else { return }
             if !isCoveredByAlertScreen, alert.takesBanner(from: visibleSoundAlert) {
                 withAnimation { visibleSoundAlert = alert }
             }
