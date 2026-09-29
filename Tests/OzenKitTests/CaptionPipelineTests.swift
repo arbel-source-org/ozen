@@ -1398,6 +1398,71 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .listening)
     }
 
+    @Test("a start waiting on an abandoned download shows that download's progress, not \"loading\" throughout, and then starts", .timeLimit(.minutes(1)))
+    func waitingStartShowsTheDownload() async {
+        let download = EnginePreparationProgress(stage: .downloadingModel, fraction: 0.4, detail: "large-v3")
+        let slow = FakeEngine(progressUpdates: [download])
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: slow])
+        var seenWhileWaiting: PipelinePhase?
+        slow.duringPrepare = { if seenWhileWaiting == nil { seenWhileWaiting = pipeline.phase } }
+        let first = Task { await pipeline.start(settings: .default) }
+        while slow.prepareCount == 0 { await Task.yield() }
+        pipeline.stop()
+        let second = Task { await pipeline.start(settings: .default) }
+        for _ in 0..<50 { await Task.yield() }
+        #expect(pipeline.phase == .preparingEngine(EnginePreparationProgress(stage: .loadingModel)))
+
+        await gate.open()
+        await first.value
+        await second.value
+        #expect(seenWhileWaiting == .preparingEngine(download))
+        #expect(slow.prepareCount == 2)
+        #expect(pipeline.phase == .listening)
+    }
+
+    @Test("two model switches while an abandoned download shows its progress: the last choice still starts", .timeLimit(.minutes(1)))
+    func lastModelChoiceWinsWhileDownloadShows() async {
+        let slow = FakeEngine(progressUpdates: [
+            EnginePreparationProgress(stage: .downloadingModel, fraction: 0.4, detail: "large-v3"),
+            EnginePreparationProgress(stage: .loadingModel, detail: "large-v3", isFirstTime: true),
+        ])
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let middle = FakeEngine()
+        let last = FakeEngine()
+        let pipeline = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                switch settings.whisperModelVariant {
+                case "middle": return middle
+                case "last": return last
+                default: return slow
+                }
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        let first = Task { await pipeline.start(settings: .default) }
+        while slow.prepareCount == 0 { await Task.yield() }
+        var middleSettings = AppSettings.default
+        middleSettings.whisperModelVariant = "middle"
+        var lastSettings = AppSettings.default
+        lastSettings.whisperModelVariant = "last"
+        let second = Task { await pipeline.restart(settings: middleSettings) }
+        for _ in 0..<50 { await Task.yield() }
+        let third = Task { await pipeline.restart(settings: lastSettings) }
+        for _ in 0..<50 { await Task.yield() }
+        await gate.open()
+        await first.value
+        await second.value
+        await third.value
+        #expect(last.prepareCount == 1)
+        #expect(middle.prepareCount == 0)
+        #expect(pipeline.phase == .listening)
+    }
+
     @Test("a start waiting on an abandoned load says the model is loading, and a stop meanwhile is kept")
     func waitingStartShowsAndCanBeStopped() async {
         let slow = FakeEngine()

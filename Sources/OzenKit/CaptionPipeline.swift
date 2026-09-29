@@ -232,6 +232,9 @@ public final class CaptionPipeline {
     /// a row both waited, and the older one, a model she had already
     /// switched away from, went ahead while her last choice was dropped.
     private var newestWaitingStart: UUID?
+    /// What a start waiting on an abandoned preparation shows: "loading"
+    /// at first, then that preparation's own progress (see `start`).
+    private var waitingShown: EnginePreparationProgress?
     private var stopCount = 0
     private var recovery: AutoRecoveryPolicy
     /// Notices capture that died while the screen still says "listening".
@@ -312,11 +315,14 @@ public final class CaptionPipeline {
             let mine = UUID()
             newestWaitingStart = mine
             let waiting = EnginePreparationProgress(stage: .loadingModel)
+            waitingShown = waiting
             phase = .preparingEngine(waiting)
             while isPreparingEngine {
                 await withCheckedContinuation { preparationWaiters.append($0) }
             }
-            guard stopCount == stops, newestWaitingStart == mine, phase == .preparingEngine(waiting) else { return }
+            let shown = waitingShown ?? waiting
+            if newestWaitingStart == mine { waitingShown = nil }
+            guard stopCount == stops, newestWaitingStart == mine, phase == .preparingEngine(shown) else { return }
             phase = .idle
         }
         cancelScheduledRetry()
@@ -434,7 +440,21 @@ public final class CaptionPipeline {
         await engine.setCellularDownloadAllowed(allowCellular)
         let availability = await engine.prepare(languageCode: settings.languageCode) { [weak self] progress in
             Task { @MainActor [weak self] in
-                guard let self, self.runID == run, case .preparingEngine(let shown) = self.phase else { return }
+                guard let self else { return }
+                // Abandoned, with a later start waiting for it to finish:
+                // that start shows what is really happening (the rest of a
+                // download, a first set-up) instead of "loading" for as
+                // long as it takes.
+                if self.runID != run, let waiting = self.waitingShown, self.phase == .preparingEngine(waiting) {
+                    let time = self.now()
+                    guard progress.isNews(after: waiting, shownAt: self.progressShownAt, now: time) else { return }
+                    self.progressShownAt = time
+                    self.waitingShown = progress
+                    self.phase = .preparingEngine(progress)
+                    self.trackDownload(progress, at: time)
+                    return
+                }
+                guard self.runID == run, case .preparingEngine(let shown) = self.phase else { return }
                 let time = self.now()
                 guard progress.isNews(after: shown, shownAt: self.progressShownAt, now: time) else { return }
                 self.progressShownAt = time
