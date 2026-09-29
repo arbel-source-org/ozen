@@ -618,6 +618,38 @@ struct HomeServerCoverTests {
         #expect(!captions.isCoveringForCloud)
     }
 
+    private final class Built: @unchecked Sendable {
+        private let lock = NSLock()
+        private var count = 0
+        func add() { lock.withLock { count += 1 } }
+        var value: Int { lock.withLock { count } }
+    }
+
+    @Test("while the phone covers, looking for the computer again keeps the phone's loaded model, so a pause and resume doesn't load it again")
+    func recheckKeepsThePhoneModel() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
+        let phone = FakeEngine(kind: .whisperKit)
+        let phonesBuilt = Built()
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                if settings.engine == .homeServer { return server }
+                phonesBuilt.add()
+                return phone
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        #expect(await eventually { server.prepareCount >= 3 })
+        captions.pause()
+        await captions.resume(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        #expect(phonesBuilt.value == 1)
+    }
+
     @Test("a refused code is left for a person to fix, not asked again and again")
     func refusedCodeIsNotPolled() async {
         let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerRejected, "wrong code"))

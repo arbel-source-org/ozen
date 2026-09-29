@@ -1354,18 +1354,38 @@ public final class CaptionPipeline {
     }
 
     private func cachedEngine(for settings: AppSettings) -> any TranscriptionEngine {
-        let key = "\(settings.engine.rawValue)|\(settings.whisperModelVariant)|\(settings.allowServerFallbackForAppleSpeech)|\(settings.cloudModel)|\(settings.homeServerAddress)|\(settings.homeServerBeam)"
-        if let cached = engineCache[key] { return cached }
+        let key = engineCacheKey(settings)
         // Only the engine in use is kept. A Whisper engine holds its loaded
         // model, hundreds of megabytes to 3 GB; every model tried once in
         // the model list used to stay loaded for as long as the app ran,
         // until iOS ended the app for using too much memory. Going back to
         // an earlier one loads it again, which takes seconds; restarts and
         // retries on the same settings still reuse it.
+        if let cached = engineCache[key] {
+            engineCache = [key: cached]
+            return cached
+        }
         engineCache.removeAll()
         let engine = engineFactory(settings)
         engineCache[key] = engine
         return engine
+    }
+
+    /// For asking the home computer or the cloud whether it answers again
+    /// while the phone covers for it. Their engines are light, so one is
+    /// kept beside the phone's loaded model: going through `cachedEngine`
+    /// threw that model out at every check, and the next pause or resume
+    /// loaded it all over again.
+    private func probeEngine(for settings: AppSettings) -> any TranscriptionEngine {
+        let key = engineCacheKey(settings)
+        if let cached = engineCache[key] { return cached }
+        let engine = engineFactory(settings)
+        engineCache[key] = engine
+        return engine
+    }
+
+    private func engineCacheKey(_ settings: AppSettings) -> String {
+        "\(settings.engine.rawValue)|\(settings.whisperModelVariant)|\(settings.allowServerFallbackForAppleSpeech)|\(settings.cloudModel)|\(settings.homeServerAddress)|\(settings.homeServerBeam)"
     }
 
     /// A tap that stopped delivering (see `AudioStallWatchdog`) becomes a
@@ -1443,7 +1463,7 @@ public final class CaptionPipeline {
                       let chosen = self.coveredSettings, chosen.engine == .homeServer
                 else { return }
                 guard self.phase == .listening else { continue }
-                let server = self.cachedEngine(for: chosen)
+                let server = self.probeEngine(for: chosen)
                 guard await server.checkAvailability(languageCode: chosen.languageCode) == .available,
                       !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening
                 else {
@@ -1477,7 +1497,7 @@ public final class CaptionPipeline {
                       let chosen = self.coveredSettings, chosen.engine == .cloud
                 else { return }
                 guard self.phase == .listening else { continue }
-                let cloud = self.cachedEngine(for: chosen)
+                let cloud = self.probeEngine(for: chosen)
                 guard await cloud.checkAvailability(languageCode: chosen.languageCode) == .available,
                       !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening
                 else {
