@@ -522,7 +522,7 @@ public final class LiveCaptionViewModel {
     private func checkCaptionsStillRunning() {
         let cause = StoppedCaptionsNotice.cause(
             phase: pipeline.phase,
-            retryScheduled: pipeline.scheduledRetry != nil,
+            retryScheduled: pipeline.isRecoveringByItself,
             systemInterrupted: isInterruptedBySystem,
             callEndedDuringInterruption: callEndedDuringInterruption
         )

@@ -46,6 +46,56 @@ struct CloudCoverTests {
         #expect(phone.prepareCount == 0)
     }
 
+    private final class Causes {
+        var seen: [StoppedCaptionsNotice.Cause?] = []
+    }
+
+    /// What the app's "captions stopped" check sees each time the phase
+    /// changes, looked at after the pipeline has finished reacting, as the
+    /// app does.
+    private func watchCauses(of captions: CaptionPipeline) -> Causes {
+        let causes = Causes()
+        captions.onPhaseChange = { [weak captions] _ in
+            Task { @MainActor in
+                guard let captions else { return }
+                causes.seen.append(StoppedCaptionsNotice.cause(
+                    phase: captions.phase,
+                    retryScheduled: captions.isRecoveringByItself,
+                    systemInterrupted: false,
+                    callEndedDuringInterruption: false
+                ))
+            }
+        }
+        return causes
+    }
+
+    @Test("while the phone's model gets ready to take over, captions are coming back, not stopped")
+    func coverIsNotAStop() async {
+        let cloud = FakeEngine(kind: .cloud, availability: .unavailable(.noInternet, "test"))
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone)
+        let causes = watchCauses(of: captions)
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.isCoveringForCloud })
+        #expect(await eventually { causes.seen.count >= 3 })
+        #expect(causes.seen.allSatisfy { $0 == nil })
+    }
+
+    @Test("a cover that can't start still says captions stopped")
+    func coverThatCantStartIsAStop() async {
+        let cloud = FakeEngine(kind: .cloud, availability: .unavailable(.cloudOutOfCredit, "test"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 800
+        let captions = pipeline(cloud: cloud, phone: phone)
+        let causes = watchCauses(of: captions)
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually {
+            if case .some(.some(.failed)) = causes.seen.last { return true }
+            return false
+        })
+        #expect(!captions.isRecoveringByItself)
+    }
+
     private func pipeline(cloud: FakeEngine, phone: FakeEngine, retryAfter delays: [Double]) -> CaptionPipeline {
         CaptionPipeline(
             audio: FakeAudioCapturer(),

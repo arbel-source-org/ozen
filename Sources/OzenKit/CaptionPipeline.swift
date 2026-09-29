@@ -150,6 +150,12 @@ public final class CaptionPipeline {
     private var nextStartCoversCloud = false
     /// Set while a failure is waiting to be retried automatically.
     public private(set) var scheduledRetry: ScheduledRetry?
+    /// The failure a model on the phone is getting ready to cover, from
+    /// the moment the failure is shown until the cover starts or won't.
+    private var pendingCover: PipelineFailure?
+    /// Captions stopped, but a retry or the phone's own model is on its
+    /// way: no reason to tell her they stopped.
+    public var isRecoveringByItself: Bool { scheduledRetry != nil || pendingCover != nil }
     /// How long the model download has left at its current pace, while
     /// one runs and there's enough to go on (see `DownloadEstimator`).
     public private(set) var downloadSecondsRemaining: Double?
@@ -1738,19 +1744,32 @@ public final class CaptionPipeline {
     private func fail(_ kind: PipelineFailure.Kind, detail: String, engineUnavailability: EngineUnavailability? = nil) {
         tearDownSession()
         let failure = PipelineFailure(kind: kind, detail: detail, engineUnavailability: engineUnavailability)
+        let onPhone = activeSettings.flatMap { CloudCover.phoneSettings(replacing: $0, after: failure) }
+        // Set before the phase: whoever reacts to the failure looks before
+        // the cover has had a turn to start.
+        pendingCover = onPhone == nil ? nil : failure
         phase = .failed(failure)
         logEvent(.failed(failure))
-        if let settings = activeSettings, let onPhone = CloudCover.phoneSettings(replacing: settings, after: failure) {
+        if let onPhone {
             Task { [weak self] in await self?.coverForCloud(with: onPhone, after: failure) }
             return
         }
         scheduleAutoRecovery(for: failure)
     }
 
+    /// The cover for `failure` started or won't: if captions are still
+    /// stopped by it, whoever decided they are coming back looks again.
+    private func coverSettled(after failure: PipelineFailure) {
+        guard pendingCover == failure else { return }
+        pendingCover = nil
+        if case .failed(let still) = phase, still == failure { onPhaseChange?(phase) }
+    }
+
     /// See `isCoveringForCloud`. Only a model that is already on the phone
     /// takes over: a surprise download of hundreds of megabytes is not a
     /// fair way to find out the cloud stopped.
     private func coverForCloud(with settings: AppSettings, after failure: PipelineFailure, retryIfNotCovered: Bool = true) async {
+        defer { coverSettled(after: failure) }
         // Someone may have stopped, retried or restarted captions since
         // the failure; then the engine cache is theirs to fill, not ours.
         guard case .failed(let before) = phase, before == failure else { return }
