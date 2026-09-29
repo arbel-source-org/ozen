@@ -166,7 +166,9 @@ struct OnboardingView: View {
     private var microphonePage: some View {
         OnboardingPage(symbol: "mic.circle", title: tr("המיקרופון", "The microphone")) {
             Text(tr("כדי להציג כתוביות לשיחה, אוזן צריכה להאזין דרך המיקרופון.", "To caption the conversation, Ozen needs to listen through the microphone."))
-            Text(tr("ההקלטה לא נשמרת ולא יוצאת מהטלפון.", "Nothing recorded is saved or leaves the phone."))
+            if !viewModel.settings.audioLeavesPhone {
+                Text(tr("ההקלטה לא נשמרת ולא יוצאת מהטלפון.", "Nothing recorded is saved or leaves the phone."))
+            }
             switch microphone {
             case .granted:
                 Label(tr("המיקרופון מאושר", "Microphone approved"), systemImage: "checkmark.circle.fill")

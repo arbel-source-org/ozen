@@ -26,7 +26,7 @@ computer backup when that is on.
 | She reads | What it means | What to do |
 | --- | --- | --- |
 | "Listening" (makshiv) | Captions are running. | Nothing. If no words appear, check the microphone (below). |
-| "Listening · Cloud captions aren't available, carrying on with the phone's own" (makshiv · ha-ktuviyot ba-anan lo zminot, mamshich im ha-zihuy she-ba-telefon) | Cloud captions lost their key, credit or internet, and a Whisper model already on the phone took over. Captions keep coming, a little less accurate. | Nothing urgent. Fix the key, credit or internet; the cloud is tried again the next time captions start (after Stop, or reopening the app). A pause and resume stays on the phone's model. |
+| "Listening · Cloud captions aren't available, carrying on with the phone's own" (makshiv · ha-ktuviyot ba-anan lo zminot, mamshich im ha-zihuy she-ba-telefon) | Cloud captions lost their key, credit or internet, and a Whisper model already on the phone took over. Captions keep coming, a little less accurate. | Nothing urgent. After a lost connection or a cloud outage, captions go back to the cloud by themselves once it answers again (checked every minute, between sentences). A key or credit problem needs fixing in Settings; the cloud is then tried again the next time captions start (after Stop, or reopening the app). A pause and resume stays on the phone's model. |
 | "Paused" (mushhe) | Paused by a tap. | Tap it to continue. |
 | "The phone is talking" (ha-telefon medaber) | The phone is saying a typed reply aloud; captions pause so they don't caption it. | Nothing. They continue by themselves when it finishes. Tapping it stops the phone talking. |
 | "Captions are off" (ha-ktuviyot kvuyot) | Stopped (for example by Siri). | Tap it to start. |
@@ -96,8 +96,9 @@ the same.
   lines, choose "Who is speaking?" (mi medaber?) and type the name.
 - **A line across the captions: "Said while the app was closed · 12 lines"
   (ne'emar k'she-ha-aplikatzia hayta sgura).** Captions kept coming while
-  the phone was locked or another app was open; the line shows where the
-  ones she hasn't seen begin. The button at the top, "What was said
+  the phone was locked or another app was open for 15 seconds or more; the
+  line shows where the ones she hasn't seen begin (when there are at least
+  two). The button at the top, "What was said
   meanwhile" (ma she-ne'emar beinta'yim), scrolls up to it.
 - **Captions on the lock screen.** The newest lines show there while
   captions run, and stay (saying "Captions paused for a call" or "Captions

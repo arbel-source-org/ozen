@@ -265,7 +265,8 @@ things, for Hebrew conversation, entirely on-device.
   locked or another app open; coming back, a line across the captions marks
   where the ones she missed begin, with how many there are, and a button at
   the top jumps up to it ("What was said meanwhile" (ma she-ne'emar
-  beinta'yim)). A glance away of a few seconds doesn't move the mark.
+  beinta'yim)). Being away less than 15 seconds, or missing a single line,
+  doesn't move the mark.
   After five minutes or more with nothing said, the time the talking
   started again is drawn between the lines, so an old sentence isn't read
   as the one just before.
@@ -317,8 +318,10 @@ the fast 16-bit arithmetic the server uses, and AMD, Intel and Apple
 graphics aren't supported. Memory in use is about 6.5 GB with both
 models: 1.6 GB for Turbo and 3.1 GB for large-v3 at 16 bits, the rest the
 work space of five-way beam search over 30-second windows and NVIDIA's
-libraries. The setup checks the card and the free space before it
-downloads anything.
+libraries. The Windows setup checks the card and the free space before
+it downloads anything, and adds the full model on a card with 8 GB or
+more. On Linux `server/setup.sh` checks neither, and the full model is
+added by hand (see `server/README.md`).
 
 Measured on rented cards (2026-09-27, the server's exact work on the same
 100 Hebrew sentences: the full model with beam 5 for each finished
