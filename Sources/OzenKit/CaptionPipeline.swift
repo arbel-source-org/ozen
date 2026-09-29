@@ -1938,7 +1938,7 @@ public final class CaptionPipeline {
     /// refused code needs a person, so it isn't asked again.
     private func waitForHomeServer(after failure: PipelineFailure) {
         guard failure.engineUnavailability?.kind == .homeServerUnreachable,
-              let chosen = activeSettings, chosen.engine == .homeServer
+              activeSettings?.engine == .homeServer
         else { return }
         homeServerRecheck?.cancel()
         homeServerRecheck = Task { [weak self] in
@@ -1946,6 +1946,12 @@ public final class CaptionPipeline {
                 guard let seconds = self?.homeServerRecheckSeconds else { return }
                 try? await Task.sleep(for: .seconds(seconds))
                 guard !Task.isCancelled, let self, case .failed(let current) = self.phase, current == failure else { return }
+                // Read again on every pass: a backup model picked, a name
+                // added or a microphone chosen during the wait reached
+                // `activeSettings`, and a copy from the start of the wait
+                // checked the old model (never taking over) or covered
+                // with the old names.
+                guard let chosen = self.activeSettings, chosen.engine == .homeServer else { return }
                 // A voice sample recording holds the microphone: the retry
                 // would stop its capture and then not start, and this wait
                 // would be over. It waits for the recording instead.
