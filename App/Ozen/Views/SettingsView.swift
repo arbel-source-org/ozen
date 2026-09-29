@@ -779,7 +779,12 @@ struct SettingsView: View {
                     ), in: 0...23) {
                         quietHoursRow(tr("מסתיימות", "Ends"), hour: viewModel.quietHours.endHour)
                     }
-                    Text(tr("צלילים דחופים כמו אזעקה עדיין יתריעו.", "Urgent sounds like a siren still alert."))
+                    // An equal start and end is the whole day, deliberately; two
+                    // equal hours on screen don't say that, and a doorbell stays
+                    // silent in her pocket all day.
+                    Text(viewModel.quietHours.startHour == viewModel.quietHours.endHour
+                         ? tr("כשהן מתחילות ומסתיימות באותה שעה, השעות השקטות נמשכות כל היום. צלילים דחופים כמו אזעקה עדיין יתריעו.", "Starting and ending at the same hour, quiet hours last all day. Urgent sounds like a siren still alert.")
+                         : tr("צלילים דחופים כמו אזעקה עדיין יתריעו.", "Urgent sounds like a siren still alert."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("quietHoursFootnote")
