@@ -1740,11 +1740,15 @@ public final class LiveCaptionViewModel {
         pipeline.isCoveringForCloud ? (pipeline.activeSettings ?? settings) : settings
     }
 
+    private var historyConversationStart: TimeInterval? {
+        ConversationBreak.start(listeningSince: historySessionStartedAt, firstLineAt: currentHistorySegments.first?.startTimestamp)
+    }
+
     public func persistHistory(ended: Bool, endedAt: TimeInterval? = nil, inBackground: Bool = false) {
         // After a conversation break the next conversation starts at its
         // first line, not at the moment the break was noticed.
         guard settings.saveHistory,
-              let startedAt = historySessionStartedAt ?? currentHistorySegments.first?.startTimestamp
+              let startedAt = historyConversationStart
         else { return }
         let record = TranscriptSessionRecord.make(
             from: currentHistorySegments,
@@ -1912,7 +1916,7 @@ public final class LiveCaptionViewModel {
     private func closeHistorySession(endedAt: TimeInterval?) {
         if settings.saveHistory {
             persistHistory(ended: true, endedAt: endedAt)
-            if let startedAt = historySessionStartedAt ?? currentHistorySegments.first?.startTimestamp {
+            if let startedAt = historyConversationStart {
                 closedHistorySessions.append(ClosedHistorySession(
                     id: historySessionID,
                     lines: historySegmentOffset..<pipeline.segments.count,
