@@ -11,6 +11,20 @@ struct PhasePresentationTests {
         .failed(PipelineFailure(kind: .engineUnavailable, detail: "", engineUnavailability: why))
     }
 
+    @Test("a call only promises captions back when it interrupted them, not ones she paused or stopped")
+    func callWordingOnlyForInterruptedCaptions() {
+        let call = PhasePresentation(phase: .listening, engine: .whisperKit, interruptedBySystem: true)
+        #expect(call.systemImage == "phone.fill")
+        #expect(PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: true, pausedForSpeech: true).title == call.title)
+        #expect(PhasePresentation(phase: .startingAudio, engine: .whisperKit, interruptedBySystem: true).title == call.title)
+
+        let paused = PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: true)
+        #expect(paused.title == PhasePresentation(phase: .paused, engine: .whisperKit, interruptedBySystem: false).title)
+        #expect(paused.title != call.title)
+        let off = PhasePresentation(phase: .idle, engine: .whisperKit, interruptedBySystem: true)
+        #expect(off.title == PhasePresentation(phase: .idle, engine: .whisperKit, interruptedBySystem: false).title)
+    }
+
     @Test("waiting for Wi-Fi says the size, and a tap asks before using cellular data")
     func waitingForWiFi() {
         let presentation = PhasePresentation(

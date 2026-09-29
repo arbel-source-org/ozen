@@ -338,7 +338,8 @@ extension LockScreenCaptions {
         pausedForSpeech: Bool,
         recoveringByItself: Bool = false
     ) -> (keep: Bool, status: String?) {
-        if interruptedByCall {
+        // Captions she paused or stopped herself are not the call's doing.
+        if interruptedByCall, phase != .idle, phase != .paused || pausedForSpeech {
             return (true, tr("הכתוביות מושהות בגלל שיחה", "Captions paused for a call"))
         }
         switch phase {

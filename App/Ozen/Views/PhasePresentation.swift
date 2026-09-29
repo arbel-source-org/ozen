@@ -55,7 +55,10 @@ struct PhasePresentation {
         coverReason: EngineUnavailability.Kind? = nil,
         offerBackup: Bool = false
     ) {
-        if interruptedBySystem {
+        // Only captions the call interrupted come back when it ends: ones
+        // she paused or stopped herself stay that way, and saying they
+        // would continue on their own was false.
+        if interruptedBySystem, phase != .idle, phase != .paused || pausedForSpeech {
             // iOS doesn't promise to say when a call ends, and can simply
             // never send it: without a tap she'd be stuck on this screen
             // for good. A tap tries to take the microphone back right now;

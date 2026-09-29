@@ -290,6 +290,10 @@ struct LockScreenPresenceTests {
         #expect(LockScreenCaptions.presence(phase: .paused, interruptedByCall: false, pausedForSpeech: true).keep)
         #expect(!LockScreenCaptions.presence(phase: .paused, interruptedByCall: false, pausedForSpeech: false).keep)
         #expect(!LockScreenCaptions.presence(phase: .idle, interruptedByCall: false, pausedForSpeech: false).keep)
+        // A call does not bring back captions she paused or stopped herself.
+        #expect(!LockScreenCaptions.presence(phase: .paused, interruptedByCall: true, pausedForSpeech: false).keep)
+        #expect(!LockScreenCaptions.presence(phase: .idle, interruptedByCall: true, pausedForSpeech: false).keep)
+        #expect(LockScreenCaptions.presence(phase: .paused, interruptedByCall: true, pausedForSpeech: true) == LockScreenCaptions.presence(phase: .listening, interruptedByCall: true, pausedForSpeech: false))
     }
 
     @Test("the lock screen status is in English when the app is")
