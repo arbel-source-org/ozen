@@ -1050,7 +1050,10 @@ public final class LiveCaptionViewModel {
             downloading: backupModelProgress,
             failed: backupModelFailed,
             shortfallMegabytes: option.flatMap {
-                StorageSpaceGate.shortfallMegabytes(downloadMegabytes: $0.installMegabytes, availableBytes: DeviceStorage.availableBytes())
+                StorageSpaceGate.shortfallMegabytes(
+                    downloadMegabytes: $0.remainingInstallMegabytes(onDiskBytes: WhisperModelStore().sizeOnDisk(of: variant)),
+                    availableBytes: DeviceStorage.availableBytes()
+                )
             },
             network: pipeline.networkConditions,
             allowCellular: settings.allowCellularModelDownload

@@ -57,6 +57,13 @@ public struct WhisperModelOption: Sendable, Equatable, Identifiable {
         }
     }
 
+    /// Room still needed to finish installing with `onDiskBytes` of it
+    /// already in the model's folder: a download cut off part way resumes,
+    /// so only the rest has to fit.
+    public func remainingInstallMegabytes(onDiskBytes: Int64) -> Int {
+        max(installMegabytes - Int(onDiskBytes / 1_048_576), 1)
+    }
+
     /// Not an exact byte count — a human-scale label for the picker.
     public var sizeLabel: String {
         sizeMB >= 1000

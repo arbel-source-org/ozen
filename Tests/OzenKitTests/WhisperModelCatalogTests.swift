@@ -61,6 +61,15 @@ struct WhisperModelCatalogTests {
         #expect(WhisperModelCatalog.option(for: "ivrit-large-v3-turbo-8bit")?.installMegabytes == 819 * 2)
     }
 
+    @Test("an interrupted install only needs room for the part not yet on the phone")
+    func remainingInstallRoom() throws {
+        let ivrit = try #require(WhisperModelCatalog.option(for: "ivrit-large-v3-turbo-8bit"))
+        let megabyte: Int64 = 1_048_576
+        #expect(ivrit.remainingInstallMegabytes(onDiskBytes: 0) == 819 * 2)
+        #expect(ivrit.remainingInstallMegabytes(onDiskBytes: 819 * megabyte) == 819)
+        #expect(ivrit.remainingInstallMegabytes(onDiskBytes: 5_000 * megabyte) == 1)
+    }
+
     @Test("size labels switch to GB at a thousand megabytes")
     func sizeLabels() {
         #expect(WhisperModelCatalog.option(for: "small")?.sizeLabel == "486 MB")
