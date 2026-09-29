@@ -110,8 +110,16 @@ public final class SessionJournal: @unchecked Sendable {
 
     /// "2026-09-18 14:02:07 listening", oldest first.
     public func reportLines(utcOffsetSeconds: Int) -> [String] {
+        reportLines(utcOffsetAt: { _ in utcOffsetSeconds })
+    }
+
+    /// Each line at the offset its own moment had: the journal keeps days
+    /// of lines, and today's offset put those from before a daylight-saving
+    /// change an hour off.
+    public func reportLines(utcOffsetAt offset: (TimeInterval) -> Int) -> [String] {
         entries().map { entry in
-            "\(Self.formattedDay(entry.at, utcOffsetSeconds: utcOffsetSeconds)) \(TranscriptHistoryStore.formattedClockTime(entry.at, utcOffsetSeconds: utcOffsetSeconds)) \(entry.text)"
+            let seconds = offset(entry.at)
+            return "\(Self.formattedDay(entry.at, utcOffsetSeconds: seconds)) \(TranscriptHistoryStore.formattedClockTime(entry.at, utcOffsetSeconds: seconds)) \(entry.text)"
         }
     }
 

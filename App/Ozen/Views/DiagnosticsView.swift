@@ -37,7 +37,7 @@ struct DiagnosticsView: View {
     }
 
     private func loadJournalLines() -> [String] {
-        viewModel.journal?.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds) ?? []
+        viewModel.journal?.reportLines(utcOffsetAt: Self.utcOffset(at:)) ?? []
     }
 
     var body: some View {
@@ -100,7 +100,7 @@ struct DiagnosticsView: View {
             }
 
             Section {
-                let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds)
+                let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetAt: Self.utcOffset(at:))
                 if lines.isEmpty {
                     Text(tr("עוד לא קרה כלום", "Nothing has happened yet"))
                         .foregroundStyle(.secondary)
@@ -277,7 +277,7 @@ struct DiagnosticsView: View {
     }
 
     private var eventLines: String {
-        let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetSeconds: Self.utcOffsetSeconds)
+        let lines = viewModel.pipeline.eventLog.reportLines(utcOffsetAt: Self.utcOffset(at:))
         return lines.isEmpty ? "-" : lines.joined(separator: "\n")
     }
 
@@ -287,6 +287,10 @@ struct DiagnosticsView: View {
 
     private static var utcOffsetSeconds: Int {
         TimeZone.current.secondsFromGMT(for: Date())
+    }
+
+    private static func utcOffset(at time: TimeInterval) -> Int {
+        TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: time))
     }
 
     /// "812 MB in use · 1.9 GB more": what the app uses, and how much more

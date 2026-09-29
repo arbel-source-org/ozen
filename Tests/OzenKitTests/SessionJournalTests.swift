@@ -48,6 +48,16 @@ struct SessionJournalTests {
         #expect(kept.contains { $0.hasPrefix("PROBLEM MARKED") })
     }
 
+    @Test("lines from before a clock change keep the clock they were written at")
+    func reportAcrossClockChange() {
+        let journal = SessionJournal(fileURL: temporaryFile())
+        let change: TimeInterval = 1_800_000_000
+        journal.append("listening", at: change - 3_600)
+        journal.append("stopped", at: change + 3_600)
+        let lines = journal.reportLines(utcOffsetAt: { $0 < change ? 3 * 3_600 : 2 * 3_600 })
+        #expect(lines == ["2027-01-15 10:00:00 listening", "2027-01-15 11:00:00 stopped"])
+    }
+
     @Test("lines carry the day as well as the time, at her clock")
     func reportLines() {
         let journal = SessionJournal(fileURL: temporaryFile())

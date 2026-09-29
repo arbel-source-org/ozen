@@ -95,6 +95,12 @@ public struct PipelineEventLog: Sendable, Equatable {
         events.map { $0.reportLine(utcOffsetSeconds: utcOffsetSeconds) }
     }
 
+    /// Each event at the offset its own moment had: a night of captions
+    /// can run across a daylight-saving change.
+    public func reportLines(utcOffsetAt offset: (TimeInterval) -> Int) -> [String] {
+        events.map { $0.reportLine(utcOffsetSeconds: offset($0.at)) }
+    }
+
     /// Error text from the system can run to paragraphs; the start says
     /// what it was.
     static func clipped(_ text: String) -> String {

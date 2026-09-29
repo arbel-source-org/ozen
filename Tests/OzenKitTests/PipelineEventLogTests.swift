@@ -21,6 +21,8 @@ struct PipelineEventLogTests {
             "15:01:01 retry 1 in 2s",
             "15:01:04 listening",
         ])
+        #expect(log.reportLines(utcOffsetAt: { $0 < noon + 60 ? 3 * 3_600 : 2 * 3_600 }).first == "15:00:00 listening")
+        #expect(log.reportLines(utcOffsetAt: { $0 < noon + 60 ? 3 * 3_600 : 2 * 3_600 }).last == "14:01:04 listening")
     }
 
     @Test("an engine failure names why, and a long error is cut short on one line")
