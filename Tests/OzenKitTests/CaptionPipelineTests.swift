@@ -624,7 +624,7 @@ struct CaptionPipelineTokenTests {
         let engine = FakeEngine()
         let audio = FakeAudioCapturer()
         let embedder = GatedEmbedder()
-        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: embedder, recovery: .disabled)
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: embedder, recovery: .disabled, now: { 1_000 })
         await pipeline.start(settings: .default)
 
         let first = UUID()
@@ -713,7 +713,10 @@ struct CaptionPipelineTokenTests {
         }
         let engine = FakeEngine()
         let audio = FakeAudioCapturer()
-        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: ThresholdTestEmbedder(), recovery: .disabled)
+        // The lines' clock, as in makePipeline: on the real clock a line
+        // stamped 1,000 is long stale, and the next tick closed it before
+        // the voice windows could name it.
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: ThresholdTestEmbedder(), recovery: .disabled, now: { 1_000 })
         await pipeline.start(settings: .default)
 
         let id = UUID()
