@@ -1859,6 +1859,18 @@ struct LiveCaptionViewModelRecentConversationTests {
         viewModel.clearTranscript()
         #expect(viewModel.recentConversation == nil)
 
+        // A deleted conversation isn't offered to pick up again.
+        await viewModel.loadRecentConversation(now: now)
+        #expect(viewModel.recentConversation != nil)
+        try viewModel.deleteConversation(id: cutOff.id)
+        #expect(viewModel.recentConversation == nil)
+        try history.save(cutOff)
+        await viewModel.loadRecentConversation(now: now)
+        #expect(viewModel.recentConversation != nil)
+        try viewModel.deleteAllConversations()
+        #expect(viewModel.recentConversation == nil)
+        try history.save(cutOff)
+
         // Half an hour later it's no longer "moments ago".
         await viewModel.loadRecentConversation(now: now + 30 * 60)
         #expect(viewModel.recentConversation == nil)
