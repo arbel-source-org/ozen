@@ -41,7 +41,7 @@ struct HistoryView: View {
 
     private var savingFooter: String {
         let size = ModelManagerView.format(bytes: totalSize)
-        let base = tr("השיחות נשמרות רק בטלפון הזה (%1). הן לא מגובות לשום מקום ואפשר למחוק אותן בכל רגע.", "Conversations are saved only on this phone (%1). They aren’t backed up anywhere, and can be deleted anytime.", args: ["\(size)"])
+        let base = tr("השיחות נשמרות בטלפון הזה (%1), וגם בגיבוי שלו ל-iCloud או למחשב כשהגיבוי פועל. אפשר למחוק אותן בכל רגע.", "Conversations are saved on this phone (%1), and in its iCloud or computer backup when that is on. They can be deleted anytime.", args: ["\(size)"])
         guard viewModel.historyRetention != .forever else { return base }
         return base + tr(" שיחות עם שורה מסומנת או עם שם נשמרות תמיד.", " Conversations with a starred line or a name are always kept.")
     }

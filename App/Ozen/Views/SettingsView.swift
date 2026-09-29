@@ -861,7 +861,7 @@ struct SettingsView: View {
         } header: {
             Text(tr("היסטוריה", "History"))
         } footer: {
-            Text(viewModel.saveHistory ? tr("השיחות נשמרות בטלפון בלבד.", "Conversations are saved on the phone only.") : tr("שמירת שיחות כבויה.", "Saving conversations is off."))
+            Text(viewModel.saveHistory ? tr("השיחות נשמרות בטלפון.", "Conversations are saved on the phone.") : tr("שמירת שיחות כבויה.", "Saving conversations is off."))
         }
     }
 

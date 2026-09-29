@@ -17,8 +17,9 @@ says so. It also keeps the last 30 seconds of sound on the phone (only while
 saving conversations is on, never in a backup); Diagnostics lists these
 clips, and one is only sent if someone taps it and shares it. "Delete all
 saved conversations" deletes them too, and the caption lines kept with
-each marked problem. Otherwise conversations never leave
-the phone.
+each marked problem. Otherwise the app never sends conversations
+anywhere; like any app's data they are in the phone's own iCloud or
+computer backup when that is on.
 
 ## What the status button says
 

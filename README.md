@@ -97,7 +97,10 @@ things, for Hebrew conversation, entirely on-device.
   no company server. The exceptions are all explicit and off by default:
   your own home computer, cloud captions above, and a switch to let
   Apple's recognizer use Apple's servers when iOS has no on-device Hebrew
-  model.
+  model. Saved conversations and settings (names, voice prints) are part
+  of the phone's own iCloud or computer backup when that is on, like any
+  app's; the sound clips, the diagnostics journal and the models are kept
+  out of it.
 - **A status control that always says what's happening** — asking for the
   microphone, downloading the model (with a percentage and the time left
   at its current pace), loading it,
