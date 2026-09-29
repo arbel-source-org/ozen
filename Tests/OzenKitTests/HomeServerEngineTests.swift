@@ -14,6 +14,8 @@ private actor ScriptedSocket: HomeServerSocket {
     private(set) var sentBytes = 0
     private(set) var isClosed = false
     var answersPings = true
+    var hangsOnHello = false
+    private var helloSends: [CheckedContinuation<Void, Error>] = []
     private(set) var pings = 0
     private var pingWaiters: [CheckedContinuation<Void, Error>] = []
     private var queue: [String] = []
@@ -36,6 +38,9 @@ private actor ScriptedSocket: HomeServerSocket {
         let pingsPending = pingWaiters
         pingWaiters = []
         pingsPending.forEach { $0.resume(throwing: Closed()) }
+        let sendsPending = helloSends
+        helloSends = []
+        sendsPending.forEach { $0.resume(throwing: Closed()) }
     }
 
     func ping() async throws {
@@ -47,8 +52,19 @@ private actor ScriptedSocket: HomeServerSocket {
 
     func setAnswersPings(_ answers: Bool) { answersPings = answers }
 
+    func setHangsOnHello(_ hangs: Bool) { hangsOnHello = hangs }
+
     func send(text: String) async throws {
         if isClosed { throw Closed() }
+        if hangsOnHello, text.contains(#""type":"hello""#) {
+            // Like a connection that never completes: only closing the
+            // socket (or cancelling) ends the wait.
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { helloSends.append($0) }
+            } onCancel: {
+                Task { await self.drop() }
+            }
+        }
         sentTexts.append(text)
         if text.contains(#""type":"hello""#), let helloReply { deliver(helloReply) }
         if text.contains(#""type":"report""#), let reportReply { deliver(reportReply) }
@@ -112,6 +128,25 @@ struct HomeServerEngineTests {
         let setup = try String(contentsOf: root.appendingPathComponent("server/setup-windows.ps1"), encoding: .utf8)
         #expect(launcher.unicodeScalars.allSatisfy { $0.isASCII })
         #expect(setup.unicodeScalars.allSatisfy { $0.isASCII })
+    }
+
+    @Test("a hello that never finishes sending (a computer gone to sleep mid-connect) gives up within the handshake wait, not the system's minute")
+    func helloSendIsTimed() async {
+        let socket = ScriptedSocket(helloReply: ready)
+        await socket.setHangsOnHello(true)
+        let started = ContinuousClock.now
+        let answer = await withTaskGroup(of: EngineAvailability?.self) { group in
+            group.addTask { await engine(socket).checkAvailability(languageCode: "he") }
+            group.addTask {
+                try? await Task.sleep(for: .seconds(5))
+                return nil
+            }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+        #expect(answer?.unavailability?.kind == .homeServerUnreachable)
+        #expect(started.duration(to: .now) < .seconds(4))
     }
 
     @Test("an address without a scheme gets ws and the default port; a given port or wss is kept; nonsense is refused")

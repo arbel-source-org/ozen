@@ -343,10 +343,13 @@ public actor HomeServerEngine: TranscriptionEngine {
             throw EngineUnavailability.homeServerUnreachable("could not connect: \(error)")
         }
         do {
-            try await socket.send(text: HomeServer.hello(
+            // Sent inside the timed wait: a connection that never completes
+            // (a computer asleep, a route that goes nowhere) holds the send
+            // itself, for the system's minute rather than these seconds.
+            let hello = HomeServer.hello(
                 token: target.token, languageCode: languageCode, vocabulary: terms, purpose: purpose, client: client, beam: beam
-            ))
-            let reply = try await Self.firstReply(from: socket, within: handshakeSeconds)
+            )
+            let reply = try await Self.firstReply(from: socket, within: handshakeSeconds, after: hello)
             switch HomeServerMessage(json: reply) {
             case .ready?:
                 return socket
@@ -363,9 +366,12 @@ public actor HomeServerEngine: TranscriptionEngine {
         }
     }
 
-    private static func firstReply(from socket: any HomeServerSocket, within seconds: Double) async throws -> String {
+    private static func firstReply(from socket: any HomeServerSocket, within seconds: Double, after message: String? = nil) async throws -> String {
         try await withThrowingTaskGroup(of: String.self) { group in
-            group.addTask { try await socket.receive() }
+            group.addTask {
+                if let message { try await socket.send(text: message) }
+                return try await socket.receive()
+            }
             group.addTask {
                 try await Task.sleep(for: .seconds(seconds))
                 // Closing is what makes a receive that ignores
