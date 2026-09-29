@@ -452,12 +452,19 @@ public final class CaptionPipeline {
         if case .unavailable(var why) = availability {
             // Refused because the only connection left is cellular: the
             // same wait for Wi-Fi as before a download, with its "download
-            // now anyway", rather than a failed download.
-            if why.kind == .modelDownloadFailed,
-               ModelDownloadGate.decide(network: network?.current, allowCellular: allowCellular) == .waitForWiFi {
+            // now anyway", rather than a failed download. Only while there
+            // is still something to download (a failure with the model all
+            // there, say fetching its tokenizer, keeps its retry timer), and
+            // decided after asking, from the connection and the cellular
+            // switch as they are now: Wi-Fi back by then, or cellular
+            // downloads switched on meanwhile, is no reason to wait.
+            if why.kind == .modelDownloadFailed {
                 let megabytes = await engine.pendingDownloadMegabytes()
                 guard runID == run else { return }
-                why = EngineUnavailability(kind: .waitingForWiFi, detail: "cellular or Low Data Mode after: \(why.detail)", downloadMegabytes: megabytes)
+                let allowCellularNow = (activeSettings?.allowCellularModelDownload ?? allowCellular) || cellularDownloadApproved
+                if let megabytes, ModelDownloadGate.decide(network: network?.current, allowCellular: allowCellularNow) == .waitForWiFi {
+                    why = EngineUnavailability(kind: .waitingForWiFi, detail: "cellular or Low Data Mode after: \(why.detail)", downloadMegabytes: megabytes)
+                }
             }
             fail(.engineUnavailable, detail: why.detail, engineUnavailability: why)
             return

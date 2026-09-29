@@ -175,8 +175,14 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
         lock.withLock { pendingInstall ?? pendingDownload }
     }
 
+    /// Runs on the main actor each time `pendingDownloadMegabytes` is asked.
+    var duringPendingDownloadCheck: (@MainActor () -> Void)?
+
     func pendingDownloadMegabytes() async -> Int? {
-        lock.withLock {
+        if let duringPendingDownloadCheck {
+            await MainActor.run { duringPendingDownloadCheck() }
+        }
+        return lock.withLock {
             pendingDownloadChecks += 1
             return pendingDownload
         }
@@ -2514,6 +2520,49 @@ struct CaptionPipelineDownloadNetworkTests {
         network.change(to: .wifi)
         #expect(await eventually { pipeline.phase.isListening })
         #expect(engine.prepareCount == 2)
+    }
+
+    @Test("a failed load with nothing left to download is retried on its timer even on cellular, not shown as waiting for Wi-Fi")
+    func failureWithNothingToDownloadOnCellular() async {
+        let (pipeline, engine) = makePipeline(network: FakeNetworkMonitor(.cellular), pendingDownload: nil, recovery: AutoRecoveryPolicy())
+        engine.availability = .unavailable(.modelDownloadFailed, "tokenizer fetch failed")
+        await pipeline.start(settings: settings())
+
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .modelDownloadFailed)
+        #expect(pipeline.scheduledRetry != nil)
+    }
+
+    @Test("Wi-Fi back by the time a refused download is reported is not a wait for Wi-Fi")
+    func wifiBackBeforeTheRefusalIsReported() async {
+        let network = FakeNetworkMonitor(.wifi)
+        let (pipeline, engine) = makePipeline(network: network, recovery: AutoRecoveryPolicy())
+        engine.availability = .unavailable(.modelDownloadFailed, "The Internet connection appears to be offline.")
+        engine.duringPrepare = {
+            network.change(to: .cellular)
+            engine.duringPendingDownloadCheck = { network.change(to: .wifi) }
+        }
+        await pipeline.start(settings: settings())
+
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .modelDownloadFailed)
+        #expect(pipeline.scheduledRetry != nil)
+    }
+
+    @Test("cellular downloads switched on while the model downloads means a later Wi-Fi drop does not stop for Wi-Fi")
+    func cellularAllowedMidDownload() async {
+        let network = FakeNetworkMonitor(.wifi)
+        let (pipeline, engine) = makePipeline(network: network, recovery: AutoRecoveryPolicy())
+        let gate = PrepareGate()
+        engine.prepareGate = gate
+        engine.availability = .unavailable(.modelDownloadFailed, "The Internet connection appears to be offline.")
+        engine.duringPrepare = { network.change(to: .cellular) }
+        let starting = Task { await pipeline.start(settings: settings()) }
+        #expect(await eventually { engine.prepareCount == 1 })
+        await pipeline.setAllowCellularModelDownload(true)
+        await gate.open()
+        await starting.value
+
+        #expect(pipeline.phase.failure?.engineUnavailability?.kind == .modelDownloadFailed)
+        #expect(pipeline.scheduledRetry != nil)
     }
 
     @Test("reaching Wi-Fi starts a waiting download by itself")
