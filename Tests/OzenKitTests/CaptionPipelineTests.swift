@@ -939,6 +939,26 @@ struct CaptionPipelineLifecycleTests {
         #expect(audio.selectedInputUID == "usb")
     }
 
+    @Test("after tapping Retry once the automatic attempts ran out, the next glitch is retried by itself again")
+    func retryTapGivesFreshAttempts() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine], recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: []))
+        await pipeline.start(settings: .default)
+        #expect(await eventually { pipeline.phase == .listening })
+        engine.endStream(throwing: TestError())
+        #expect(await eventually { pipeline.phase == .listening && engine.prepareCount >= 2 })
+        engine.endStream(throwing: TestError())
+        #expect(await eventually { pipeline.phase.failure != nil })
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(pipeline.scheduledRetry == nil)
+
+        await pipeline.retryAfterTap(settings: .default)
+        #expect(await eventually { pipeline.phase == .listening })
+        engine.endStream(throwing: TestError())
+        #expect(await eventually { pipeline.phase.failure != nil })
+        #expect(await eventually { pipeline.phase == .listening })
+    }
+
     @Test("stop() returns to idle and stops capture")
     func stop() async {
         let (pipeline, audio, _) = makePipeline()

@@ -786,7 +786,7 @@ public final class LiveCaptionViewModel {
     }
 
     public func retry() async {
-        await pipeline.retry(settings: settings)
+        await pipeline.retryAfterTap(settings: settings)
         historySessionDidChangePhase()
     }
 

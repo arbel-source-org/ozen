@@ -671,6 +671,16 @@ public final class CaptionPipeline {
         await start(settings: effective)
     }
 
+    /// The Retry button. A person asked, so automatic recovery starts over
+    /// too: the attempts were used up (that is why captions stopped), and
+    /// a glitch in the first minute after the tap found none left, so
+    /// captions stopped again until someone noticed.
+    public func retryAfterTap(settings: AppSettings? = nil) async {
+        guard case .failed = phase else { return }
+        recovery.reset()
+        await retry(settings: settings)
+    }
+
     public func clearTranscript() {
         segments = []
         defer { onCaptionsChanged?() }
