@@ -24,7 +24,10 @@ concurrency:
 jobs:
   ozenkit-linux:
     name: OzenKit (Linux, portable core)
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: that label moves to Ubuntu 26 from 19 October 2026,
+    # and setup-swift installs Swift 6.1 from swift.org builds that stop at
+    # Ubuntu 24.04, so the move would turn this job red on its own.
+    runs-on: ubuntu-24.04
     # A hung test would otherwise hold the runner for GitHub's six-hour
     # default; the whole job normally takes about a minute.
     timeout-minutes: 15
