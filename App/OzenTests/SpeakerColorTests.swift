@@ -7,6 +7,7 @@ import Testing
 /// `EmbeddingClusterer` assigns ids in whatever order voices are heard), so
 /// grandma can still spot her own lines by color from one day to the next.
 @Suite("Speaker color")
+@MainActor
 struct SpeakerColorTests {
     @Test("a named speaker's color depends on the name, not the session-only cluster id")
     func namedSpeakerIsStableAcrossIDs() {
