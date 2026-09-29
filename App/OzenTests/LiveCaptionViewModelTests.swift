@@ -2378,6 +2378,34 @@ struct LiveCaptionViewModelLockScreenTests {
         #expect(!lockScreen.isShowing)
     }
 
+    @Test("the notice that captions left the lock screen is taken back once opening the app puts them there again")
+    func endedNoticeWithdrawn() async {
+        let lockScreen = FakeLockScreen()
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let store = SettingsStore(fileURL: FileManager.default.temporaryDirectory.appendingPathComponent("ozen-lock-\(UUID()).json"))
+        var posted: [String] = []
+        var withdrawn: [String] = []
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: store,
+            pipeline: pipeline,
+            postNotification: { posted.append($0.identifier) },
+            withdrawNotification: { withdrawn.append($0) },
+            lockScreen: lockScreen
+        )
+        await viewModel.start()
+        #expect(await eventually { lockScreen.isShowing })
+        viewModel.sceneActivityChanged(isActive: false)
+        lockScreen.isShowing = false
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "the bus is here", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        #expect(await eventually { posted.contains(LockScreenCaptions.endedNotice.identifier) })
+        #expect(!withdrawn.contains(LockScreenCaptions.endedNotice.identifier))
+
+        viewModel.sceneActivityChanged(isActive: true)
+        #expect(await eventually { lockScreen.isShowing })
+        #expect(await eventually { withdrawn.contains(LockScreenCaptions.endedNotice.identifier) })
+    }
+
     @Test("with the app in front, new lines wait; leaving the app sends them at once")
     func slowerInFront() async {
         let lockScreen = FakeLockScreen()

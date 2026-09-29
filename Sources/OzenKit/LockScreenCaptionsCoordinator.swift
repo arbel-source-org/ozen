@@ -74,6 +74,11 @@ public final class LockScreenCaptionsCoordinator {
     /// was away (its eight-hour limit, or swiped off): only the app in
     /// front can start them again, so she needs telling to open it.
     public var onEndedWhileAway: (@MainActor () -> Void)?
+    /// Called once the lines are on the lock screen again after
+    /// `onEndedWhileAway`, or captions stopped: the notice sent then, which
+    /// says to open the app to bring them back, is out of date.
+    public var onEndedNoticeOutdated: (@MainActor () -> Void)?
+    private var endedWhileAway = false
 
     /// `situation` and `lines` are asked on every refresh; `lines` gets how
     /// many lines there is room for and how large they are.
@@ -174,6 +179,13 @@ public final class LockScreenCaptionsCoordinator {
             display.end()
             isShowing = false
         }
+        endedNoticeIsOutdated()
+    }
+
+    private func endedNoticeIsOutdated() {
+        guard endedWhileAway else { return }
+        endedWhileAway = false
+        onEndedNoticeOutdated?()
     }
 
     private func send(_ content: LockScreenCaptionContent, at time: TimeInterval) {
@@ -187,9 +199,13 @@ public final class LockScreenCaptionsCoordinator {
             // Nothing left for the keep-alive to keep alive.
             keepAlive?.cancel()
             keepAlive = nil
-            if wasShowing, !isAppActive { onEndedWhileAway?() }
+            if wasShowing, !isAppActive {
+                endedWhileAway = true
+                onEndedWhileAway?()
+            }
             return
         }
+        endedNoticeIsOutdated()
         throttle.sent(content, at: time)
         guard keepAlive == nil else { return }
         let interval = keepAliveSeconds

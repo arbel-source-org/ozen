@@ -271,6 +271,9 @@ public final class LiveCaptionViewModel {
                 guard let self, self.settings.notifyWhenInBackground else { return }
                 self.postNotification?(LockScreenCaptions.endedNotice)
             }
+            self.lockScreen?.onEndedNoticeOutdated = { [weak self] in
+                self?.withdrawNotification?(LockScreenCaptions.endedNotice.identifier)
+            }
         }
         pipeline.onCaptionsChanged = { [weak self] in
             self?.refreshLockScreen()

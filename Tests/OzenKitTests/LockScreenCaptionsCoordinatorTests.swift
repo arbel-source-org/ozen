@@ -240,6 +240,36 @@ struct LockScreenCaptionsCoordinatorTests {
         #expect(reports == 1)
     }
 
+    @Test("the notice that captions left the lock screen is out of date once they are back on it, or captions stop")
+    func endedNoticeOutdated() async {
+        let (coordinator, display, captions) = make(keepAliveSeconds: 0.05)
+        var outdated = 0
+        coordinator.onEndedWhileAway = {}
+        coordinator.onEndedNoticeOutdated = { outdated += 1 }
+        captions.texts = ["good morning"]
+        coordinator.refresh()
+        coordinator.appActivityChanged(isActive: false)
+        display.isRunning = false
+        #expect(await eventually { !coordinator.isShowing })
+        #expect(outdated == 0)
+
+        coordinator.appActivityChanged(isActive: true)
+        #expect(coordinator.isShowing)
+        #expect(outdated == 1)
+        coordinator.refresh()
+        #expect(outdated == 1)
+
+        coordinator.appActivityChanged(isActive: false)
+        display.isRunning = false
+        #expect(await eventually { !coordinator.isShowing })
+        captions.situation.phase = .idle
+        coordinator.refresh()
+        #expect(outdated == 2)
+        captions.situation.phase = .listening
+        coordinator.refresh()
+        #expect(outdated == 2)
+    }
+
     @Test("a call arriving after 15+ quiet minutes doesn't bring the already-cleared stale line back")
     func callAfterLongQuietStaysCleared() async {
         let (coordinator, display, captions) = make()
