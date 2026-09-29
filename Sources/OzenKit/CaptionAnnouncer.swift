@@ -13,7 +13,8 @@ import Foundation
 /// together go out as one announcement, and the speaker's name leads a
 /// line when the speaker changes, the way the screen shows it.
 public struct CaptionAnnouncer: Sendable, Equatable {
-    /// What each line said when it was last announced (or skipped).
+    /// What each line said when it was last announced (or skipped),
+    /// without a cut-off mark.
     private var announced: [UUID: String] = [:]
     private var lastSpeaker: String?
     /// The line announced (or skipped) last, for the quiet before the next.
@@ -42,9 +43,11 @@ public struct CaptionAnnouncer: Sendable, Equatable {
         for segment in segments[start...] where segment.isCommitted {
             let text = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
             // A line read out once is read again only if its words changed
-            // afterwards (a slow engine correcting one of the last lines).
-            guard announced[segment.id] != text else { continue }
-            announced[segment.id] = text
+            // afterwards (a slow engine correcting one of the last lines),
+            // not when a dropped connection only marked it cut off.
+            let words = Self.words(of: text)
+            guard announced[segment.id] != words else { continue }
+            announced[segment.id] = words
             guard !text.isEmpty else { continue }
             let name = speakerName(segment)
             // After a quiet stretch the name comes again, as on screen.
@@ -66,8 +69,13 @@ public struct CaptionAnnouncer: Sendable, Equatable {
         let start = scanStart(in: segments)
         noteScanned(segments, from: start)
         for segment in segments[start...] where segment.isCommitted {
-            announced[segment.id] = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            announced[segment.id] = Self.words(of: segment.text.trimmingCharacters(in: .whitespacesAndNewlines))
         }
+    }
+
+    private static func words(of text: String) -> String {
+        guard text.hasSuffix(CaptionStabilizer.cutOffMark) else { return text }
+        return String(text.dropLast(CaptionStabilizer.cutOffMark.count)).trimmingCharacters(in: .whitespaces)
     }
 
     /// Only the lines that can have changed are looked at: those since the

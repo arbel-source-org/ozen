@@ -29,6 +29,18 @@ struct CaptionAnnouncerTests {
         #expect(announcer.announcement(for: [finished, open], speakerName: { _ in nil }) == "שלום מה שלומך")
     }
 
+    @Test("a line already read is not read again only because a dropped connection marked it cut off")
+    func cutOffMarkAloneIsNotNews() {
+        var announcer = CaptionAnnouncer()
+        var quiet = line("נתראה מחר בבוקר")
+        #expect(announcer.announcement(for: [quiet], speakerName: { _ in nil }) == "נתראה מחר בבוקר")
+        quiet.text += CaptionStabilizer.cutOffMark
+        #expect(announcer.announcement(for: [quiet], speakerName: { _ in nil }) == nil)
+
+        quiet.text = "נתראה מחר בערב" + CaptionStabilizer.cutOffMark
+        #expect(announcer.announcement(for: [quiet], speakerName: { _ in nil }) == "נתראה מחר בערב" + CaptionStabilizer.cutOffMark)
+    }
+
     @Test("lines finished together go out as one announcement, in order")
     func batched() {
         var announcer = CaptionAnnouncer()
