@@ -20,7 +20,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Download the release's assets
         env:
@@ -65,7 +65,7 @@ jobs:
           MAX_PERCENT: ${{ inputs.max_percent }}
         run: python3 scripts/model-release/wer.py report "$MAX_PERCENT"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: model-check-report
