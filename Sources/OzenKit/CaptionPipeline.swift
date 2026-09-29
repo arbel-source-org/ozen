@@ -375,6 +375,10 @@ public final class CaptionPipeline {
             return
         }
 
+        // Before the session, not after: a session refused at launch (a
+        // hearing aid still connecting) left nothing to hear the aid
+        // arrive, and captions stayed stopped until someone tapped Retry.
+        audio.onInputsChanged = { [weak self] in self?.inputsChanged() }
         do {
             try await audio.prepareSession(preferredInputUID: settings.preferredInputUID)
         } catch {
@@ -383,7 +387,6 @@ public final class CaptionPipeline {
             return
         }
         guard runID == run else { return }
-        audio.onInputsChanged = { [weak self] in self?.inputsChanged() }
         audio.onCaptureLost = { [weak self] in self?.captureLost(run: run) }
         syncInputs()
         guard !availableInputs.isEmpty else {

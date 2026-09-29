@@ -2502,6 +2502,19 @@ struct CaptionPipelineAudioStallTests {
         #expect(audio.calls.filter { $0 == "startCapture" }.count == 1)
     }
 
+    @Test("captions that never got the microphone since launch still try again when a microphone arrives")
+    func microphoneArrivingAfterAFailedFirstStart() async {
+        let audio = FakeAudioCapturer()
+        audio.prepareError = NSError(domain: "AVAudioSession", code: 561_017_449)
+        let (pipeline, _, _) = makePipeline(audio: audio)
+        await pipeline.start(settings: .default)
+        #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+
+        audio.prepareError = nil
+        audio.simulateRouteChange(inputs: [AudioInputDescriptor(uid: "aid", portName: "Hearing Aid", portType: .bluetooth)])
+        #expect(await eventually { pipeline.phase.isListening })
+    }
+
     @Test("a microphone that comes back during a voice recording brings captions back once the recording ends")
     func microphoneChangeDuringVoiceRecordingWaits() async {
         let (pipeline, audio, _) = makePipeline()

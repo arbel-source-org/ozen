@@ -45,6 +45,10 @@ public final class AVAudioInputManager: AudioCapturing {
     }
 
     public func prepareSession(preferredInputUID: String?) async throws {
+        // Listening for route changes first: when this setup fails (the
+        // chosen hearing aid still connecting refuses to be picked), the
+        // aid arriving later is what tells captions to try again.
+        observeNotificationsIfNeeded()
         // Off the main thread: activating the session waits on the audio
         // server, which can take seconds while AirPods reconnect or another
         // app lets go of the microphone, and captions start right at launch,
@@ -75,7 +79,6 @@ public final class AVAudioInputManager: AudioCapturing {
         sessionPrepared = true
         refreshAvailableInputs()
         try applySelection()
-        observeNotificationsIfNeeded()
     }
 
     public func startCapture() throws -> AsyncStream<[Float]> {
