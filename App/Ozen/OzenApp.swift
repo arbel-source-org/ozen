@@ -131,7 +131,7 @@ struct OzenApp: App {
             }
             // iOS is about to end apps for memory; see handleMemoryWarning.
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
-                viewModel.pipeline.handleMemoryWarning(footprintBytes: DeviceMemory.footprintBytes())
+                viewModel.handleMemoryWarning(footprintBytes: DeviceMemory.footprintBytes())
             }
             // Right to left in Hebrew. Under this, SwiftUI's `.leading` is
             // the right edge: text and a row's icon go on `.leading`, never

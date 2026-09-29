@@ -518,6 +518,23 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.listSummaries().first { $0.id == stopped.id }?.endedAt == nil)
     }
 
+    @Test("a low-memory warning saves what was said since the last autosave, before iOS may end the app")
+    func memoryWarningSaves() async {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "הכדור בבוקר", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        await eventually { !viewModel.segments.isEmpty }
+        #expect(history.listSummaries().isEmpty)
+
+        viewModel.handleMemoryWarning(footprintBytes: nil)
+        #expect(history.listSummaries().first?.preview == "הכדור בבוקר")
+        #expect(viewModel.phase.isListening)
+    }
+
     @Test("a line starred from history sticks, whether its conversation is still on screen or long gone")
     func starFromHistory() async throws {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))

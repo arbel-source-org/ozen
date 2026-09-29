@@ -2032,6 +2032,14 @@ public final class LiveCaptionViewModel {
         guard pendingPersistTask != nil else { return }
         persist()
     }
+
+    /// iOS is running out of memory and ends the biggest apps next, with no
+    /// further warning: what was said since the last autosave (up to 20 s)
+    /// is written now, not lost with the app.
+    public func handleMemoryWarning(footprintBytes: Int64?) {
+        pipeline.handleMemoryWarning(footprintBytes: footprintBytes)
+        persistHistory(ended: false)
+    }
 }
 
 /// What the outside world (Siri, Shortcuts, a URL) can ask the app to do.
