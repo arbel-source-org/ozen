@@ -53,6 +53,12 @@ def read_code(path):
         return f.read().strip()
 
 
+def write_private(path, text):
+    with open(path, "w", encoding="utf-8", opener=lambda name, flags: os.open(name, flags, 0o600)) as f:
+        f.write(text)
+    os.chmod(path, 0o600)
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     p = argparse.ArgumentParser(description="Makes the QR code the phone scans to pair with this computer.")
@@ -84,8 +90,7 @@ def main():
 <p>Or type it into Ozen's Settings, Home computer:</p>
 <p>Address: <code>{html.escape(address)}</code><br>Pairing code: <code>{html.escape(code)}</code></p>
 <p>Anyone with this code can use this computer for captions. Keep it in the family.</p>"""
-    with open(args.out, "w", encoding="utf-8") as f:
-        f.write(page)
+    write_private(args.out, page)
     print(f"Pairing page: {args.out}")
     print(f"Link: {link}")
     if not args.no_open:

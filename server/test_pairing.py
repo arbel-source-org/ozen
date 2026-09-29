@@ -1,5 +1,7 @@
+import io
 import json
 import os
+import tempfile
 import unittest
 from unittest import mock
 
@@ -39,9 +41,42 @@ class PhoneAddress(unittest.TestCase):
             self.assertEqual(pairing.phone_address(address), address)
 
 
+class PairingPage(unittest.TestCase):
+    def setUp(self):
+        self.umask = os.umask(0o022)
+
+    def tearDown(self):
+        os.umask(self.umask)
+
+    def make_page(self, folder):
+        code = os.path.join(folder, "pairing-code")
+        with open(code, "w", encoding="utf-8") as f:
+            f.write("example-code-123\n")
+        out = os.path.join(folder, "pairing.html")
+        argv = ["pairing.py", "--address", "192.168.1.20", "--code-file", code, "--out", out, "--no-open"]
+        with mock.patch("sys.argv", argv), mock.patch("sys.stdout", io.StringIO()):
+            pairing.main()
+        return out
+
+    def test_the_page_holding_the_code_is_readable_only_by_its_owner(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out = self.make_page(folder)
+            self.assertEqual(os.stat(out).st_mode & 0o777, 0o600)
+            with open(out, encoding="utf-8") as f:
+                self.assertIn("example-code-123", f.read())
+
+    def test_a_page_an_older_version_left_readable_is_closed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out = os.path.join(folder, "pairing.html")
+            with open(out, "w", encoding="utf-8") as f:
+                f.write("old page")
+            os.chmod(out, 0o644)
+            self.make_page(folder)
+            self.assertEqual(os.stat(out).st_mode & 0o777, 0o600)
+
+
 class CodeFile(unittest.TestCase):
     def test_a_code_saved_again_by_notepad_loses_its_byte_order_mark(self):
-        import tempfile
         with tempfile.TemporaryDirectory() as folder:
             path = os.path.join(folder, "pairing-code")
             with open(path, "w", encoding="utf-8-sig", newline="") as f:

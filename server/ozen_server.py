@@ -465,13 +465,17 @@ def save_report(text, client):
     """A diagnostics report the phone sent (Settings, Diagnostics), kept
     next to the server for whoever looks after the phone. Older ones stay;
     only the newest 50 are kept."""
-    os.makedirs(REPORTS_DIR, exist_ok=True)
+    # Reports hold the conversation's lines: on a shared Linux machine the
+    # default permissions let every other account read them.
+    os.makedirs(REPORTS_DIR, mode=0o700, exist_ok=True)
+    os.chmod(REPORTS_DIR, 0o700)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     name, n = stamp + ".txt", 1
     while os.path.exists(os.path.join(REPORTS_DIR, name)):
         n += 1
         name = f"{stamp}-{n}.txt"
-    with open(os.path.join(REPORTS_DIR, name), "w", encoding="utf-8") as f:
+    with open(os.path.join(REPORTS_DIR, name), "w", encoding="utf-8",
+              opener=lambda path, flags: os.open(path, flags, 0o600)) as f:
         f.write(f"from: {client or 'unknown app'}\n\n")
         f.write(text[:MAX_REPORT_CHARS])
     reports = sorted(n for n in os.listdir(REPORTS_DIR) if n.endswith(".txt"))

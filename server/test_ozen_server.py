@@ -343,5 +343,25 @@ class PromptBudget(unittest.TestCase):
         self.assertIsNone(session.hotwords())
 
 
+class Reports(unittest.TestCase):
+    def test_a_report_the_phone_sent_is_readable_only_by_the_servers_owner(self):
+        import os
+        import tempfile
+        from unittest import mock
+        previous = os.umask(0o022)
+        try:
+            with tempfile.TemporaryDirectory() as folder:
+                reports = os.path.join(folder, "reports")
+                with mock.patch.object(S, "REPORTS_DIR", reports):
+                    name = S.save_report("line one\nline two", "Ozen 0.2")
+                path = os.path.join(reports, name)
+                self.assertEqual(os.stat(reports).st_mode & 0o777, 0o700)
+                self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
+                with open(path, encoding="utf-8") as f:
+                    self.assertIn("line two", f.read())
+        finally:
+            os.umask(previous)
+
+
 if __name__ == "__main__":
     unittest.main()
