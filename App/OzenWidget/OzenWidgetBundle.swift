@@ -94,12 +94,13 @@ struct CaptionLinesView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            if let status = state.status {
-                note(status)
-            } else if isStale {
+            if isStale {
                 // The app stopped updating the lines (iOS closed it, say):
-                // they may be long out of date.
+                // they may be long out of date, and so may a note it left
+                // ("paused for a call" with the call long over).
                 note(state.notUpdating ?? (state.english ? "Captions aren’t updating. Open Ozen." : "הכתוביות לא מתעדכנות. פתחו את אוזן."))
+            } else if let status = state.status {
+                note(status)
             } else if let ageNote = state.ageNote {
                 // Captions run, but nobody has spoken for a while.
                 note(ageNote, color: .white.opacity(0.7))
