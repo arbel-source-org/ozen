@@ -195,7 +195,25 @@ struct LockScreenCaptionsCoordinatorTests {
         captions.age = 3.5 * 60
         captions.situation.interruptedByCall = true
         coordinator.refresh()
-        #expect(display.shown.last?.status != nil && display.shown.last?.ageNote == nil)
+        #expect(await eventually { display.shown.last?.status != nil })
+        #expect(display.shown.last?.ageNote == nil)
+    }
+
+    @Test("under a note, a line said minutes ago is left off, not shown as if just said", arguments: [false, true])
+    func oldLineUnderANote(call: Bool) async {
+        let (coordinator, display, captions) = make()
+        captions.texts = ["see you tomorrow"]
+        captions.situation.phase = call ? .listening : .startingAudio
+        captions.situation.interruptedByCall = call
+        captions.age = 10 * 60
+        coordinator.refresh()
+        #expect(await eventually { display.shown.last?.status != nil })
+        #expect(display.shown.last?.lines == [])
+        #expect(display.shown.last?.ageNote == nil)
+
+        captions.age = 20
+        coordinator.appActivityChanged(isActive: false)
+        #expect(await eventually { display.shown.last?.lines.map(\.text) == ["see you tomorrow"] })
     }
 
     @Test("lock-screen captions iOS ended while the app was away are reported once; ended in front, they simply start again")

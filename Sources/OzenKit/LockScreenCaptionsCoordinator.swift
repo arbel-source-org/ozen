@@ -130,16 +130,18 @@ public final class LockScreenCaptionsCoordinator {
         // Staleness clearing applies whether or not there's a status note:
         // a call arriving right after 15+ quiet minutes correctly cleared
         // the screen must not bring that stale line back just because
-        // there's now a note above where it would sit. Only the age-note
-        // *text* is status-gated — a call's note already takes the room a
-        // moderately-old line's age note would (see the test covering that).
+        // there's now a note above where it would sit. A note leaves no
+        // room for a line's age either, so under one a line minutes old is
+        // left off rather than shown as if it had just been said.
         switch LockScreenCaptions.quiet(newestLineAt: shown.map(\.lastUpdate).max(), now: time) {
         case .recent:
             break
         case .minutesAgo(let minutes):
-            shown = lines(1, textSize)
             if presence.status == nil {
+                shown = lines(1, textSize)
                 ageNote = LockScreenCaptions.ageNote(minutes: minutes)
+            } else {
+                shown = []
             }
         case .over:
             shown = []

@@ -114,7 +114,8 @@ the same.
   meanwhile" (ma she-ne'emar beinta'yim), scrolls up to it.
 - **Captions on the lock screen.** The newest lines show there while
   captions run, and stay (saying "Captions paused for a call" or "Captions
-  stopped") when something interrupts them. After a minute with nothing
+  stopped") when something interrupts them; under such a note a line
+  said more than a minute ago is left off. After a minute with nothing
   said, only the newest line stays, with "said N minutes ago" (ne'emar
   lifnei N dakot) under it; after a quarter of an hour it gives way to
   "Listening" (makshiv). With the caption text size at 34 or more, the lock
