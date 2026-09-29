@@ -787,7 +787,7 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.phase == .listening)
     }
 
-    @Test("a sentence still being said when the screen is cleared doesn't come back with its earlier words")
+    @Test("a sentence still being said when the screen is cleared keeps the words said after the tap, without the cleared ones")
     func clearMidSentence() async {
         let engine = FakeEngine()
         let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
@@ -800,8 +800,41 @@ struct CaptionPipelineTokenTests {
         engine.emit(token(open, "את המספר של הרופא"))
         engine.emit(token(open, "את המספר של הרופא שלך", final: true))
         engine.emit(token(UUID(), "שלום", final: true))
+        #expect(await eventually { pipeline.segments.count == 2 })
+        #expect(pipeline.segments.map(\.text) == ["הרופא שלך", "שלום"])
+    }
+
+    @Test("clearing twice in one sentence keeps neither cleared part and still shows what came after")
+    func clearTwiceMidSentence() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "את המספר של"))
         #expect(await eventually { pipeline.segments.count == 1 })
-        #expect(pipeline.segments.map(\.text) == ["שלום"])
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "את המספר של הרופא"))
+        #expect(await eventually { pipeline.segments.map(\.text) == ["הרופא"] })
+        pipeline.clearTranscript()
+        engine.emit(token(open, "את המספר של הרופא שלך", final: true))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.map(\.text) == ["שלך"])
+    }
+
+    @Test("a cleared sentence the engine rewrites from its first word comes back whole rather than losing what followed")
+    func clearMidSentenceRewritten() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "את המספר של"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "עם המספר של הרופא", final: true))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.map(\.text) == ["עם המספר של הרופא"])
     }
 }
 

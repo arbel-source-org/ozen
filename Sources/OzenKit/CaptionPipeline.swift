@@ -183,7 +183,7 @@ public final class CaptionPipeline {
     private var clusterer: EmbeddingClusterer
     private var stabilizer: CaptionStabilizer
     private var engineCache: [String: any TranscriptionEngine] = [:]
-    private var clearedUtteranceIDs: Set<UUID> = []
+    private var clearedUtterances: [UUID: [String]] = [:]
     private var fanOut: AudioFanOut?
     private var streamTask: Task<Void, Never>?
     private var embeddingTask: Task<Void, Never>?
@@ -662,8 +662,13 @@ public final class CaptionPipeline {
         // The engine keeps sending the sentence being said, each time with
         // all of its words so far; to a fresh stabilizer it looked new, and
         // the words from before "Delete all captions from the screen" came
-        // straight back. The rest of that one sentence goes with them.
-        clearedUtteranceIDs = stabilizer.stillChangingIDs
+        // straight back. The words each such line showed are remembered so
+        // only what is said after the tap shows (see `handle(token:)`); a
+        // second clear in the same sentence adds to what the first cleared.
+        let stillChanging = stabilizer.stillChangingIDs
+        for segment in stabilizer.segments where stillChanging.contains(segment.id) {
+            clearedUtterances[segment.id, default: []] += Self.comparableWords(segment.text)
+        }
         stabilizer = CaptionStabilizer(silenceCommitThreshold: stabilizer.silenceCommitThreshold)
         startNewConversation()
         keywordHits = []
@@ -1198,12 +1203,37 @@ public final class CaptionPipeline {
         }
     }
 
+    private static func comparableWords(_ text: String) -> [String] {
+        text.split(whereSeparator: \.isWhitespace).map { $0.trimmingCharacters(in: .punctuationCharacters) }
+    }
+
+    /// `text` without the leading words it shares with `cleared`, or nil
+    /// when nothing else is left.
+    private static func words(of text: String, after cleared: [String]) -> String? {
+        let words = text.split(whereSeparator: \.isWhitespace)
+        var shared = 0
+        while shared < min(words.count, cleared.count),
+              words[shared].trimmingCharacters(in: .punctuationCharacters) == cleared[shared] {
+            shared += 1
+        }
+        guard shared < words.count else { return nil }
+        return words[shared...].joined(separator: " ")
+    }
+
     private func handle(token incoming: TranscriptToken) {
         stats.tokensReceived += 1
-        guard !clearedUtteranceIDs.contains(incoming.utteranceID) else { return }
         // ivrit.ai's model starts some lines with an invisible direction
         // mark; kept, it would travel into saved conversations and search.
-        let cleaned = HebrewText.removingDirectionMarks(incoming.text)
+        var cleaned = HebrewText.removingDirectionMarks(incoming.text)
+        // A sentence cleared from the screen mid-way keeps arriving with all
+        // of its words so far. Dropping it whole lost everything said after
+        // the tap, on screen and in History; only the words it shared with
+        // what was cleared stay gone. Rewritten from its first word, it comes
+        // back whole: a repeat is better than a loss.
+        if let cleared = clearedUtterances[incoming.utteranceID] {
+            guard let rest = Self.words(of: cleaned, after: cleared) else { return }
+            cleaned = rest
+        }
         let token = cleaned == incoming.text ? incoming : TranscriptToken(
             utteranceID: incoming.utteranceID,
             text: cleaned,
