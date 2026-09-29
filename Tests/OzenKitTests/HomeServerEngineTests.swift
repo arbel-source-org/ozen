@@ -212,6 +212,23 @@ struct HomeServerEngineTests {
         #expect(!HomeServerPairing.isPairingLink(try #require(URL(string: "https://pair?address=wss://x.net&code=abc"))))
     }
 
+    @Test("an internet address written as one number or with zero-padded parts is not taken for a computer at home")
+    func numericHostsAreNotHome() {
+        for away in [
+            "ws://3405803785:8765",
+            "ws://0xcb007109:8765",
+            "ws://0XCB007109:8765",
+            "ws://010.010.010.010:8765",
+            "ws://0127.0.0.1:8765",
+            "3405803785",
+        ] {
+            #expect(HomeServerPairing(address: away, code: "abc") == nil, "\(away)")
+        }
+        for home in ["ws://desktop:8765", "ws://pc2:8765", "ws://10.0.0.5:8765", "ws://192.168.0.10:8765"] {
+            #expect(HomeServerPairing(address: home, code: "abc") != nil, "\(home)")
+        }
+    }
+
     @Test("Test connection says connected with the time it took, a refused code, no answer, or nothing set up yet")
     func connectionCheck() async {
         let ok = await engine(ScriptedSocket(helloReply: ready)).checkAvailability(languageCode: "he")

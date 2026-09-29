@@ -41,7 +41,10 @@ public enum HomeServer {
         if host == "localhost" || host.hasSuffix(".local") || host.hasSuffix(".lan") || host.hasSuffix(".home.arpa") || host.hasSuffix(".ts.net") {
             return true
         }
-        let octets = host.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
+        // The system reads a zero-padded part as octal ("010" is 8), so
+        // "010.010.010.010" is not the private address it looks like.
+        let octets = host.split(separator: ".", omittingEmptySubsequences: false)
+            .map { $0.count > 1 && $0.hasPrefix("0") ? nil : Int($0) }
         if octets.count == 4, octets.allSatisfy({ $0 != nil && (0...255).contains($0!) }) {
             let a = octets[0]!, b = octets[1]!
             return a == 10 || a == 127 || (a == 192 && b == 168) || (a == 172 && (16...31).contains(b))
@@ -49,6 +52,13 @@ public enum HomeServer {
         }
         if host.contains(":") {
             return host == "::1" || host.hasPrefix("fe80:") || host.hasPrefix("fd") || host.hasPrefix("fc")
+        }
+        // One number with no dots ("3405803785", "0xcb007109") is an
+        // internet address to the system, not a computer's name.
+        let digits = host.hasPrefix("0x") ? host.dropFirst(2) : Substring(host)
+        let hexDigits = host.hasPrefix("0x")
+        if !digits.isEmpty, digits.allSatisfy({ $0.isASCII && (hexDigits ? $0.isHexDigit : $0.isNumber) }) {
+            return false
         }
         return !host.contains(".")
     }
