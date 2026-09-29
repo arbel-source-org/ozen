@@ -573,6 +573,54 @@ struct HomeServerEngineTests {
         feed.finish()
     }
 
+    @Test("a line the connection cut before its final ends with the cut mark; a finished line is left alone")
+    func droppedLineMarked() async throws {
+        let socket = ScriptedSocket(helloReply: ready)
+        let (audio, feed) = AsyncStream<[Float]>.makeStream()
+        let tokens = engine(socket).stream(languageCode: "he", audio: audio)
+        var iterator = tokens.makeAsyncIterator()
+        var waited = 0
+        while await socket.sentTexts.isEmpty, waited < 400 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        await socket.deliver(text(0, "shalom savta", final: true))
+        _ = try #require(try await iterator.next())
+        await socket.deliver(text(1, "tavi li et ha", final: false))
+        let live = try #require(try await iterator.next())
+        await socket.drop()
+        let cut = try #require(try await iterator.next())
+        #expect(cut.utteranceID == live.utteranceID)
+        #expect(cut.isFinal && cut.text == "tavi li et ha" + CaptionStabilizer.cutOffMark)
+        var thrown: Error?
+        do {
+            while try await iterator.next() != nil {}
+        } catch {
+            thrown = error
+        }
+        #expect((thrown as? EngineUnavailability)?.kind == .homeServerUnreachable)
+        feed.finish()
+    }
+
+    @Test("after the end, a line whose final never came ends with the cut mark")
+    func lineWithoutFinalAfterEndMarked() async throws {
+        let socket = ScriptedSocket(helloReply: ready)
+        let (audio, feed) = AsyncStream<[Float]>.makeStream()
+        let tokens = engine(socket).stream(languageCode: "he", audio: audio)
+        var iterator = tokens.makeAsyncIterator()
+        var waited = 0
+        while await socket.sentTexts.isEmpty, waited < 400 {
+            try await Task.sleep(for: .milliseconds(5))
+            waited += 1
+        }
+        await socket.deliver(text(0, "ma nishma", final: false))
+        let live = try #require(try await iterator.next())
+        feed.finish()
+        let cut = try #require(try await iterator.next())
+        #expect(cut.utteranceID == live.utteranceID)
+        #expect(cut.isFinal && cut.text == "ma nishma" + CaptionStabilizer.cutOffMark)
+    }
+
     @Test("a connection that drops while she is still talking ends the stream as unreachable")
     func drops() async {
         let socket = ScriptedSocket(helloReply: ready)

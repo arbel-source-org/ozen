@@ -232,6 +232,22 @@ public actor HomeServerEngine: TranscriptionEngine {
             } catch {
                 liveSocket = nil
                 await socket.close()
+                // A line still showing a live guess never gets its final
+                // pass now: the rest of that sentence is lost, so it is
+                // marked as cut (as the cloud engine does when it gives up)
+                // instead of settling as if it were finished. Stopping
+                // captions cancels this task and leaves her lines as they are.
+                if !Task.isCancelled {
+                    for number in shown.keys.sorted() {
+                        guard let id = ids[number], let words = shown[number]?.trimmingCharacters(in: .whitespaces), !words.isEmpty else { continue }
+                        continuation.yield(TranscriptToken(
+                            utteranceID: id,
+                            text: words.hasSuffix(CaptionStabilizer.cutOffMark) ? words : words + CaptionStabilizer.cutOffMark,
+                            isFinal: true,
+                            timestamp: Date().timeIntervalSince1970
+                        ))
+                    }
+                }
                 if stalled {
                     verified = nil
                     continuation.finish(throwing: EngineUnavailability.homeServerUnreachable("no reply for \(Int(stallSeconds)) s of speech"))
