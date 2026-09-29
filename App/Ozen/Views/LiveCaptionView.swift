@@ -594,7 +594,8 @@ struct LiveCaptionView: View {
             // one person instead of repeating on each.
             showsSpeakerLabel: name != nil && CaptionLayout.showsSpeakerLabel(
                 for: segment,
-                after: index > 0 ? viewModel.segments[index - 1] : nil
+                after: index > 0 ? viewModel.segments[index - 1] : nil,
+                name: viewModel.displayName(for:)
             ),
             display: liveDisplay,
             theme: theme,

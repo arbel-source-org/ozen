@@ -196,6 +196,16 @@ extension CaptionLayout {
         return previous?.speakerClusterID != cluster || startsAfterQuiet(segment, previous: previous)
     }
 
+    /// The same, with `name` giving the name each line shows. Someone
+    /// recorded several times has one voice per recording, and her lines
+    /// move between them: compared by voice, her name headed almost every
+    /// line.
+    public static func showsSpeakerLabel(for segment: TranscriptSegment, after previous: TranscriptSegment?, name: (TranscriptSegment) -> String) -> Bool {
+        guard showsSpeakerLabel(for: segment, after: previous) else { return false }
+        guard let previous, previous.speakerClusterID != nil, !startsAfterQuiet(segment, previous: previous) else { return true }
+        return name(previous) != name(segment)
+    }
+
     /// A quiet stretch this long between two lines puts the later line's
     /// clock time between them, so a sentence from half an hour ago isn't
     /// read as the one before the words just said.

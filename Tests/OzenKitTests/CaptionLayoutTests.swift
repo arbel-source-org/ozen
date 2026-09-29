@@ -144,6 +144,17 @@ struct CaptionLayoutSpeakerLabelTests {
         #expect(!CaptionLayout.showsSpeakerLabel(for: at(1400, 1410, speaker: nil), after: first))
     }
 
+    @Test("two voices with one name are one speaker: her name doesn't head every line")
+    func oneNameSeveralVoices() {
+        let names = [0: "Savta", 1: "Savta", 2: "Dana"]
+        let lines = [line(0), line(1), line(0), line(2), line(1)]
+        let shown = lines.indices.map {
+            CaptionLayout.showsSpeakerLabel(for: lines[$0], after: $0 > 0 ? lines[$0 - 1] : nil) { names[$0.speakerClusterID ?? -1] ?? "" }
+        }
+        #expect(shown == [true, false, false, true, true])
+        #expect(!CaptionLayout.showsSpeakerLabel(for: line(nil), after: line(0)) { _ in "Savta" })
+    }
+
     @Test("a line with no identified speaker has no label, and the next identified line gets one")
     func unknownSpeaker() {
         #expect(CaptionLayout.showsSpeakerLabel(for: line(nil), after: nil) == false)
