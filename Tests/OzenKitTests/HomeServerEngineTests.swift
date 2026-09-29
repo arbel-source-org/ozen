@@ -423,6 +423,17 @@ struct HomeServerEngineTests {
         #expect(await socket.isClosed)
     }
 
+    @Test("an approval is trusted for a quick restart, but a start long after the computer was last heard checks it again")
+    func staleApprovalCheckedAgain() async throws {
+        let socket = ScriptedSocket(helloReply: ready)
+        let server = HomeServerEngine(address: "10.0.0.5", token: { "1234" }, connector: Connector(socket: socket), handshakeSeconds: 1, approvalSeconds: 0.3)
+        #expect(await server.checkAvailability(languageCode: "he") == .available)
+        #expect(await socket.isClosed)
+        #expect(await server.checkAvailability(languageCode: "he") == .available)
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(await server.checkAvailability(languageCode: "he").unavailability?.kind == .homeServerUnreachable)
+    }
+
     @Test("a refused pairing code needs a person; a silent, missing or unparseable server is unreachable")
     func refusals() async {
         let refused = ScriptedSocket(helloReply: #"{"type":"error","code":"unauthorized","detail":""}"#)

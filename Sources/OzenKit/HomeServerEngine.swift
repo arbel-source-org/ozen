@@ -33,6 +33,13 @@ public actor HomeServerEngine: TranscriptionEngine {
     private let filter = WhisperResultFilter()
     private var liveSocket: (any HomeServerSocket)?
     private var verified: (url: URL, token: String)?
+    /// The last time the computer answered anything. An approval older
+    /// than `approvalSeconds` is checked again: trusted the next morning,
+    /// a computer that went to sleep overnight showed "Listening" for the
+    /// handshake's 5 s, and what was said then was thrown away when the
+    /// phone's model took over.
+    private var lastHeardAt: ContinuousClock.Instant?
+    private let approvalSeconds: Double
     private var endSent = false
 
     public init(
@@ -44,8 +51,10 @@ public actor HomeServerEngine: TranscriptionEngine {
         stallSeconds: Double = 35,
         pingSeconds: Double = 5,
         pongSeconds: Double = 8,
-        beam: Int? = nil
+        beam: Int? = nil,
+        approvalSeconds: Double = 120
     ) {
+        self.approvalSeconds = approvalSeconds
         self.address = address
         self.token = token
         self.connector = connector
@@ -76,11 +85,15 @@ public actor HomeServerEngine: TranscriptionEngine {
         case .success(let found): target = found
         case .failure(let why): return .unavailable(why)
         }
-        if let verified, verified.url == target.url, verified.token == target.token { return .available }
+        if let verified, verified.url == target.url, verified.token == target.token,
+           let lastHeardAt, ContinuousClock.now - lastHeardAt < .seconds(approvalSeconds) {
+            return .available
+        }
         do {
             let socket = try await handshake(target, languageCode: languageCode, purpose: "check", vocabulary: vocabulary)
             await socket.close()
             verified = target
+            lastHeardAt = .now
             return .available
         } catch let why as EngineUnavailability {
             return .unavailable(why)
@@ -141,6 +154,7 @@ public actor HomeServerEngine: TranscriptionEngine {
             return
         }
         liveSocket = socket
+        lastHeardAt = .now
         // A name added while the hello waited for its answer found no live
         // socket to send on; the server would keep the old list all session.
         if vocabulary != helloVocabulary {
@@ -294,6 +308,7 @@ public actor HomeServerEngine: TranscriptionEngine {
 
     private func noteReply() {
         speechSinceReply = nil
+        lastHeardAt = .now
     }
 
     /// A connection that died without closing (Wi-Fi dropped under a
@@ -318,6 +333,7 @@ public actor HomeServerEngine: TranscriptionEngine {
 
     private func notePong() {
         pingSentAt = nil
+        lastHeardAt = .now
     }
 
     // MARK: - Connecting
