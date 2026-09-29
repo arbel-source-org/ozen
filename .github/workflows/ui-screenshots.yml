@@ -18,6 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Use the newest Xcode 26, as the release build does
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$XCODE" ]; then
+            ls -d /Applications/Xcode*.app >&2 || true
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
