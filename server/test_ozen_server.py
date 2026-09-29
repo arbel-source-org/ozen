@@ -1,4 +1,5 @@
 import asyncio
+import json
 import sys
 import time
 import types
@@ -104,6 +105,40 @@ class PauseEnd(unittest.TestCase):
         after_last_words = [t for t in speech_over if t > finals[0] - 0.7]
         self.assertLessEqual(len(after_last_words), 1, gpu.passes)
         self.assertLess(session.final_lag_seconds[0], 0.15, session.final_lag_seconds)
+
+
+class RepeatGPU(SlowGPU):
+    """Every pass comes back as a sentence written twice, which this server
+    drops for its compression and the phone keeps (WhisperResultFilter)."""
+
+    async def transcribe(self, audio, language, prompt, final, hotwords=None, gate=True, beam=None):
+        self.passes.append((time.monotonic(), final))
+        await asyncio.sleep(0.05)
+        return "", None, [{"text": "one two three four five one two three four five",
+                           "no_speech": 0.0, "logprob": -0.1, "compression": 2.9}]
+
+
+class DroppedLivePass(unittest.TestCase):
+    def test_a_live_pass_with_only_dropped_segments_still_reaches_the_phone(self):
+        socket = Socket()
+        session = S.Session(socket, RepeatGPU(live_seconds=0.05), "he", [], live_interval=0.3)
+
+        async def feed():
+            worker = asyncio.create_task(session.run())
+            for seconds, level in ((0.6, 0.0005), (1.5, 0.3), (1.6, 0.0005)):
+                chunk = pcm(seconds, level)
+                step = int(0.1 * S.RATE) * 2
+                for i in range(0, len(chunk), step):
+                    session.add_audio(chunk[i:i + step])
+                    await asyncio.sleep(0.1)
+            session.finished = True
+            session.changed.set()
+            await asyncio.wait_for(worker, 5)
+
+        asyncio.run(feed())
+        live = [f for f in map(json.loads, socket.sent) if f["type"] == "text" and not f["final"]]
+        self.assertTrue(live, socket.sent)
+        self.assertEqual(live[0]["segments"][0]["compression"], 2.9)
 
 
 class GoneSocket:

@@ -400,7 +400,10 @@ class Session:
                     self.lines += 1
                 else:
                     self.empty_finals += 1
-            if text or final:
+            # A pass this server dropped is still sent when the model wrote
+            # something: the phone filters the segments itself, and keeps a
+            # sentence said twice that the compression check here drops.
+            if text or pieces or final:
                 await self.ws.send(json.dumps({
                     "type": "text", "utterance": self.utterance, "text": text,
                     "final": final, "confidence": confidence, "segments": pieces,
