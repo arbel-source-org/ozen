@@ -836,6 +836,27 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.segments.map(\.text) == ["שלך"])
     }
 
+    @Test("a second clear after the engine briefly sent a shorter version still keeps every cleared word away")
+    func secondClearAfterShorterResend() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "את המספר של הרופא שלך"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "את המספר של הרופא שלך מחר"))
+        #expect(await eventually { pipeline.segments.map(\.text) == ["מחר"] })
+        engine.emit(token(open, "את המספר של הרופא"))
+        #expect(await eventually { pipeline.stats.tokensReceived == 3 })
+        #expect(pipeline.segments.map(\.text) == ["מחר"])
+        pipeline.clearTranscript()
+        engine.emit(token(open, "את המספר של הרופא שלך מחר בבוקר", final: true))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.map(\.text) == ["בבוקר"])
+    }
+
     @Test("a cleared sentence the engine rewrites heavily comes back whole rather than losing what followed")
     func clearMidSentenceRewritten() async {
         let engine = FakeEngine()

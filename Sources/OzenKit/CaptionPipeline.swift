@@ -718,7 +718,17 @@ public final class CaptionPipeline {
         // the whole sentence again, which already holds the first one's.
         let stillChanging = stabilizer.stillChangingIDs
         for segment in stabilizer.segments where stillChanging.contains(segment.id) {
-            clearedUtterances[segment.id] = Self.comparableWords(incomingText[segment.id] ?? segment.text)
+            let sent = Self.comparableWords(incomingText[segment.id] ?? segment.text)
+            guard let before = clearedUtterances[segment.id] else {
+                clearedUtterances[segment.id] = sent
+                continue
+            }
+            // The engine's last version can be shorter than what the screen
+            // shows (it took a word back, and that version, all cleared
+            // words, was ignored): then the words cleared before and those
+            // shown since are what this clear takes away.
+            let shown = Self.comparableWords(segment.text)
+            clearedUtterances[segment.id] = sent.suffix(shown.count).elementsEqual(shown) ? sent : before + shown
         }
         incomingText = incomingText.filter { stillChanging.contains($0.key) }
         stabilizer = CaptionStabilizer(silenceCommitThreshold: stabilizer.silenceCommitThreshold)
