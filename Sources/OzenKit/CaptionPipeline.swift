@@ -108,6 +108,9 @@ public final class CaptionPipeline {
     /// Only switch back after this long without new words or speech, so a
     /// sentence isn't cut in half.
     public var homeServerSwitchBackQuietSeconds: Double = 2
+    /// How long the phone's model may load, when it is not a first set-up,
+    /// before the screen says it can take a few minutes.
+    public var slowLoadSeconds: Double = 15
     /// After this many checks in a row found it back, switch at the next
     /// finished line even without a quiet moment: a TV or a lively table
     /// may never go quiet for long, and every minute on the phone's own
@@ -448,6 +451,7 @@ public final class CaptionPipeline {
         earlyCaptureRun = earlySource == nil ? nil : run
         let loadsModelOnPhone = settings.engine == .whisperKit
         if loadsModelOnPhone { isPreparingEngine = true }
+        let slowLoad = loadsModelOnPhone ? Task { [weak self] in await self?.sayLoadIsSlow(run: run) } : nil
         // Checked above only as the download starts: without this, a
         // download that began on Wi-Fi went on over the phone plan when
         // Wi-Fi dropped between two of the model's files.
@@ -476,6 +480,7 @@ public final class CaptionPipeline {
                 self.trackDownload(progress, at: time)
             }
         }
+        slowLoad?.cancel()
         if loadsModelOnPhone {
             isPreparingEngine = false
             let waiting = preparationWaiters
@@ -1686,6 +1691,18 @@ public final class CaptionPipeline {
 
     /// The failure the audio watchdog would report, as soon as the phone
     /// gives up on the microphone, and held back the same way during a call.
+    /// The phone's model says "loading" once and nothing more until it is
+    /// ready. A load iOS turned into a set-up of minutes (it had thrown the
+    /// compiled copy away) said "just a moment" for all of them.
+    private func sayLoadIsSlow(run: UUID) async {
+        try? await Task.sleep(for: .seconds(slowLoadSeconds))
+        guard !Task.isCancelled, runID == run, case .preparingEngine(var shown) = phase,
+              shown.stage == .loadingModel, !shown.isFirstTime, !shown.isTakingLong
+        else { return }
+        shown.isTakingLong = true
+        phase = .preparingEngine(shown)
+    }
+
     private func captureLost(run: UUID) {
         guard runID == run, phase.isListening || earlyCaptureRun == run, !systemInterrupted else { return }
         stats.audioStalls += 1

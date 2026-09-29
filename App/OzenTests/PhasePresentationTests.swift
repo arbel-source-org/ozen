@@ -211,6 +211,24 @@ struct PhasePresentationTests {
         #expect(first.title != later.title)
     }
 
+    @Test("a load that has run long says it can take minutes, without promising it is the only time")
+    func longLoad() {
+        let long = PhasePresentation(
+            phase: .preparingEngine(EnginePreparationProgress(stage: .loadingModel, detail: "small", isTakingLong: true)),
+            engine: .whisperKit,
+            interruptedBySystem: false
+        )
+        let quick = PhasePresentation(
+            phase: .preparingEngine(EnginePreparationProgress(stage: .loadingModel, detail: "small")),
+            engine: .whisperKit,
+            interruptedBySystem: false
+        )
+        #expect(long.title != quick.title)
+        #expect(long.detail?.contains("כמה דקות") == true)
+        #expect(long.detail?.contains("רק רגע") == false)
+        #expect(long.detail?.contains("פעם אחת בלבד") == false)
+    }
+
     @Test("time left reads as words, never falsely precise")
     func remainingText() {
         #expect(PhasePresentation.remainingText(seconds: 20) == "עוד פחות מדקה")

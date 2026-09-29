@@ -132,6 +132,7 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
     /// test can hold one preparation genuinely in flight while it drives
     /// the pipeline from outside.
     var prepareGate: PrepareGate?
+    var afterProgressGate: PrepareGate?
     /// Megabytes `prepare` would still download; nil when the model is there.
     var pendingDownload: Int?
     private(set) var prepareCount = 0
@@ -162,6 +163,7 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
             progress(update)
             await Task.yield()
         }
+        await afterProgressGate?.wait()
         if let duringPrepare {
             await MainActor.run { duringPrepare() }
         }
@@ -1484,6 +1486,48 @@ struct CaptionPipelineLifecycleTests {
         await second.value
         #expect(slow.prepareCount == 1)
         #expect(pipeline.phase == .idle)
+    }
+
+    @Test("a load that runs long without being a first set-up says it can take minutes, not \"just a moment\"", .timeLimit(.minutes(1)))
+    func longLoadSaysSo() async {
+        let loading = EnginePreparationProgress(stage: .loadingModel, detail: "large-v3")
+        let engine = FakeEngine(progressUpdates: [loading])
+        let gate = PrepareGate()
+        engine.afterProgressGate = gate
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        pipeline.slowLoadSeconds = 0.2
+        let start = Task { await pipeline.start(settings: .default) }
+        #expect(await eventually { pipeline.phase == .preparingEngine(loading) })
+        var long = loading
+        long.isTakingLong = true
+        #expect(await eventually { pipeline.phase == .preparingEngine(long) })
+        await gate.open()
+        await start.value
+        #expect(pipeline.phase == .listening)
+    }
+
+    @Test("a quick load, a download or a first set-up keeps its own wording")
+    func quickLoadKeepsItsWording() async {
+        let firstTime = EnginePreparationProgress(stage: .loadingModel, detail: "large-v3", isFirstTime: true)
+        let engine = FakeEngine(progressUpdates: [firstTime])
+        let gate = PrepareGate()
+        engine.afterProgressGate = gate
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        pipeline.slowLoadSeconds = 0.05
+        let start = Task { await pipeline.start(settings: .default) }
+        #expect(await eventually { pipeline.phase == .preparingEngine(firstTime) })
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(pipeline.phase == .preparingEngine(firstTime))
+        await gate.open()
+        await start.value
+
+        pipeline.stop()
+        let quick = FakeEngine(progressUpdates: [EnginePreparationProgress(stage: .loadingModel, detail: "base")])
+        let (fast, _, _) = makePipeline(engines: [.whisperKit: quick])
+        fast.slowLoadSeconds = 0.05
+        await fast.start(settings: .default)
+        try? await Task.sleep(for: .milliseconds(150))
+        #expect(fast.phase == .listening)
     }
 }
 

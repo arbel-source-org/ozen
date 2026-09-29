@@ -183,6 +183,9 @@ struct PhasePresentation {
             self.init(title: title, detail: detail, systemImage: "arrow.down.circle", tint: .yellow, progress: preparation.fraction, isBusy: true)
         case .loadingModel where preparation.isFirstTime:
             self.init(title: tr("מתאים את המודל לטלפון הזה", "Setting the model up for this phone"), detail: tr("פעם אחת בלבד · כמה דקות · השאירו את האפליקציה פתוחה", "Just this once · a few minutes · Leave the app open"), systemImage: "cpu", tint: .yellow, isBusy: true)
+        case .loadingModel where preparation.isTakingLong:
+            let detail = tr("זה יכול לקחת כמה דקות", "It can take a few minutes") + " · " + tr("השאירו את האפליקציה פתוחה", "Leave the app open")
+            self.init(title: tr("עדיין טוען את המודל", "Still loading the model"), detail: detail, systemImage: "cpu", tint: .yellow, isBusy: true)
         case .loadingModel:
             self.init(title: tr("טוען את המודל", "Loading the model"), detail: tr("רק רגע", "Just a moment"), systemImage: "cpu", tint: .yellow, isBusy: true)
         case .warmingUp:

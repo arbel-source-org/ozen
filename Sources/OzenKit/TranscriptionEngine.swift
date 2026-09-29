@@ -90,12 +90,17 @@ public struct EnginePreparationProgress: Sendable, Equatable {
     /// for the chip and takes minutes instead of seconds, and the screen
     /// should say it is a one-time wait rather than look stuck.
     public var isFirstTime: Bool
+    /// A load that is not a first set-up but has run for a while anyway
+    /// (iOS threw the phone's compiled copy away to free space, say): set by
+    /// the pipeline, so the screen stops saying "just a moment".
+    public var isTakingLong: Bool
 
-    public init(stage: Stage, fraction: Double? = nil, detail: String? = nil, isFirstTime: Bool = false) {
+    public init(stage: Stage, fraction: Double? = nil, detail: String? = nil, isFirstTime: Bool = false, isTakingLong: Bool = false) {
         self.stage = stage
         self.fraction = fraction
         self.detail = detail
         self.isFirstTime = isFirstTime
+        self.isTakingLong = isTakingLong
     }
 
     /// How often a download's fraction alone is put on screen when it
