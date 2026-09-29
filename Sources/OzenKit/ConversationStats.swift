@@ -257,6 +257,21 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    /// "About 21 minutes left" for a download (3 to 59 minutes). Russian
+    /// "около" and Ukrainian "близько" take the genitive, singular after
+    /// 21, 31, 41, 51; Arabic counts 3 to 10 in the plural. The table has
+    /// one wording per language, so only the noun is changed here.
+    public static func aboutMinutesLeftText(_ minutes: Int) -> String {
+        let text = tr("עוד כ-%1 דקות", "About %1 minutes left", args: ["\(minutes)"])
+        let endsInOne = minutes % 10 == 1 && minutes % 100 != 11
+        switch Localization.language {
+        case .russian where endsInOne: return text.replacingOccurrences(of: " минут", with: " минуты")
+        case .ukrainian where endsInOne: return text.replacingOccurrences(of: " хвилин", with: " хвилини")
+        case .arabic where (3...10).contains(minutes): return text.replacingOccurrences(of: "دقيقة", with: "دقائق")
+        default: return text
+        }
+    }
+
     /// "one second", "two seconds", "7 seconds", as VoiceOver reads a
     /// voice sample's recording progress.
     public static func secondsText(_ count: Int) -> String {

@@ -331,7 +331,7 @@ struct PhasePresentation {
         case ..<90: return tr("עוד כדקה", "About a minute left")
         case ..<(59.5 * 60):
             let minutes = Int((seconds / 60).rounded())
-            return minutes == 2 ? tr("עוד כשתי דקות", "About 2 minutes left") : tr("עוד כ-%1 דקות", "About %1 minutes left", args: ["\(minutes)"])
+            return minutes == 2 ? tr("עוד כשתי דקות", "About 2 minutes left") : ConversationStats.aboutMinutesLeftText(minutes)
         default: return tr("עוד יותר משעה", "More than an hour left")
         }
     }

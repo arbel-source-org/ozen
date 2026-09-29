@@ -85,6 +85,27 @@ struct PluralizationTests {
         }
     }
 
+    @Test("a download's minutes left take the form 'about' needs: Russian and Ukrainian 21, 31, 41, 51; Arabic 3 to 10")
+    func aboutMinutesLeft() {
+        let expected: [(UILanguage, Int, String)] = [
+            (.hebrew, 5, "עוד כ-5 דקות"),
+            (.english, 21, "About 21 minutes left"),
+            (.russian, 5, "Осталось около 5 минут"),
+            (.russian, 21, "Осталось около 21 минуты"),
+            (.russian, 11, "Осталось около 11 минут"),
+            (.ukrainian, 31, "Залишилося близько 31 хвилини"),
+            (.ukrainian, 12, "Залишилося близько 12 хвилин"),
+            (.arabic, 5, "تبقّى نحو 5 دقائق"),
+            (.arabic, 12, "تبقّى نحو 12 دقيقة"),
+            (.german, 21, "Noch etwa 21 Minuten"),
+        ]
+        for (language, minutes, text) in expected {
+            Localization.$override.withValue(language) {
+                #expect(ConversationStats.aboutMinutesLeftText(minutes) == text, "\(language) \(minutes)")
+            }
+        }
+    }
+
     @Test("French treats zero the same as one, unlike everything else")
     func frenchEdgeNumbers() {
         Localization.$override.withValue(.french) {
