@@ -228,16 +228,18 @@ public actor CloudSpeechEngine: TranscriptionEngine {
                     lastShownText = text
                 }
             } else {
-                // A final request that failed, or came back empty, must not
-                // take away what was already on screen.
+                // A final request that came back empty must not take away
+                // what was already on screen.
                 let finalTurns = turns.flatMap { $0.isEmpty ? nil : $0 } ?? (lastShownText.isEmpty ? [] : [lastShownText])
-                if turns == nil, lastShownText.isEmpty {
+                if turns == nil {
                     // The request itself failed (as opposed to succeeding
-                    // with nothing to say) and there's no earlier live
-                    // preview to fall back to. Dropping the intake here
-                    // would lose these words outright with no trace of a
-                    // failure; retrying with the same audio, bounded by the
-                    // failuresInARow check above, is the only way not to.
+                    // with nothing to say). Dropping the intake here would
+                    // lose these words outright - or, after a live preview,
+                    // commit the preview as the finished line and lose the
+                    // rest of the sentence without a mark. Retrying with the
+                    // same audio, bounded by the failuresInARow check above,
+                    // is the only way not to; if that gives up, the line
+                    // still open is cut with the "…" mark.
                     try await Task.sleep(for: .seconds(failedSegmentPauseSeconds * Double(failuresInARow)))
                     continue
                 }

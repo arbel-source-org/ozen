@@ -175,6 +175,26 @@ struct CloudSpeechEngineTests {
         #expect(received.map(\.isFinal) == [false, true])
     }
 
+    @Test("a final request that fails after words were shown is tried again, so the end of the sentence isn't dropped behind them")
+    func failedFinalAfterPreviewRetried() async throws {
+        let http = FakeCloudHTTP(answers: [.text("שלום"), .status(503, "{}"), .status(503, "{}"), .text("שלום מה שלומך היום")])
+        let engine = engine(http)
+        let (audio, input) = AsyncStream<[Float]>.makeStream()
+        let tokens = engine.stream(languageCode: "he", audio: audio)
+        let collected = Task {
+            var received: [TranscriptToken] = []
+            for try await token in tokens { received.append(token) }
+            return received
+        }
+        for chunk in speech(seconds: 3) { input.yield(chunk) }
+        #expect(await eventually { http.transcriptionRequests.count == 1 })
+        for chunk in silence(seconds: 1) { input.yield(chunk) }
+        input.finish()
+        let received = try await collected.value
+        #expect(received.map(\.text) == ["שלום", "שלום מה שלומך היום"])
+        #expect(received.map(\.isFinal) == [false, true])
+    }
+
     @Test("a rejected key ends the stream at once")
     func rejectedKey() async {
         let http = FakeCloudHTTP(answers: [.status(401, #"{"error":{"message":"No auth credentials found"}}"#)])
