@@ -1859,6 +1859,21 @@ struct CaptionPipelineAlertTests {
         #expect(await eventually { pipeline.soundAlerts.count == 2 })
     }
 
+    @Test("a clock set back right after the phone vibrated doesn't keep ringing phones and knocks ignored until it catches up")
+    func ownVibrationWindowSurvivesClockSetBack() async {
+        let clock = TestClock()
+        let detector = FakeSoundDetector()
+        let (pipeline, audio, _) = makePipeline(soundDetector: detector, now: { clock.now })
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.1, count: 1_024))
+        #expect(await eventually { detector.chunksSeen == 1 })
+
+        pipeline.ignoreSounds(whileVibrating: AlertVibration.pattern(for: .critical))
+        clock.advance(-3_600)
+        detector.push(SoundObservation(identifier: "telephone_bell_ringing", confidence: 0.9, timestamp: clock.now))
+        #expect(await eventually { pipeline.soundAlerts.map(\.event.identifier) == ["telephone_bell_ringing"] })
+    }
+
     @Test("sound preferences from settings are applied at start")
     func soundPreferencesApplied() async {
         let detector = FakeSoundDetector()

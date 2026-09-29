@@ -77,6 +77,7 @@ public final class CaptionPipeline {
 
     /// Tunable from Settings without a restart.
     public var soundPolicy: SoundEventPolicy
+    private var soundsIgnoredFrom: TimeInterval = 0
     private var soundsIgnoredUntil: TimeInterval = 0
 
     /// The settings the running (or last-run) session was started with.
@@ -767,7 +768,17 @@ public final class CaptionPipeline {
     /// `SoundEventCatalog.vibrationLookalikes` are ignored; a siren, a smoke
     /// alarm or the doorbell in the same moment still comes through.
     public func ignoreSounds(whileVibrating vibration: AlertVibration) {
-        soundsIgnoredUntil = max(soundsIgnoredUntil, now() + vibration.totalSeconds + Self.soundReportDelaySeconds)
+        let start = now()
+        let end = start + vibration.totalSeconds + Self.soundReportDelaySeconds
+        // A buzz still going on carries on; otherwise the window starts now.
+        // Kept as a range: a clock set back an hour after a buzz otherwise
+        // left phones ringing and knocks ignored until it caught up.
+        if (soundsIgnoredFrom..<soundsIgnoredUntil).contains(start) {
+            soundsIgnoredUntil = max(soundsIgnoredUntil, end)
+        } else {
+            soundsIgnoredFrom = start
+            soundsIgnoredUntil = end
+        }
     }
 
     /// How long after a sound the classifier may still be reporting it: its
@@ -778,7 +789,7 @@ public final class CaptionPipeline {
         // Judged by when the classifier produced the reading, not when it
         // got here, and dropped before the policy, so the phone's own buzz
         // doesn't start a cooldown that would hide a real ring right after.
-        if observation.timestamp < soundsIgnoredUntil,
+        if (soundsIgnoredFrom..<soundsIgnoredUntil).contains(observation.timestamp),
            SoundEventCatalog.vibrationLookalikes.contains(observation.identifier) {
             return
         }
