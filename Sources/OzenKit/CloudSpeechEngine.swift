@@ -211,7 +211,23 @@ public actor CloudSpeechEngine: TranscriptionEngine {
             // second try isn't a second, unrelated failure.
             if let lastFailure {
                 failuresInARow += 1
-                if failuresInARow >= Self.failuresBeforeStopping { throw lastFailure }
+                if failuresInARow >= Self.failuresBeforeStopping {
+                    // Giving up takes several seconds of retries, and by then
+                    // the screen has settled the shown words as a finished
+                    // line (the stabilizer's quiet-line safety net), which
+                    // stopping leaves as written. Only the engine knows the
+                    // rest of the sentence is lost, so it marks the line.
+                    let shown = lastShownText.trimmingCharacters(in: .whitespaces)
+                    if !shown.isEmpty {
+                        continuation.yield(TranscriptToken(
+                            utteranceID: utteranceID,
+                            text: shown.hasSuffix(CaptionStabilizer.cutOffMark) ? shown : shown + CaptionStabilizer.cutOffMark,
+                            isFinal: true,
+                            timestamp: Date().timeIntervalSince1970
+                        ))
+                    }
+                    throw lastFailure
+                }
             } else {
                 failuresInARow = 0
             }
@@ -239,7 +255,7 @@ public actor CloudSpeechEngine: TranscriptionEngine {
                     // rest of the sentence without a mark. Retrying with the
                     // same audio, bounded by the failuresInARow check above,
                     // is the only way not to; if that gives up, the line
-                    // still open is cut with the "…" mark.
+                    // shown is cut with the "…" mark (see above).
                     try await Task.sleep(for: .seconds(failedSegmentPauseSeconds * Double(failuresInARow)))
                     continue
                 }

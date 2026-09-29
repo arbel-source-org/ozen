@@ -195,6 +195,29 @@ struct CloudSpeechEngineTests {
         #expect(received.map(\.isFinal) == [false, true])
     }
 
+    @Test("giving up after words were shown finishes that line with the cut-off mark, since the rest of the sentence is lost")
+    func giveUpMarksShownLine() async throws {
+        let http = FakeCloudHTTP(answers: [.text("שלום מה"), .offline])
+        let engine = engine(http)
+        let (audio, input) = AsyncStream<[Float]>.makeStream()
+        let tokens = engine.stream(languageCode: "he", audio: audio)
+        let collected = Task {
+            var received: [TranscriptToken] = []
+            do {
+                for try await token in tokens { received.append(token) }
+            } catch {}
+            return received
+        }
+        for chunk in speech(seconds: 3) { input.yield(chunk) }
+        #expect(await eventually { http.transcriptionRequests.count == 1 })
+        for chunk in silence(seconds: 1) { input.yield(chunk) }
+        input.finish()
+        let received = await collected.value
+        #expect(received.map(\.text) == ["שלום מה", "שלום מה" + CaptionStabilizer.cutOffMark])
+        #expect(received.map(\.isFinal) == [false, true])
+        #expect(Set(received.map(\.utteranceID)).count == 1)
+    }
+
     @Test("a rejected key ends the stream at once")
     func rejectedKey() async {
         let http = FakeCloudHTTP(answers: [.status(401, #"{"error":{"message":"No auth credentials found"}}"#)])
