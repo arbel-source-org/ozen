@@ -48,6 +48,11 @@ def phone_address(address):
     return address
 
 
+def read_code(path):
+    with open(path, encoding="utf-8-sig") as f:
+        return f.read().strip()
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     p = argparse.ArgumentParser(description="Makes the QR code the phone scans to pair with this computer.")
@@ -66,8 +71,7 @@ def main():
     if not address:
         sys.exit("Couldn't work out this computer's address; pass --address wss://... or --address 192.168.1.20")
     address = phone_address(address)
-    with open(args.code_file, encoding="utf-8") as f:
-        code = f.read().strip()
+    code = read_code(args.code_file)
     link = "ozen://pair?" + urllib.parse.urlencode({"address": address, "code": code})
 
     svg = io.BytesIO()

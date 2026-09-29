@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from unittest import mock
 
@@ -36,6 +37,16 @@ class PhoneAddress(unittest.TestCase):
     def test_other_addresses_are_left_alone(self):
         for address in ["wss://pc.tail0example.ts.net", "192.168.1.20", "ws://100.64.0.7:8765"]:
             self.assertEqual(pairing.phone_address(address), address)
+
+
+class CodeFile(unittest.TestCase):
+    def test_a_code_saved_again_by_notepad_loses_its_byte_order_mark(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "pairing-code")
+            with open(path, "w", encoding="utf-8-sig", newline="") as f:
+                f.write("example-code-123\r\n")
+            self.assertEqual(pairing.read_code(path), "example-code-123")
 
 
 if __name__ == "__main__":
