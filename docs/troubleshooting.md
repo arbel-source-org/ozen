@@ -37,7 +37,7 @@ computer backup when that is on.
 | "Downloading the model failed" (horadat ha-model nichshela) | The download failed, usually a dead connection. | It retries by itself for a while. Check the internet, then tap to try again. |
 | "Loading the model failed" (te'inat ha-model nichshela) | The model is on the phone but didn't load. | Tap to try again. If it keeps failing, pick a smaller model in Settings. |
 | "Loading the model / almost ready" (to'en et ha-model / kim'at mukhan) | Starting up. The first time can take a minute or two. | Wait. |
-| "The microphone isn't responding" (ha-mikrofon lo megiv) | Audio stopped arriving (a Bluetooth microphone reconnecting, often). | It restarts by itself. If it keeps coming back, choose the microphone again with the button at the bottom right. |
+| "The microphone isn't responding" (ha-mikrofon lo megiv) | Audio stopped arriving (a Bluetooth microphone reconnecting, often). | It restarts by itself. If it keeps coming back, choose the microphone again with the microphone button at the bottom (bottom right in Hebrew, bottom left in English). |
 | "No microphone found" (lo nimtza mikrofon) | No microphone is available at all. | Reconnect the microphone, then tap. |
 | "No microphone access" (ein gisha la-mikrofon) | Microphone permission was turned off for Ozen. | Tap it: it opens iOS Settings. Turn Microphone on. |
 | "No speech recognition permission" (ein ishur le-zihuy dibur) | Speech recognition permission is off (Apple's engine only). | Tap it: it opens iOS Settings. |
@@ -151,7 +151,8 @@ the same.
   used.** The report's `input:` line says which one records and, after
   `chosen:`, the one she picked and whether it is recording. On purpose: a microphone on her own ear hears her own voice best
   and everyone else's worst. It is used only when she picks it with the
-  button at the bottom right (or when no other microphone is there). Once
+  microphone button at the bottom (bottom right in Hebrew, bottom left in
+  English), or when no other microphone is there. Once
   picked it stays her choice: after a phone call, or when a hearing aid
   reconnects slowly, Ozen asks for it again by itself.
 - **People further away aren't captioned, or lines stop mid-sentence.**
