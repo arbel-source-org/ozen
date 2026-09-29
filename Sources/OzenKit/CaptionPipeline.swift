@@ -185,6 +185,9 @@ public final class CaptionPipeline {
     private var stabilizer: CaptionStabilizer
     private var engineCache: [String: any TranscriptionEngine] = [:]
     private var clearedUtterances: [UUID: [String]] = [:]
+    /// Each sentence still being said, as the engine last sent it, before
+    /// any cleared words were cut from it.
+    private var incomingText: [UUID: String] = [:]
     private var fanOut: AudioFanOut?
     private var streamTask: Task<Void, Never>?
     private var embeddingTask: Task<Void, Never>?
@@ -674,13 +677,15 @@ public final class CaptionPipeline {
         // The engine keeps sending the sentence being said, each time with
         // all of its words so far; to a fresh stabilizer it looked new, and
         // the words from before "Delete all captions from the screen" came
-        // straight back. The words each such line showed are remembered so
-        // only what is said after the tap shows (see `handle(token:)`); a
-        // second clear in the same sentence adds to what the first cleared.
+        // straight back. The words each such line has sent so far are
+        // remembered so only what is said after the tap shows (see
+        // `handle(token:)`); a second clear in the same sentence remembers
+        // the whole sentence again, which already holds the first one's.
         let stillChanging = stabilizer.stillChangingIDs
         for segment in stabilizer.segments where stillChanging.contains(segment.id) {
-            clearedUtterances[segment.id, default: []] += Self.comparableWords(segment.text)
+            clearedUtterances[segment.id] = Self.comparableWords(incomingText[segment.id] ?? segment.text)
         }
+        incomingText = incomingText.filter { stillChanging.contains($0.key) }
         stabilizer = CaptionStabilizer(silenceCommitThreshold: stabilizer.silenceCommitThreshold)
         startNewConversation()
         keywordHits = []
@@ -1293,17 +1298,33 @@ public final class CaptionPipeline {
         return words[best.cut...].joined(separator: " ")
     }
 
+    /// Commits the line already shown for `id`, if any, as it stands.
+    private func commitWithoutNewWords(_ id: UUID) {
+        guard let segment = stabilizer.commit(id: id) else { return }
+        let wasCommitted = segments.last { $0.id == segment.id }?.isCommitted ?? false
+        upsert(segment)
+        if !wasCommitted { countCommittedLine() }
+        stats.hasOpenLine = stabilizer.hasOpenLine
+    }
+
     private func handle(token incoming: TranscriptToken) {
         stats.tokensReceived += 1
         // ivrit.ai's model starts some lines with an invisible direction
         // mark; kept, it would travel into saved conversations and search.
         var cleaned = HebrewText.removingDirectionMarks(incoming.text)
+        incomingText[incoming.utteranceID] = incoming.isFinal ? nil : cleaned
         // A sentence cleared from the screen mid-way keeps arriving with all
         // of its words so far. Dropping it whole lost everything said after
         // the tap, on screen and in History; only the words that are the
         // cleared ones again stay gone (see `words(of:after:)`).
         if let cleared = clearedUtterances[incoming.utteranceID] {
-            guard let rest = Self.words(of: cleaned, after: cleared) else { return }
+            guard let rest = Self.words(of: cleaned, after: cleared) else {
+                // Only cleared words: a final still finishes what was shown
+                // after the tap, instead of leaving it "still settling".
+                stats.lastTokenAt = now()
+                if incoming.isFinal { commitWithoutNewWords(incoming.utteranceID) }
+                return
+            }
             cleaned = rest
         }
         let token = cleaned == incoming.text ? incoming : TranscriptToken(
@@ -1331,12 +1352,7 @@ public final class CaptionPipeline {
         // are good, so commit them now instead of leaving the line
         // "still settling" until the stale-commit safety net catches up.
         guard silencePhraseGuard.admits(token, at: now()) else {
-            if token.isFinal, let segment = stabilizer.commit(id: token.utteranceID) {
-                let wasCommitted = segments.last { $0.id == segment.id }?.isCommitted ?? false
-                upsert(segment)
-                if !wasCommitted { countCommittedLine() }
-                stats.hasOpenLine = stabilizer.hasOpenLine
-            }
+            if token.isFinal { commitWithoutNewWords(token.utteranceID) }
             return
         }
         var enriched = token

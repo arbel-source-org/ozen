@@ -837,6 +837,42 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.segments.map(\.text) == ["עם מספר שלו הרופא"])
     }
 
+    @Test("a finished line that turns out to be only cleared words still finishes what was shown after the tap, at once")
+    func clearedFinalFinishesTheLeftover() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "את המספר של"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "את המספר של הרופא שלך"))
+        #expect(await eventually { pipeline.segments.map(\.text) == ["הרופא שלך"] })
+        #expect(pipeline.segments.first?.isCommitted == false)
+        engine.emit(token(open, "עם המספר של", final: true))
+        #expect(await eventually(within: .seconds(2)) { pipeline.segments.first?.isCommitted == true })
+        #expect(pipeline.segments.map(\.text) == ["הרופא שלך"])
+    }
+
+    @Test("clearing again after a rewrite came back whole keeps it away, instead of counting the first cleared words twice")
+    func clearAgainAfterWholeRewrite() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "את המספר של"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "עם מספר שלו הרופא"))
+        #expect(await eventually { pipeline.segments.map(\.text) == ["עם מספר שלו הרופא"] })
+        pipeline.clearTranscript()
+        engine.emit(token(open, "עם מספר שלו הרופא שלך", final: true))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.map(\.text) == ["שלך"])
+    }
+
     @Test("a cleared sentence finished with a word written differently still keeps the cleared words away, and shows only what came after")
     func clearMidSentenceFinishedDifferently() async {
         let engine = FakeEngine()
