@@ -388,12 +388,24 @@ struct SettingsView: View {
                 Label(tr("הקוד לא נשמר. נסו שוב.", "The code wasn’t saved. Try again."), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.readable(.red))
             }
-            if hasHomeServerCode, HomeServer.url(from: viewModel.settings.homeServerAddress) != nil {
+            if hasHomeServerCode || !homeServerCodeDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               HomeServer.url(from: viewModel.settings.homeServerAddress) != nil
+                || HomeServer.unsavedAddress(draft: homeServerAddressDraft, saved: viewModel.settings.homeServerAddress) != nil {
                 Button {
                     isCheckingHomeServer = true
+                    // What is on screen is what gets tested: an address or
+                    // code typed but not saved yet is saved first, as closing
+                    // Settings would. Testing the saved ones showed
+                    // "Connected" under an address that was never tried.
+                    let typedAddress = HomeServer.unsavedAddress(draft: homeServerAddressDraft, saved: viewModel.settings.homeServerAddress)
+                    saveHomeServerCode()
                     forgetHomeServerCheck()
                     let generation = homeServerCheckGeneration
                     Task {
+                        if let typedAddress {
+                            homeServerAddressDraft = typedAddress
+                            await viewModel.setHomeServerAddress(typedAddress)
+                        }
                         let check = await viewModel.checkHomeServer()
                         isCheckingHomeServer = false
                         guard generation == homeServerCheckGeneration else { return }
