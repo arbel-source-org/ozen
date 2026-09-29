@@ -345,13 +345,11 @@ private struct NumberLineLabel: View {
     let segment: SavedSegment
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    // The emphasized numbers use a fixed point size below; at accessibility
-    // Dynamic Type sizes the surrounding .body text grows well past that,
-    // leaving the numbers smaller than the sentence around them instead of
-    // standing out.
-    private var numberSize: Double {
-        dynamicTypeSize.isAccessibilitySize ? 34 : 17
-    }
+    // The emphasized numbers grow with the .body text around them. Fixed
+    // sizes (17, or 34 at accessibility sizes) fell behind .body from xLarge
+    // to xxxLarge and again from AX3 up, drawing the numbers smaller than the
+    // sentence instead of standing out.
+    @ScaledMetric(relativeTo: .body) private var numberSize: Double = 17
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
