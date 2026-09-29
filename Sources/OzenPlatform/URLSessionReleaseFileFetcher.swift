@@ -13,10 +13,18 @@ public struct URLSessionReleaseFileFetcher: ReleaseFileFetching {
     /// How many bytes are gathered before each write to disk.
     private static let writeBatch = 1 << 20
 
-    public init() {}
+    /// False: the request is refused over cellular data or Low Data Mode
+    /// rather than moving there when Wi-Fi drops between two files.
+    private let allowsCellular: Bool
+
+    public init(allowsCellular: Bool = true) {
+        self.allowsCellular = allowsCellular
+    }
 
     public func fetch(_ url: URL, from offset: Int64, appendingTo destination: URL, received: @escaping @Sendable (Int64) -> Void) async throws {
         var request = URLRequest(url: url, timeoutInterval: 60)
+        request.allowsExpensiveNetworkAccess = allowsCellular
+        request.allowsConstrainedNetworkAccess = allowsCellular
         if offset > 0 {
             request.setValue("bytes=\(offset)-", forHTTPHeaderField: "Range")
         }

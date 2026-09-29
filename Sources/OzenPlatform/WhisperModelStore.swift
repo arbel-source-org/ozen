@@ -135,17 +135,24 @@ public struct WhisperModelStore: Sendable {
     /// values, never write the same folder at once: a dropped engine's
     /// download still running when captions start again is joined, not
     /// raced, and the second caller hears its progress too.
+    ///
+    /// Without `allowCellular`, a model from the app's own releases fetches
+    /// every file with cellular data and Low Data Mode refused, so Wi-Fi
+    /// dropping part-way stops the download instead of moving it onto the
+    /// phone plan. (WhisperKit's hub downloads keep their own session.)
     public func download(
         variant: String,
+        allowCellular: Bool = true,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> URL {
         try await DownloadCoordinator.shared.run(for: folder(for: variant), progress: progress) { [self] report in
-            try await performDownload(variant: variant, progress: report)
+            try await performDownload(variant: variant, allowCellular: allowCellular, progress: report)
         }
     }
 
     private func performDownload(
         variant: String,
+        allowCellular: Bool,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> URL {
         try prepareDownloadBase()
@@ -165,7 +172,7 @@ public struct WhisperModelStore: Sendable {
             folder = self.folder(for: variant)
             // Compiling at the end takes a moment of its own, so the
             // download's share of the bar stops just short of full.
-            _ = try await ReleaseModelDownloader(fetcher: URLSessionReleaseFileFetcher())
+            _ = try await ReleaseModelDownloader(fetcher: URLSessionReleaseFileFetcher(allowsCellular: allowCellular))
                 .download(tag: tag, into: folder) { progress($0 * 0.95) }
             // The compile moves the bar on, one package at a time, rather
             // than leaving it on 95% for minutes like a stuck download.

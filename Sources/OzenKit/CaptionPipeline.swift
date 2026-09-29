@@ -370,9 +370,9 @@ public final class CaptionPipeline {
         // A download that failed earlier and is starting again is timed afresh.
         downloadEstimator.reset()
         downloadSecondsRemaining = nil
+        let allowCellular = settings.allowCellularModelDownload || cellularDownloadApproved
         if let megabytes = await engine.pendingDownloadMegabytes() {
             guard runID == run else { return }
-            let allowCellular = settings.allowCellularModelDownload || cellularDownloadApproved
             // Right after launch the system may not have said yet whether
             // this is Wi-Fi; hundreds of megabytes are worth a short wait
             // for the answer rather than starting on a phone plan.
@@ -423,6 +423,10 @@ public final class CaptionPipeline {
         let earlySource = isCoveringForCloud ? try? audio.startCapture() : nil
         let loadsModelOnPhone = settings.engine == .whisperKit
         if loadsModelOnPhone { isPreparingEngine = true }
+        // Checked above only as the download starts: without this, a
+        // download that began on Wi-Fi went on over the phone plan when
+        // Wi-Fi dropped between two of the model's files.
+        await engine.setCellularDownloadAllowed(allowCellular)
         let availability = await engine.prepare(languageCode: settings.languageCode) { [weak self] progress in
             Task { @MainActor [weak self] in
                 guard let self, self.runID == run, case .preparingEngine(let shown) = self.phase else { return }
@@ -440,7 +444,16 @@ public final class CaptionPipeline {
             waiting.forEach { $0.resume() }
         }
         guard runID == run else { return }
-        if case .unavailable(let why) = availability {
+        if case .unavailable(var why) = availability {
+            // Refused because the only connection left is cellular: the
+            // same wait for Wi-Fi as before a download, with its "download
+            // now anyway", rather than a failed download.
+            if why.kind == .modelDownloadFailed,
+               ModelDownloadGate.decide(network: network?.current, allowCellular: allowCellular) == .waitForWiFi {
+                let megabytes = await engine.pendingDownloadMegabytes()
+                guard runID == run else { return }
+                why = EngineUnavailability(kind: .waitingForWiFi, detail: "cellular or Low Data Mode after: \(why.detail)", downloadMegabytes: megabytes)
+            }
             fail(.engineUnavailable, detail: why.detail, engineUnavailability: why)
             return
         }

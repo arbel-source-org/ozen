@@ -1077,11 +1077,12 @@ public final class LiveCaptionViewModel {
     public func downloadBackupModel() {
         guard BackupModel.canStart(backupModelStatus) else { return }
         let variant = settings.whisperModelVariant
+        let allowCellular = settings.allowCellularModelDownload
         backupModelFailed = false
         backupModelProgress = 0
         Task {
             do {
-                _ = try await WhisperModelStore().download(variant: variant) { fraction in
+                _ = try await WhisperModelStore().download(variant: variant, allowCellular: allowCellular) { fraction in
                     Task { @MainActor [weak self] in
                         guard let self, self.backupModelProgress != nil else { return }
                         self.backupModelProgress = fraction

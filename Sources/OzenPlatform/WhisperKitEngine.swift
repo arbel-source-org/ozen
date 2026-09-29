@@ -30,6 +30,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
     private let store: WhisperModelStore
     private var pipe: WhisperKit?
     private var vocabulary: [String] = []
+    private var cellularDownloadAllowed = true
     /// Token ids for the current vocabulary prompt, recomputed only when
     /// the list changes (encoding is cheap but runs every pass otherwise).
     private var promptCache: (terms: [String], tokens: [Int])?
@@ -82,6 +83,10 @@ public actor WhisperKitEngine: TranscriptionEngine {
 
     // MARK: - TranscriptionEngine
 
+    public func setCellularDownloadAllowed(_ allowed: Bool) async {
+        cellularDownloadAllowed = allowed
+    }
+
     public func setVocabulary(_ terms: [String]) async {
         vocabulary = terms
         let detector = PromptEchoDetector(terms: terms)
@@ -128,9 +133,10 @@ public actor WhisperKitEngine: TranscriptionEngine {
         if pipe != nil { return .available }
 
         let variant = modelVariant
+        let allowCellular = cellularDownloadAllowed
         let downloadAndReport: @Sendable () async throws -> URL = { [store] in
             progress(EnginePreparationProgress(stage: .downloadingModel, fraction: 0, detail: variant))
-            return try await store.download(variant: variant) { fraction in
+            return try await store.download(variant: variant, allowCellular: allowCellular) { fraction in
                 progress(EnginePreparationProgress(stage: .downloadingModel, fraction: fraction, detail: variant))
             }
         }

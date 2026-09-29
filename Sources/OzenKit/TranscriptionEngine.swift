@@ -221,6 +221,13 @@ public protocol TranscriptionEngine: Sendable {
     /// its packages. Defaults to the download itself.
     func pendingInstallMegabytes() async -> Int?
 
+    /// Whether a download that `prepare` starts may use cellular data or
+    /// Low Data Mode. Set before every `prepare`: the check before a
+    /// download only sees the connection at that moment, and a download
+    /// that began on Wi-Fi must stop, not move to the phone plan, when
+    /// Wi-Fi drops. Engines that download nothing ignore it.
+    func setCellularDownloadAllowed(_ allowed: Bool) async
+
     /// Names and words to bias recognition towards (see `VocabularyHints`).
     /// Called before every `stream` and again whenever the user edits the
     /// list mid-conversation; engines that can't use hints ignore it.
@@ -240,6 +247,8 @@ public extension TranscriptionEngine {
     func pendingDownloadMegabytes() async -> Int? { nil }
 
     func pendingInstallMegabytes() async -> Int? { await pendingDownloadMegabytes() }
+
+    func setCellularDownloadAllowed(_ allowed: Bool) async {}
 
     /// `prepare` without caring about progress — for callers (and tests)
     /// that only want the yes/no answer.

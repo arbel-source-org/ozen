@@ -197,6 +197,14 @@ final class FakeEngine: TranscriptionEngine, @unchecked Sendable {
         lock.withLock { vocabularyHistory.append(terms) }
     }
 
+    private var cellularHistory: [Bool] = []
+    /// Every answer handed to `setCellularDownloadAllowed`, in order.
+    var cellularAllowedSeen: [Bool] { lock.withLock { cellularHistory } }
+
+    func setCellularDownloadAllowed(_ allowed: Bool) async {
+        lock.withLock { cellularHistory.append(allowed) }
+    }
+
     func emit(_ token: TranscriptToken) {
         lock.withLock { tokenContinuation }?.yield(token)
     }
@@ -2398,6 +2406,42 @@ struct CaptionPipelineDownloadNetworkTests {
         await pipeline.start(settings: settings())
         await pipeline.setAllowCellularModelDownload(true)
         #expect(pipeline.phase.isListening)
+    }
+
+    @Test("the engine hears whether its download may use cellular: not on Wi-Fi alone, yes once she says download now")
+    func engineToldAboutCellular() async {
+        let (pipeline, engine) = makePipeline(network: FakeNetworkMonitor(.wifi))
+        await pipeline.start(settings: settings())
+        #expect(engine.cellularAllowedSeen == [false])
+
+        let (onCellular, waiting) = makePipeline(network: FakeNetworkMonitor(.cellular))
+        await onCellular.start(settings: settings())
+        await onCellular.approveCellularDownload()
+        #expect(waiting.cellularAllowedSeen == [true])
+
+        let (allowed, allowedEngine) = makePipeline(network: FakeNetworkMonitor(.wifi))
+        await allowed.start(settings: settings(allowCellular: true))
+        #expect(allowedEngine.cellularAllowedSeen == [true])
+    }
+
+    @Test("a download cut off when Wi-Fi dropped waits for Wi-Fi, not on the phone plan, and goes on when Wi-Fi is back")
+    func wifiDropsMidDownload() async {
+        let network = FakeNetworkMonitor(.wifi)
+        let (pipeline, engine) = makePipeline(network: network)
+        engine.availability = .unavailable(.modelDownloadFailed, "The Internet connection appears to be offline.")
+        engine.duringPrepare = { network.change(to: .cellular) }
+        await pipeline.start(settings: settings())
+
+        let why = pipeline.phase.failure?.engineUnavailability
+        #expect(why?.kind == .waitingForWiFi)
+        #expect(why?.downloadMegabytes == 626)
+        #expect(pipeline.scheduledRetry == nil)
+
+        engine.duringPrepare = nil
+        engine.availability = .available
+        network.change(to: .wifi)
+        #expect(await eventually { pipeline.phase.isListening })
+        #expect(engine.prepareCount == 2)
     }
 
     @Test("reaching Wi-Fi starts a waiting download by itself")
