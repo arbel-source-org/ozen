@@ -1516,10 +1516,10 @@ public final class CaptionPipeline {
                 guard !Task.isCancelled, let self, self.isCoveringForCloud,
                       let chosen = self.coveredSettings, chosen.engine == .homeServer
                 else { return }
-                guard self.phase == .listening else { continue }
+                guard self.coverCanBeReplaced else { continue }
                 let server = self.probeEngine(for: chosen)
                 guard await server.checkAvailability(languageCode: chosen.languageCode) == .available,
-                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening
+                      !Task.isCancelled, self.isCoveringForCloud, self.coverCanBeReplaced
                 else {
                     answered = 0
                     continue
@@ -1529,7 +1529,7 @@ public final class CaptionPipeline {
                 self.logEvent(.note("the home computer answers again, switching back to it"))
                 self.homeServerRecheck = nil
                 self.homeServerSwitchedBackAt = .now
-                await self.restart(settings: chosen)
+                await self.switchBack(to: chosen)
                 return
             }
         }
@@ -1550,10 +1550,10 @@ public final class CaptionPipeline {
                 guard !Task.isCancelled, let self, self.isCoveringForCloud,
                       let chosen = self.coveredSettings, chosen.engine == .cloud
                 else { return }
-                guard self.phase == .listening else { continue }
+                guard self.coverCanBeReplaced else { continue }
                 let cloud = self.probeEngine(for: chosen)
                 guard await cloud.checkAvailability(languageCode: chosen.languageCode) == .available,
-                      !Task.isCancelled, self.isCoveringForCloud, self.phase == .listening
+                      !Task.isCancelled, self.isCoveringForCloud, self.coverCanBeReplaced
                 else {
                     answered = 0
                     continue
@@ -1563,9 +1563,29 @@ public final class CaptionPipeline {
                 self.logEvent(.note("the cloud answers again, switching back to it"))
                 self.cloudRecheck = nil
                 self.cloudSwitchedBackAt = .now
-                await self.restart(settings: chosen)
+                await self.switchBack(to: chosen)
                 return
             }
+        }
+    }
+
+    /// A cover that is listening, or one whose own model has failed: the
+    /// phone's model failing for good (a load that runs out of memory)
+    /// left captions stopped with the computer or cloud healthy, because
+    /// the checks waited for listening and a retry covers again.
+    private var coverCanBeReplaced: Bool {
+        if case .failed = phase { return true }
+        return phase == .listening
+    }
+
+    /// From a failure, through `retry` rather than `.idle`, which means
+    /// stopped on purpose and would skip "captions came back".
+    private func switchBack(to chosen: AppSettings) async {
+        if case .failed = phase {
+            isCoveringForCloud = false
+            await retry(settings: chosen)
+        } else {
+            await restart(settings: chosen)
         }
     }
 

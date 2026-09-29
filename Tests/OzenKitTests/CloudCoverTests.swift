@@ -239,6 +239,29 @@ struct CloudCoverTests {
         captions.stop()
     }
 
+    @Test("when the phone's model fails while it covers, the cloud answering again is switched to instead of captions staying stopped")
+    func failedCoverSwitchesBackWhenTheCloudAnswers() async {
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone)
+        captions.cloudRecheckSeconds = 0.2
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.availability = .unavailable(.noInternet, "offline")
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+
+        phone.endStream(throwing: EngineUnavailability(kind: .modelLoadFailed, detail: "out of memory"))
+        #expect(await eventually {
+            if case .failed = captions.phase { return true }
+            return false
+        })
+        cloud.availability = .available
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        #expect(!captions.isCoveringForCloud)
+        captions.stop()
+    }
+
     @Test("a retry after the covering model itself fails keeps covering, and still switches back once the cloud answers")
     func retryDuringCoverKeepsCovering() async {
         let cloud = FakeEngine(kind: .cloud)
