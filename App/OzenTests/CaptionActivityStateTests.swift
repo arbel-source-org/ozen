@@ -3,6 +3,7 @@ import Testing
 @testable import Ozen
 
 @Suite("Lock screen activity state")
+@MainActor
 struct CaptionActivityStateTests {
     @Test("a state from an older build still decodes, and the app's direction goes both ways")
     func directionSurvivesTheTrip() throws {

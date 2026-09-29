@@ -3,6 +3,7 @@ import Testing
 @testable import Ozen
 @testable import OzenKit
 
+@MainActor
 struct CaptionThemeResolutionTests {
     @Test("match the phone follows its light or dark setting and leaves the scheme to the system")
     func matchPhone() {

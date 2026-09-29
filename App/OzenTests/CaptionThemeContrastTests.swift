@@ -9,6 +9,7 @@ import Testing
 /// the price of pinning WCAG contrast down for a screen this test can't
 /// otherwise see.
 @Suite("Caption theme contrast")
+@MainActor
 struct CaptionThemeContrastTests {
     private let white = (red: 1.0, green: 1.0, blue: 1.0)
     private let black = (red: 0.0, green: 0.0, blue: 0.0)

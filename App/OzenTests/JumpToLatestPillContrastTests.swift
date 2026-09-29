@@ -8,6 +8,7 @@ import Testing
 /// (no macOS/Xcode), so its colours are mirrored as plain sRGB components,
 /// the same as CaptionThemeContrastTests.
 @Suite("Jump-to-latest pill contrast")
+@MainActor
 struct JumpToLatestPillContrastTests {
     private let white = (red: 1.0, green: 1.0, blue: 1.0)
     private let black = (red: 0.0, green: 0.0, blue: 0.0)
