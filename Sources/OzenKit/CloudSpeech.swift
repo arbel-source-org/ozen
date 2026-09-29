@@ -117,6 +117,12 @@ public enum CloudSpeech {
             }
             throw .badReply
         }
+        // An empty answer is the model saying nobody spoke, and the audio
+        // is let go; an answer the provider marks as failed must be tried
+        // again with the same audio, or those words are lost unseen.
+        if choices.first?["finish_reason"] as? String == "error" || choices.first?["error"] != nil {
+            throw .serverTrouble(status: response.status)
+        }
         return (message["content"] as? String) ?? ""
     }
 

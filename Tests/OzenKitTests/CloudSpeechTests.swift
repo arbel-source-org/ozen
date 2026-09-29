@@ -91,6 +91,18 @@ struct CloudSpeechTests {
         }
     }
 
+    @Test("an answer marked as failed is a failure to retry, not a room where nobody spoke")
+    func failedChoice() throws {
+        #expect(throws: CloudSpeechError.serverTrouble(status: 200)) {
+            try CloudSpeech.transcript(from: reply(200, #"{"choices":[{"finish_reason":"error","message":{"role":"assistant","content":""}}]}"#))
+        }
+        #expect(throws: CloudSpeechError.serverTrouble(status: 200)) {
+            try CloudSpeech.transcript(from: reply(200, #"{"choices":[{"error":{"message":"provider failed"},"message":{"role":"assistant","content":null}}]}"#))
+        }
+        let finished = try CloudSpeech.transcript(from: reply(200, #"{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":""}}]}"#))
+        #expect(finished == "")
+    }
+
     @Test("what each refusal means")
     func failures() {
         #expect(CloudSpeech.failure(from: reply(401, "{}")) == .keyRejected)
