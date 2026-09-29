@@ -142,8 +142,9 @@ struct CaptionLinesView: View {
         guard newestOnly || state.status != nil || isStale, var newest = state.lines.last else {
             return state.lines
         }
-        if newest.speaker == nil, state.lines.count > 1 {
-            // No name on a line means the speaker of the line above it.
+        if newest.speaker == nil, newest.sameSpeakerAsAbove == true, state.lines.count > 1 {
+            // The name was left off because the line above has it; a line
+            // nobody was recognised on stays without one.
             newest.speaker = state.lines[state.lines.count - 2].speaker
         }
         return [newest]

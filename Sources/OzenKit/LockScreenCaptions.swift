@@ -8,12 +8,17 @@ public struct LockScreenCaptionLine: Sendable, Equatable, Hashable, Codable {
     public var isFinal: Bool
     /// When the line last changed.
     public var lastUpdate: TimeInterval
+    /// A line without a name that continues its speaker's run, as opposed
+    /// to one nobody was recognised on: a line drawn alone takes the name
+    /// above it only then.
+    public var sameSpeakerAsAbove: Bool
 
-    public init(speaker: String?, text: String, isFinal: Bool, lastUpdate: TimeInterval = 0) {
+    public init(speaker: String?, text: String, isFinal: Bool, lastUpdate: TimeInterval = 0, sameSpeakerAsAbove: Bool = false) {
         self.speaker = speaker
         self.text = text
         self.isFinal = isFinal
         self.lastUpdate = lastUpdate
+        self.sameSpeakerAsAbove = sameSpeakerAsAbove
     }
 }
 
@@ -55,12 +60,9 @@ public enum LockScreenCaptions {
             if let later = picked.first, CaptionLayout.startsAfterQuiet(later, previous: segment) { break }
             picked.insert(segment, at: 0)
         }
-        var previousName: String?
-        let speakers: [String?] = picked.enumerated().map { offset, segment in
-            let name = name(segment)
-            defer { previousName = name }
-            return offset == 0 || name != previousName ? name : nil
-        }
+        let names = picked.map(name)
+        let sameSpeakerAsAbove = names.indices.map { $0 > 0 && names[$0] != nil && names[$0] == names[$0 - 1] }
+        let speakers: [String?] = names.indices.map { sameSpeakerAsAbove[$0] ? nil : names[$0] }
         // An earlier line that fits comfortably under its own budget leaves
         // room nobody reads; the newest line, where the words she needs are,
         // gets it added to its own instead of leaving blank space above a
@@ -85,7 +87,8 @@ public enum LockScreenCaptions {
                 // of reading right to left.
                 text: CaptionLayout.directed(tail(of: segment.text, maximumCharacters: room)),
                 isFinal: segment.isCommitted,
-                lastUpdate: segment.lastUpdateTimestamp
+                lastUpdate: segment.lastUpdateTimestamp,
+                sameSpeakerAsAbove: sameSpeakerAsAbove[offset]
             )
         }
     }

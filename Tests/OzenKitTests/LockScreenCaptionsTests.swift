@@ -62,6 +62,17 @@ struct LockScreenCaptionsTests {
         #expect(unnamed.map(\.speaker) == ["Speaker 1", nil])
     }
 
+    @Test("a line shown alone takes the name above only when it is the same speaker, never when nobody was recognised on it")
+    func aloneLineKnowsItsSpeaker() {
+        let continuing = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b", speaker: 1)], name: names)
+        #expect(continuing.map(\.speaker) == ["Speaker 1", nil])
+        #expect(continuing.map(\.sameSpeakerAsAbove) == [false, true])
+        let unnamed = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b")], name: names)
+        #expect(unnamed.map(\.sameSpeakerAsAbove) == [false, false])
+        let changing = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b", speaker: 2)], name: names)
+        #expect(changing.map(\.sameSpeakerAsAbove) == [false, false])
+    }
+
     @Test("asked for one line, the newest comes with its speaker's name even mid-run")
     func singleLine() {
         let one = LockScreenCaptions.lines(from: [line("a", speaker: 1), line("b", speaker: 1), line("  ")], count: 1, name: names)

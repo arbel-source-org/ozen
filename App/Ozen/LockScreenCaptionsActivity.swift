@@ -38,7 +38,7 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
     func show(_ content: LockScreenCaptionContent, mayStart: Bool) -> Bool {
         let state = CaptionActivityAttributes.ContentState(
             lines: content.lines.map {
-                CaptionActivityAttributes.ContentState.Line(speaker: $0.speaker, text: $0.text, isFinal: $0.isFinal)
+                CaptionActivityAttributes.ContentState.Line(speaker: $0.speaker, text: $0.text, isFinal: $0.isFinal, sameSpeakerAsAbove: $0.sameSpeakerAsAbove)
             },
             status: content.status,
             ageNote: content.ageNote,
