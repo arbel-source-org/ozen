@@ -425,7 +425,7 @@ private struct SessionRow: View {
                 }
             }
             .font(.caption2)
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(.secondary)
         }
     }
 }

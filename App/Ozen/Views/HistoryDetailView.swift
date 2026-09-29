@@ -29,6 +29,9 @@ struct HistoryDetailView: View {
     @State private var renaming = false
     @State private var newTitle = ""
     @Environment(\.dismiss) private var dismiss
+    /// The jumps to a line land without a long animated scroll, as on the
+    /// caption screen.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isSearch: Bool {
         !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -47,7 +50,7 @@ struct HistoryDetailView: View {
             // be the one a tap scrolls to.
             ForEach(Array(lines.enumerated()), id: \.offset) { _, segment in
                 Button {
-                    withAnimation { proxy.scrollTo(segment.id, anchor: .center) }
+                    withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(segment.id, anchor: .center) }
                 } label: {
                     NumberLineLabel(segment: segment)
                 }
@@ -110,7 +113,7 @@ struct HistoryDetailView: View {
                 // search found something instead of at the top.
                 guard let target = isSearch ? matches.first : initialLineID else { return }
                 try? await Task.sleep(for: .milliseconds(150))
-                withAnimation { proxy.scrollTo(target, anchor: .center) }
+                withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(target, anchor: .center) }
                 guard !isSearch else { return }
                 withAnimation { arrivedLineID = target }
                 try? await Task.sleep(for: .seconds(2))
@@ -118,7 +121,7 @@ struct HistoryDetailView: View {
             }
             .onChange(of: scrollRequest) { _, _ in
                 guard matches.indices.contains(currentMatch) else { return }
-                withAnimation { proxy.scrollTo(matches[currentMatch], anchor: .center) }
+                withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(matches[currentMatch], anchor: .center) }
             }
         }
     }
