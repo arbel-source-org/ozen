@@ -54,6 +54,18 @@ struct SoundEventsTests {
         #expect(Set(observations.map(\.identifier)) == ["door_bell", "smoke_detector"])
     }
 
+    @Test("in one reading the most important sound comes first, so a smoke alarm also heard as a louder alarm clock sends one notification")
+    func matchingObservationsPutTheMostImportantFirst() {
+        let candidates: [(identifier: String, confidence: Double)] = [
+            ("alarm_clock", 0.9),
+            ("door_bell", 0.8),
+            ("smoke_detector", 0.7),
+            ("fire", 0.75),
+        ]
+        let observations = SoundEventCatalog.matchingObservations(from: candidates, minimumConfidence: 0.6, timestamp: 1)
+        #expect(observations.map(\.identifier) == ["fire", "smoke_detector", "alarm_clock", "door_bell"])
+    }
+
     @Test("importance orders critical above high above medium above low")
     func importanceOrdering() {
         #expect(SoundEvent.Importance.critical > .high)

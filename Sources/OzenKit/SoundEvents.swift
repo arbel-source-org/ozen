@@ -137,6 +137,12 @@ public enum SoundEventCatalog {
     /// the top of that ranking, and a doorbell or kettle heard at the same
     /// time can fall to rank four or lower. Filtering by catalog membership
     /// instead of by rank means it is still reported.
+    ///
+    /// The most important sound comes first, then the most confident: the
+    /// caption screen takes up the first of a reading and lets a weaker
+    /// label of the same reading go, so a smoke alarm the classifier also
+    /// scored higher as an alarm clock sends one notification, the smoke
+    /// alarm's, instead of both.
     public static func matchingObservations(
         from candidates: some Sequence<(identifier: String, confidence: Double)>,
         minimumConfidence: Double,
@@ -146,6 +152,11 @@ public enum SoundEventCatalog {
         return candidates
             .filter { known.contains($0.identifier) && $0.confidence >= minimumConfidence }
             .map { SoundObservation(identifier: $0.identifier, confidence: $0.confidence, timestamp: timestamp) }
+            .sorted { lhs, rhs in
+                let left = event(for: lhs.identifier)?.importance ?? .low
+                let right = event(for: rhs.identifier)?.importance ?? .low
+                return left != right ? left > right : lhs.confidence > rhs.confidence
+            }
     }
 }
 
