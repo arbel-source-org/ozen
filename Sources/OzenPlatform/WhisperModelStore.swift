@@ -88,19 +88,18 @@ public struct WhisperModelStore: Sendable {
         try? ModelFolderInspector.markComplete(folder(for: variant))
     }
 
-    /// Whether this phone has loaded `variant` before. The first load
-    /// compiles the model for the chip and takes minutes; a marker beside
-    /// the model (gone with it when it is deleted) tells the two apart.
+    /// Whether this phone has loaded `variant` since iOS was last updated.
+    /// The first load compiles the model for the chip and takes minutes,
+    /// and iOS throws that work away with a system update: the next load
+    /// takes minutes again, and the screen said "Just a moment" all the
+    /// while. A marker beside the model (gone with it when it is deleted)
+    /// holds the iOS version it was loaded on (see `ModelLoadMarker`).
     public func hasLoadedBefore(variant: String) -> Bool {
-        FileManager.default.fileExists(atPath: loadedMarker(for: variant).path)
+        ModelLoadMarker.hasLoadedBefore(folder(for: variant), system: ProcessInfo.processInfo.operatingSystemVersionString)
     }
 
     public func markLoaded(variant: String) {
-        FileManager.default.createFile(atPath: loadedMarker(for: variant).path, contents: nil)
-    }
-
-    private func loadedMarker(for variant: String) -> URL {
-        folder(for: variant).appendingPathComponent(".ozen-loaded-once")
+        ModelLoadMarker.markLoaded(folder(for: variant), system: ProcessInfo.processInfo.operatingSystemVersionString)
     }
 
     public func isInstalled(_ variant: String) -> Bool {
