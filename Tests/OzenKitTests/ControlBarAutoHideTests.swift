@@ -10,6 +10,7 @@ struct ControlBarAutoHideTests {
         followingLatest: Bool = true,
         hasLines: Bool = true,
         voiceOverRunning: Bool = false,
+        pausedForCall: Bool = false,
         idle: TimeInterval = 10
     ) -> Bool {
         ControlBarAutoHide.hides(
@@ -18,6 +19,7 @@ struct ControlBarAutoHideTests {
             followingLatest: followingLatest,
             hasLines: hasLines,
             voiceOverRunning: voiceOverRunning,
+            pausedForCall: pausedForCall,
             lastTouchAt: 1_000,
             now: 1_000 + idle
         )
@@ -33,6 +35,11 @@ struct ControlBarAutoHideTests {
     func recentTouch() {
         #expect(!hides(idle: ControlBarAutoHide.idleSeconds - 0.5))
         #expect(!hides(idle: 0))
+    }
+
+    @Test("captions paused for a call keep the bar, which is where it says so and where the tap to try again is")
+    func keptWhilePausedForCall() {
+        #expect(!hides(pausedForCall: true))
     }
 
     @Test("anything that needs the buttons keeps them: not listening, reading back, no lines yet, VoiceOver, switched off")

@@ -1046,6 +1046,7 @@ struct LiveCaptionView: View {
             followingLatest: isPinnedToBottom,
             hasLines: !viewModel.segments.isEmpty,
             voiceOverRunning: UIAccessibility.isVoiceOverRunning,
+            pausedForCall: viewModel.isInterruptedBySystem,
             lastTouchAt: lastTouchAt,
             now: Date().timeIntervalSince1970
         )
