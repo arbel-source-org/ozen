@@ -495,6 +495,28 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.load(id: first.id)?.segments.first?.isStarred == true)
     }
 
+    @Test("with saving turned off, a star on a line of a conversation saved before still reaches its file")
+    func starWithSavingOff() async throws {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let history = TranscriptHistoryStore(directoryURL: temporaryURL("history"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: 1))
+        await eventually { !viewModel.segments.isEmpty }
+        viewModel.saveHistory = false
+        let saved = try #require(history.listSummaries().first)
+        let line = try #require(viewModel.segments.first)
+
+        viewModel.toggleStarInHistory(sessionID: saved.id, segmentID: line.id)
+        #expect(history.load(id: saved.id)?.segments.first?.isStarred == true)
+        #expect(viewModel.starredSegmentIDs.contains(line.id))
+        viewModel.toggleStarInHistory(sessionID: saved.id, segmentID: line.id)
+        #expect(history.load(id: saved.id)?.segments.first?.isStarred == false)
+        #expect(!viewModel.starredSegmentIDs.contains(line.id))
+    }
+
     @Test("an autosave still being written never lands on top of the final save")
     func autosaveThenFinalSave() async {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))

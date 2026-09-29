@@ -810,7 +810,15 @@ public final class LiveCaptionViewModel {
         if let index = pipeline.segments.firstIndex(where: { $0.id == segment.id }),
            index < historySegmentOffset,
            let closed = closedHistorySessions.last(where: { $0.lines.contains(index) }) {
-            saveClosed(closed)
+            if settings.saveHistory {
+                saveClosed(closed)
+            } else if let starred = historyWriter.toggleStarNow(sessionID: closed.id, segmentID: segment.id) {
+                // Saving is off, but this conversation was saved before and
+                // nothing rewrites it now: its file takes the star itself.
+                // Before, the star showed nowhere in History and a second
+                // tap undid it unseen.
+                if starred { starredSegmentIDs.insert(segment.id) } else { starredSegmentIDs.remove(segment.id) }
+            }
         } else {
             persistHistory(ended: false, inBackground: true)
         }
