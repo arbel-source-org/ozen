@@ -183,6 +183,7 @@ public final class CaptionPipeline {
     private var clusterer: EmbeddingClusterer
     private var stabilizer: CaptionStabilizer
     private var engineCache: [String: any TranscriptionEngine] = [:]
+    private var clearedUtteranceIDs: Set<UUID> = []
     private var fanOut: AudioFanOut?
     private var streamTask: Task<Void, Never>?
     private var embeddingTask: Task<Void, Never>?
@@ -658,6 +659,11 @@ public final class CaptionPipeline {
     public func clearTranscript() {
         segments = []
         defer { onCaptionsChanged?() }
+        // The engine keeps sending the sentence being said, each time with
+        // all of its words so far; to a fresh stabilizer it looked new, and
+        // the words from before "Delete all captions from the screen" came
+        // straight back. The rest of that one sentence goes with them.
+        clearedUtteranceIDs = stabilizer.stillChangingIDs
         stabilizer = CaptionStabilizer(silenceCommitThreshold: stabilizer.silenceCommitThreshold)
         startNewConversation()
         keywordHits = []
@@ -1180,6 +1186,7 @@ public final class CaptionPipeline {
 
     private func handle(token incoming: TranscriptToken) {
         stats.tokensReceived += 1
+        guard !clearedUtteranceIDs.contains(incoming.utteranceID) else { return }
         // ivrit.ai's model starts some lines with an invisible direction
         // mark; kept, it would travel into saved conversations and search.
         let cleaned = HebrewText.removingDirectionMarks(incoming.text)

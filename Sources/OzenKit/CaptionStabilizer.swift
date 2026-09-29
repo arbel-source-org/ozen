@@ -85,6 +85,12 @@ public struct CaptionStabilizer: Sendable {
     /// commit is a guess that nothing more is coming; if the engine turns
     /// out to be merely slow, its next update proves the guess wrong.
     private var provisionalCommits: Set<UUID> = []
+
+    /// Lines the engine may still send words for: open ones, and ones
+    /// committed early that a late final can reopen.
+    public var stillChangingIDs: Set<UUID> {
+        Set(segments.lazy.filter { !$0.isCommitted }.map(\.id)).union(provisionalCommits)
+    }
     /// For each line still being written, which of its words to hold
     /// steady between passes; see `LiveAgreement`.
     private var liveAgreements: [UUID: LiveAgreement] = [:]

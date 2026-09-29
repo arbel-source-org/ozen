@@ -786,6 +786,23 @@ struct CaptionPipelineTokenTests {
         #expect(pipeline.segments.isEmpty)
         #expect(pipeline.phase == .listening)
     }
+
+    @Test("a sentence still being said when the screen is cleared doesn't come back with its earlier words")
+    func clearMidSentence() async {
+        let engine = FakeEngine()
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: engine])
+        await pipeline.start(settings: .default)
+        let open = UUID()
+        engine.emit(token(open, "את המספר של"))
+        #expect(await eventually { pipeline.segments.count == 1 })
+
+        pipeline.clearTranscript()
+        engine.emit(token(open, "את המספר של הרופא"))
+        engine.emit(token(open, "את המספר של הרופא שלך", final: true))
+        engine.emit(token(UUID(), "שלום", final: true))
+        #expect(await eventually { pipeline.segments.count == 1 })
+        #expect(pipeline.segments.map(\.text) == ["שלום"])
+    }
 }
 
 @Suite("CaptionPipeline lifecycle: stop, restart, retry, pause")
