@@ -906,7 +906,10 @@ public final class CaptionPipeline {
             if let current {
                 journalOnly(.input(name: current.portName, type: current.portType))
             }
-            microphoneDrop.inputChanged(from: lastSelectedInput, to: current, isListening: phase.isListening)
+            // Only stopped captions let it go unsaid: paused, starting or
+            // waiting to try again, they come back on whatever microphone
+            // is left, with nothing saying it changed.
+            microphoneDrop.inputChanged(from: lastSelectedInput, to: current, isListening: phase != .idle)
         }
         // Remembered apart from the list: the one that just went away is
         // no longer in it.
