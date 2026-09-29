@@ -172,9 +172,10 @@ things, for Hebrew conversation, entirely on-device.
   her to read. "Write to me" (kitvu li) opens it straight from Siri or the Action button.
 - **Names and words list.** Family names, the doctor, the medicines.
   Both engines are primed with the list (Apple's recognizer via
-  contextual strings, Whisper via a decoder prompt), edits apply from the
-  next sentence, and Whisper output that is just the list read back is
-  dropped.
+  contextual strings, Whisper via a decoder prompt; on a long list,
+  Whisper gets the first two dozen or so names, so put the important ones
+  first), edits apply from the next sentence, and Whisper output that is
+  just the list read back is dropped.
 - **Keyword alerts.** Her name, or any word she picks, buzzes the phone
   and highlights the line, matching through Hebrew's attached prefixes
   ("ve-le-Ruti" still matches "Ruti"), without firing a short name on the
@@ -227,7 +228,9 @@ things, for Hebrew conversation, entirely on-device.
   time, an amount or a phone number in it, each a tap from where it was
   said. Phone numbers in captions, including the 1-700 and 1-800 numbers
   health funds and pharmacies give out, are a tap from a call (star
-  numbers such as *2700 stay text: iOS won't dial them from a link).
+  numbers such as *2700 stay text: iOS won't dial them from a link). A
+  number is only linked when it has the right length for its prefix, so
+  a date, an hour or a digit said next to it is never dialed with it.
   Holding a line copies just that line, to paste a phone number or
   an address somewhere else.
   The list is grouped under "Today" (hayom), "Yesterday" (etmol), the
