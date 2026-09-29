@@ -60,6 +60,20 @@ struct DownloadEstimatorTests {
         #expect(left < 15)
     }
 
+    @Test("a resumed download's first reading is where it picked up, not how fast it goes")
+    func resumedJump() throws {
+        var estimator = DownloadEstimator()
+        // Announced at 0%, then the part already on the phone: 57%.
+        estimator.record(fraction: 0, at: 0)
+        estimator.record(fraction: 0.57, at: 1)
+        // Then 0.1% a second.
+        for second in 2...6 {
+            estimator.record(fraction: 0.57 + Double(second - 1) / 1_000, at: Double(second))
+        }
+        let left = try #require(estimator.secondsRemaining())
+        #expect(abs(left - 425) < 5)
+    }
+
     @Test("a download that starts over starts the estimate over")
     func restart() {
         var estimator = DownloadEstimator()
