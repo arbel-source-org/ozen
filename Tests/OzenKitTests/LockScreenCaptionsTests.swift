@@ -108,17 +108,23 @@ struct LockScreenCaptionsTests {
         #expect(plain(short[1].text).count > plain(full[1].text).count)
     }
 
-    @Test("a newest line with a name never outgrows the widget's three rows, so the name at its head is not cut off")
-    func namedNewestLineKeepsItsName() {
+    @Test("the newest line never outgrows the widget's three rows, counting the name it shows or gets back when shown alone")
+    func newestLineFitsThreeRows() {
         let long = (1...40).map { "word\($0)" }.joined(separator: " ")
         for (size, threeRows) in [(LockScreenTextSize.regular, 3 * 30), (.large, 3 * 23)] {
-            let lines = LockScreenCaptions.lines(from: [line("hi", speaker: 1), line(long, speaker: 2)], textSize: size, name: names)
-            #expect(lines[1].speaker == "Speaker 2")
-            #expect(plain(lines[1].text).count + "Speaker 2: ".count <= threeRows, "\(size)")
-            #expect(lines[1].text.hasSuffix("word40"))
+            let newSpeaker = LockScreenCaptions.lines(from: [line("hi", speaker: 1), line(long, speaker: 2)], textSize: size, name: names)
+            #expect(newSpeaker[1].speaker == "Speaker 2")
+            #expect(plain(newSpeaker[1].text).count + "Speaker 2: ".count <= threeRows, "\(size)")
+            #expect(newSpeaker[1].text.hasSuffix("word40"))
+
+            let sameSpeaker = LockScreenCaptions.lines(from: [line("hi", speaker: 1), line(long, speaker: 1)], textSize: size, name: names)
+            #expect(sameSpeaker[1].speaker == nil)
+            #expect(sameSpeaker[1].sameSpeakerAsAbove)
+            #expect(plain(sameSpeaker[1].text).count + "Speaker 1: ".count <= threeRows, "\(size)")
+
+            let unknown = LockScreenCaptions.lines(from: [line("hi"), line(long)], textSize: size) { _ in nil }
+            #expect(plain(unknown[1].text).count <= threeRows, "\(size)")
         }
-        let unnamed = LockScreenCaptions.lines(from: [line("hi"), line(long)]) { _ in nil }
-        #expect(plain(unnamed[1].text).count > 3 * 30)
     }
 
     @Test("large lock screen text keeps fewer characters, and follows the caption size in the app")

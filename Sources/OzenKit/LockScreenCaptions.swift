@@ -76,11 +76,13 @@ public enum LockScreenCaptions {
         return picked.enumerated().map { offset, segment in
             let speaker = speakers[offset]
             let isNewest = offset == picked.count - 1
-            var budget = (isNewest ? textSize.newestLineMaximumCharacters + bonus : textSize.earlierLineMaximumCharacters)
-            if isNewest, speaker != nil {
-                budget = min(budget, textSize.newestLineCapacityWithName)
+            let budget = (isNewest ? textSize.newestLineMaximumCharacters + bonus : textSize.earlierLineMaximumCharacters)
+            var room = lineRoom(budget: budget, speaker: speaker)
+            if isNewest {
+                // The name counts even when hidden under the same speaker's
+                // line: the widget puts it back when it shows this line alone.
+                room = min(room, lineRoom(budget: textSize.newestLineCapacity, speaker: names[offset]))
             }
-            let room = lineRoom(budget: budget, speaker: speaker)
             return LockScreenCaptionLine(
                 speaker: speaker,
                 // The widget draws this on its own line, the same as any
@@ -294,10 +296,12 @@ public enum LockScreenTextSize: String, Sendable, Equatable, Codable {
     }
 
     /// What the widget's newest line holds at full size: three rows of
-    /// about 30 (or 23) characters. The widget cuts a longer one from the
-    /// front, so a line that starts with a speaker's name is kept to this,
-    /// or the name went first and the words read as the line above's.
-    public var newestLineCapacityWithName: Int {
+    /// about 30 (or 23) characters. The room a short line above leaves can
+    /// not become a fourth row, so the newest line is kept to this: longer,
+    /// the widget cut it, and the name at its head went first (the words
+    /// read as the line above's) or, cut on its last row, words from the
+    /// middle vanished.
+    public var newestLineCapacity: Int {
         switch self {
         case .regular: return 90
         case .large: return 69
