@@ -141,6 +141,13 @@ private struct SoundEventRow: View {
     @Binding var isOn: Bool
     let nearMiss: SoundNearMisses.Entry?
     @Binding var isSensitive: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var nudgeLayout: AnyLayout {
+        dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout())
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -148,7 +155,7 @@ private struct SoundEventRow: View {
                 HStack(spacing: 12) {
                     Image(systemName: event.systemImage)
                         .accessibilityHidden(true)
-                        .foregroundStyle(SoundAlertsView.tint(event.importance))
+                        .foregroundStyle(.readable(SoundAlertsView.tint(event.importance)))
                         .frame(width: 28)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(event.name)
@@ -175,7 +182,7 @@ private struct SoundEventRow: View {
 
     @ViewBuilder
     private func sensitivityNudge(_ nearMiss: SoundNearMisses.Entry?) -> some View {
-        HStack {
+        nudgeLayout {
             Group {
                 if let nearMiss {
                     Text(tr(
@@ -187,13 +194,13 @@ private struct SoundEventRow: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
-            Spacer()
+            if !dynamicTypeSize.isAccessibilitySize { Spacer() }
             Toggle(isOn: $isSensitive) {
                 Text(tr("להתריע גם על צליל חלש יותר", "Alert on a fainter sound too"))
                     .font(.caption.weight(.semibold))
+                    .frame(minHeight: 30)
             }
             .toggleStyle(.button)
-            .controlSize(.small)
         }
         .accessibilityIdentifier("soundSensitivityToggle-\(event.identifier)")
     }
