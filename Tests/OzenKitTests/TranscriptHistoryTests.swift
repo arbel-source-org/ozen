@@ -1052,6 +1052,18 @@ struct TranscriptHistoryStarredExportTests {
         let line = StarredLine(sessionID: UUID(), sessionStartedAt: 0, segment: SavedSegment(id: UUID(), text: "OK, מחר", speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true, isStarred: true))
         #expect(TranscriptHistoryStore.exportStarredText([line]) == "01.01.1970\n\u{200F}[00:00:00] OK, מחר")
     }
+
+    @Test("a phone number or star code in shared text stays left to right in a Hebrew line")
+    func sharedNumbersStayLeftToRight() {
+        let text = "תתקשרי ל 050 123 4567 או *2700"
+        let isolated = "תתקשרי ל \u{2066}050 123 4567\u{2069} או \u{2066}*2700\u{2069}"
+        let saved = SavedSegment(id: UUID(), text: text, speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true, isStarred: true)
+        let session = TranscriptSessionRecord(id: UUID(), startedAt: 0, engine: .whisperKit, modelVariant: nil, inputName: nil, segments: [saved])
+        #expect(TranscriptHistoryStore.exportText(session) == "שיחה מתאריך 01.01.1970\n\n★ [00:00:00] \(isolated)")
+
+        let line = StarredLine(sessionID: session.id, sessionStartedAt: 0, segment: saved)
+        #expect(TranscriptHistoryStore.exportStarredText([line]) == "01.01.1970\n[00:00:00] \(isolated)")
+    }
 }
 
 @Suite("Transcript history conversation names")

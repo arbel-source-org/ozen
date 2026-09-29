@@ -824,13 +824,16 @@ public struct TranscriptHistoryStore: Sendable {
             .map { segment in
                 let time = formattedClockTime(segment.startTimestamp, utcOffsetSeconds: offset(segment.startTimestamp))
                 let star = segment.isStarred ? "★ " : ""
+                // As on the caption screen: pasted into a chat, "050 123
+                // 4567" in a Hebrew line would read "4567 123 050".
+                let said = CaptionLayout.isolatingNumbers(segment.text)
                 let line: String
                 // "Unknown speaker:" on every unrecognised line says nothing;
                 // numbered voices ("Speaker 2") still tell turns apart.
                 if let name = segment.speakerName, !name.isEmpty, !TranscriptSessionSummary.isUnknownSpeakerLabel(name) {
-                    line = "\(star)[\(time)] \(name): \(segment.text)"
+                    line = "\(star)[\(time)] \(name): \(said)"
                 } else {
-                    line = "\(star)[\(time)] \(segment.text)"
+                    line = "\(star)[\(time)] \(said)"
                 }
                 // Pasted into a chat, a line opening with an English word
                 // would be laid out left to right and read out of order.
@@ -878,11 +881,12 @@ public struct TranscriptHistoryStore: Sendable {
                 currentSession = line.sessionID
             }
             let time = formattedClockTime(line.segment.startTimestamp, utcOffsetSeconds: offset(line.segment.startTimestamp))
+            let said = CaptionLayout.isolatingNumbers(line.segment.text)
             let text: String
             if let name = line.segment.speakerName, !name.isEmpty, !TranscriptSessionSummary.isGenericLabel(name) {
-                text = "[\(time)] \(name): \(line.segment.text)"
+                text = "[\(time)] \(name): \(said)"
             } else {
-                text = "[\(time)] \(line.segment.text)"
+                text = "[\(time)] \(said)"
             }
             // As in `exportText`: read in order when pasted into a chat.
             block.append(CaptionLayout.opensLeftToRight(text) ? CaptionLayout.rightToLeftMark + text : text)
