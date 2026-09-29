@@ -1104,7 +1104,12 @@ public final class LiveCaptionViewModel {
             do {
                 _ = try await WhisperModelStore().download(variant: variant, allowCellular: allowCellular) { fraction in
                     Task { @MainActor [weak self] in
-                        guard let self, self.backupModelVariant == variant, self.backupModelProgress != nil else { return }
+                        guard let self, self.backupModelVariant == variant, let shown = self.backupModelProgress else { return }
+                        // Whole percents only, all any row shows: the caption
+                        // screen reads this too (to keep the phone awake), and
+                        // every chunk off the network redrew it, captions and
+                        // all, while the backup downloaded.
+                        guard Int((fraction * 100).rounded()) != Int((shown * 100).rounded()) else { return }
                         self.backupModelProgress = fraction
                     }
                 }
