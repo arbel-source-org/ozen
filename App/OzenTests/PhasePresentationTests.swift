@@ -304,6 +304,13 @@ struct ScreenWordingTests {
         #expect(HistoryView.savingFooter(saving: false, size: "2 MB", retention: .month).hasSuffix("נשמרות תמיד."))
     }
 
+    @Test("an empty History with saving off says saving is off, not that conversations are coming")
+    func emptyHistoryWithSavingOff() {
+        #expect(HistoryView.emptyConversationsMessage(query: "", speakerFilter: nil, saving: true) == "עדיין אין שיחות שמורות.")
+        #expect(HistoryView.emptyConversationsMessage(query: "", speakerFilter: nil, saving: false) == "שמירת שיחות כבויה.")
+        #expect(HistoryView.emptyConversationsMessage(query: "רופא", speakerFilter: nil, saving: false).contains("רופא"))
+    }
+
     @Test("every auto-delete choice has its own name")
     func retentionNames() {
         let names = HistoryRetention.allCases.map(HistoryView.name(for:))
