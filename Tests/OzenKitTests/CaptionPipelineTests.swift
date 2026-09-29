@@ -822,6 +822,31 @@ struct CaptionPipelineLifecycleTests {
         #expect(audio.calls.last == "stopCapture")
     }
 
+    @Test("a sound choice, the speaker sensitivity or the microphone changed while listening stays after an automatic retry")
+    func liveChoicesSurviveAutomaticRetry() async {
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        audio.availableInputs.append(AudioInputDescriptor(uid: "usb", portName: "USB Microphone", portType: .usb))
+        let (pipeline, _, _) = makePipeline(audio: audio, engines: [.whisperKit: engine], recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: []))
+        var settings = AppSettings.default
+        settings.preferredInputUID = "builtin"
+        await pipeline.start(settings: settings)
+        #expect(await eventually { pipeline.phase == .listening })
+
+        var sounds = settings.soundAlerts
+        sounds.mutedIdentifiers.insert("door_bell")
+        pipeline.setSoundAlertPreferences(sounds)
+        pipeline.setSpeakerSimilarityThreshold(0.9)
+        #expect(pipeline.selectInput(uid: "usb"))
+        let prepared = audio.calls.filter { $0 == "prepareSession" }.count
+
+        engine.endStream(throwing: TestError())
+        #expect(await eventually { pipeline.phase == .listening && audio.calls.filter { $0 == "prepareSession" }.count > prepared })
+        #expect(pipeline.soundPolicy.preferences == sounds)
+        #expect(pipeline.speakerSimilarityThreshold == 0.9)
+        #expect(audio.selectedInputUID == "usb")
+    }
+
     @Test("stop() returns to idle and stops capture")
     func stop() async {
         let (pipeline, audio, _) = makePipeline()

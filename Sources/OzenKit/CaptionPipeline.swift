@@ -766,6 +766,7 @@ public final class CaptionPipeline {
     /// in use afterwards: the system can refuse it, or settle on another.
     @discardableResult
     public func selectInput(uid: String) -> Bool {
+        activeSettings?.preferredInputUID = uid
         do {
             try audio.selectInput(uid: uid)
             stats.inputChanges += 1
@@ -1164,8 +1165,21 @@ public final class CaptionPipeline {
         speakerClusters = clusterer.clusters
     }
 
+    // A choice made while listening also goes into `activeSettings`, as
+    // keyword alerts and vocabulary do: every automatic retry starts from
+    // that copy, and it used to put back what was chosen at Start - a
+    // doorbell switched on mid-evening went quiet again while Settings
+    // still showed it on.
     public func setSpeakerSimilarityThreshold(_ threshold: Float) {
         clusterer.similarityThreshold = threshold
+        activeSettings?.speakerSimilarityThreshold = threshold
+    }
+
+    var speakerSimilarityThreshold: Float { clusterer.similarityThreshold }
+
+    public func setSoundAlertPreferences(_ preferences: SoundAlertPreferences) {
+        soundPolicy.preferences = preferences
+        activeSettings?.soundAlerts = preferences
     }
 
     // MARK: - Tokens

@@ -1347,7 +1347,7 @@ public final class LiveCaptionViewModel {
         get { settings.soundAlerts }
         set {
             settings.soundAlerts = newValue
-            pipeline.soundPolicy.preferences = newValue
+            pipeline.setSoundAlertPreferences(newValue)
             persist()
         }
     }
