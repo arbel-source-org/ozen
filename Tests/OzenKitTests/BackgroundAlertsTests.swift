@@ -95,6 +95,13 @@ struct BackgroundAlertPolicyTests {
         #expect(cut.dropLast().hasSuffix("מילה"))
     }
 
+    @Test("a phone number quoted in a keyword notification reads left to right on the lock screen, as on the caption screen")
+    func numbersIsolatedInBody() {
+        var policy = BackgroundAlertPolicy()
+        let content = policy.notification(for: hit("סבתא"), lineText: "סבתא תתקשרי 050 123 4567 מחר", appIsActive: false, now: 0)
+        #expect(content?.body == "סבתא תתקשרי \u{2066}050 123 4567\u{2069} מחר")
+    }
+
     @Test("the same sound shares one cooldown in English too, where its two labels read differently")
     func synonymSoundsShareCooldownInEnglish() {
         Localization.$override.withValue(.english) {

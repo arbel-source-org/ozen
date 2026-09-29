@@ -78,8 +78,9 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
             identifier: key,
             title: tr("נאמר: %1", "Said: %1", args: ["\(hit.match.phrase)"]),
             // On the lock screen too, a line opening with an English word
-            // would otherwise read out of order.
-            body: Self.rightToLeft(Self.excerpt(lineText)),
+            // would otherwise read out of order, and a phone number said in
+            // it would read from its last group ("4567 123 050").
+            body: Self.rightToLeft(CaptionLayout.isolatingNumbers(Self.excerpt(lineText))),
             threadIdentifier: "keywords",
             isUrgent: false
         )
