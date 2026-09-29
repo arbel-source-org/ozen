@@ -164,6 +164,40 @@ class PauseEnd(unittest.TestCase):
         self.assertLess(session.final_lag_seconds[0], 0.15, session.final_lag_seconds)
 
 
+class WindowGPU(SlowGPU):
+    """Remembers how much audio each pass was given."""
+
+    async def transcribe(self, audio, language, prompt, final, hotwords=None, gate=True, beam=None):
+        self.passes.append((len(audio), final))
+        await asyncio.sleep(0.05 if final else self.live_seconds)
+        return ("שלום" if final else "של"), 0.9, []
+
+
+class LongLine(unittest.TestCase):
+    def test_a_line_cut_for_length_stays_within_the_limit_after_a_slow_pass(self):
+        gpu = WindowGPU(live_seconds=1.3)
+        session = S.Session(Socket(), gpu, "he", [], live_interval=0.3)
+        session.max_utterance = 2.0
+        session.cut_look_back = 0.2
+
+        async def feed():
+            worker = asyncio.create_task(session.run())
+            chunk = pcm(6.0, 0.3)
+            step = int(0.1 * S.RATE) * 2
+            for i in range(0, len(chunk), step):
+                session.add_audio(chunk[i:i + step])
+                await asyncio.sleep(0.1)
+            session.finished = True
+            session.changed.set()
+            await asyncio.wait_for(worker, 10)
+
+        asyncio.run(feed())
+        finals = [n for n, final in gpu.passes if final]
+        self.assertGreaterEqual(len(finals), 3, gpu.passes)
+        self.assertTrue(all(n <= 2.0 * S.RATE for n in finals), finals)
+        self.assertEqual(sum(finals), session.offset)
+
+
 class RepeatGPU(SlowGPU):
     """Every pass comes back as a sentence written twice, which this server
     drops for its compression and the phone keeps (WhisperResultFilter)."""

@@ -401,8 +401,15 @@ class Session:
                 window = self.buf[:total]
             else:
                 end = min(total, end_speech + pad)
+                # A slow pass can leave more than the longest line waiting,
+                # even past a pause or the end: cut near the limit, not near
+                # the end of that backlog, or Whisper gets more than its
+                # 30 s window. The rest is the next line.
+                cut_for_length = (too_long and not pause_reached and not self.finished) or end > max_s
+                if cut_for_length:
+                    end = min(end, max_s)
                 window = self.buf[:end]
-                if too_long and not pause_reached and not self.finished:
+                if cut_for_length:
                     cut = quietest_point(window, len(window), int(self.cut_look_back * R), int(self.cut_frame * R))
                     window = window[:cut]
             self.samples_at_last_pass = total
