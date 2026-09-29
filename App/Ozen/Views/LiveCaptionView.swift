@@ -90,7 +90,10 @@ struct LiveCaptionView: View {
     }
 
     private var keepsScreenAwake: Bool {
-        ScreenAwakePolicy.shouldKeepAwake(
+        // The home computer's backup downloads outside the captions, often
+        // while they are stopped or failed, and like any model download it
+        // stalls once the phone locks (see `ScreenAwakePolicy`).
+        viewModel.backupModelProgress != nil || ScreenAwakePolicy.shouldKeepAwake(
             phase: viewModel.phase,
             keepAwakeWhileListening: viewModel.display.keepScreenAwake,
             lastActivityAt: viewModel.lastCaptionActivityAt,
