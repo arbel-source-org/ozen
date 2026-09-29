@@ -1057,7 +1057,9 @@ public final class LiveCaptionViewModel {
     /// The model that download is fetching: another can be picked in
     /// Models meanwhile, and the progress must stay on the right row.
     public private(set) var backupModelVariant: String?
-    public private(set) var backupModelFailed = false
+    /// The model whose backup download failed: another model picked since
+    /// has not failed, and its row must not say so.
+    private var backupModelFailedVariant: String?
     /// Bumped after a download ends so the installed check is read again.
     private var backupModelChecks = 0
 
@@ -1070,7 +1072,7 @@ public final class LiveCaptionViewModel {
             installed: WhisperModelStore().isInstalled(variant),
             sizeMegabytes: option?.sizeMB ?? 0,
             downloading: backupModelVariant == variant ? backupModelProgress : nil,
-            failed: backupModelFailed,
+            failed: backupModelFailedVariant == variant,
             shortfallMegabytes: option.flatMap {
                 StorageSpaceGate.shortfallMegabytes(
                     downloadMegabytes: $0.remainingInstallMegabytes(onDiskBytes: WhisperModelStore().sizeOnDisk(of: variant)),
@@ -1082,26 +1084,31 @@ public final class LiveCaptionViewModel {
         )
     }
 
+    /// A backup for a model picked earlier may still be downloading: this
+    /// one starts beside it (the tap did nothing for the whole of that
+    /// download), and the rows follow the newest.
     public func downloadBackupModel() {
-        guard backupModelProgress == nil, BackupModel.canStart(backupModelStatus) else { return }
+        guard BackupModel.canStart(backupModelStatus) else { return }
         let variant = settings.whisperModelVariant
         let allowCellular = settings.allowCellularModelDownload
-        backupModelFailed = false
+        backupModelFailedVariant = nil
         backupModelProgress = 0
         backupModelVariant = variant
         Task {
             do {
                 _ = try await WhisperModelStore().download(variant: variant, allowCellular: allowCellular) { fraction in
                     Task { @MainActor [weak self] in
-                        guard let self, self.backupModelProgress != nil else { return }
+                        guard let self, self.backupModelVariant == variant, self.backupModelProgress != nil else { return }
                         self.backupModelProgress = fraction
                     }
                 }
             } catch {
-                backupModelFailed = true
+                backupModelFailedVariant = variant
             }
-            backupModelProgress = nil
-            backupModelVariant = nil
+            if backupModelVariant == variant {
+                backupModelProgress = nil
+                backupModelVariant = nil
+            }
             backupModelChecks += 1
         }
     }
