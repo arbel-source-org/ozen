@@ -40,12 +40,12 @@ struct SoundAlertsView: View {
                             event: event,
                             isSupported: viewModel.isSoundEventSupported(event.identifier),
                             isOn: Binding(
-                                get: { !viewModel.soundAlertPreferences.mutedIdentifiers.contains(event.identifier) },
+                                get: { !viewModel.soundAlertPreferences.isMuted(event.identifier) },
                                 set: { viewModel.setSoundEvent(event.identifier, muted: !$0) }
                             ),
                             nearMiss: viewModel.pipeline.soundNearMisses.entry(for: event),
                             isSensitive: Binding(
-                                get: { viewModel.soundAlertPreferences.sensitiveIdentifiers.contains(event.identifier) },
+                                get: { viewModel.soundAlertPreferences.isSensitive(event.identifier) },
                                 set: { viewModel.setSoundEvent(event.identifier, sensitive: $0) }
                             )
                         )

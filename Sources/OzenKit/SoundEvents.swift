@@ -120,6 +120,12 @@ public enum SoundEventCatalog {
         events.first { $0.identifier == identifier }
     }
 
+    /// Every label for the same sound as `identifier`, itself included.
+    public static func sameSound(as identifier: String) -> Set<String> {
+        guard let key = event(for: identifier)?.cooldownKey else { return [identifier] }
+        return Set(events.filter { $0.cooldownKey == key }.map(\.identifier))
+    }
+
     public static var identifiers: Set<String> {
         Set(events.map(\.identifier))
     }
@@ -217,6 +223,28 @@ public struct SoundAlertPreferences: Codable, Sendable, Equatable {
 
     public static let `default` = SoundAlertPreferences()
 
+    // Two classifier labels the catalog shows as one sound ("Phone ringing"
+    // as telephone_bell_ringing and ringtone) follow one switch: muting one
+    // row left the same ring alerting under the other label, with the
+    // switch showing off.
+    public func isMuted(_ identifier: String) -> Bool {
+        !mutedIdentifiers.isDisjoint(with: SoundEventCatalog.sameSound(as: identifier))
+    }
+
+    public mutating func setMuted(_ identifier: String, _ muted: Bool) {
+        let labels = SoundEventCatalog.sameSound(as: identifier)
+        if muted { mutedIdentifiers.formUnion(labels) } else { mutedIdentifiers.subtract(labels) }
+    }
+
+    public func isSensitive(_ identifier: String) -> Bool {
+        !sensitiveIdentifiers.isDisjoint(with: SoundEventCatalog.sameSound(as: identifier))
+    }
+
+    public mutating func setSensitive(_ identifier: String, _ sensitive: Bool) {
+        let labels = SoundEventCatalog.sameSound(as: identifier)
+        if sensitive { sensitiveIdentifiers.formUnion(labels) } else { sensitiveIdentifiers.subtract(labels) }
+    }
+
     private enum CodingKeys: String, CodingKey {
         case isEnabled, minimumImportance, mutedIdentifiers, sensitiveIdentifiers
     }
@@ -294,7 +322,7 @@ public struct SoundEventPolicy: Sendable, Equatable {
     /// stricter than `minimumConfidence`, even if a future setting ever
     /// lowered it below the default `sensitiveConfidence`.
     public func requiredConfidence(for identifier: String) -> Double {
-        preferences.sensitiveIdentifiers.contains(identifier)
+        preferences.isSensitive(identifier)
             ? min(sensitiveConfidence, minimumConfidence)
             : minimumConfidence
     }
@@ -305,7 +333,7 @@ public struct SoundEventPolicy: Sendable, Equatable {
         guard observation.confidence >= requiredConfidence(for: observation.identifier) else { return nil }
         guard let event = SoundEventCatalog.event(for: observation.identifier) else { return nil }
         guard event.importance >= preferences.minimumImportance else { return nil }
-        guard !preferences.mutedIdentifiers.contains(event.identifier) else { return nil }
+        guard !preferences.isMuted(event.identifier) else { return nil }
         // A continuous sound needs a second confirming window within
         // `persistenceWindowSeconds`, unless it's already confident enough
         // to be sure on its own: a real siren or a kettle at a rolling boil

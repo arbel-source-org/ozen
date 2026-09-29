@@ -66,6 +66,29 @@ struct SoundEventsTests {
         SoundObservation(identifier: id, confidence: confidence, timestamp: time)
     }
 
+    @Test("turning off 'Phone ringing' silences it under both of its labels, and a faint-sounds choice covers both too")
+    func twinLabelsFollowOneSwitch() {
+        var preferences = SoundAlertPreferences()
+        preferences.setMuted("telephone_bell_ringing", true)
+        #expect(preferences.isMuted("ringtone"))
+        var policy = SoundEventPolicy()
+        policy.preferences = preferences
+        #expect(policy.evaluate(reading("ringtone")) == nil)
+        #expect(policy.evaluate(reading("telephone_bell_ringing", at: 200)) == nil)
+        #expect(policy.evaluate(reading("door_bell", at: 300)) != nil)
+
+        preferences.setMuted("ringtone", false)
+        #expect(!preferences.isMuted("telephone_bell_ringing"))
+        #expect(SoundAlertPreferences(mutedIdentifiers: ["whistling"]).isMuted("boiling"))
+
+        var faint = SoundAlertPreferences()
+        faint.setSensitive("telephone_bell_ringing", true)
+        #expect(faint.isSensitive("ringtone"))
+        var faintPolicy = SoundEventPolicy()
+        faintPolicy.preferences = faint
+        #expect(faintPolicy.evaluate(reading("ringtone", confidence: 0.45)) != nil)
+    }
+
     @Test("a siren heard for a minute keeps its banner up the whole time; an ordinary sound's banner is short")
     func sirenBannerNeverLapses() throws {
         var policy = SoundEventPolicy()
