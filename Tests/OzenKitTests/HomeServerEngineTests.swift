@@ -595,6 +595,49 @@ struct HomeServerCoverTests {
         #expect(captions.coverReason == nil)
     }
 
+    @Test("with no backup on the phone, captions start again by themselves once the computer answers, not only after a tap")
+    func waitsForTheComputerWithoutABackup() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 819
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: [])
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { server.prepareCount >= 2 && captions.scheduledRetry == nil })
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(captions.phase.failure?.engineUnavailability?.kind == .homeServerUnreachable)
+        #expect(phone.prepareCount == 0, "no surprise download of the backup")
+
+        server.availability = .available
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        #expect(!captions.isCoveringForCloud)
+    }
+
+    @Test("a refused code is left for a person to fix, not asked again and again")
+    func refusedCodeIsNotPolled() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerRejected, "wrong code"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 819
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: [])
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase.failure != nil && captions.scheduledRetry == nil })
+        try? await Task.sleep(for: .milliseconds(150))
+        let asked = server.prepareCount
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(server.prepareCount == asked)
+    }
+
     @Test("the switch back waits while someone is mid-sentence")
     func waitsForTheSentenceToEnd() async throws {
         let server = FakeEngine(kind: .homeServer)

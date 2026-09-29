@@ -1601,6 +1601,7 @@ public final class CaptionPipeline {
         guard !systemInterrupted else { return }
         guard let delay = recovery.nextDelay(for: failure) else {
             coverOnceRetriesRunOut(after: failure)
+            waitForHomeServer(after: failure)
             return
         }
 
@@ -1631,6 +1632,36 @@ public final class CaptionPipeline {
         else { return }
         onPhone.engine = .whisperKit
         Task { [weak self] in await self?.coverForCloud(with: onPhone, after: failure, retryIfNotCovered: false) }
+    }
+
+    /// With no model on the phone to take over, an unreachable home
+    /// computer left captions stopped once the quick retries ran out, even
+    /// after it woke up: only a tap, or the phone's own network dropping
+    /// and coming back, started them again. Asks the computer every
+    /// `homeServerRecheckSeconds` and starts captions once it answers. A
+    /// refused code needs a person, so it isn't asked again.
+    private func waitForHomeServer(after failure: PipelineFailure) {
+        guard failure.engineUnavailability?.kind == .homeServerUnreachable,
+              let chosen = activeSettings, chosen.engine == .homeServer
+        else { return }
+        homeServerRecheck?.cancel()
+        homeServerRecheck = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let seconds = self?.homeServerRecheckSeconds else { return }
+                try? await Task.sleep(for: .seconds(seconds))
+                guard !Task.isCancelled, let self, case .failed(let current) = self.phase, current == failure else { return }
+                guard !self.systemInterrupted else { continue }
+                let server = self.cachedEngine(for: chosen)
+                guard await server.checkAvailability(languageCode: chosen.languageCode) == .available,
+                      !Task.isCancelled, !self.systemInterrupted, case .failed(let still) = self.phase, still == failure
+                else { continue }
+                self.logEvent(.note("the home computer answers again, starting captions"))
+                self.homeServerRecheck = nil
+                self.recovery.reset()
+                await self.retry()
+                return
+            }
+        }
     }
 
     private func cancelScheduledRetry() {

@@ -66,7 +66,8 @@ things, for Hebrew conversation, entirely on-device.
   code; if the PC can't be reached, the phone's own model carries on,
   once it has been downloaded as a backup (Settings → Home computer →
   "Download a backup to the phone"; without it captions wait for the PC,
-  and the status line offers the backup).
+  start again about a minute after it answers, and the status line offers
+  the backup).
   See [Home computer requirements](#home-computer-requirements) and
   `server/README.md`.
 - **Optional cloud captions** for when the phone's models are too slow or
