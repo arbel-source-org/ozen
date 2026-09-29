@@ -105,8 +105,8 @@ public final class CaptionPipeline {
     public var cloudRecheckSeconds: Double = 60
     /// How long a download waits for the system's first word on the network.
     public var networkFirstReportWaitSeconds: Double = 2
-    /// Only switch back after this long without new words, so a sentence
-    /// isn't cut in half.
+    /// Only switch back after this long without new words or speech, so a
+    /// sentence isn't cut in half.
     public var homeServerSwitchBackQuietSeconds: Double = 2
     /// After this many checks in a row found it back, switch at the next
     /// finished line even without a quiet moment: a TV or a lively table
@@ -205,6 +205,10 @@ public final class CaptionPipeline {
     /// and background noise must not open phantom speakers or drag a real
     /// person's voice profile toward the fridge hum.
     private var embeddingVoiceDetector = EnergyVoiceDetector()
+    /// When the microphone last heard speech, words or not: the phone's
+    /// model writes a sentence's first word a second or two after it
+    /// began, and a switch back in that gap lost the sentence's start.
+    private var lastSpeechAt: TimeInterval?
     private var silencePhraseGuard = SilencePhraseGuard()
     /// The speaker of the most recent window that held speech. A short reply
     /// ("ken" — "yes") is often over before its caption line exists, so a new
@@ -1534,6 +1538,7 @@ public final class CaptionPipeline {
             }
             stats.noiseMarginDecibels = Double(20 * log10(embeddingVoiceDetector.currentNoiseFloorRatio))
             if isSpeech {
+                lastSpeechAt = now()
                 speechSamples += chunk.count
                 stats.speechChunks += 1
             }
@@ -1841,6 +1846,7 @@ public final class CaptionPipeline {
 
     private var isBetweenSentences: Bool {
         if stabilizer.segments.last.map({ !$0.isCommitted }) ?? false { return false }
+        if let lastSpeechAt, now() - lastSpeechAt < homeServerSwitchBackQuietSeconds { return false }
         guard let lastTokenAt = stats.lastTokenAt else { return true }
         return now() - lastTokenAt >= homeServerSwitchBackQuietSeconds
     }

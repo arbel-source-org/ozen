@@ -1028,6 +1028,41 @@ struct HomeServerCoverTests {
         #expect(await eventually { captions.activeEngineKind == .homeServer })
     }
 
+    @Test("the switch back waits while someone is talking, even before the phone's model has written a word")
+    func waitsForSpeechWithoutWords() async throws {
+        let audio = FakeAudioCapturer()
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: audio,
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        captions.homeServerSwitchBackQuietSeconds = 1
+        captions.switchBackAfterAnsweredChecks = 1000
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        let quiet = [Float](repeating: 0.0002, count: 800)
+        let voice = (0..<800).map { Float(sin(Double($0) * 0.3) * 0.2) }
+        for _ in 0..<5 {
+            audio.push(quiet)
+            audio.push(voice)
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        let talkUntil = ContinuousClock.now + .milliseconds(800)
+        while ContinuousClock.now < talkUntil {
+            audio.push(quiet)
+            audio.push(voice)
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(captions.activeEngineKind == .whisperKit)
+        #expect(await eventually { captions.activeEngineKind == .homeServer })
+    }
+
     @Test("with talk that never goes quiet, captions still go back after a few answered checks, between two lines")
     func switchesBackWithoutSilence() async throws {
         let server = FakeEngine(kind: .homeServer)
