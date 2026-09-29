@@ -1847,6 +1847,7 @@ public final class LiveCaptionViewModel {
     public func deleteAllConversations() throws {
         try historyWriter.deleteAllNow()
         problemAudio?.deleteAll()
+        journal?.removeEntries(where: ProblemSnapshot.isCaptionLine)
         closedHistorySessions = []
         forgetCurrentConversation()
     }

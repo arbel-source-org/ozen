@@ -2,6 +2,11 @@ import Foundation
 
 public enum ProblemSnapshot {
     public static let lineCount = 4
+    static let captionLinePrefix = "  line ("
+
+    public static func isCaptionLine(_ text: String) -> Bool {
+        text.hasPrefix(captionLinePrefix)
+    }
 
     public static func lines(
         settings: AppSettings,
@@ -20,13 +25,8 @@ public enum ProblemSnapshot {
         ]
         for segment in segments.suffix(lineCount) {
             let sureness = segment.confidence.map { String(format: "%.2f", $0) } ?? "-"
-            // The problem-marked line above and the journal entry this all
-            // becomes both carry the moment the problem was marked, not
-            // when each line last changed: without its own clock time here
-            // there's no telling a line stuck for ten minutes from one
-            // that just went wrong.
             let time = TranscriptHistoryStore.formattedClockTime(segment.lastUpdateTimestamp, utcOffsetSeconds: utcOffsetSeconds)
-            lines.append("  line (\(segment.isCommitted ? "final" : "live"), sure \(sureness), \(time)): \(segment.text)")
+            lines.append("\(captionLinePrefix)\(segment.isCommitted ? "final" : "live"), sure \(sureness), \(time)): \(segment.text)")
         }
         return lines
     }

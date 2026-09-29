@@ -153,6 +153,30 @@ struct LiveCaptionViewModelTests {
         #expect(viewModel.problemAudio?.clips().isEmpty == true)
     }
 
+    @Test("delete all also takes out the caption lines a marked problem kept, and leaves the rest of the journal")
+    func deleteAllRemovesMarkedLines() async throws {
+        let engine = FakeEngine()
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-vm-problem-lines-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let journalURL = directory.appendingPathComponent("journal.log")
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: temporaryStore(),
+            pipeline: CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder()),
+            journal: SessionJournal(fileURL: journalURL),
+            problemAudio: ProblemAudioStore(directory: directory.appendingPathComponent("clips"))
+        )
+        await viewModel.start()
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "תתקשרי לרופא מחר", isFinal: true, timestamp: Date().timeIntervalSince1970))
+        #expect(await eventually { !viewModel.segments.isEmpty })
+        viewModel.markProblem()
+        #expect(SessionJournal(fileURL: journalURL).entries().contains { $0.text.contains("תתקשרי לרופא מחר") })
+
+        try viewModel.deleteAllConversations()
+        let kept = SessionJournal(fileURL: journalURL).entries().map(\.text)
+        #expect(!kept.contains { $0.contains("תתקשרי לרופא מחר") })
+        #expect(kept.contains { $0.hasPrefix("PROBLEM MARKED") })
+    }
+
     @Test("start() drives the pipeline to listening")
     func startListens() async {
         let viewModel = LiveCaptionViewModel(settingsStore: temporaryStore(), pipeline: fakePipeline())

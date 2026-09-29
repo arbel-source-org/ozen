@@ -24,6 +24,30 @@ struct SessionJournalTests {
         #expect(second.entries()[1].at == 1_800_000_065.5)
     }
 
+    @Test("the caption lines a marked problem kept can be taken out, and everything else stays")
+    func removesSpokenLines() {
+        let url = temporaryFile()
+        let journal = SessionJournal(fileURL: url)
+        let segments = ["תתקשרי לרופא", "מחר בעשר"].map {
+            TranscriptSegment(id: UUID(), text: $0, isCommitted: true, speakerClusterID: nil, startTimestamp: 0, lastUpdateTimestamp: 60)
+        }
+        journal.append("listening", at: 1_800_000_000)
+        for line in ProblemSnapshot.lines(settings: .default, activeEngine: nil, input: nil, stats: PipelineStats(), segments: segments, device: "-", utcOffsetSeconds: 0) {
+            journal.append(line, at: 1_800_000_010)
+        }
+        journal.append("  sound saved: problem.wav", at: 1_800_000_010)
+        journal.append("stopped", at: 1_800_000_020)
+
+        journal.removeEntries(where: ProblemSnapshot.isCaptionLine)
+
+        let kept = SessionJournal(fileURL: url).entries().map(\.text)
+        #expect(!kept.contains { $0.contains("תתקשרי לרופא") || $0.contains("מחר בעשר") })
+        #expect(kept.count == 6)
+        #expect(kept.first == "listening")
+        #expect(kept.last == "stopped")
+        #expect(kept.contains { $0.hasPrefix("PROBLEM MARKED") })
+    }
+
     @Test("lines carry the day as well as the time, at her clock")
     func reportLines() {
         let journal = SessionJournal(fileURL: temporaryFile())

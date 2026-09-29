@@ -16,7 +16,8 @@ around the moment it was tapped, so the wrong words can be seen; the screen
 says so. It also keeps the last 30 seconds of sound on the phone (only while
 saving conversations is on, never in a backup); Diagnostics lists these
 clips, and one is only sent if someone taps it and shares it. "Delete all
-saved conversations" deletes them too. Otherwise conversations never leave
+saved conversations" deletes them too, and the caption lines kept with
+each marked problem. Otherwise conversations never leave
 the phone.
 
 ## What the status button says

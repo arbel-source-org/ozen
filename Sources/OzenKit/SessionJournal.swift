@@ -88,6 +88,26 @@ public final class SessionJournal: @unchecked Sendable {
         }
     }
 
+    /// Takes out every kept line `shouldRemove` picks, whether still
+    /// buffered or on disk; the rest stay, in order.
+    public func removeEntries(where shouldRemove: (String) -> Bool) {
+        Self.queue.sync {
+            Self.flush(fileURL)
+            if let pending = Self.pendingLines[fileURL] {
+                Self.pendingLines[fileURL] = pending.filter { line in
+                    guard let tab = line.firstIndex(of: "\t") else { return true }
+                    return !shouldRemove(String(line[line.index(after: tab)...].dropLast()))
+                }
+            }
+            let entries = Self.read(fileURL)
+            let kept = entries.filter { !shouldRemove($0.text) }
+            guard kept.count < entries.count else { return }
+            let text = kept.map { "\(String(format: "%.2f", $0.at))\t\($0.text)\n" }.joined()
+            try? Data(text.utf8).write(to: fileURL, options: .privateFile)
+            Self.excludeFromBackup(fileURL)
+        }
+    }
+
     /// "2026-09-18 14:02:07 listening", oldest first.
     public func reportLines(utcOffsetSeconds: Int) -> [String] {
         entries().map { entry in

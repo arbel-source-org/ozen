@@ -19,6 +19,6 @@ struct PrivateFileWritesTests {
         }
         #expect(try source("SessionJournal.swift").contains("attributes: privateFileAttributes"))
         let journal = try source("SessionJournal.swift")
-        #expect(journal.components(separatedBy: "excludeFromBackup(fileURL)").count - 1 == 2)
+        #expect(journal.components(separatedBy: "excludeFromBackup(fileURL)").count - 1 == 3)
     }
 }
