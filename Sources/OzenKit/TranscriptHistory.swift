@@ -16,8 +16,12 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
     /// Marked as important while it was said ("what the doctor said about
     /// the pills"), so it can be found again.
     public var isStarred: Bool
-    /// The engine's confidence in the line when it was saved.
-    public var confidence: Float?
+    /// The engine's confidence in the line when it was saved. Only a real
+    /// number is kept: JSON can't hold "not a number" or infinity, and one
+    /// such line made every save of its conversation fail.
+    public var confidence: Float? {
+        didSet { if let confidence, !confidence.isFinite { self.confidence = nil } }
+    }
 
     public init(
         id: UUID,
@@ -36,7 +40,7 @@ public struct SavedSegment: Codable, Sendable, Equatable, Identifiable {
         self.startTimestamp = startTimestamp
         self.isCommitted = isCommitted
         self.isStarred = isStarred
-        self.confidence = confidence
+        self.confidence = confidence.flatMap { $0.isFinite ? $0 : nil }
     }
 
     private enum CodingKeys: String, CodingKey {

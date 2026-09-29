@@ -58,6 +58,23 @@ struct TranscriptHistoryTests {
         #expect(loaded == original)
     }
 
+    @Test("a line whose confidence is not a number is saved without it, instead of the whole conversation failing to save")
+    func nonFiniteConfidenceStillSaves() throws {
+        let dir = makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = TranscriptHistoryStore(directoryURL: dir)
+
+        let odd = SavedSegment(id: UUID(), text: "הכדור בבוקר", speakerName: nil, speakerClusterID: nil, startTimestamp: 0, isCommitted: true, confidence: .nan)
+        var changed = segment(text: "ובערב")
+        changed.confidence = .infinity
+        let original = record(startedAt: 100, endedAt: 200, segments: [odd, changed, segment(text: "שלום")])
+        #expect(try store.save(original))
+
+        let loaded = try #require(store.load(id: original.id))
+        #expect(loaded.segments.map(\.text) == ["הכדור בבוקר", "ובערב", "שלום"])
+        #expect(loaded.segments.allSatisfy { $0.confidence == nil })
+    }
+
     @Test("renaming a voice rewrites every saved conversation that used the old name, and search finds the new one")
     func renameSpeakerAcrossHistory() throws {
         let dir = makeTempDirectory()
