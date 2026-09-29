@@ -208,7 +208,7 @@ struct ModelManagerView: View {
         // The phone's backup for the home computer downloads outside the
         // captions: without this its row said "Download interrupted" and
         // offered Delete while the download was still writing into it.
-        if option.variant == viewModel.settings.whisperModelVariant, let backup = viewModel.backupModelProgress {
+        if option.variant == viewModel.backupModelVariant, let backup = viewModel.backupModelProgress {
             return backup
         }
         guard let progress = viewModel.phase.preparationProgress,

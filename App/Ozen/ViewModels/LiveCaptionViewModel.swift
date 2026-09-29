@@ -1049,6 +1049,9 @@ public final class LiveCaptionViewModel {
     /// while that model still needs a download, so without it captions
     /// just stop.
     public private(set) var backupModelProgress: Double?
+    /// The model that download is fetching: another can be picked in
+    /// Models meanwhile, and the progress must stay on the right row.
+    public private(set) var backupModelVariant: String?
     public private(set) var backupModelFailed = false
     /// Bumped after a download ends so the installed check is read again.
     private var backupModelChecks = 0
@@ -1061,7 +1064,7 @@ public final class LiveCaptionViewModel {
             engine: settings.engine,
             installed: WhisperModelStore().isInstalled(variant),
             sizeMegabytes: option?.sizeMB ?? 0,
-            downloading: backupModelProgress,
+            downloading: backupModelVariant == variant ? backupModelProgress : nil,
             failed: backupModelFailed,
             shortfallMegabytes: option.flatMap {
                 StorageSpaceGate.shortfallMegabytes(
@@ -1075,11 +1078,12 @@ public final class LiveCaptionViewModel {
     }
 
     public func downloadBackupModel() {
-        guard BackupModel.canStart(backupModelStatus) else { return }
+        guard backupModelProgress == nil, BackupModel.canStart(backupModelStatus) else { return }
         let variant = settings.whisperModelVariant
         let allowCellular = settings.allowCellularModelDownload
         backupModelFailed = false
         backupModelProgress = 0
+        backupModelVariant = variant
         Task {
             do {
                 _ = try await WhisperModelStore().download(variant: variant, allowCellular: allowCellular) { fraction in
@@ -1092,6 +1096,7 @@ public final class LiveCaptionViewModel {
                 backupModelFailed = true
             }
             backupModelProgress = nil
+            backupModelVariant = nil
             backupModelChecks += 1
         }
     }
