@@ -40,4 +40,13 @@ struct UtteranceCutTests {
         #expect(UtteranceCut.quietestPoint(in: speech(count: 1_000), before: 5_000, lookBack: 1_000, frame: 0) == 1_000)
         #expect(UtteranceCut.quietestPoint(in: speech(count: 1_000), before: -3, lookBack: 1_000, frame: 100) == 0)
     }
+
+    @Test("a finished line reaches no further than the cap, whether someone was still talking, paused or stopped")
+    func finishedLineStaysWithinTheCap() {
+        #expect(UtteranceCut.finishedLine(total: 100, speechEnd: 60, pad: 5, maxSamples: 280, stillTalkingAtCap: false) == (65, false))
+        #expect(UtteranceCut.finishedLine(total: 62, speechEnd: 60, pad: 5, maxSamples: 280, stillTalkingAtCap: false) == (62, false))
+        #expect(UtteranceCut.finishedLine(total: 290, speechEnd: 289, pad: 5, maxSamples: 280, stillTalkingAtCap: true) == (280, true))
+        #expect(UtteranceCut.finishedLine(total: 270, speechEnd: 260, pad: 5, maxSamples: 280, stillTalkingAtCap: true) == (265, true))
+        #expect(UtteranceCut.finishedLine(total: 400, speechEnd: 390, pad: 5, maxSamples: 280, stillTalkingAtCap: false) == (280, true))
+    }
 }

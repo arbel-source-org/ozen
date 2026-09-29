@@ -359,13 +359,21 @@ public actor WhisperKitEngine: TranscriptionEngine {
             // Only this loop drops audio from the front, so the first
             // `total` samples are still the ones the counts described.
             let window: [Float]
+            let line = UtteranceCut.finishedLine(
+                total: total,
+                speechEnd: speechEnd,
+                pad: padSamples,
+                maxSamples: maxSamples,
+                stillTalkingAtCap: tooLong && !pauseReached && !status.finished
+            )
             if !isFinal {
                 window = intake.copySamples(upTo: total)
-            } else if tooLong && !pauseReached && !status.finished {
-                // Still talking at the cap: end the line in the quietest
-                // moment of the last two seconds rather than mid-word. What
-                // comes after it is kept and starts the next line.
-                let heard = intake.copySamples(upTo: min(total, speechEnd + padSamples))
+            } else if line.cut {
+                // Still talking at the cap, or more than the longest line
+                // waiting after a slow pass: end the line in the quietest
+                // moment of the last two seconds before the cap rather than
+                // mid-word. What comes after it is kept and starts the next line.
+                let heard = intake.copySamples(upTo: line.end)
                 let cut = UtteranceCut.quietestPoint(
                     in: heard,
                     before: heard.count,
@@ -374,7 +382,7 @@ public actor WhisperKitEngine: TranscriptionEngine {
                 )
                 window = Array(heard[0..<cut])
             } else {
-                window = intake.copySamples(upTo: min(total, speechEnd + padSamples))
+                window = intake.copySamples(upTo: line.end)
             }
             let end = window.count
             samplesAtLastPass = total

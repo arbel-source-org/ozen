@@ -94,6 +94,26 @@ struct CloudSpeechEngineTests {
         #expect(seconds < 2.0)
     }
 
+    private func secondsSent(_ request: CloudHTTPRequest) throws -> Double {
+        let json = try #require(JSONSerialization.jsonObject(with: request.body ?? Data()) as? [String: Any])
+        let content = try #require(((json["messages"] as? [[String: Any]])?.first?["content"]) as? [[String: Any]])
+        let audio = try #require(Data(base64Encoded: (content.last?["input_audio"] as? [String: String])?["data"] ?? ""))
+        return Double(audio.count - 44) / 2 / 16_000
+    }
+
+    @Test("a line never runs past 28 seconds, even when more than that is waiting")
+    func backlogIsCutAtTheLimit() async throws {
+        let http = FakeCloudHTTP(answers: [.text("שלום")])
+        // Talk: syllables with short dips, which a steady tone is not.
+        let talk = (0..<Int(40 * 16_000) / chunk).map { index in
+            (0..<chunk).map { index % 6 == 5 ? 0.001 * sin(Float($0) * 0.3) : 0.05 * sin(Float($0) * 0.3) }
+        }
+        _ = try await transcribe(engine(http), talk + silence(seconds: 1))
+        let sent = try http.transcriptionRequests.map(secondsSent)
+        #expect(sent.count >= 2)
+        #expect(sent.allSatisfy { $0 <= CloudSpeechEngine.maxUtteranceSeconds }, "\(sent)")
+    }
+
     private func pause(in path: String, after prefix: String) throws -> Double {
         let file = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

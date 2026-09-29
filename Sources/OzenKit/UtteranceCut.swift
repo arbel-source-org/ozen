@@ -9,6 +9,18 @@ import Foundation
 /// Even fluent speech has short dips between words and at breaths, so the
 /// cut goes to the quietest moment of the last couple of seconds instead.
 public enum UtteranceCut {
+    /// How far a finished line reaches into the audio waiting, and whether
+    /// it ends at `quietestPoint` before that. Someone still talking at
+    /// the cap is cut there. So is a line that would run past the cap
+    /// although a pause or the end came: a slow pass let more than the
+    /// longest line pile up, and all of it at once would be more than
+    /// Whisper hears. What is left starts the next line.
+    public static func finishedLine(total: Int, speechEnd: Int, pad: Int, maxSamples: Int, stillTalkingAtCap: Bool) -> (end: Int, cut: Bool) {
+        let end = min(total, speechEnd + pad)
+        guard stillTalkingAtCap || end > maxSamples else { return (end, false) }
+        return (min(end, maxSamples), true)
+    }
+
     /// The middle of the quietest `frame`-sample stretch within the
     /// `lookBack` samples before `end`, stepping half a frame at a time.
     /// Returns `end` itself when there's too little audio to choose from.

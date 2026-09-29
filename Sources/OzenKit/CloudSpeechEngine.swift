@@ -189,10 +189,17 @@ public actor CloudSpeechEngine: TranscriptionEngine {
             }
 
             let window: [Float]
+            let line = UtteranceCut.finishedLine(
+                total: total,
+                speechEnd: speechEnd,
+                pad: padSamples,
+                maxSamples: maxSamples,
+                stillTalkingAtCap: tooLong && !pauseReached && !status.finished
+            )
             if !isFinal {
                 window = intake.copySamples(upTo: total)
-            } else if tooLong && !pauseReached && !status.finished {
-                let heard = intake.copySamples(upTo: min(total, speechEnd + padSamples))
+            } else if line.cut {
+                let heard = intake.copySamples(upTo: line.end)
                 let cut = UtteranceCut.quietestPoint(
                     in: heard,
                     before: heard.count,
@@ -201,7 +208,7 @@ public actor CloudSpeechEngine: TranscriptionEngine {
                 )
                 window = Array(heard[0..<cut])
             } else {
-                window = intake.copySamples(upTo: min(total, speechEnd + padSamples))
+                window = intake.copySamples(upTo: line.end)
             }
             let end = window.count
             samplesAtLastPass = total
