@@ -175,7 +175,9 @@ public final class LockScreenCaptionsCoordinator {
         keepAlive = nil
         throttle.reset()
         nextStartAttempt = 0
-        if isShowing {
+        // One iOS ended while the app was away can stay on the lock screen
+        // for hours with her old lines; ending it takes it off.
+        if isShowing || endedWhileAway {
             display.end()
             isShowing = false
         }

@@ -270,6 +270,23 @@ struct LockScreenCaptionsCoordinatorTests {
         #expect(outdated == 2)
     }
 
+    @Test("lock-screen captions iOS ended while the app was away are taken off when captions stop, not left with her old lines")
+    func endedWhileAwayTakenOffOnStop() async {
+        let (coordinator, display, captions) = make(keepAliveSeconds: 0.05)
+        captions.texts = ["good morning"]
+        coordinator.refresh()
+        coordinator.appActivityChanged(isActive: false)
+        display.isRunning = false
+        #expect(await eventually { !coordinator.isShowing })
+        #expect(display.ends == 0)
+
+        captions.situation.enabled = false
+        coordinator.refresh()
+        #expect(display.ends == 1)
+        coordinator.refresh()
+        #expect(display.ends == 1)
+    }
+
     @Test("a call arriving after 15+ quiet minutes doesn't bring the already-cleared stale line back")
     func callAfterLongQuietStaysCleared() async {
         let (coordinator, display, captions) = make()

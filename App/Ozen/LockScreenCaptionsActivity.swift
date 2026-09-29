@@ -63,9 +63,12 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
             }
             return true
         }
-        // Ended by iOS (they last eight hours) or swiped away.
-        activityID = nil
+        // Ended by iOS (they last eight hours) or swiped away. iOS can keep
+        // an ended one on the lock screen for hours with its last lines, so
+        // it is kept track of until a new one replaces it or `end` is
+        // called, and then taken off.
         guard mayStart, isAllowedBySystem else { return false }
+        if activityID != nil { end() }
         do {
             activityID = try Self.start(state: state, staleDate: staleDate)
             return true
