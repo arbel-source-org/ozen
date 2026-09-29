@@ -130,16 +130,17 @@ public struct WhisperModelStore: Sendable {
     }
 
     /// Downloads (or resumes) a model, reporting 0…1 progress, and returns
-    /// the folder to load from. Routed through `DownloadCoordinator` (see
-    /// its own doc comment) so two calls for the same variant, from two
-    /// different `WhisperModelStore` values, never write the same folder
-    /// at once.
+    /// the folder to load from. Routed through `DownloadCoordinator` so two
+    /// calls for the same variant, from two different `WhisperModelStore`
+    /// values, never write the same folder at once: a dropped engine's
+    /// download still running when captions start again is joined, not
+    /// raced, and the second caller hears its progress too.
     public func download(
         variant: String,
         progress: @escaping @Sendable (Double) -> Void
     ) async throws -> URL {
-        try await DownloadCoordinator.shared.run(for: folder(for: variant)) { [self] in
-            try await performDownload(variant: variant, progress: progress)
+        try await DownloadCoordinator.shared.run(for: folder(for: variant), progress: progress) { [self] report in
+            try await performDownload(variant: variant, progress: report)
         }
     }
 

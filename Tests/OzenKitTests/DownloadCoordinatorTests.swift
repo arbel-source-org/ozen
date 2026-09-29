@@ -44,6 +44,13 @@ private actor Gate {
 
 private struct Failure: Error, Equatable {}
 
+private final class Heard: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: [Double] = []
+    var values: [Double] { lock.withLock { stored } }
+    func add(_ value: Double) { lock.withLock { stored.append(value) } }
+}
+
 @Suite("DownloadCoordinator")
 struct DownloadCoordinatorTests {
     @Test("a second call for the same URL joins the first instead of running its own operation")
@@ -159,5 +166,31 @@ struct DownloadCoordinatorTests {
         }
         #expect(recovered == url)
         #expect(await runs.value == 2)
+    }
+
+    @Test("a caller joining a download in flight hears its progress, from where it has got to")
+    func joinerHearsProgress() async throws {
+        let coordinator = DownloadCoordinator()
+        let url = URL(fileURLWithPath: "/tmp/ozen-test/model-progress")
+        let started = Counter()
+        let gate = Gate()
+        let first = Heard()
+        let joined = Heard()
+
+        async let a: URL = coordinator.run(for: url, progress: { first.add($0) }) { report in
+            report(0.4)
+            await started.increment()
+            await gate.wait()
+            report(0.9)
+            return url
+        }
+        await started.waitUntilAtLeast(1)
+        async let b: URL = coordinator.run(for: url, progress: { joined.add($0) }) { _ in url }
+        while await coordinator.joinCount < 1 { await Task.yield() }
+        await gate.open()
+
+        _ = try await (a, b)
+        #expect(first.values == [0.4, 0.9])
+        #expect(joined.values == [0.4, 0.9])
     }
 }
