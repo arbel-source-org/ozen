@@ -26,7 +26,7 @@ struct HistoryView: View {
         Section {
             if viewModel.saveHistory, viewModel.historySaveFailure != nil {
                 Label(tr("השמירה האחרונה של שיחה נכשלה, כנראה כי אין מקום פנוי בטלפון. מה שנאמר מאז אולי לא נשמר.", "The last conversation save failed, probably because the phone is out of space. What was said since then may not have been saved."), systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.readable(.red))
             }
             Toggle(tr("לשמור שיחות", "Save conversations"), isOn: $viewModel.saveHistory)
             Picker(tr("מחיקה אוטומטית", "Automatic deletion"), selection: retentionChoice) {

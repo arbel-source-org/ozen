@@ -309,7 +309,7 @@ struct SettingsView: View {
         Section {
             if hasCloudKey {
                 Label(tr("מפתח שמור בטלפון", "Key saved on the phone"), systemImage: "key.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.readable(.green))
             }
             SecureField(hasCloudKey ? tr("מפתח חדש במקום השמור", "New key instead of the saved one") : tr("הדביקו כאן מפתח OpenRouter", "Paste your OpenRouter key here"), text: $cloudKeyDraft)
                 .textContentType(.password)
@@ -321,7 +321,7 @@ struct SettingsView: View {
             }
             if cloudKeySaveFailed {
                 Label(tr("המפתח לא נשמר. נסו שוב.", "The key wasn’t saved. Try again."), systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.readable(.red))
             }
             if hasCloudKey {
                 Button(tr("מחיקת המפתח", "Delete key"), role: .destructive) {
@@ -371,11 +371,11 @@ struct SettingsView: View {
             }
             if !homeServerAddressDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, HomeServer.url(from: homeServerAddressDraft) == nil {
                 Label(tr("הכתובת לא נראית תקינה", "That address doesn’t look right"), systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.readable(.orange))
             }
             if hasHomeServerCode {
                 Label(tr("קוד צימוד שמור בטלפון", "Pairing code saved on the phone"), systemImage: "key.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.readable(.green))
             }
             SecureField(hasHomeServerCode ? tr("קוד חדש במקום השמור", "New code instead of the saved one") : tr("קוד הצימוד מהמחשב", "The pairing code from the computer"), text: $homeServerCodeDraft)
                 .textInputAutocapitalization(.never)
@@ -386,7 +386,7 @@ struct SettingsView: View {
             }
             if homeServerCodeSaveFailed {
                 Label(tr("הקוד לא נשמר. נסו שוב.", "The code wasn’t saved. Try again."), systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.readable(.red))
             }
             if hasHomeServerCode, HomeServer.url(from: viewModel.settings.homeServerAddress) != nil {
                 Button {
@@ -488,13 +488,13 @@ struct SettingsView: View {
         switch check {
         case .connected:
             Label(text, systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(.readable(.green))
         case .codeRefused:
             Label(text, systemImage: "key.slash")
-                .foregroundStyle(.red)
+                .foregroundStyle(.readable(.red))
         case .unreachable:
             Label(text, systemImage: "desktopcomputer.trianglebadge.exclamationmark")
-                .foregroundStyle(.orange)
+                .foregroundStyle(.readable(.orange))
         case .notSetUp:
             Label(text, systemImage: "questionmark.circle")
                 .foregroundStyle(.secondary)
@@ -660,7 +660,7 @@ struct SettingsView: View {
     private var lockScreenBlockedNotice: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(tr("פעילויות בזמן אמת כבויות לאוזן בהגדרות הטלפון, אז הכתוביות לא יופיעו במסך הנעילה.", "Live Activities are turned off for Ozen in the phone’s settings, so captions won’t appear on the lock screen."), systemImage: "lock.slash.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(.readable(.red))
             Button(tr("לפתוח את הגדרות הטלפון", "Open the phone’s settings")) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     openURL(url)
@@ -738,7 +738,7 @@ struct SettingsView: View {
             if viewModel.notifyWhenInBackground && notificationsBlocked {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(tr("ההודעות של אוזן כבויות בהגדרות הטלפון, אז כשהמסך כבוי לא תגיע שום התראה.", "Ozen’s notifications are turned off in the phone’s settings, so no alert will arrive when the screen is off."), systemImage: "bell.slash.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.readable(.red))
                     Button(tr("לפתוח את הגדרות הטלפון", "Open the phone’s settings")) {
                         if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
                             openURL(url)
@@ -839,11 +839,11 @@ struct SettingsView: View {
             if !viewModel.hasVoiceForAppLanguage {
                 Text(tr("אין בטלפון קול ל%1, ולכן אי אפשר להקריא את המשפטים. אפשר להוסיף אחד בהגדרות ← נגישות ← תוכן מדובר ← קולות.", "No voice for %1 is installed on this phone, so these phrases can’t be read aloud. Add one in Settings → Accessibility → Spoken Content → Voices.", args: ["\(viewModel.uiLanguage.nativeName)"]))
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.readable(.orange))
             } else if viewModel.uiLanguage == .hebrew, !viewModel.hasHebrewVoice {
                 Text(tr("אין קול עברי מותקן. הוסיפו אחד בהגדרות המכשיר ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice is installed. Add one in the device settings → Accessibility → Spoken Content → Voices → Hebrew."))
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.readable(.orange))
             }
         } header: {
             Text(tr("להגיד משהו (הקלדה לדיבור)", "Say something (type to speak)"))
@@ -908,7 +908,7 @@ struct SettingsView: View {
                             if viewModel.needsNewRecording(speaker) {
                                 Text(tr("נשמר בגרסה ישנה ולא מזוהה. כדי לתקן: \"הוספת דובר\" באותו שם.", "Saved by an older version and not recognized. To fix: \"Add speaker\" with the same name."))
                                     .font(.footnote)
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(.readable(.orange))
                             }
                         }
                         Spacer()

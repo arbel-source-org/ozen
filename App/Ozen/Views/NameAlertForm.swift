@@ -40,7 +40,7 @@ struct NameAlertForm: View {
             }
             if !viewModel.settings.keywordAlerts.isEmpty {
                 Label(addedText, systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.readable(.green))
             }
         }
         // A name typed and then "Next" or "Done" instead of "Add" was

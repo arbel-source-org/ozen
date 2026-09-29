@@ -146,7 +146,7 @@ struct OnboardingView: View {
                 if let missing = modelStorageShortfall {
                     Label(tr("אין מספיק מקום בטלפון למודל הזה. צריך לפנות עוד %1.", "Not enough room on the phone for this model. %1 more needs to be freed up.", args: ["\(PhasePresentation.sizeText(megabytes: missing))"]), systemImage: "externaldrive.badge.exclamationmark")
                         .font(.callout)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.readable(.red))
                 }
             }
             EngineCard(
@@ -172,12 +172,12 @@ struct OnboardingView: View {
             switch microphone {
             case .granted:
                 Label(tr("המיקרופון מאושר", "Microphone approved"), systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.readable(.green))
                     .font(.title3.weight(.semibold))
                 Text(tr("ועוד דבר אחד: כשהטלפון בכיס או נעול, אוזן יכולה להודיע על צלצול בדלת, אזעקה או השם שלך.", "One more thing: when the phone is in a pocket or locked, Ozen can notify you about a doorbell, an alarm, or your name."))
                 if let notificationsAllowed {
                     Label(notificationsAllowed ? tr("ההתראות מאושרות", "Notifications approved") : tr("בלי התראות. אפשר לשנות בהגדרות.", "No notifications. This can be changed in Settings."), systemImage: notificationsAllowed ? "checkmark.circle.fill" : "bell.slash")
-                        .foregroundStyle(notificationsAllowed ? Color.green : Color.secondary)
+                        .foregroundStyle(.readable(notificationsAllowed ? .green : .secondary))
                 } else {
                     Button {
                         Task { notificationsAllowed = await AlertNotifier.shared.requestAuthorization() }
@@ -193,7 +193,7 @@ struct OnboardingView: View {
             case .denied:
                 VStack(alignment: .leading, spacing: 12) {
                     Label(tr("המיקרופון חסום", "Microphone blocked"), systemImage: "xmark.circle.fill")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.readable(.red))
                         .font(.title3.weight(.semibold))
                     Text(tr("בלי מיקרופון אין כתוביות. אפשר לאשר בהגדרות הטלפון.", "Without a microphone there are no captions. It can be approved in the phone’s Settings."))
                     Button {

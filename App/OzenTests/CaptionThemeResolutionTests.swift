@@ -39,4 +39,17 @@ struct CaptionThemeResolutionTests {
             }
         }
     }
+
+    @Test("a warning or status colour deepens on a light screen, where the bright shade is about 2:1, and stays bright on a dark one")
+    func readableStatusColours() {
+        var light = EnvironmentValues()
+        light.colorScheme = .light
+        var dark = EnvironmentValues()
+        dark.colorScheme = .dark
+        for color in [Color.green, .orange, .red] {
+            #expect(ReadableColor(color: color).resolve(in: light) == color.deepShade)
+            #expect(ReadableColor(color: color).resolve(in: light) != color)
+            #expect(ReadableColor(color: color).resolve(in: dark) == color)
+        }
+    }
 }

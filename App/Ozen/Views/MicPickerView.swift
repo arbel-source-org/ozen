@@ -25,7 +25,7 @@ struct MicPickerView: View {
                     }
                     if let refusedInputName {
                         Label(tr("הטלפון לא עבר ל\"%1\", והמיקרופון המסומן עדיין מקליט. נסו לנתק ולחבר אותו שוב.", "The phone did not switch to “%1”, and the marked microphone is still recording. Try unplugging and reconnecting it.", args: ["\(refusedInputName)"]), systemImage: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.readable(.orange))
                             .font(.footnote)
                     }
                 } header: {
@@ -151,7 +151,7 @@ private struct InputRow: View {
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
                     .accessibilityHidden(true)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.readable(.green))
                     .font(.title3)
             }
         }

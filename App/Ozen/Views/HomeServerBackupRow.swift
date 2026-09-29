@@ -12,7 +12,7 @@ struct HomeServerBackupRow: View {
                 EmptyView()
             case .ready:
                 Label(tr("גיבוי בטלפון מוכן: כשאין חיבור למחשב, הטלפון ממשיך לבד.", "Backup on the phone is ready: when the computer can’t be reached, the phone carries on by itself."), systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.readable(.green))
             case .missing(let megabytes):
                 downloadButton(megabytes: megabytes)
                 note(tr("בלי הגיבוי, הכתוביות נעצרות כשאין חיבור למחשב.", "Without the backup, captions stop when the computer can’t be reached."))
@@ -26,11 +26,11 @@ struct HomeServerBackupRow: View {
                 note(tr("אין אינטרנט, אז אי אפשר להוריד את הגיבוי עכשיו.", "There’s no internet, so the backup can’t be downloaded now."))
             case .notEnoughRoom(let megabytes):
                 Label(tr("אין מספיק מקום בטלפון לגיבוי. צריך לפנות עוד %1.", "Not enough room on the phone for the backup. %1 more needs to be freed up.", args: ["\(PhasePresentation.sizeText(megabytes: megabytes))"]), systemImage: "externaldrive.badge.exclamationmark")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(.readable(.red))
             case .failed:
                 downloadButton(megabytes: nil)
                 Label(tr("ההורדה של הגיבוי נעצרה. נסו שוב.", "The backup download stopped. Try again."), systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.readable(.orange))
             }
         }
         .accessibilityIdentifier("homeServerBackupRow")

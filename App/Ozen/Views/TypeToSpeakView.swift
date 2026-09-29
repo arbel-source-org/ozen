@@ -166,12 +166,12 @@ struct TypeToSpeakView: View {
             if !viewModel.hasVoiceForAppLanguage {
                 Label(tr("אין בטלפון קול ל%1, ולכן אי אפשר להקריא את המשפטים. אפשר להוסיף אחד בהגדרות ← נגישות ← תוכן מדובר ← קולות.", "No voice for %1 is installed on this phone, so these phrases can’t be read aloud. Add one in Settings → Accessibility → Spoken Content → Voices.", args: ["\(viewModel.uiLanguage.nativeName)"]), systemImage: "exclamationmark.triangle")
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.readable(.orange))
             }
             if !viewModel.hasHebrewVoice {
                 Label(tr("אין קול עברי מותקן. הגדרות ← נגישות ← תוכן מדובר ← קולות ← עברית.", "No Hebrew voice installed. Settings → Accessibility → Spoken Content → Voices → Hebrew."), systemImage: "exclamationmark.triangle")
                     .font(.footnote)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.readable(.orange))
             }
         }
     }
