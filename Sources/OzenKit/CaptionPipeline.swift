@@ -1080,8 +1080,10 @@ public final class CaptionPipeline {
         seconds: Double,
         onProgress: @MainActor (Double) -> Void = { _ in }
     ) async -> [Float] {
-        let wasListening = phase.isListening
-        if wasListening || phase.isTransitioning {
+        // Still starting counts as running: torn down for the recording,
+        // a start that was under way was left paused for good.
+        let wasRunning = phase.isListening || phase.isTransitioning
+        if wasRunning {
             tearDownSession()
             phase = .paused
         }
@@ -1112,7 +1114,7 @@ public final class CaptionPipeline {
         }
 
         isRecordingVoice = false
-        if wasListening {
+        if wasRunning {
             await resume()
         } else if let held = retryAfterRecording {
             retryAfterRecording = nil

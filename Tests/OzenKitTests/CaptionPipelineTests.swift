@@ -1518,6 +1518,27 @@ struct CaptionPipelineEnrollmentTests {
         #expect(pipeline.isRecordingVoice == false)
     }
 
+    @Test("a voice recorded while captions are still starting brings them back afterwards instead of leaving them paused", .timeLimit(.minutes(1)))
+    func enrollmentDuringStartResumes() async {
+        let slow = FakeEngine()
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let (pipeline, audio, _) = makePipeline(engines: [.whisperKit: slow])
+        let starting = Task { await pipeline.start(settings: .default) }
+        while slow.prepareCount == 0 { await Task.yield() }
+        #expect(pipeline.phase.isTransitioning)
+
+        let recording = Task { @MainActor in
+            await pipeline.captureEnrollmentSamples(seconds: 0.5)
+        }
+        #expect(await eventually { audio.calls.contains("startCapture") })
+        audio.push([Float](repeating: 0.1, count: 8_000))
+        await gate.open()
+        #expect(await recording.value.count == 8_000)
+        await starting.value
+        #expect(await eventually { pipeline.phase == .listening })
+    }
+
     @Test("enrollment while idle leaves the pipeline idle afterwards")
     func enrollmentFromIdle() async {
         let (pipeline, audio, _) = makePipeline()
