@@ -69,9 +69,12 @@ struct OnboardingView: View {
         // partway through. The caption screen manages this on its own
         // once it's showing (see `ScreenAwakePolicy`); onboarding has no
         // pipeline phase to key that off, so it simply holds the screen
-        // awake for as long as it's on screen at all.
+        // awake for as long as it's on screen at all. It doesn't switch
+        // this off on the way out: the caption screen sets it the moment
+        // it appears, and this page only disappears once the fade between
+        // them ends, which used to undo that just as the first model
+        // download began and let the phone lock and stall it.
         .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
-        .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
     }
 
     // MARK: - Pages
