@@ -16,7 +16,6 @@ struct BigTextView: View {
     @State private var isFlipped = false
     @FocusState private var isTyping: Bool
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     static let fontSize: CGFloat = 52
     /// Never smaller than her own captions, which can be set larger.
@@ -88,18 +87,8 @@ struct BigTextView: View {
         }
     }
 
-    // Two to a row above accessibility sizes; even that was too narrow at
-    // the largest one, where a single Hebrew word like "ניקוי" wrapped
-    // letter by letter down its half of the row, and the whole grid grew
-    // tall enough to push the text area up under the status bar.
-    private var gridColumns: [GridItem] {
-        dynamicTypeSize.isAccessibilitySize
-            ? [GridItem(.flexible())]
-            : [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-    }
-
     private var controls: some View {
-        LazyVGrid(columns: gridColumns, spacing: 12) {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
             Button {
                 text = ""
                 isFlipped = false
@@ -108,6 +97,7 @@ struct BigTextView: View {
                 Label(tr("ניקוי", "Clear"), systemImage: "eraser")
                     .frame(maxWidth: .infinity)
             }
+            .accessibilityShowsLargeContentViewer()
             .disabled(isEmpty)
 
             Button {
@@ -117,6 +107,7 @@ struct BigTextView: View {
                 Label(isFlipped ? tr("חזרה", "Back") : tr("להפוך", "Flip"), systemImage: "arrow.up.arrow.down")
                     .frame(maxWidth: .infinity)
             }
+            .accessibilityShowsLargeContentViewer()
             .disabled(isEmpty)
             .accessibilityHint(tr("הופך את הטקסט כדי שמי שיושב מולך יוכל לקרוא", "Flips the text so the person sitting across from you can read it"))
 
@@ -127,6 +118,7 @@ struct BigTextView: View {
                     Label(tr("להשמיע", "Speak"), systemImage: "speaker.wave.3.fill")
                         .frame(maxWidth: .infinity)
                 }
+                .accessibilityShowsLargeContentViewer()
                 .disabled(isEmpty)
             }
 
@@ -136,12 +128,20 @@ struct BigTextView: View {
                 Label(tr("סגירה", "Close"), systemImage: "xmark")
                     .frame(maxWidth: .infinity)
             }
+            .accessibilityShowsLargeContentViewer()
         }
         .labelStyle(.titleAndIcon)
         .font(.headline)
         .buttonStyle(.bordered)
         .controlSize(.large)
         .tint(theme.chrome)
+        // At the accessibility sizes the buttons, one to a row, stacked
+        // about 350-400 pt; with the keyboard up that left the editor a
+        // line of the 52 pt text at AX3 and none at AX5. They stop growing
+        // at the largest ordinary size, as on the caption screen's bar, and
+        // a long press shows a button's name in large type. The words
+        // themselves are already larger than any text size.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(16)
     }
 }
