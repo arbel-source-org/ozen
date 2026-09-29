@@ -370,4 +370,34 @@ struct CloudCoverTests {
         #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
         #expect(await eventually { phone.chunksSeen >= 20 })
     }
+
+    @Test("a microphone the phone gives up on while its model loads to take over stops captions then, not after the load")
+    func captureLostWhileTakeoverLoads() async {
+        let audio = FakeAudioCapturer()
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let gate = PrepareGate()
+        phone.prepareGate = gate
+        let captions = CaptionPipeline(
+            audio: audio,
+            engineFactory: { $0.engine == .cloud ? cloud : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { phone.prepareCount == 1 })
+        guard case .preparingEngine = captions.phase else {
+            Issue.record("expected the phone's model to be loading, got \(captions.phase)")
+            return
+        }
+
+        audio.onCaptureLost?()
+        #expect(captions.phase.failure?.kind == .audioSessionFailed)
+        #expect(captions.stats.audioStalls == 1)
+        await gate.open()
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(captions.phase.failure?.kind == .audioSessionFailed)
+    }
 }

@@ -257,6 +257,10 @@ public final class CaptionPipeline {
     private var lastNetwork: NetworkConditions?
     private var networkRetryTask: Task<Void, Never>?
     private var microphoneRetryTask: Task<Void, Never>?
+    /// The run whose microphone opened before its model finished loading
+    /// (a takeover), so a microphone the phone gives up on meanwhile ends
+    /// it then instead of showing "Listening" on nothing after the load.
+    private var earlyCaptureRun: UUID?
     private var lastMicrophoneChangeRetryAt: TimeInterval?
     /// Free space on the phone in bytes, or nil when it can't be read.
     private let availableStorageBytes: (@Sendable () -> Int64?)?
@@ -437,6 +441,7 @@ public final class CaptionPipeline {
         // microphone listens from now, and what is said meanwhile waits in
         // its stream for the model instead of being lost.
         let earlySource = isCoveringForCloud ? try? audio.startCapture() : nil
+        earlyCaptureRun = earlySource == nil ? nil : run
         let loadsModelOnPhone = settings.engine == .whisperKit
         if loadsModelOnPhone { isPreparingEngine = true }
         // Checked above only as the download starts: without this, a
@@ -1677,7 +1682,7 @@ public final class CaptionPipeline {
     /// The failure the audio watchdog would report, as soon as the phone
     /// gives up on the microphone, and held back the same way during a call.
     private func captureLost(run: UUID) {
-        guard runID == run, phase.isListening, !systemInterrupted else { return }
+        guard runID == run, phase.isListening || earlyCaptureRun == run, !systemInterrupted else { return }
         stats.audioStalls += 1
         logEvent(.microphoneStalled)
         fail(.audioSessionFailed, detail: "the microphone never settled after it changed")
