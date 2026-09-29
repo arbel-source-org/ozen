@@ -1491,6 +1491,26 @@ struct CaptionPipelineLifecycleTests {
         #expect(pipeline.phase == .idle)
     }
 
+    @Test("a start that waits long on an earlier load says it can take minutes too", .timeLimit(.minutes(1)))
+    func longWaitOnAnEarlierLoadSaysSo() async {
+        let slow = FakeEngine()
+        let gate = PrepareGate()
+        slow.prepareGate = gate
+        let (pipeline, _, _) = makePipeline(engines: [.whisperKit: slow])
+        pipeline.slowLoadSeconds = 0.2
+        let first = Task { await pipeline.start(settings: .default) }
+        while slow.prepareCount == 0 { await Task.yield() }
+        pipeline.stop()
+        let second = Task { await pipeline.start(settings: .default) }
+        #expect(await eventually { pipeline.phase == .preparingEngine(EnginePreparationProgress(stage: .loadingModel)) })
+        #expect(await eventually { pipeline.phase == .preparingEngine(EnginePreparationProgress(stage: .loadingModel, isTakingLong: true)) })
+
+        await gate.open()
+        await first.value
+        await second.value
+        #expect(pipeline.phase == .listening)
+    }
+
     @Test("a load that runs long without being a first set-up says it can take minutes, not \"just a moment\"", .timeLimit(.minutes(1)))
     func longLoadSaysSo() async {
         let loading = EnginePreparationProgress(stage: .loadingModel, detail: "large-v3")

@@ -332,9 +332,11 @@ public final class CaptionPipeline {
             let waiting = EnginePreparationProgress(stage: .loadingModel)
             waitingShown = waiting
             phase = .preparingEngine(waiting)
+            let slowWait = Task { [weak self] in await self?.sayWaitIsSlow(mine) }
             while isPreparingEngine {
                 await withCheckedContinuation { preparationWaiters.append($0) }
             }
+            slowWait.cancel()
             let shown = waitingShown ?? waiting
             if newestWaitingStart == mine { waitingShown = nil }
             guard stopCount == stops, newestWaitingStart == mine, phase == .preparingEngine(shown) else { return }
@@ -1705,6 +1707,18 @@ public final class CaptionPipeline {
     /// The phone's model says "loading" once and nothing more until it is
     /// ready. A load iOS turned into a set-up of minutes (it had thrown the
     /// compiled copy away) said "just a moment" for all of them.
+    /// The same for a start waiting on an earlier load, which says nothing
+    /// more either (a model changed during a set-up of minutes).
+    private func sayWaitIsSlow(_ waiter: UUID) async {
+        try? await Task.sleep(for: .seconds(slowLoadSeconds))
+        guard !Task.isCancelled, newestWaitingStart == waiter, var shown = waitingShown,
+              phase == .preparingEngine(shown), shown.stage == .loadingModel, !shown.isFirstTime, !shown.isTakingLong
+        else { return }
+        shown.isTakingLong = true
+        waitingShown = shown
+        phase = .preparingEngine(shown)
+    }
+
     private func sayLoadIsSlow(run: UUID) async {
         try? await Task.sleep(for: .seconds(slowLoadSeconds))
         guard !Task.isCancelled, runID == run, case .preparingEngine(var shown) = phase,
