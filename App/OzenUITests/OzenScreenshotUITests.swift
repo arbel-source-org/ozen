@@ -176,6 +176,29 @@ final class OzenScreenshotUITests: XCTestCase {
         }
     }
 
+    /// The home computer guide sits inside Settings and ends with "scan the
+    /// code with the Camera and tap the Ozen link": the link comes back
+    /// with Settings still open, and the question it asks must not wait
+    /// unseen behind the sheet.
+    func testPairingLinkWhileSettingsIsOpen() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-uiTestScreenshots", "hebrewDefault"]
+        app.launch()
+
+        let settingsButton = app.descendants(matching: .any)["settingsButton"]
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 10), "pairing: the settings button never appeared")
+        settingsButton.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["settingsScreen"].waitForExistence(timeout: 10), "pairing: settings never appeared")
+
+        let link = try XCTUnwrap(URL(string: "ozen://pair?address=wss://desktop.tail0example.ts.net&code=example-code-123"))
+        app.open(link)
+
+        let prompt = app.alerts.firstMatch
+        let shown = prompt.waitForExistence(timeout: 10)
+        capture(app, name: "pairing-over-settings")
+        XCTAssertTrue(shown, "pairing: 'Connect to the home computer?' never appeared with Settings open")
+    }
+
     /// The steppers quiet hours reveals once enabled, at this text size --
     /// seeded on at launch (see ScreenshotFixtures.Variant.quietHoursEnabled)
     /// rather than flipped live by the test, since tapping the toggle
