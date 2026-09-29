@@ -253,7 +253,7 @@ struct LiveCaptionView: View {
             // Removed rather than fed nil while covered, so closing the
             // covering screen doesn't replay the last flash.
             if !isCoveredByAlertScreen {
-                AlertFlashOverlay(alert: viewModel.soundAlerts.last)
+                AlertFlashOverlay(alert: viewModel.screenSoundAlert)
             }
         }
         .preferredColorScheme(theme.preferredScheme)
@@ -276,8 +276,8 @@ struct LiveCaptionView: View {
                 await viewModel.handle(pending: pending, isFirstAppearance: isFirstAppearance)
             }
         }
-        .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
-            guard let alert = viewModel.soundAlerts.last else { return }
+        .onChange(of: viewModel.screenSoundAlert?.id) { _, _ in
+            guard let alert = viewModel.screenSoundAlert else { return }
             if !isCoveredByAlertScreen, alert.takesBanner(from: visibleSoundAlert) {
                 withAnimation { visibleSoundAlert = alert }
             }

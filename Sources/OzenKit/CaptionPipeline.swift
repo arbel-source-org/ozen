@@ -67,6 +67,12 @@ public final class CaptionPipeline {
     private var lastSelectedInput: AudioInputDescriptor?
     /// Doorbell/siren/kettle alerts that passed `soundPolicy`, newest last.
     public private(set) var soundAlerts: [SoundAlert] = []
+    /// The alert the caption screen shows, buzzes for and reads out: the
+    /// newest, except that a weaker label from the same classifier reading
+    /// (a smoke alarm also scored as an alarm clock) doesn't take the
+    /// stronger one's place. Dismissing a banner leaves it as it is, so the
+    /// alert before it isn't replayed as if it had just been heard.
+    public private(set) var screenSoundAlert: SoundAlert?
 
     /// Tunable from Settings without a restart.
     public var soundPolicy: SoundEventPolicy
@@ -687,6 +693,7 @@ public final class CaptionPipeline {
 
     public func clearSoundAlerts() {
         soundAlerts = []
+        screenSoundAlert = nil
     }
 
     /// Stops taking a buzz for a sound while the phone vibrates for an
@@ -715,6 +722,10 @@ public final class CaptionPipeline {
         soundNearMisses.record(observation, alertConfidence: soundPolicy.requiredConfidence(for: observation.identifier))
         guard let alert = soundPolicy.evaluate(observation) else { return }
         soundAlerts.append(alert)
+        let weakerInSameReading = screenSoundAlert.map { $0.timestamp == alert.timestamp && $0.event.importance > alert.event.importance } ?? false
+        if !weakerInSameReading {
+            screenSoundAlert = alert
+        }
         onSoundAlert?(alert)
         if soundAlerts.count > Self.maxSoundAlerts {
             soundAlerts.removeFirst(soundAlerts.count - Self.maxSoundAlerts)

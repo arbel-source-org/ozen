@@ -626,6 +626,7 @@ public final class LiveCaptionViewModel {
     public var keywordHits: [KeywordHit] { pipeline.keywordHits }
     public var keywordHitSegmentIDs: Set<UUID> { pipeline.keywordHitSegmentIDs }
     public var soundAlerts: [SoundAlert] { pipeline.soundAlerts }
+    public var screenSoundAlert: SoundAlert? { pipeline.screenSoundAlert }
     public var microphoneDrop: MicrophoneDropNotice { pipeline.microphoneDrop }
 
     public func dismissMicrophoneDrop() {

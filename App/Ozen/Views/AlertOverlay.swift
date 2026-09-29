@@ -31,10 +31,10 @@ private struct AlertOverlay: ViewModifier {
                 }
             }
             .overlay {
-                AlertFlashOverlay(alert: viewModel.soundAlerts.last)
+                AlertFlashOverlay(alert: viewModel.screenSoundAlert)
             }
-            .onChange(of: viewModel.soundAlerts.last?.id) { _, _ in
-                guard let alert = viewModel.soundAlerts.last, alert.takesBanner(from: shown) else { return }
+            .onChange(of: viewModel.screenSoundAlert?.id) { _, _ in
+                guard let alert = viewModel.screenSoundAlert, alert.takesBanner(from: shown) else { return }
                 withAnimation { shown = alert }
             }
             .onChange(of: viewModel.attentionKeywordHit?.id) { _, _ in

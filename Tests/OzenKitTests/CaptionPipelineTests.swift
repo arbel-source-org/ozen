@@ -1570,6 +1570,33 @@ struct CaptionPipelineAlertTests {
         #expect(pipeline.soundAlerts.isEmpty)
     }
 
+    @Test("the screen's alert is the strongest of one reading, and a dismissed banner doesn't bring back the one before")
+    func screenSoundAlert() async {
+        let detector = FakeSoundDetector()
+        let (pipeline, audio, _) = makePipeline(soundDetector: detector)
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.1, count: 1_024))
+        #expect(await eventually { detector.chunksSeen == 1 })
+
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: 100))
+        detector.push(SoundObservation(identifier: "knock", confidence: 0.9, timestamp: 150))
+        #expect(await eventually { pipeline.soundAlerts.count == 2 })
+        let knock = pipeline.soundAlerts[1]
+        pipeline.dismissSoundAlert(id: knock.id)
+        #expect(pipeline.screenSoundAlert?.id == knock.id)
+
+        // One reading of a smoke alarm that also scores as an alarm clock.
+        detector.push(SoundObservation(identifier: "smoke_detector", confidence: 0.95, timestamp: 200))
+        detector.push(SoundObservation(identifier: "alarm_clock", confidence: 0.7, timestamp: 200))
+        #expect(await eventually { pipeline.soundAlerts.count == 3 })
+        #expect(pipeline.screenSoundAlert?.event.identifier == "smoke_detector")
+
+        // A weaker sound heard later is news again.
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: 230))
+        #expect(await eventually { pipeline.soundAlerts.count == 4 })
+        #expect(pipeline.screenSoundAlert?.event.identifier == "door_bell")
+    }
+
     @Test("while the phone vibrates for an alert, what the microphone hears of the buzz is not an alert")
     func ownVibrationIsNotAnAlert() async {
         let clock = TestClock()
