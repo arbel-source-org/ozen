@@ -590,20 +590,22 @@ async def main():
     try:
         transcriber = Transcriber(args.model, args.device, args.compute_type, args.beam, args.context, args.final_model or None,
                                   args.speech_gate)
+        # Warm the models so the first sentence isn't slow. Past the voice
+        # gate: silence would stop there and never reach the GPU. A broken
+        # CUDA library often shows only here, on the first pass; outside
+        # this try it ended the server with 1, which run.sh never restarts.
+        started = time.monotonic()
+        await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, False, gate=False)
+        await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, True, gate=False)
     except Exception as error:
         # run.cmd starts the server again at once: without the wait a card
         # that can't take the models would fill the log every few seconds,
         # and the log would never say why the phone finds nothing.
-        log.critical("could not load the speech models on the graphics card (%s). Another program may be using its "
+        log.critical("could not load or run the speech models on the graphics card (%s). Another program may be using its "
                      "memory, or the card or its driver may be too old. Trying again in %d seconds.", error, LOAD_RETRY_SECONDS)
         logging.shutdown()
         time.sleep(LOAD_RETRY_SECONDS)
         raise SystemExit(4)
-    # Warm the models so the first sentence isn't slow. Past the voice
-    # gate: silence would stop there and never reach the GPU.
-    started = time.monotonic()
-    await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, False, gate=False)
-    await transcriber.transcribe(np.zeros(RATE, dtype=np.float32), "he", None, True, gate=False)
     log.info("models warmed in %.1f s", time.monotonic() - started)
     make_enhancer = None
     if args.enhance_mix > 0:

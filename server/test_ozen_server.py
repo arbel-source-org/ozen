@@ -264,6 +264,27 @@ class ModelsThatWontLoad(unittest.TestCase):
         self.assertIn("out of memory", logged.output[0])
         self.assertIn("graphics card", logged.output[0])
 
+    def test_models_that_load_but_fail_their_first_pass_wait_and_restart_the_same_way(self):
+        from unittest import mock
+
+        class FailsWarmUp:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def transcribe(self, *args, **kwargs):
+                raise RuntimeError("CUBLAS_STATUS_NOT_SUPPORTED")
+
+        with mock.patch.object(S, "Transcriber", FailsWarmUp), \
+                mock.patch.object(S.time, "sleep") as sleep, \
+                mock.patch.object(sys, "argv", ["ozen_server.py"]), \
+                mock.patch.dict("os.environ", {"OZEN_TOKEN": "x"}), \
+                self.assertLogs(S.log, "CRITICAL") as logged:
+            with self.assertRaises(SystemExit) as stopped:
+                asyncio.run(S.main())
+        self.assertEqual(stopped.exception.code, 4)
+        sleep.assert_called_once_with(S.LOAD_RETRY_SECONDS)
+        self.assertIn("CUBLAS_STATUS_NOT_SUPPORTED", logged.output[0])
+
 
 class PromptBudget(unittest.TestCase):
     def test_the_names_at_the_top_are_the_ones_kept(self):
