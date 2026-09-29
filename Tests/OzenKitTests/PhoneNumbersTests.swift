@@ -46,6 +46,18 @@ struct PhoneNumbersTests {
         }
     }
 
+    @Test("a number never takes a digit, a date or an hour said next to it, and a number one digit short or long is not linked")
+    func exactLength() {
+        #expect(dialed("המספר הוא 03-5551234 5 פעמים") == ["035551234"])
+        #expect(dialed("תתקשרי 04-8123456 2 פעמים") == ["048123456"])
+        for text in [
+            "התור הוא 09-03-2026 14:30", "09-03-2026 9:30", "הפגישה ב-05-03-2026 10:30",
+            "050-123456", "03-12345678", "+972-50-123456", "050-1234567-8",
+        ] {
+            #expect(dialed(text).isEmpty, "\(text)")
+        }
+    }
+
     @Test("the number is still found in the line as the caption screen draws it, with its direction marks")
     func displayedLine() {
         let shown = CaptionLayout.displayText("תתקשרי ל-050-1234567.")

@@ -31,7 +31,7 @@ public enum PhoneNumbers {
     }
 
     private static let pattern = try? NSRegularExpression(
-        pattern: #"(?<![\d+])(?:\+972[- ]?|0)[2-9](?:[- ]?\d){7,8}(?!\d)"#
+        pattern: #"(?<![\d+])(?!\d{1,2}[-./]\d{1,2}[-./]\d{2,4})(?:\+972[- ]?|0)(?:[2-489](?:[- ]?\d){7}|[57](?:[- ]?\d){8})(?!-?\d)"#
     )
 
     private static let servicePattern = try? NSRegularExpression(
