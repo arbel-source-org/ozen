@@ -227,6 +227,13 @@ class WrongCode(unittest.TestCase):
         self.assertEqual(len(ws.sent), 1)
         self.assertIn("unauthorized", ws.sent[0])
 
+    def test_a_guess_that_is_not_valid_text_is_refused_like_any_other(self):
+        ws = HelloSocket('{"type": "hello", "token": "\\ud800"}')
+        with self.assertLogs(S.log, "WARNING"):
+            asyncio.run(S.handle(ws, None, "real-code-456", 1.0))
+        self.assertEqual(len(ws.sent), 1)
+        self.assertIn("unauthorized", ws.sent[0])
+
 
 class WorkerEndings(unittest.TestCase):
     def test_a_phone_hanging_up_mid_send_is_not_a_failure(self):

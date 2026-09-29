@@ -501,7 +501,11 @@ async def handle(ws, transcriber, token, live_interval, make_enhancer=None):
     if not isinstance(hello, dict):
         await refuse(ws, "bad_request", "hello expected")
         return
-    if hello.get("type") != "hello" or not hmac.compare_digest(str(hello.get("token", "")).encode(), token.encode()):
+    # JSON can carry half of a character pair ("\ud800") that no text
+    # encoding accepts; surrogatepass turns it into bytes no code matches,
+    # so it is refused like any wrong code instead of crashing the handler.
+    guess = str(hello.get("token", "")).encode(errors="surrogatepass")
+    if hello.get("type") != "hello" or not hmac.compare_digest(guess, token.encode()):
         log.warning("refused %s", peer)
         await refuse(ws, "unauthorized", "")
         return
