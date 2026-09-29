@@ -36,8 +36,9 @@ public actor CloudSpeechEngine: TranscriptionEngine {
     /// Trusted for `approvalSeconds` after the check or the last answered
     /// request: the checks for whether the cloud can be reached again use
     /// this same engine, and with the approval kept for good every one of
-    /// them said yes without asking, so captions went back to a cloud still
-    /// out of reach and lost what was said until the phone took over again.
+    /// them after the first said yes without asking, so captions went back
+    /// to a cloud still out of reach and lost what was said until the phone
+    /// took over again.
     /// Shorter than the minute between those checks
     /// (`CaptionPipeline.cloudRecheckSeconds`), so each one really asks.
     private var approvedKey: String?

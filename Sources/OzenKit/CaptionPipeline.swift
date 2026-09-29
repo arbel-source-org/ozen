@@ -1037,7 +1037,7 @@ public final class CaptionPipeline {
         case .requestingMicrophonePermission: return "asking for the microphone"
         case .preparingEngine(let progress):
             let model = progress.detail.map { " \($0)" } ?? ""
-            return "engine: \(progress.stage.rawValue)\(model)\(progress.isFirstTime ? " (first time on this phone)" : "")"
+            return "engine: \(progress.stage.rawValue)\(model)\(progress.isFirstTime ? " (setting up for this phone)" : "")"
         case .startingAudio: return "starting audio"
         case .listening: return "listening"
         case .paused: return "paused"

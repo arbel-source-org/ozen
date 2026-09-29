@@ -194,7 +194,7 @@ struct PhasePresentationTests {
         #expect(timed.detail?.hasPrefix("עוד כ-3 דקות · ") == true)
     }
 
-    @Test("the first load of a model says it is a one-time wait of minutes; later loads don't")
+    @Test("the first load of a model says it is a wait of minutes, without promising it is the only one; later loads don't")
     func firstLoad() {
         let first = PhasePresentation(
             phase: .preparingEngine(EnginePreparationProgress(stage: .loadingModel, detail: "small", isFirstTime: true)),
@@ -206,8 +206,9 @@ struct PhasePresentationTests {
             engine: .whisperKit,
             interruptedBySystem: false
         )
-        #expect(first.detail?.contains("פעם אחת בלבד") == true)
-        #expect(later.detail?.contains("פעם אחת בלבד") == false)
+        #expect(first.detail?.contains("כמה דקות") == true)
+        #expect(first.detail?.contains("פעם אחת בלבד") == false)
+        #expect(later.detail?.contains("כמה דקות") == false)
         #expect(first.title != later.title)
     }
 

@@ -86,9 +86,10 @@ public struct EnginePreparationProgress: Sendable, Equatable {
     /// Free-form technical detail for the diagnostics screen, e.g. the
     /// model variant being fetched. Not user-facing copy.
     public var detail: String?
-    /// The model has never been loaded on this phone: the load compiles it
-    /// for the chip and takes minutes instead of seconds, and the screen
-    /// should say it is a one-time wait rather than look stuck.
+    /// The model has not been loaded on this phone since it was downloaded
+    /// or since iOS was last updated: the load compiles it for the chip and
+    /// takes minutes instead of seconds, and the screen should say so
+    /// rather than look stuck.
     public var isFirstTime: Bool
     /// A load that is not a first set-up but has run for a while anyway
     /// (iOS threw the phone's compiled copy away to free space, say): set by
