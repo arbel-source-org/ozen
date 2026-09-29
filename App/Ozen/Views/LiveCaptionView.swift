@@ -206,6 +206,20 @@ struct LiveCaptionView: View {
         }
         .overlay(alignment: .top) {
             VStack(spacing: 8) {
+                // A doorbell or smoke alarm lasts seconds; the warnings below
+                // stay until tapped and, at large text sizes, can fill the
+                // screen, so the sound comes first (as in `alertOverlay`).
+                if let alert = visibleSoundAlert {
+                    SoundAlertBanner(alert: alert) {
+                        withAnimation { visibleSoundAlert = nil }
+                        viewModel.dismissSoundAlert(id: alert.id)
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+                if let hit = visibleKeywordHit {
+                    KeywordHitPill(hit: hit, speakerName: viewModel.speakerName(for: hit))
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
                 if let expiresAt = installExpiryToWarn {
                     InstallExpiryBanner(expiresAt: expiresAt, now: Date(timeIntervalSince1970: awakeClock)) {
                         withAnimation { installExpiryDismissed = true }
@@ -232,17 +246,6 @@ struct LiveCaptionView: View {
                         withAnimation { battery.dismiss() }
                     }
                     .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                if let alert = visibleSoundAlert {
-                    SoundAlertBanner(alert: alert) {
-                        withAnimation { visibleSoundAlert = nil }
-                        viewModel.dismissSoundAlert(id: alert.id)
-                    }
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                }
-                if let hit = visibleKeywordHit {
-                    KeywordHitPill(hit: hit, speakerName: viewModel.speakerName(for: hit))
-                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 awayJumpButton
             }
