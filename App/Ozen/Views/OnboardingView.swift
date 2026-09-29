@@ -274,8 +274,12 @@ struct OnboardingView: View {
                 Button {
                     finish()
                 } label: {
+                    // Bare text is a ~25 pt target beside the 50 pt Next
+                    // button, and a slip ends the walkthrough.
                     Text(tr("דילוג", "Skip"))
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .foregroundStyle(.secondary)
                 Spacer()
