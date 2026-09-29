@@ -88,6 +88,27 @@ struct CaptionLayoutTests {
     }
 }
 
+@Suite("CaptionLayout numbers in right-to-left lines")
+struct CaptionLayoutNumberDirectionTests {
+    let open = "\u{2066}", close = "\u{2069}", mark = "\u{200F}"
+
+    @Test("a star code, a number in spaced groups and an international number are each kept left to right in a Hebrew line")
+    func numbersIsolated() {
+        #expect(CaptionLayout.displayText("תתקשרי לקופה *2700") == mark + "תתקשרי לקופה " + open + "*2700" + close)
+        #expect(CaptionLayout.displayText("תתקשרי 050 123 4567 מחר") == mark + "תתקשרי " + open + "050 123 4567" + close + " מחר")
+        #expect(CaptionLayout.directed("אליו +972-3-1234567.") == mark + "אליו " + open + "+972-3-1234567" + close + ".")
+        #expect(CaptionLayout.directed("המוקד 1-700-50-50-50 פתוח") == mark + "המוקד " + open + "1-700-50-50-50" + close + " פתוח")
+    }
+
+    @Test("times, doses and English lines are left as they were, and the numbers still dial from the shown line")
+    func otherTextUntouched() {
+        #expect(CaptionLayout.displayText("בשעה 10:30, 3 כדורים") == mark + "בשעה 10:30, 3 כדורים")
+        #expect(CaptionLayout.displayText("call 050 123 4567", languageCode: "en") == "call 050 123 4567")
+        let shown = CaptionLayout.displayText("תתקשרי 050 123 4567 או +972-3-1234567 מחר")
+        #expect(PhoneNumbers.matches(in: shown).map(\.dialable) == ["0501234567", "+97231234567"])
+    }
+}
+
 @Suite("CaptionLayout speaker labels")
 struct CaptionLayoutSpeakerLabelTests {
     private func line(_ cluster: Int?) -> TranscriptSegment {

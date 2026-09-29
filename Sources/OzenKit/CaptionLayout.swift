@@ -50,13 +50,35 @@ public enum CaptionLayout {
     /// one- or two-line preview.
     public static func directed(_ text: String, languageCode: String = "he") -> String {
         guard isRightToLeft(languageCode: languageCode) else { return text }
-        return text
+        return isolatingNumbers(text)
             .split(separator: "\n", omittingEmptySubsequences: false)
             .map { rightToLeftMark + anchorTrailingPunctuation(String($0)) }
             .joined(separator: "\n")
     }
 
     static let rightToLeftMark = "\u{200F}"
+
+    /// A number is read left to right inside Hebrew too, but the spaces,
+    /// "*" and "+" in "050 123 4567", "*2700" or "+972-3-1234567" have no
+    /// direction of their own, and a right-to-left line drew them "4567
+    /// 123 050", "2700*" and "972-3-1234567+" (checked with fribidi).
+    /// Each phone number and star code is kept whole, left to right, in an
+    /// isolate: invisible, and the digits and what they dial are the same.
+    static func isolatingNumbers(_ text: String) -> String {
+        let whole = NSRange(text.startIndex..., in: text)
+        let stars = (starCode?.matches(in: text, range: whole) ?? []).compactMap { Range($0.range, in: text) }
+        let ranges = (PhoneNumbers.matches(in: text).map(\.range) + stars).sorted { $0.lowerBound < $1.lowerBound }
+        guard !ranges.isEmpty else { return text }
+        var result = ""
+        var rest = text.startIndex
+        for range in ranges where range.lowerBound >= rest {
+            result += text[rest..<range.lowerBound] + "\u{2066}" + text[range] + "\u{2069}"
+            rest = range.upperBound
+        }
+        return result + text[rest...]
+    }
+
+    private static let starCode = try? NSRegularExpression(pattern: #"(?<![\d*])\*\d{2,6}(?!\d)"#)
 
     /// Neutral punctuation ending a right-to-left paragraph (UAX #9) takes
     /// its direction from the run before it. After a Latin word or a
