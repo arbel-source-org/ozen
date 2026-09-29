@@ -197,6 +197,9 @@ public enum HebrewText {
         "אור": ["האור", "באור", "לאור"],
         "שיר": ["השיר", "לשיר", "בשיר"],
         "אביב": ["באביב", "האביב"],
+        // A doctor's abbreviated title ("ד״ר") after the article spells the
+        // name Hadar, which is said far more often than "the Dr.".
+        "דר": ["הדר", "והדר", "שהדר", "להדר", "בהדר", "מהדר", "כשהדר", "וכשהדר", "ושהדר", "שמהדר"],
     ]
 
     /// The Hebrew geresh, and the plain and typographic apostrophes a
