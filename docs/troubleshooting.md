@@ -70,11 +70,13 @@ the same.
 
 ## Things that are working as intended
 
-- **A line ends with "…".** The rest of that sentence was never captioned:
-  captions were paused or stopped while someone was talking, or the
-  microphone, the home computer or the cloud connection dropped out
-  mid-sentence. The words before the "…" are as they were heard; whatever
-  was said after them is missing, so it is worth asking again.
+- **A caption line ends with "…".** The rest of that sentence was never
+  captioned: captions were paused or stopped while someone was talking, the
+  microphone stopped working, or the connection to the home computer or the
+  cloud ended mid-sentence. The words before the "…" are as they were heard;
+  whatever was said after them is missing, so it is worth asking again. (In
+  the History list, the saved-conversation card and notifications, a "…"
+  only means the text was shortened to fit.)
 - **A card on the empty caption screen offers "much more accurate Hebrew
   with a different model".** The phone was set up when the small, fast
   model was the default, and that one gets most Hebrew words wrong. Tapping
