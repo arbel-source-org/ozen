@@ -1246,6 +1246,22 @@ struct CaptionPipelineInputTests {
         #expect(pipeline.microphoneDrop.lost == nil)
     }
 
+    @Test("choosing the phone's own microphone in the picker is not a drop")
+    func chosenBuiltInIsNotADrop() async {
+        let builtIn = AudioInputDescriptor(uid: "builtin", portName: "iPhone Microphone", portType: .builtInMic)
+        let lapel = AudioInputDescriptor(uid: "usb-lav", portName: "USB Lavalier", portType: .usb)
+        let audio = FakeAudioCapturer()
+        audio.availableInputs = [builtIn, lapel]
+        let (pipeline, _, _) = makePipeline(audio: audio)
+        var settings = AppSettings.default
+        settings.preferredInputUID = "usb-lav"
+        await pipeline.start(settings: settings)
+        #expect(pipeline.selectedInputUID == "usb-lav")
+
+        #expect(pipeline.selectInput(uid: "builtin"))
+        #expect(pipeline.microphoneDrop.lost == nil)
+    }
+
     @Test("a headset going away, or a change while stopped, is not a drop")
     func headsetDropIsNotShown() {
         let builtIn = AudioInputDescriptor(uid: "builtin", portName: "iPhone Microphone", portType: .builtInMic)

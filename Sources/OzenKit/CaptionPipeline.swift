@@ -751,6 +751,9 @@ public final class CaptionPipeline {
             try audio.selectInput(uid: uid)
             stats.inputChanges += 1
             syncInputs()
+            // Her own choice in the picker: the microphone she left was
+            // not lost, and saying "disconnected" would be untrue.
+            if selectedInputUID == uid { microphoneDrop.dismiss() }
         } catch {
             // A failed switch leaves the previous input active, which is
             // strictly better than dropping a live conversation over a mic
