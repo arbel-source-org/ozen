@@ -41,6 +41,7 @@ struct ModelManagerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: refresh)
         .onChange(of: viewModel.phase.step) { _, _ in refresh() }
+        .onChange(of: viewModel.backupModelProgress == nil) { _, _ in refresh() }
         .confirmationDialog(
             tr("למחוק את %1 מהטלפון?", "Delete %1 from the phone?", args: ["\(pendingDelete?.displayName ?? "")"]),
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
@@ -191,7 +192,7 @@ struct ModelManagerView: View {
         .foregroundStyle(.primary)
         .disabled(wontFit)
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            if (isInstalled || isPartial) && !(isSelected && (viewModel.isListening || viewModel.phase == .paused || viewModel.phase.isTransitioning)) {
+            if (isInstalled || isPartial) && downloadProgress == nil && !(isSelected && (viewModel.isListening || viewModel.phase == .paused || viewModel.phase.isTransitioning)) {
                 Button(role: .destructive) {
                     pendingDelete = option
                 } label: {
@@ -204,6 +205,12 @@ struct ModelManagerView: View {
     }
 
     private func downloadProgress(for option: WhisperModelOption) -> Double? {
+        // The phone's backup for the home computer downloads outside the
+        // captions: without this its row said "Download interrupted" and
+        // offered Delete while the download was still writing into it.
+        if option.variant == viewModel.settings.whisperModelVariant, let backup = viewModel.backupModelProgress {
+            return backup
+        }
         guard let progress = viewModel.phase.preparationProgress,
               progress.stage == .downloadingModel,
               progress.detail == option.variant
