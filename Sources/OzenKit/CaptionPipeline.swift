@@ -234,6 +234,10 @@ public final class CaptionPipeline {
     /// A phone call (or another app) holds the audio session. Retrying
     /// then would only use up attempts; recovery waits for it to end.
     private var systemInterrupted = false
+    /// A retry that came due while a voice sample was recording, with the
+    /// settings it was asked with; it runs when the recording ends.
+    private struct HeldRetry { let settings: AppSettings? }
+    private var retryAfterRecording: HeldRetry?
     private let network: (any NetworkMonitoring)?
     /// The person said this session's model may download over cellular.
     private var cellularDownloadApproved = false
@@ -648,6 +652,13 @@ public final class CaptionPipeline {
     /// so a change made while failed isn't silently dropped on retry.
     public func retry(settings: AppSettings? = nil) async {
         guard case .failed = phase, var effective = settings ?? activeSettings else { return }
+        // A voice sample holds the microphone. Tearing the session down cut
+        // it short, and `start` then refused to run, so captions stayed
+        // stopped with no retry left to bring them back.
+        guard !isRecordingVoice else {
+            retryAfterRecording = HeldRetry(settings: settings)
+            return
+        }
         cancelScheduledRetry()
         tearDownSession()
         keepCovering(&effective)
@@ -1074,6 +1085,9 @@ public final class CaptionPipeline {
         isRecordingVoice = false
         if wasListening {
             await resume()
+        } else if let held = retryAfterRecording {
+            retryAfterRecording = nil
+            await retry(settings: held.settings)
         }
         return collected
     }
@@ -1597,7 +1611,7 @@ public final class CaptionPipeline {
     /// left captions stopped with the computer or cloud healthy, because
     /// the checks waited for listening and a retry covers again.
     private var coverCanBeReplaced: Bool {
-        if case .failed = phase { return !isRecordingVoice }
+        if case .failed = phase { return !isRecordingVoice && !systemInterrupted }
         return phase == .listening
     }
 

@@ -262,6 +262,33 @@ struct CloudCoverTests {
         captions.stop()
     }
 
+    @Test("a failed cover isn't switched back to the cloud during a phone call, which holds the microphone, but is right after it")
+    func failedCoverWaitsForTheCall() async {
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone)
+        captions.cloudRecheckSeconds = 0.1
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.availability = .unavailable(.noInternet, "offline")
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+
+        captions.systemInterruptionChanged(active: true)
+        phone.endStream(throwing: EngineUnavailability(kind: .modelLoadFailed, detail: "out of memory"))
+        #expect(await eventually {
+            if case .failed = captions.phase { return true }
+            return false
+        })
+        cloud.availability = .available
+        try? await Task.sleep(for: .milliseconds(600))
+        #expect(captions.phase.failure != nil)
+
+        captions.systemInterruptionChanged(active: false)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        captions.stop()
+    }
+
     @Test("a retry after the covering model itself fails keeps covering, and still switches back once the cloud answers")
     func retryDuringCoverKeepsCovering() async {
         let cloud = FakeEngine(kind: .cloud)

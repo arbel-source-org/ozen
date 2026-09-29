@@ -681,6 +681,32 @@ struct HomeServerCoverTests {
         #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
     }
 
+    @Test("an automatic retry that comes due while a voice sample records waits for it, instead of cutting it short and giving up")
+    func retryDueDuringVoiceSample() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 819
+        let audio = FakeAudioCapturer()
+        let captions = CaptionPipeline(
+            audio: audio,
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.2], downloadDelays: [])
+        )
+        captions.homeServerRecheckSeconds = 60
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.scheduledRetry != nil })
+
+        let recording = Task { await captions.captureEnrollmentSamples(seconds: 1) }
+        #expect(await eventually { captions.isRecordingVoice })
+        server.availability = .available
+        try? await Task.sleep(for: .milliseconds(400))
+        audio.push([Float](repeating: 0.1, count: 16_000))
+        let sample = await recording.value
+        #expect(sample.count == 16_000)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+    }
+
     private final class Built: @unchecked Sendable {
         private let lock = NSLock()
         private var count = 0
