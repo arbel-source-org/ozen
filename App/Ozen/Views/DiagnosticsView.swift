@@ -11,6 +11,7 @@ struct DiagnosticsView: View {
     @State private var copied = false
     /// Read once, and again after a mark: reading waits for the file.
     @State private var journalLines: [String] = []
+    @State private var hasMarkedLines = false
     @State private var problemClips: [URL] = []
     /// Built once on appearing, and again right before it's actually sent
     /// or copied, rather than on every body evaluation: this screen also
@@ -36,8 +37,9 @@ struct DiagnosticsView: View {
         return date.formatted(inAppLanguage: .abbreviated, time: .standard)
     }
 
-    private func loadJournalLines() -> [String] {
-        viewModel.journal?.reportLines(utcOffsetAt: Self.utcOffset(at:)) ?? []
+    private func reloadJournal() {
+        journalLines = viewModel.journal?.reportLines(utcOffsetAt: Self.utcOffset(at:)) ?? []
+        hasMarkedLines = viewModel.hasMarkedCaptionLines
     }
 
     var body: some View {
@@ -121,7 +123,7 @@ struct DiagnosticsView: View {
             Section {
                 Button {
                     viewModel.markProblem()
-                    journalLines = loadJournalLines()
+                    reloadJournal()
                     problemClips = viewModel.problemAudio?.clips() ?? []
                     reportText = report
                 } label: {
@@ -132,6 +134,15 @@ struct DiagnosticsView: View {
                         .font(.caption.monospaced())
                         .environment(\.layoutDirection, .leftToRight)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if hasMarkedLines {
+                    Button(role: .destructive) {
+                        viewModel.deleteMarkedCaptionLines()
+                        reloadJournal()
+                        reportText = report
+                    } label: {
+                        Label(tr("מחיקת שורות הכתוביות שנשמרו כאן", "Delete the caption lines kept here"), systemImage: "trash")
+                    }
                 }
             } header: {
                 Text(tr("יומן, כולל הפעלות קודמות", "Journal, previous runs included"))
@@ -210,7 +221,7 @@ struct DiagnosticsView: View {
             }
         }
         .task {
-            journalLines = loadJournalLines()
+            reloadJournal()
             problemClips = viewModel.problemAudio?.clips() ?? []
             notificationsAllowed = await AlertNotifier.shared.isAllowed()
             reportText = report
@@ -223,7 +234,7 @@ struct DiagnosticsView: View {
                 try? await Task.sleep(for: .seconds(2))
                 ticks += 1
                 if ticks % 5 == 0 {
-                    journalLines = loadJournalLines()
+                    reloadJournal()
                     notificationsAllowed = await AlertNotifier.shared.isAllowed()
                 }
                 reportText = report

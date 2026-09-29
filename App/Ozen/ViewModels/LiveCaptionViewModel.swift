@@ -1855,9 +1855,21 @@ public final class LiveCaptionViewModel {
         try historyWriter.deleteAllNow()
         recentConversation = nil
         problemAudio?.deleteAll()
-        journal?.removeEntries(where: ProblemSnapshot.isCaptionLine)
+        deleteMarkedCaptionLines()
         closedHistorySessions = []
         forgetCurrentConversation()
+    }
+
+    /// Whether the journal still holds caption lines a marked problem kept.
+    public var hasMarkedCaptionLines: Bool {
+        journal?.entries().contains { ProblemSnapshot.isCaptionLine($0.text) } ?? false
+    }
+
+    /// Deletes the caption lines marked problems kept in the journal, and
+    /// nothing else in it. With saving off there is no conversation to
+    /// delete, so "Delete all" is greyed out, and it was the only way.
+    public func deleteMarkedCaptionLines() {
+        journal?.removeEntries(where: ProblemSnapshot.isCaptionLine)
     }
 
     private func forgetCurrentConversation() {
