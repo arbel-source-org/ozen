@@ -772,6 +772,7 @@ public final class CaptionPipeline {
     @discardableResult
     public func selectInput(uid: String) -> Bool {
         activeSettings?.preferredInputUID = uid
+        coveredSettings?.preferredInputUID = uid
         do {
             try audio.selectInput(uid: uid)
             stats.inputChanges += 1
@@ -1178,6 +1179,7 @@ public final class CaptionPipeline {
     public func setSpeakerSimilarityThreshold(_ threshold: Float) {
         clusterer.similarityThreshold = threshold
         activeSettings?.speakerSimilarityThreshold = threshold
+        coveredSettings?.speakerSimilarityThreshold = threshold
     }
 
     var speakerSimilarityThreshold: Float { clusterer.similarityThreshold }
@@ -1185,6 +1187,7 @@ public final class CaptionPipeline {
     public func setSoundAlertPreferences(_ preferences: SoundAlertPreferences) {
         soundPolicy.preferences = preferences
         activeSettings?.soundAlerts = preferences
+        coveredSettings?.soundAlerts = preferences
     }
 
     // MARK: - Tokens

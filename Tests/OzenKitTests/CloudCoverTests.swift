@@ -205,6 +205,40 @@ struct CloudCoverTests {
         captions.stop()
     }
 
+    @Test("a sound choice, the speaker sensitivity or the microphone changed while the phone's model covers stays after switching back")
+    func liveChoicesDuringCoverSurviveSwitchBack() async {
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let audio = FakeAudioCapturer()
+        audio.availableInputs.append(AudioInputDescriptor(uid: "usb", portName: "USB Microphone", portType: .usb))
+        let captions = CaptionPipeline(
+            audio: audio,
+            engineFactory: { $0.engine == .cloud ? cloud : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.cloudRecheckSeconds = 1
+        captions.homeServerSwitchBackQuietSeconds = 0
+        var settings = cloudSettings
+        settings.preferredInputUID = "builtin"
+        await captions.start(settings: settings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+
+        var sounds = settings.soundAlerts
+        sounds.mutedIdentifiers.insert("door_bell")
+        captions.setSoundAlertPreferences(sounds)
+        captions.setSpeakerSimilarityThreshold(0.9)
+        #expect(captions.selectInput(uid: "usb"))
+
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        #expect(captions.soundPolicy.preferences == sounds)
+        #expect(captions.speakerSimilarityThreshold == 0.9)
+        #expect(audio.selectedInputUID == "usb")
+        captions.stop()
+    }
+
     @Test("a retry after the covering model itself fails keeps covering, and still switches back once the cloud answers")
     func retryDuringCoverKeepsCovering() async {
         let cloud = FakeEngine(kind: .cloud)
