@@ -1281,9 +1281,12 @@ struct LiveCaptionView: View {
                 .foregroundStyle(current.tint.readable(on: theme.colorScheme))
 
                 if let detail = current.detail, !statusDetailGoesBelow(current) {
+                    // The theme's own dim colour: the system's secondary grey
+                    // is about 3.4:1 on the white theme, too faint for text
+                    // this small.
                     Text(detail)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(theme.pendingText)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                         .multilineTextAlignment(.center)
@@ -1318,10 +1321,10 @@ struct LiveCaptionView: View {
     /// it means ("Listening · tap to pause"): even shrunk, the title only
     /// fit as its first two letters.
     private func statusLineText(_ current: PhasePresentation) -> Text {
-        let detail = Text(current.detail ?? "").foregroundStyle(.secondary)
+        let detail = Text(current.detail ?? "").foregroundStyle(theme.pendingText)
         guard statusIsNarrow else { return detail }
         let title = Text(current.title).fontWeight(.semibold).foregroundStyle(current.tint.readable(on: theme.colorScheme))
-        return current.detail == nil ? title : title + Text(" · ").foregroundStyle(.secondary) + detail
+        return current.detail == nil ? title : title + Text(" · ").foregroundStyle(theme.pendingText) + detail
     }
 
     private func statusDetailGoesBelow(_ current: PhasePresentation) -> Bool {
