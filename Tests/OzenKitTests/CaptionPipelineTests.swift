@@ -2415,6 +2415,42 @@ struct CaptionPipelineAudioStallTests {
         #expect(pipeline.stats.audioStalls == 0)
     }
 
+    @Test("captions stopped for a microphone problem with no retry left try again when the microphones change", .timeLimit(.minutes(1)))
+    func microphoneChangeRetriesAfterRetriesRanOut() async {
+        let clock = TestClock()
+        let (pipeline, audio, _) = makePipeline(now: { clock.now })
+        await pipeline.start(settings: .default)
+        audio.onCaptureLost?()
+        #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+        #expect(pipeline.scheduledRetry == nil)
+
+        audio.onInputsChanged?()
+        #expect(await eventually { pipeline.phase.isListening })
+        #expect(audio.calls.filter { $0 == "startCapture" }.count == 2)
+
+        audio.onCaptureLost?()
+        clock.advance(10)
+        audio.onInputsChanged?()
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+
+        clock.advance(30)
+        audio.onInputsChanged?()
+        #expect(await eventually { pipeline.phase.isListening })
+    }
+
+    @Test("a microphone change during a phone call does not restart captions stopped for a microphone problem")
+    func microphoneChangeDuringCallWaits() async {
+        let (pipeline, audio, _) = makePipeline()
+        await pipeline.start(settings: .default)
+        audio.onCaptureLost?()
+        pipeline.systemInterruptionChanged(active: true)
+        audio.onInputsChanged?()
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+        #expect(audio.calls.filter { $0 == "startCapture" }.count == 1)
+    }
+
     @Test("a quiet room still delivers audio, so captions keep listening")
     func silenceIsNotAStall() async throws {
         // A wider window than the other tests, so a busy CI machine that

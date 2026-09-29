@@ -256,6 +256,8 @@ public final class CaptionPipeline {
     private var cellularDownloadApproved = false
     private var lastNetwork: NetworkConditions?
     private var networkRetryTask: Task<Void, Never>?
+    private var microphoneRetryTask: Task<Void, Never>?
+    private var lastMicrophoneChangeRetryAt: TimeInterval?
     /// Free space on the phone in bytes, or nil when it can't be read.
     private let availableStorageBytes: (@Sendable () -> Int64?)?
 
@@ -918,7 +920,33 @@ public final class CaptionPipeline {
     private func inputsChanged() {
         stats.inputChanges += 1
         syncInputs()
+        retryWhenMicrophonesChange()
     }
+
+    /// Captions stopped for a microphone problem with no retry left (a
+    /// hearing aid at the edge of its range dropping out a few times in a
+    /// minute uses them up) stayed stopped after it came back, until
+    /// someone tapped: a change of microphones is a new chance, as a
+    /// returning network is for a download. At most once in
+    /// `microphoneChangeRetrySeconds`, since taking the session down can
+    /// itself be reported as a change.
+    private func retryWhenMicrophonesChange() {
+        guard microphoneRetryTask == nil, scheduledRetry == nil, !systemInterrupted, !isRecordingVoice,
+              let kind = phase.failure?.kind, kind == .audioSessionFailed || kind == .noAudioInputs,
+              !availableInputs.isEmpty
+        else { return }
+        let at = now()
+        if let last = lastMicrophoneChangeRetryAt, at >= last, at - last < Self.microphoneChangeRetrySeconds { return }
+        lastMicrophoneChangeRetryAt = at
+        logEvent(.note("the microphones changed, trying captions again"))
+        recovery.reset()
+        microphoneRetryTask = Task { [weak self] in
+            await self?.retry()
+            self?.microphoneRetryTask = nil
+        }
+    }
+
+    static let microphoneChangeRetrySeconds: TimeInterval = 30
 
     private func syncInputs() {
         availableInputs = audio.availableInputs
