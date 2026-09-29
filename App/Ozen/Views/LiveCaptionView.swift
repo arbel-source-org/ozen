@@ -298,7 +298,11 @@ struct LiveCaptionView: View {
                 withAnimation { visibleSoundAlert = alert }
             }
             vibrate(.pattern(for: alert.event.importance))
-            announceAlert(alert.event.importance == .critical ? tr("שימו לב! %1", "Attention! %1", args: ["\(alert.event.name)"]) : tr("התראה: %1", "Alert: %1", args: ["\(alert.event.name)"]))
+            let critical = alert.event.importance == .critical
+            announceAlert(
+                critical ? tr("שימו לב! %1", "Attention! %1", args: ["\(alert.event.name)"]) : tr("התראה: %1", "Alert: %1", args: ["\(alert.event.name)"]),
+                critical: critical
+            )
         }
         .task(id: visibleSoundAlert?.id) {
             guard let alert = visibleSoundAlert else { return }
@@ -973,10 +977,18 @@ struct LiveCaptionView: View {
     /// A doorbell, an alarm or her name, read out by VoiceOver as soon as
     /// it happens. The banner and the buzz can't be seen or felt by
     /// everyone who needs them, so alerts are spoken whatever the setting
-    /// for reading caption lines says.
-    private func announceAlert(_ text: String) {
+    /// for reading caption lines says. A smoke alarm or a siren is said in
+    /// full: any announcement cuts off the one being spoken, and her name
+    /// or "Captions stopped" a moment later left "Attention! Smoke alarm"
+    /// unheard.
+    private func announceAlert(_ text: String, critical: Bool = false) {
         guard UIAccessibility.isVoiceOverRunning else { return }
-        UIAccessibility.post(notification: .announcement, argument: text)
+        guard critical else {
+            UIAccessibility.post(notification: .announcement, argument: text)
+            return
+        }
+        let announcement = NSAttributedString(string: text, attributes: [.accessibilitySpeechAnnouncementPriority: UIAccessibilityPriority.high])
+        UIAccessibility.post(notification: .announcement, argument: announcement)
     }
 
     /// Captions that stopped by themselves, and their return, spoken the
