@@ -1121,12 +1121,15 @@ struct SettingsView: View {
 private struct ScrollsToFocus: ViewModifier {
     let focus: SettingsView.Focus?
     let proxy: ScrollViewProxy
+    /// Straight to the section, without a long animated scroll, as History
+    /// and the caption screen do.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content.task {
             guard let focus else { return }
             try? await Task.sleep(for: .milliseconds(350))
-            withAnimation { proxy.scrollTo(focus, anchor: .center) }
+            withAnimation(reduceMotion ? nil : .default) { proxy.scrollTo(focus, anchor: .center) }
         }
     }
 }
