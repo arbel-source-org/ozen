@@ -974,6 +974,9 @@ struct SettingsView: View {
                 Slider(value: $viewModel.speakerSimilarityThreshold, in: 0.2...0.95, step: 0.01)
                     .accessibilityLabel(tr("רגישות הפרדת דוברים", "Speaker separation sensitivity"))
                     .accessibilityValue(String(format: "%.2f", viewModel.speakerSimilarityThreshold))
+                    // The "more merging / more separating" ends are hidden
+                    // from VoiceOver with the rest of the row's labels.
+                    .accessibilityHint(tr("הורדה מאחדת קולות, העלאה מפרידה ביניהם.", "Lower merges voices, higher keeps them apart."))
                 sliderLabelLayout {
                     Text(tr("מאחד יותר", "More merging"))
                         .frame(maxWidth: .infinity, alignment: .leading)
