@@ -781,13 +781,15 @@ struct SettingsView: View {
                     }
                     // An equal start and end is the whole day, deliberately; two
                     // equal hours on screen don't say that, and a doorbell stays
-                    // silent in her pocket all day.
+                    // silent in her pocket all day. VoiceOver reads only the hour
+                    // a stepper lands on, so the warning is announced too.
                     Text(viewModel.quietHours.startHour == viewModel.quietHours.endHour
-                         ? tr("כשהן מתחילות ומסתיימות באותה שעה, השעות השקטות נמשכות כל היום. צלילים דחופים כמו אזעקה עדיין יתריעו.", "Starting and ending at the same hour, quiet hours last all day. Urgent sounds like a siren still alert.")
+                         ? Self.allDayQuietHoursText
                          : tr("צלילים דחופים כמו אזעקה עדיין יתריעו.", "Urgent sounds like a siren still alert."))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .accessibilityIdentifier("quietHoursFootnote")
+                        .announcing(Self.allDayQuietHoursText, whenTurningTrue: viewModel.quietHours.startHour == viewModel.quietHours.endHour)
                 }
             }
         } header: {
@@ -1103,6 +1105,10 @@ struct SettingsView: View {
                 .fixedSize()
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private static var allDayQuietHoursText: String {
+        tr("כשהן מתחילות ומסתיימות באותה שעה, השעות השקטות נמשכות כל היום. צלילים דחופים כמו אזעקה עדיין יתריעו.", "Starting and ending at the same hour, quiet hours last all day. Urgent sounds like a siren still alert.")
     }
 
     private static func hourLabel(_ hour: Int) -> String {

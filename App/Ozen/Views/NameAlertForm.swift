@@ -22,6 +22,7 @@ struct NameAlertForm: View {
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
                     .onSubmit(addName)
+                    .announcing(otherLettersNote, whenTurningTrue: HebrewText.isInOtherLetters(nameDraft, captionLanguage: viewModel.settings.languageCode))
                 Button(tr("להוסיף", "Add"), action: addName)
                     .buttonStyle(.bordered)
                     .controlSize(.large)
@@ -29,7 +30,7 @@ struct NameAlertForm: View {
                     .disabled(nameDraft.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             if HebrewText.isInOtherLetters(nameDraft, captionLanguage: viewModel.settings.languageCode) {
-                Text(tr("הכתוביות באותיות עבריות, ולכן מילה שנכתבה באותיות אחרות עלולה לא להימצא אף פעם.", "Captions are in Hebrew letters, so a word written in other letters may never be found."))
+                Text(otherLettersNote)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -46,6 +47,10 @@ struct NameAlertForm: View {
         // A name typed and then "Next" or "Done" instead of "Add" was
         // dropped, and the name alert never came.
         .onDisappear(perform: addName)
+    }
+
+    private var otherLettersNote: String {
+        tr("הכתוביות באותיות עבריות, ולכן מילה שנכתבה באותיות אחרות עלולה לא להימצא אף פעם.", "Captions are in Hebrew letters, so a word written in other letters may never be found.")
     }
 
     private var addedText: String {

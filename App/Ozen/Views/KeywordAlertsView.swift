@@ -30,6 +30,7 @@ struct KeywordAlertsView: View {
                         .focused($isEditing)
                         .submitLabel(.done)
                         .onSubmit(add)
+                        .announcing(otherLettersNote, whenTurningTrue: HebrewText.isInOtherLetters(newPhrase, captionLanguage: viewModel.settings.languageCode))
                     Button(action: add) {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
