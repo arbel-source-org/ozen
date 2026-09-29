@@ -323,4 +323,68 @@ struct TranscriptHistoryWriterTests {
         #expect(store.load(id: old.id)?.segments.first?.speakerName == "Aviv")
         #expect(writer.lastFailure == nil)
     }
+
+    @Test("a conversation the disk refused is written by the next save once there is room, and is reported until then")
+    func refusedConversationCatchesUp() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused"))
+        let evening = record(id: UUID(), lines: 3, ended: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(evening)
+        #expect(writer.lastFailure != nil)
+        writer.saveInBackground(record(id: UUID(), lines: 1, ended: false))
+        writer.waitUntilIdle()
+        #expect(writer.lastFailure != nil)
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        writer.saveNow(record(id: UUID(), lines: 1, ended: false))
+        #expect(store.load(id: evening.id)?.segments.count == 3)
+        #expect(writer.lastFailure == nil)
+    }
+
+    @Test("a refused conversation waiting for room takes a voice rename made meanwhile")
+    func refusedConversationTakesRename() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-rename"))
+        let evening = TranscriptSessionRecord(
+            id: UUID(), startedAt: 100, endedAt: 200, engine: .whisperKit, modelVariant: nil, inputName: nil,
+            segments: [SavedSegment(id: UUID(), text: "שלום", speakerName: "Avi", speakerClusterID: nil, startTimestamp: 100, isCommitted: true)]
+        )
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(evening)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        writer.renameSpeakerInBackground(from: "Avi", to: "Aviv")
+        writer.saveNow(record(id: UUID(), lines: 1, ended: false))
+        #expect(store.load(id: evening.id)?.segments.first?.speakerName == "Aviv")
+    }
+
+    @Test("a refused conversation deleted before there is room is not written back later")
+    func refusedConversationDeletedStaysDeleted() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-deleted"))
+        let evening = record(id: UUID(), lines: 3, ended: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(evening)
+        try? writer.deleteNow(id: evening.id)
+
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+        writer.saveNow(record(id: UUID(), lines: 1, ended: false))
+        #expect(store.load(id: evening.id) == nil)
+        #expect(writer.lastFailure == nil)
+    }
 }

@@ -22,6 +22,7 @@ public final class TranscriptHistoryWriter: Sendable {
     private let failure = FailureBox()
     private let lastWritten = WrittenRecord()
     private let pendingRenames = PendingRenames()
+    private let pendingSaves = PendingSaves()
 
     /// Why the most recent save or rename didn't reach the disk (a full
     /// phone, most likely), or nil when it did. Autosaves have no one to
@@ -38,10 +39,13 @@ public final class TranscriptHistoryWriter: Sendable {
     /// writer's queue once the save is done, with `lastFailure` already
     /// saying how it went.
     public func saveInBackground(_ record: TranscriptSessionRecord, finished: (@Sendable () -> Void)? = nil) {
-        queue.async { [store, failure, lastWritten, pendingRenames] in
+        queue.async { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             if lastWritten.record != record {
-                lastWritten.record = failure.capture { try store.save(record) } ? record : nil
+                let saved = failure.capture { try store.save(record) }
+                lastWritten.record = saved ? record : nil
+                pendingSaves.records[record.id] = saved ? nil : record
             }
+            Self.retry(pendingSaves, other: record.id, store: store, failure: failure)
             Self.retry(pendingRenames, store: store, failure: failure)
             finished?()
         }
@@ -55,8 +59,11 @@ public final class TranscriptHistoryWriter: Sendable {
     /// the caller up only for the one write that must not be lost, not for
     /// the whole conversation's search index too.
     public func saveNow(_ record: TranscriptSessionRecord) {
-        queue.sync { [store, failure, lastWritten, pendingRenames] in
-            lastWritten.record = failure.capture { try store.save(record, updateSearchCaches: false) } ? record : nil
+        queue.sync { [store, failure, lastWritten, pendingRenames, pendingSaves] in
+            let saved = failure.capture { try store.save(record, updateSearchCaches: false) }
+            lastWritten.record = saved ? record : nil
+            pendingSaves.records[record.id] = saved ? nil : record
+            Self.retry(pendingSaves, other: record.id, store: store, failure: failure)
             Self.retry(pendingRenames, store: store, failure: failure)
         }
     }
@@ -74,8 +81,9 @@ public final class TranscriptHistoryWriter: Sendable {
     /// Renames a voice across every saved conversation, queued behind the
     /// saves already waiting so none of them lands the old name back.
     public func renameSpeakerInBackground(from oldName: String, to newName: String, finished: (@Sendable () -> Void)? = nil) {
-        queue.async { [store, failure, lastWritten, pendingRenames] in
+        queue.async { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             lastWritten.record = nil
+            pendingSaves.renameSpeaker(from: oldName, to: newName)
             pendingRenames.list.append((oldName, newName))
             failure.capture { try Self.runRenames(pendingRenames, store: store) }
             finished?()
@@ -93,6 +101,22 @@ public final class TranscriptHistoryWriter: Sendable {
             try runRenames(pending, store: store)
         } catch {
             failure.record(String(describing: error))
+        }
+    }
+
+    /// A conversation the disk refused (a full phone) was never tried
+    /// again: the next save of another one worked and cleared the error,
+    /// and the warning with it, though the refused one was never written.
+    /// It stays waiting instead, is tried after every save of another
+    /// conversation, and until it is written its error is the one reported.
+    private static func retry(_ pending: PendingSaves, other current: UUID, store: TranscriptHistoryStore, failure: FailureBox) {
+        for (id, record) in pending.records where id != current {
+            do {
+                try store.save(record)
+                pending.records[id] = nil
+            } catch {
+                failure.record(String(describing: error))
+            }
         }
     }
 
@@ -120,16 +144,18 @@ public final class TranscriptHistoryWriter: Sendable {
     /// Deletes a conversation after any autosave of it already queued, so
     /// that autosave can't write it back a moment after it was deleted.
     public func deleteNow(id: UUID) throws {
-        try queue.sync { [store, lastWritten] in
+        try queue.sync { [store, lastWritten, pendingSaves] in
             lastWritten.record = nil
+            pendingSaves.records[id] = nil
             try store.delete(id: id)
         }
     }
 
     /// Deletes every conversation, after the saves already queued.
     public func deleteAllNow() throws {
-        try queue.sync { [store, lastWritten] in
+        try queue.sync { [store, lastWritten, pendingSaves] in
             lastWritten.record = nil
+            pendingSaves.records.removeAll()
             try store.deleteAll()
         }
     }
@@ -190,6 +216,24 @@ private final class FailureBox: @unchecked Sendable {
 /// touched on the writer's queue.
 private final class PendingRenames: @unchecked Sendable {
     var list: [(from: String, to: String)] = []
+}
+
+/// Conversations the disk refused, waiting to be written. Only touched on
+/// the writer's queue.
+private final class PendingSaves: @unchecked Sendable {
+    var records: [UUID: TranscriptSessionRecord] = [:]
+
+    /// A voice renamed while they wait would otherwise come back under the
+    /// old name when they are finally written.
+    func renameSpeaker(from oldName: String, to newName: String) {
+        records = records.mapValues { record in
+            var record = record
+            for index in record.segments.indices where record.segments[index].speakerName == oldName {
+                record.segments[index].speakerName = newName
+            }
+            return record
+        }
+    }
 }
 
 /// The conversation as the writer last wrote it; nil after a failure or
