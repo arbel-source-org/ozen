@@ -104,6 +104,18 @@ struct SessionJournalTests {
         #expect(journal.entries().map(\.text) == ["problem marked", "listening"])
     }
 
+    @Test("lines the disk refused still show while they wait, so a report made meanwhile has the problem she marked")
+    func refusedLinesStillListed() throws {
+        let url = temporaryFile()
+        let folder = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: folder.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path) }
+        let journal = SessionJournal(fileURL: url)
+        journal.append("problem marked", at: 1_800_000_000)
+        #expect(journal.entries().map(\.text) == ["problem marked"])
+    }
+
     @Test("a file someone damaged loses the bad lines, not the rest")
     func damagedFile() throws {
         let url = temporaryFile()

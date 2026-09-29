@@ -67,11 +67,13 @@ public final class SessionJournal: @unchecked Sendable {
     }
 
     /// Everything kept, oldest first. Flushes anything buffered first, so
-    /// this always sees every line already asked to be appended.
+    /// this always sees every line already asked to be appended; lines a
+    /// full phone refused are listed from where they wait, or the report
+    /// sent from Diagnostics left out the problem she had just marked.
     public func entries() -> [Entry] {
         Self.queue.sync {
             Self.flush(fileURL)
-            return Self.read(fileURL)
+            return Self.read(fileURL) + Self.parse(Self.pendingLines[fileURL, default: []].joined())
         }
     }
 
@@ -170,7 +172,11 @@ public final class SessionJournal: @unchecked Sendable {
 
     private static func read(_ fileURL: URL) -> [Entry] {
         guard let data = try? Data(contentsOf: fileURL) else { return [] }
-        return String(decoding: data, as: UTF8.self)
+        return parse(String(decoding: data, as: UTF8.self))
+    }
+
+    private static func parse(_ text: String) -> [Entry] {
+        text
             .split(separator: "\n")
             .compactMap { line in
                 let parts = line.split(separator: "\t", maxSplits: 1)
