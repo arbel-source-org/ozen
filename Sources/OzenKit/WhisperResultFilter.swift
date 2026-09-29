@@ -155,7 +155,11 @@ public struct WhisperResultFilter: Sendable, Equatable {
     /// (see `PromptEchoDetector`).
     public func acceptedText(from segments: [WhisperSegmentSummary], echo: PromptEchoDetector? = nil) -> String {
         let joined = accepted(from: segments, echo: echo)
-            .map { Self.stripSpecialTokens($0.text).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .map { segment in
+                let text = Self.stripSpecialTokens(segment.text).trimmingCharacters(in: .whitespacesAndNewlines)
+                guard segment.compressionRatio > compressionRatioThreshold else { return text }
+                return Self.repeatedSentence(text) ?? text
+            }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
         return Self.collapsingRepeats(joined)
@@ -213,6 +217,74 @@ public struct WhisperResultFilter: Sendable, Equatable {
         return changed ? words.joined(separator: " ") : text
     }
 
+    /// Someone saying a sentence again with no pause, as people do for a
+    /// listener who didn't catch it, comes back as the sentence written
+    /// twice, and that alone takes the compression ratio past 2.4: a
+    /// Hebrew FLEURS sentence of ten words or more did 90% of the time,
+    /// and the whole line was dropped (7 of 24 finals and 9 of 24 live
+    /// passes, two speakers 0.3 s apart, turbo and large-v3). Two or
+    /// three back-to-back copies of one sentence of at least
+    /// `minimumWords` words, alike word for word to `minimumSimilarity`,
+    /// are that sentence, shown once. A decoding loop runs to more copies
+    /// or over fewer words, and stays dropped.
+    public static func repeatedSentence(_ text: String, minimumWords: Int = 5, minimumSimilarity: Double = 0.7) -> String? {
+        let tokens = text.split(whereSeparator: { $0.isWhitespace }).map(String.init).filter { !normalize($0).isEmpty }
+        let keys = tokens.map(normalize)
+        var best: (similarity: Double, size: Int)?
+        for copies in 2...3 {
+            let average = keys.count / copies
+            guard average >= minimumWords else { continue }
+            for size in max(minimumWords, average - 2)...(average + 2) where size < keys.count {
+                guard let similarity = copySimilarity(keys, size: size, copies: copies),
+                      similarity >= minimumSimilarity, similarity > (best?.similarity ?? 0) else { continue }
+                best = (similarity, size)
+            }
+        }
+        guard let best else { return nil }
+        let sentence = tokens[..<best.size].joined(separator: " ")
+        // Two copies of two copies is a loop of four, and a "sentence"
+        // that is itself a word or short phrase over again is a loop cut
+        // in half ("pak pak pak..." on dripping water).
+        guard collapsingRepeats(sentence, maxRepeats: 1) == sentence,
+              repeatedSentence(sentence, minimumWords: minimumWords, minimumSimilarity: minimumSimilarity) == nil
+        else { return nil }
+        return sentence
+    }
+
+    /// How alike the least alike later copy is to the first `size` words,
+    /// each copy free to run a few words longer or shorter; nil when more
+    /// than a word is left over after the last one.
+    static func copySimilarity(_ keys: [String], size: Int, copies: Int) -> Double? {
+        let first = Array(keys[..<size])
+        var start = size
+        var least = 1.0
+        for _ in 1..<copies {
+            var best: (similarity: Double, length: Int)?
+            for length in max(1, size - 3)...(size + 3) where start + length <= keys.count {
+                let similarity = wordSimilarity(first, Array(keys[start..<(start + length)]))
+                if similarity > (best?.similarity ?? -1) { best = (similarity, length) }
+            }
+            guard let best else { return nil }
+            least = min(least, best.similarity)
+            start += best.length
+        }
+        return keys.count - start <= 1 ? least : nil
+    }
+
+    /// Twice the longest run of words the two share in order, over both lengths.
+    static func wordSimilarity(_ a: [String], _ b: [String]) -> Double {
+        guard !a.isEmpty || !b.isEmpty else { return 1 }
+        var previous = [Int](repeating: 0, count: b.count + 1)
+        for word in a {
+            var current = [Int](repeating: 0, count: b.count + 1)
+            for (index, other) in b.enumerated() {
+                current[index + 1] = word == other ? previous[index] + 1 : max(previous[index + 1], current[index])
+            }
+            previous = current
+        }
+        return Double(2 * previous[b.count]) / Double(a.count + b.count)
+    }
+
     public func accepts(_ segment: WhisperSegmentSummary) -> Bool {
         let text = Self.stripSpecialTokens(segment.text).trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty { return false }
@@ -236,7 +308,13 @@ public struct WhisperResultFilter: Sendable, Equatable {
         if segment.noSpeechProb > noSpeechThreshold && segment.avgLogprob < logprobThreshold {
             return false
         }
-        if segment.compressionRatio > compressionRatioThreshold { return false }
+        if segment.compressionRatio > compressionRatioThreshold {
+            // Two or three copies of a sentence measured 2.5 to 3.6; the
+            // loops Whisper wrote on household noise 11 to 25.
+            guard segment.compressionRatio <= 2 * compressionRatioThreshold,
+                  let sentence = Self.repeatedSentence(text), !isKnownHallucination(sentence)
+            else { return false }
+        }
         return true
     }
 

@@ -276,3 +276,46 @@ struct WhisperRepeatCollapseTests {
         #expect(filter.acceptedText(from: [segment]) == "תבואי תבואי תבואי מחר")
     }
 }
+
+@Suite("A sentence said twice in one line")
+struct WhisperRepeatedSentenceTests {
+    let filter = WhisperResultFilter()
+    let cave = "המערה שוכנת בפסגת אחד ההרים מצפון למכה והיא מבודדת לחלוטין מכל שאר העולם."
+
+    private func segment(_ text: String, compression: Float) -> WhisperSegmentSummary {
+        WhisperSegmentSummary(text: text, noSpeechProb: 0.0, avgLogprob: -0.03, compressionRatio: compression)
+    }
+
+    @Test("the same sentence written twice is kept, once, though the repeat pushes the compression past the loop line")
+    func exactRepeatKeptOnce() {
+        let twice = segment("\(cave) \(cave)", compression: 2.67)
+        #expect(filter.accepts(twice))
+        #expect(filter.acceptedText(from: [twice]) == cave)
+    }
+
+    @Test("a second copy heard a word differently still counts as the same sentence")
+    func nearRepeatKeptOnce() {
+        let other = cave.replacingOccurrences(of: "ההרים", with: "הערים")
+        let twice = segment("\(cave) \(other)", compression: 2.6)
+        #expect(filter.accepts(twice))
+        #expect(filter.acceptedText(from: [twice]) == cave)
+        #expect(filter.acceptedText(from: [segment("\(cave) \(cave) \(cave)", compression: 4.1)]) == cave)
+    }
+
+    @Test("a loop of four or more copies, a short phrase looped, or repetitive text that is not copies is still dropped")
+    func loopsStillDropped() {
+        #expect(!filter.accepts(segment(Array(repeating: cave, count: 4).joined(separator: " "), compression: 5.4)))
+        #expect(!filter.accepts(segment("אני לא יודע אני לא יודע אני לא יודע", compression: 3.0)))
+        #expect(!filter.accepts(segment("\(cave) והיא מבודדת לחלוטין והיא מבודדת לחלוטין והיא מבודדת", compression: 2.9)))
+        #expect(!filter.accepts(segment("Subtitles by the Amara.org community. Subtitles by the Amara.org community.", compression: 2.5)))
+        // Loops the models wrote on dripping water and on silence.
+        #expect(!filter.accepts(segment(Array(repeating: "פאק", count: 75).joined(separator: " "), compression: 21.9)))
+        #expect(!filter.accepts(segment(Array(repeating: "התקדם בנושא הזה", count: 4).joined(separator: " "), compression: 2.9)))
+        #expect(!filter.accepts(segment(Array(repeating: "התקדם בנושא הזה", count: 20).joined(separator: " "), compression: 13.2)))
+    }
+
+    @Test("a sentence said once is shown exactly as written")
+    func singleUntouched() {
+        #expect(filter.acceptedText(from: [segment(cave, compression: 1.5)]) == cave)
+    }
+}
