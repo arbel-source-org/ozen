@@ -584,12 +584,22 @@ public final class CaptionPipeline {
         // say so) carries on, rather than trying it again with nothing
         // buffered and then reloading the model. The recheck brings it
         // back once it answers.
-        if isCoveringForCloud, effective.engine == .cloud || effective.engine == .homeServer {
-            effective.engine = .whisperKit
-            nextStartCoversCloud = true
-        }
+        keepCovering(&effective)
         phase = .idle
         await start(settings: effective)
+    }
+
+    /// Starting again while the phone's model covers (a resume, or a retry
+    /// after the covering model itself failed) goes on covering: the
+    /// recheck keeps trying what was chosen. Started from the phone's own
+    /// settings, as a retry or a plain resume is, the cover was dropped
+    /// and the home computer or the cloud was never tried again.
+    private func keepCovering(_ settings: inout AppSettings) {
+        guard isCoveringForCloud else { return }
+        if settings.engine == .cloud || settings.engine == .homeServer {
+            settings.engine = .whisperKit
+        }
+        nextStartCoversCloud = true
     }
 
     /// Her settings changed while captions were paused (the home computer's
@@ -629,9 +639,10 @@ public final class CaptionPipeline {
     /// a caller with its own live settings should pass the current value
     /// so a change made while failed isn't silently dropped on retry.
     public func retry(settings: AppSettings? = nil) async {
-        guard case .failed = phase, let effective = settings ?? activeSettings else { return }
+        guard case .failed = phase, var effective = settings ?? activeSettings else { return }
         cancelScheduledRetry()
         tearDownSession()
+        keepCovering(&effective)
         // Straight from the failure to starting, never through .idle, which
         // means stopped on purpose (the "captions came back" announcement
         // forgets the failure there).

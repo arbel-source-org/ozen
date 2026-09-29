@@ -205,6 +205,27 @@ struct CloudCoverTests {
         captions.stop()
     }
 
+    @Test("a retry after the covering model itself fails keeps covering, and still switches back once the cloud answers")
+    func retryDuringCoverKeepsCovering() async {
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone)
+        captions.cloudRecheckSeconds = 1
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+
+        phone.endStream(throwing: EngineUnavailability(kind: .temporarilyUnavailable, detail: "microphone stalled"))
+        #expect(await eventually { if case .failed = captions.phase { return true } else { return false } })
+        await captions.retry()
+
+        #expect(captions.isCoveringForCloud)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        captions.stop()
+    }
+
     @Test("a connection that keeps dropping right after switching back is tried less and less often; a drop after a good stretch starts over")
     func flappingCloudBacksOff() async {
         let cloud = FakeEngine(kind: .cloud)
