@@ -130,6 +130,18 @@ struct CloudCoverTests {
         #expect(cloud.prepareCount >= 3)
     }
 
+    @Test("a cloud still busy after every retry is covered without saying captions stopped")
+    func troubleOutlastingRetriesIsNotAStop() async {
+        let cloud = FakeEngine(kind: .cloud, availability: .unavailable(.temporarilyUnavailable, "test"))
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone, retryAfter: [0.01, 0.01])
+        let causes = watchCauses(of: captions)
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.isCoveringForCloud })
+        #expect(await eventually { causes.seen.count >= 5 })
+        #expect(causes.seen.allSatisfy { $0 == nil })
+    }
+
     @Test("starting again with her own settings ends the cover")
     func restartEndsCover() async {
         let engines = [

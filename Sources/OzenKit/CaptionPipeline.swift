@@ -2073,6 +2073,7 @@ public final class CaptionPipeline {
               var onPhone = activeSettings, onPhone.engine == .cloud
         else { return }
         onPhone.engine = .whisperKit
+        pendingCover = failure
         Task { [weak self] in await self?.coverForCloud(with: onPhone, after: failure, retryIfNotCovered: false) }
     }
 
