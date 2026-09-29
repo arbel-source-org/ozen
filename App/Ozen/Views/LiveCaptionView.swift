@@ -258,8 +258,10 @@ struct LiveCaptionView: View {
         // Captions reach VoiceOver and braille displays line by line; a
         // reader who can't see these two banners would never learn that
         // saving stopped or that captions now come through another microphone.
-        .announcing(savingTroubleAnnouncement, whenTurningTrue: viewModel.savingTrouble.shouldShow)
-        .announcing(microphoneDropAnnouncement, whenTurningTrue: viewModel.microphoneDrop.title != nil)
+        // Also when the screen first appears with one already up: on a full
+        // phone saving can fail before the caption screen exists.
+        .announcing(savingTroubleAnnouncement, whenTurningTrue: viewModel.savingTrouble.shouldShow, alsoWhenFirstShown: true)
+        .announcing(microphoneDropAnnouncement, whenTurningTrue: viewModel.microphoneDrop.title != nil, alsoWhenFirstShown: true)
         .overlay {
             // Removed rather than fed nil while covered, so closing the
             // covering screen doesn't replay the last flash.
