@@ -18,6 +18,7 @@ public final class AVAudioInputManager: AudioCapturing {
     public private(set) var selectedInputUID: String?
     public private(set) var inputLevel: Float = 0
     public var onInputsChanged: (@MainActor () -> Void)?
+    public var onCaptureLost: (@MainActor () -> Void)?
     /// `true` when the system took the session away (an incoming call),
     /// `false` when it came back and capture resumed on its own.
     public var onInterruption: (@MainActor (Bool) -> Void)?
@@ -166,8 +167,9 @@ public final class AVAudioInputManager: AudioCapturing {
     ///
     /// A Bluetooth microphone that is still connecting can report a 0 Hz
     /// format, or refuse to start, for a moment. Try again a few times
-    /// before giving up; if it never settles, the pipeline's audio
-    /// watchdog sees no audio arriving and restarts capture from scratch.
+    /// before giving up; if it never settles, `onCaptureLost` tells the
+    /// pipeline, which restarts capture from scratch (its audio watchdog
+    /// would, too, but only after seconds of "Listening" to nothing).
     private func recoverFromConfigurationChange(attempt: Int = 0) {
         guard let current = activeTap else { return }
         engine.inputNode.removeTap(onBus: 0)
@@ -179,7 +181,10 @@ public final class AVAudioInputManager: AudioCapturing {
             engine.prepare()
             if (try? engine.start()) != nil { return }
         }
-        guard attempt < Self.configurationRetryLimit else { return }
+        guard attempt < Self.configurationRetryLimit else {
+            onCaptureLost?()
+            return
+        }
         let engineID = ObjectIdentifier(engine)
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(300))

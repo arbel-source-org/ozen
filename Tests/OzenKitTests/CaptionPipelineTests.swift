@@ -16,6 +16,7 @@ final class FakeAudioCapturer: AudioCapturing {
     var selectedInputUID: String?
     var inputLevel: Float = 0
     var onInputsChanged: (@MainActor () -> Void)?
+    var onCaptureLost: (@MainActor () -> Void)?
 
     var permissionAnswer: AudioPermission = .granted
     var prepareError: Error?
@@ -2389,6 +2390,29 @@ struct CaptionPipelineAudioStallTests {
         #expect(await eventually { pipeline.phase.failure?.kind == .audioSessionFailed })
         #expect(pipeline.stats.audioStalls == 1)
         #expect(audio.calls.last == "stopCapture")
+    }
+
+    @Test("a microphone the phone gave up setting up again fails at once, not after the watchdog's wait")
+    func captureLostFailsAtOnce() async {
+        let (pipeline, audio, _) = makePipeline()
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0, count: 1_600))
+        #expect(pipeline.phase.isListening)
+
+        audio.onCaptureLost?()
+        #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+        #expect(pipeline.stats.audioStalls == 1)
+        #expect(audio.calls.last == "stopCapture")
+    }
+
+    @Test("a microphone given up during a phone call is left to the call's end, like a stall")
+    func captureLostDuringCallIsNotAFailure() async {
+        let (pipeline, audio, _) = makePipeline()
+        await pipeline.start(settings: .default)
+        pipeline.systemInterruptionChanged(active: true)
+        audio.onCaptureLost?()
+        #expect(pipeline.phase.isListening)
+        #expect(pipeline.stats.audioStalls == 0)
     }
 
     @Test("a quiet room still delivers audio, so captions keep listening")

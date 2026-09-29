@@ -371,6 +371,7 @@ public final class CaptionPipeline {
         }
         guard runID == run else { return }
         audio.onInputsChanged = { [weak self] in self?.inputsChanged() }
+        audio.onCaptureLost = { [weak self] in self?.captureLost(run: run) }
         syncInputs()
         guard !availableInputs.isEmpty else {
             fail(.noAudioInputs, detail: "AVAudioSession reported no available inputs")
@@ -1643,6 +1644,15 @@ public final class CaptionPipeline {
         stats.audioStalls += 1
         logEvent(.microphoneStalled)
         fail(.audioSessionFailed, detail: "no audio from the microphone for \(Int(audioWatchdog.stallSeconds)) s")
+    }
+
+    /// The failure the audio watchdog would report, as soon as the phone
+    /// gives up on the microphone, and held back the same way during a call.
+    private func captureLost(run: UUID) {
+        guard runID == run, phase.isListening, !systemInterrupted else { return }
+        stats.audioStalls += 1
+        logEvent(.microphoneStalled)
+        fail(.audioSessionFailed, detail: "the microphone never settled after it changed")
     }
 
     private func fail(_ kind: PipelineFailure.Kind, detail: String, engineUnavailability: EngineUnavailability? = nil) {
