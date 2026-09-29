@@ -331,7 +331,12 @@ public struct ConversationStats: Sendable, Equatable {
         let hours = minutes / 60
         let rest = minutes % 60
         let hoursPhrase = countedTime(hours, unit: .hour, in: language)
-        return rest == 0 ? hoursPhrase : "\(hoursPhrase) \(countedTime(rest, unit: .minute, in: language))"
+        guard rest > 0 else { return hoursPhrase }
+        let minutesPhrase = countedTime(rest, unit: .minute, in: language)
+        // Arabic writes one and two as the word alone ("ساعة", "دقيقتان"):
+        // without its "and" (و, joined to the next word) two such words
+        // side by side don't read as a duration at all.
+        return language == .arabic ? "\(hoursPhrase) و\(minutesPhrase)" : "\(hoursPhrase) \(minutesPhrase)"
     }
 
     private static func countedTime(_ n: Int, unit: TimeUnit, in language: UILanguage) -> String {

@@ -227,6 +227,19 @@ struct PluralizationTests {
         #expect(tr("פנוי בטלפון: %1.", "Free on the phone: %1.", args: ["3 GB"], in: .amharic).contains(freeSpace))
     }
 
+    @Test("Arabic joins hours and minutes with \"and\", which it needs when one and two carry no numeral")
+    func arabicHoursAndMinutes() {
+        Localization.$override.withValue(.arabic) {
+            #expect(ConversationStats.minutesText(61 * 60) == "ساعة ودقيقة")
+            #expect(ConversationStats.minutesText(122 * 60) == "ساعتان ودقيقتان")
+            #expect(ConversationStats.minutesText(65 * 60) == "ساعة و5 دقائق")
+            #expect(ConversationStats.minutesText(120 * 60) == "ساعتان")
+        }
+        Localization.$override.withValue(.russian) {
+            #expect(ConversationStats.minutesText(65 * 60) == "1 час 5 минут")
+        }
+    }
+
     @Test("no function leaks a Hebrew word into another language's text")
     func noHebrewLeak() {
         for language in UILanguage.allCases where language != .hebrew {
