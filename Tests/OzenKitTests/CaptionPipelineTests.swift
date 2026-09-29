@@ -2502,6 +2502,24 @@ struct CaptionPipelineAudioStallTests {
         #expect(audio.calls.filter { $0 == "startCapture" }.count == 1)
     }
 
+    @Test("a microphone that comes back during a voice recording brings captions back once the recording ends")
+    func microphoneChangeDuringVoiceRecordingWaits() async {
+        let (pipeline, audio, _) = makePipeline()
+        await pipeline.start(settings: .default)
+        audio.onCaptureLost?()
+        #expect(pipeline.phase.failure?.kind == .audioSessionFailed)
+
+        let recording = Task { await pipeline.captureEnrollmentSamples(seconds: 1) }
+        #expect(await eventually { pipeline.isRecordingVoice })
+        audio.simulateRouteChange(inputs: [AudioInputDescriptor(uid: "builtin", portName: "iPhone Microphone", portType: .builtInMic)])
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(pipeline.isRecordingVoice)
+        audio.push([Float](repeating: 0.1, count: 16_000))
+        let sample = await recording.value
+        #expect(sample.count == 16_000)
+        #expect(await eventually { pipeline.phase.isListening })
+    }
+
     @Test("a quiet room still delivers audio, so captions keep listening")
     func silenceIsNotAStall() async throws {
         // A wider window than the other tests, so a busy CI machine that

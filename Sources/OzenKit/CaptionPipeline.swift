@@ -945,15 +945,23 @@ public final class CaptionPipeline {
     /// `microphoneChangeRetrySeconds`, since taking the session down can
     /// itself be reported as a change.
     private func retryWhenMicrophonesChange() {
-        guard microphoneRetryTask == nil, scheduledRetry == nil, !systemInterrupted, !isRecordingVoice,
+        guard microphoneRetryTask == nil, scheduledRetry == nil, !systemInterrupted,
               let kind = phase.failure?.kind, kind == .audioSessionFailed || kind == .noAudioInputs,
               !availableInputs.isEmpty
         else { return }
         let at = now()
         if let last = lastMicrophoneChangeRetryAt, at >= last, at - last < Self.microphoneChangeRetrySeconds { return }
         lastMicrophoneChangeRetryAt = at
-        logEvent(.note("the microphones changed, trying captions again"))
         recovery.reset()
+        // A voice sample holds the microphone: captions try again when it
+        // is done, as a Retry tapped meanwhile would. Dropped here, the
+        // change was never answered and captions stayed stopped.
+        guard !isRecordingVoice else {
+            logEvent(.note("the microphones changed during a voice recording, trying captions again after it"))
+            if retryAfterRecording == nil { retryAfterRecording = HeldRetry(settings: nil) }
+            return
+        }
+        logEvent(.note("the microphones changed, trying captions again"))
         microphoneRetryTask = Task { [weak self] in
             await self?.retry()
             self?.microphoneRetryTask = nil
