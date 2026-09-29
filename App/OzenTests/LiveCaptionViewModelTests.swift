@@ -504,6 +504,35 @@ struct LiveCaptionViewModelAlertTests {
 
         #expect(history.listSummaries().isEmpty)
     }
+
+    @Test("lines said while saving was off stay out of every saved conversation after it is switched back on")
+    func offStretchNeverSaved() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-save-off-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory)
+        let store = SettingsStore(fileURL: directory.appendingPathExtension("json"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+        let now = Date().timeIntervalSince1970
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "מה שלום כולם", isFinal: true, timestamp: now - 20))
+        await eventually { viewModel.segments.count >= 1 }
+        viewModel.saveHistory = false
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "זה סוד בינינו", isFinal: true, timestamp: now - 10))
+        await eventually { viewModel.segments.count >= 2 }
+        viewModel.saveHistory = true
+        viewModel.toggleStar(viewModel.segments[1])
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "נתראה מחר בבוקר", isFinal: true, timestamp: now))
+        await eventually { viewModel.segments.count >= 3 }
+        viewModel.persistHistory(ended: true)
+
+        let saved = history.listSummaries().compactMap { history.load(id: $0.id) }.flatMap(\.segments).map(\.text)
+        #expect(saved.contains("מה שלום כולם"))
+        #expect(saved.contains("נתראה מחר בבוקר"))
+        #expect(!saved.contains("זה סוד בינינו"))
+        #expect(viewModel.savedConversationID(holdingLineAt: 1) == nil)
+    }
 }
 
 @Suite("LiveCaptionViewModel vocabulary")
@@ -1033,6 +1062,30 @@ struct LiveCaptionViewModelConversationBreakTests {
         #expect(viewModel.segments.count == 2)
         // And a second check right away doesn't split again.
         #expect(viewModel.checkForConversationBreak() == false)
+    }
+
+    @Test("a conversation begun after a break keeps its first line's time when captions pause and resume")
+    func resumeKeepsStartTime() async throws {
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-break-resume-\(UUID())", isDirectory: true)
+        let history = TranscriptHistoryStore(directoryURL: directory)
+        let store = SettingsStore(fileURL: directory.appendingPathExtension("json"))
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: history)
+        await viewModel.start()
+
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "בוקר טוב", isFinal: true, timestamp: Date().timeIntervalSince1970 - 30 * 60))
+        await eventually { !viewModel.segments.isEmpty }
+        #expect(viewModel.checkForConversationBreak())
+        engine.emit(TranscriptToken(utteranceID: UUID(), text: "ערב טוב", isFinal: true, timestamp: Date().timeIntervalSince1970 - 120))
+        await eventually { viewModel.segments.count >= 2 }
+
+        await viewModel.togglePause()
+        await viewModel.togglePause()
+        viewModel.persistHistory(ended: false)
+
+        let evening = try #require(history.listSummaries().first { $0.preview == "ערב טוב" })
+        #expect(abs(evening.startedAt - viewModel.segments[1].startTimestamp) < 0.001)
     }
 
     @Test("each line on screen leads to the saved conversation it belongs to, and to none once that is deleted or saving is off")

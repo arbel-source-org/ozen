@@ -1167,6 +1167,12 @@ public final class LiveCaptionViewModel {
     public var saveHistory: Bool {
         get { settings.saveHistory }
         set {
+            guard newValue != settings.saveHistory else { return }
+            // Switched off, what was said until now is kept and nothing
+            // after it; switched back on, saving starts with the next line.
+            // Without this, the next save after switching it back on wrote
+            // every line said while it was off.
+            closeHistorySession(endedAt: currentHistorySegments.map(\.lastUpdateTimestamp).max())
             settings.saveHistory = newValue
             persist()
         }
@@ -1859,23 +1865,33 @@ public final class LiveCaptionViewModel {
     public func checkForConversationBreak(now: TimeInterval = Date().timeIntervalSince1970) -> Bool {
         let lastCaptionAt = currentHistorySegments.map(\.lastUpdateTimestamp).max()
         guard ConversationBreak.shouldStartNew(lastCaptionAt: lastCaptionAt, now: now) else { return false }
-        persistHistory(ended: true, endedAt: lastCaptionAt)
-        if let startedAt = historySessionStartedAt ?? currentHistorySegments.first?.startTimestamp {
-            closedHistorySessions.append(ClosedHistorySession(
-                id: historySessionID,
-                lines: historySegmentOffset..<pipeline.segments.count,
-                startedAt: startedAt,
-                endedAt: lastCaptionAt,
-                engine: transcribingSettings.engine,
-                modelVariant: transcribingSettings.modelDescription,
-                inputName: selectedInput?.portName
-            ))
+        closeHistorySession(endedAt: lastCaptionAt)
+        pipeline.startNewConversation()
+        return true
+    }
+
+    /// Ends the saved conversation and starts the next one at the next
+    /// line. Its lines stay on screen, and a star or a name given to one
+    /// of them later still reaches its file. A conversation had while
+    /// saving was off is never saved, then or later.
+    private func closeHistorySession(endedAt: TimeInterval?) {
+        if settings.saveHistory {
+            persistHistory(ended: true, endedAt: endedAt)
+            if let startedAt = historySessionStartedAt ?? currentHistorySegments.first?.startTimestamp {
+                closedHistorySessions.append(ClosedHistorySession(
+                    id: historySessionID,
+                    lines: historySegmentOffset..<pipeline.segments.count,
+                    startedAt: startedAt,
+                    endedAt: endedAt,
+                    engine: transcribingSettings.engine,
+                    modelVariant: transcribingSettings.modelDescription,
+                    inputName: selectedInput?.portName
+                ))
+            }
         }
         historySessionID = UUID()
         historySegmentOffset = pipeline.segments.count
         historySessionStartedAt = nil
-        pipeline.startNewConversation()
-        return true
     }
 
     /// Keeps the autosave loop matched to whether we're listening.
@@ -1883,8 +1899,10 @@ public final class LiveCaptionViewModel {
         historySawListening = pipeline.phase.isListening
         if pipeline.phase.isListening {
             checkForConversationBreak()
+            // A conversation that began after a break, while listening,
+            // already has lines: it starts at the first, not at this resume.
             if historySessionStartedAt == nil {
-                historySessionStartedAt = Date().timeIntervalSince1970
+                historySessionStartedAt = currentHistorySegments.first?.startTimestamp ?? Date().timeIntervalSince1970
             }
             if autosaveTask == nil {
                 autosaveTask = Task { [weak self] in
