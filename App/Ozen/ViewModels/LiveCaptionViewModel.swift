@@ -1605,7 +1605,12 @@ public final class LiveCaptionViewModel {
             pipeline.speakerClusters.first(where: { $0.id == id })?.name
         }
         guard let centroid = pipeline.nameSpeaker(of: segment, name: name) else { return }
-        if let oldName, settings.speakerProfiles.contains(where: { $0.name == oldName }) {
+        // A name another saved person already has is not a misspelling:
+        // the phone took this voice for the wrong person. Renaming would
+        // hand all of that person's prints to this name, and they would
+        // vanish from the saved speakers; this voice gets a print instead.
+        let isAnotherSavedPerson = name != oldName && settings.speakerProfiles.contains(where: { $0.name == name })
+        if let oldName, !isAnotherSavedPerson, settings.speakerProfiles.contains(where: { $0.name == oldName }) {
             for index in settings.speakerProfiles.indices where settings.speakerProfiles[index].name == oldName {
                 settings.speakerProfiles[index].name = name
             }
