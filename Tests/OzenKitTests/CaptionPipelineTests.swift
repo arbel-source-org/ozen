@@ -1733,6 +1733,22 @@ struct CaptionPipelineAlertTests {
         #expect(pipeline.bannerSecondsLeft(for: siren) == 0)
     }
 
+    @Test("a clock set back after an alert never makes its banner last longer than its own time")
+    func bannerTimeLeftAfterClockSetBack() async throws {
+        let clock = TestClock()
+        let detector = FakeSoundDetector()
+        let (pipeline, audio, _) = makePipeline(soundDetector: detector, now: { clock.now })
+        await pipeline.start(settings: .default)
+        audio.push([Float](repeating: 0.1, count: 1_024))
+        #expect(await eventually { detector.chunksSeen == 1 })
+
+        detector.push(SoundObservation(identifier: "civil_defense_siren", confidence: 0.95, timestamp: clock.now))
+        #expect(await eventually { pipeline.screenSoundAlert != nil })
+        let siren = try #require(pipeline.screenSoundAlert)
+        clock.advance(-600)
+        #expect(pipeline.bannerSecondsLeft(for: siren) <= siren.bannerSeconds)
+    }
+
     @Test("while the phone vibrates for an alert, what the microphone hears of the buzz is not an alert")
     func ownVibrationIsNotAnAlert() async {
         let clock = TestClock()

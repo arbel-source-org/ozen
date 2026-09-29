@@ -727,7 +727,8 @@ public final class CaptionPipeline {
     /// whose time is up isn't shown again.
     public func bannerSecondsLeft(for alert: SoundAlert) -> Double {
         guard alert.id == screenSoundAlert?.id, let raised = screenSoundAlertRaisedAt else { return alert.bannerSeconds }
-        return max(0, alert.bannerSeconds - (now() - raised))
+        // A clock set back since would otherwise add the jump to the time left.
+        return min(alert.bannerSeconds, max(0, alert.bannerSeconds - (now() - raised)))
     }
 
     /// Stops taking a buzz for a sound while the phone vibrates for an
