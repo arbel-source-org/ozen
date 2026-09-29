@@ -105,8 +105,9 @@ struct CloudSpeechEngineTests {
     func backlogIsCutAtTheLimit() async throws {
         let http = FakeCloudHTTP(answers: [.text("שלום")])
         // Talk: syllables with short dips, which a steady tone is not.
-        let talk = (0..<Int(40 * 16_000) / chunk).map { index in
-            (0..<chunk).map { index % 6 == 5 ? 0.001 * sin(Float($0) * 0.3) : 0.05 * sin(Float($0) * 0.3) }
+        let talk: [[Float]] = (0..<Int(40 * 16_000) / chunk).map { index in
+            let level: Float = index % 6 == 5 ? 0.001 : 0.05
+            return (0..<chunk).map { level * sin(Float($0) * 0.3) }
         }
         _ = try await transcribe(engine(http), talk + silence(seconds: 1))
         let sent = try http.transcriptionRequests.map(secondsSent)
