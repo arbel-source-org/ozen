@@ -42,6 +42,9 @@ final class BatteryMonitor {
             }
             observers.removeAll()
             device.isBatteryMonitoringEnabled = false
+            // Nothing reads the charger from here on: a "plug in a charger"
+            // left up would stay after she did.
+            notice = nil
         }
     }
 
@@ -65,16 +68,25 @@ final class BatteryMonitor {
 
 /// "The battery is at 18%" in the top overlay, tinted by urgency.
 struct BatteryBanner: View {
+    /// What VoiceOver reads for it, on the banner and when it appears.
+    static func spoken(_ warning: BatteryWarning) -> String {
+        tr("הסוללה ב-%1 אחוזים", "Battery at %1 percent", args: ["\(warning.percent)"]) + ". " + advice(for: warning)
+    }
+
     let notice: BatteryMonitor.Notice
     let onDismiss: () -> Void
 
-    private var isCritical: Bool {
-        if case .critical = notice.warning { return true }
+    private var isCritical: Bool { Self.isCritical(notice.warning) }
+
+    private static func isCritical(_ warning: BatteryWarning) -> Bool {
+        if case .critical = warning { return true }
         return false
     }
 
-    private var advice: String {
-        isCritical ? tr("הטלפון עלול להיכבות באמצע השיחה. חברו למטען.", "The phone might shut down mid-conversation. Plug in a charger.") : tr("כדאי לחבר למטען.", "Consider plugging in a charger.")
+    private var advice: String { Self.advice(for: notice.warning) }
+
+    private static func advice(for warning: BatteryWarning) -> String {
+        isCritical(warning) ? tr("הטלפון עלול להיכבות באמצע השיחה. חברו למטען.", "The phone might shut down mid-conversation. Plug in a charger.") : tr("כדאי לחבר למטען.", "Consider plugging in a charger.")
     }
 
     var body: some View {
@@ -104,7 +116,7 @@ struct BatteryBanner: View {
             .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(tr("הסוללה ב-%1 אחוזים", "Battery at %1 percent", args: ["\(notice.warning.percent)"]) + ". " + advice)
+        .accessibilityLabel(Self.spoken(notice.warning))
         .accessibilityHint(tr("הקישו לסגירה", "Tap to close"))
     }
 }

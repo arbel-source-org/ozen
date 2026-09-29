@@ -262,6 +262,14 @@ struct LiveCaptionView: View {
         // phone saving can fail before the caption screen exists.
         .announcing(savingTroubleAnnouncement, whenTurningTrue: viewModel.savingTrouble.shouldShow, alsoWhenFirstShown: true)
         .announcing(microphoneDropAnnouncement, whenTurningTrue: viewModel.microphoneDrop.title != nil, alsoWhenFirstShown: true)
+        // Each new battery warning, a critical one after a low one too: the
+        // banner only buzzed, and a reader who can't see it missed that the
+        // phone may shut down.
+        .onChange(of: battery.notice?.id) { _, id in
+            guard id != nil, let warning = battery.notice?.warning else { return }
+            let text = NSAttributedString(string: BatteryBanner.spoken(warning), attributes: [.accessibilitySpeechQueueAnnouncement: true])
+            UIAccessibility.post(notification: .announcement, argument: text)
+        }
         .overlay {
             // Removed rather than fed nil while covered, so closing the
             // covering screen doesn't replay the last flash.
