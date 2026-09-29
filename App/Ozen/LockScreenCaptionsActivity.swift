@@ -18,6 +18,11 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
 
     private var activityID: String?
     private(set) var lastStartFailure: String?
+    /// The last update or end handed to ActivityKit. Each one waits for the
+    /// one before: sent as separate tasks, a status sent a moment after a
+    /// line could arrive first and then be overwritten by the older state
+    /// ("Captions stopped" gone again) until the next keep-alive.
+    private var lastSent: Task<Void, Never>?
 
     init() {
         // One left from a previous run (the app was closed while it
@@ -51,7 +56,11 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
         )
         let staleDate = Date().addingTimeInterval(Self.staleAfterSeconds)
         if let activityID, Self.isRunning(id: activityID) {
-            Task.detached { await Self.update(id: activityID, state: state, staleDate: staleDate) }
+            let previous = lastSent
+            lastSent = Task.detached {
+                await previous?.value
+                await Self.update(id: activityID, state: state, staleDate: staleDate)
+            }
             return true
         }
         // Ended by iOS (they last eight hours) or swiped away.
@@ -73,7 +82,11 @@ final class LockScreenCaptionsActivity: LockScreenCaptionsDisplaying {
     func end() {
         guard let activityID else { return }
         self.activityID = nil
-        Task.detached { await Self.end(ids: [activityID]) }
+        let previous = lastSent
+        lastSent = Task.detached {
+            await previous?.value
+            await Self.end(ids: [activityID])
+        }
     }
 
     private nonisolated static func isRunning(id: String) -> Bool {
