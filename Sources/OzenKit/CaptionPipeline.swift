@@ -186,6 +186,10 @@ public final class CaptionPipeline {
     private var stabilizer: CaptionStabilizer
     private var engineCache: [String: any TranscriptionEngine] = [:]
     private var clearedUtterances: [UUID: [String]] = [:]
+    /// The cloud finishes a sentence as one line per speaker, each after
+    /// the first under a new id. The cleared words the first line did not
+    /// use belong to the next speaker's line of the same finished sentence.
+    private var clearedTurnCarry: (timestamp: TimeInterval, words: [String])?
     /// Each sentence still being said, as the engine last sent it, before
     /// any cleared words were cut from it.
     private var incomingText: [UUID: String] = [:]
@@ -1299,10 +1303,11 @@ public final class CaptionPipeline {
     /// is lined up with `cleared` word by word instead, and the cut goes
     /// where they match best, as long as no more than a third of the
     /// cleared words differ. Rewritten further than that, the line comes
-    /// back whole: a repeat is better than a loss.
-    private static func words(of text: String, after cleared: [String]) -> String? {
+    /// back whole: a repeat is better than a loss. Also returns how many of
+    /// the cleared words `text` accounted for.
+    private static func words(of text: String, after cleared: [String]) -> (rest: String?, clearedWordsUsed: Int) {
         let words = text.split(whereSeparator: \.isWhitespace)
-        guard !words.isEmpty else { return nil }
+        guard !words.isEmpty else { return (nil, 0) }
         let comparable = words.map { $0.trimmingCharacters(in: .punctuationCharacters) }
         // edits[i][k]: the words to change, add or drop to turn the first
         // i cleared words into the first k words of `text`.
@@ -1314,12 +1319,12 @@ public final class CaptionPipeline {
             }
             edits.append(row)
         }
-        var best: (edits: Int, cut: Int)?
+        var best: (edits: Int, cut: Int, clearedWords: Int)?
         func consider(clearedWords: Int, cut: Int) {
             let cost = edits[clearedWords][cut]
             guard cost <= clearedWords / 3 else { return }
             if let current = best, (current.edits, current.cut) <= (cost, cut) { return }
-            best = (cost, cut)
+            best = (cost, cut, clearedWords)
         }
         // Words after the cut are new only once all of the cleared ones
         // are accounted for; a `text` that is all old may still stop short.
@@ -1329,9 +1334,9 @@ public final class CaptionPipeline {
         for clearedWords in 0...cleared.count {
             consider(clearedWords: clearedWords, cut: comparable.count)
         }
-        guard let best else { return words.joined(separator: " ") }
-        guard best.cut < words.count else { return nil }
-        return words[best.cut...].joined(separator: " ")
+        guard let best else { return (words.joined(separator: " "), cleared.count) }
+        guard best.cut < words.count else { return (nil, best.clearedWords) }
+        return (words[best.cut...].joined(separator: " "), best.clearedWords)
     }
 
     /// Commits the line already shown for `id`, if any, as it stands.
@@ -1353,8 +1358,17 @@ public final class CaptionPipeline {
         // of its words so far. Dropping it whole lost everything said after
         // the tap, on screen and in History; only the words that are the
         // cleared ones again stay gone (see `words(of:after:)`).
+        if let carry = clearedTurnCarry, incoming.isFinal, incoming.startsNewSpeakerTurn,
+           incoming.timestamp == carry.timestamp, clearedUtterances[incoming.utteranceID] == nil {
+            clearedUtterances[incoming.utteranceID] = carry.words
+        }
+        clearedTurnCarry = nil
         if let cleared = clearedUtterances[incoming.utteranceID] {
-            guard let rest = Self.words(of: cleaned, after: cleared) else {
+            let (rest, clearedWordsUsed) = Self.words(of: cleaned, after: cleared)
+            if incoming.isFinal, clearedWordsUsed < cleared.count {
+                clearedTurnCarry = (incoming.timestamp, Array(cleared[clearedWordsUsed...]))
+            }
+            guard let rest else {
                 // Only cleared words: a final still finishes what was shown
                 // after the tap, instead of leaving it "still settling".
                 stats.lastTokenAt = now()
