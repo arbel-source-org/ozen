@@ -1087,6 +1087,78 @@ struct HomeServerCoverTests {
         #expect(await eventually { captions.activeEngineKind == .homeServer })
     }
 
+    @Test("a name added while the computer is asked whether it is back goes with the switch back")
+    func nameAddedDuringTheSwitchBackCheck() async {
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        let gate = PrepareGate()
+        server.prepareGate = gate
+        let asked = server.prepareCount
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        #expect(await eventually { server.prepareCount > asked })
+
+        await captions.setVocabulary(["Dvora"])
+        server.prepareGate = nil
+        await gate.open()
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        #expect(server.vocabularySeen.last?.contains("Dvora") == true)
+    }
+
+    @Test("after enough answered checks, going back still waits for a breath in the talk, and looks for one without waiting for the next check")
+    func switchBackWaitsForABreath() async throws {
+        let audio = FakeAudioCapturer()
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = CaptionPipeline(
+            audio: audio,
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        captions.homeServerRecheckSeconds = 2
+        captions.homeServerSwitchBackQuietSeconds = 1000
+        captions.switchBackAfterAnsweredChecks = 1
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        let quiet = [Float](repeating: 0.0002, count: 800)
+        let voice = (0..<800).map { Float(sin(Double($0) * 0.3) * 0.2) }
+        for _ in 0..<5 {
+            audio.push(quiet)
+            audio.push(voice)
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        let asked = server.prepareCount
+        while server.prepareCount == asked {
+            audio.push(quiet)
+            audio.push(voice)
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        let firstCheck = ContinuousClock.now
+        let talkUntil = firstCheck + .milliseconds(500)
+        while ContinuousClock.now < talkUntil {
+            audio.push(quiet)
+            audio.push(voice)
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(captions.activeEngineKind == .whisperKit)
+        #expect(await eventually { captions.activeEngineKind == .homeServer })
+        // The next check is 2 s after the first; the breath came about 0.9 s after it.
+        #expect(ContinuousClock.now - firstCheck < .milliseconds(1_700))
+    }
+
     @Test("with talk that never goes quiet, captions still go back after a few answered checks, between two lines")
     func switchesBackWithoutSilence() async throws {
         let server = FakeEngine(kind: .homeServer)

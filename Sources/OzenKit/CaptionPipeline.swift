@@ -116,6 +116,13 @@ public final class CaptionPipeline {
     /// may never go quiet for long, and every minute on the phone's own
     /// model is a minute of weaker captions.
     public var switchBackAfterAnsweredChecks = 3
+    /// That switch still waits for a breath this long since the last
+    /// speech: the phone's model writes nothing for the first second or
+    /// so of a sentence, and switching then loses its start.
+    public var switchBackBreathSeconds: Double = 0.4
+    /// How long a breath is looked for after a check that allows that
+    /// switch, before waiting for the next check a minute later.
+    public var switchBackBreathWaitSeconds: Double = 10
     /// A computer that answers the check but drops again soon after
     /// captions went back to it (one that hangs on audio stalls for 35 s
     /// first) would otherwise be switched to every minute, each time
@@ -1835,11 +1842,18 @@ public final class CaptionPipeline {
                     continue
                 }
                 answered += 1
-                guard self.canSwitchBack(answeredChecks: answered) else { continue }
+                guard await self.switchBackMomentCame(answeredChecks: answered) else { continue }
+                // Read again after the check and the wait: a name or a
+                // microphone chosen meanwhile reached `coveredSettings`, not
+                // this copy. Another address or model was not the one asked.
+                guard let latest = self.coveredSettings, self.engineCacheKey(latest) == self.engineCacheKey(chosen) else {
+                    answered = 0
+                    continue
+                }
                 self.logEvent(.note("the home computer answers again, switching back to it"))
                 self.homeServerRecheck = nil
                 self.homeServerSwitchedBackAt = .now
-                await self.switchBack(to: chosen)
+                await self.switchBack(to: latest)
                 return
             }
         }
@@ -1869,11 +1883,18 @@ public final class CaptionPipeline {
                     continue
                 }
                 answered += 1
-                guard self.canSwitchBack(answeredChecks: answered) else { continue }
+                guard await self.switchBackMomentCame(answeredChecks: answered) else { continue }
+                // Read again after the check and the wait: a name or a
+                // microphone chosen meanwhile reached `coveredSettings`, not
+                // this copy. Another address or model was not the one asked.
+                guard let latest = self.coveredSettings, self.engineCacheKey(latest) == self.engineCacheKey(chosen) else {
+                    answered = 0
+                    continue
+                }
                 self.logEvent(.note("the cloud answers again, switching back to it"))
                 self.cloudRecheck = nil
                 self.cloudSwitchedBackAt = .now
-                await self.switchBack(to: chosen)
+                await self.switchBack(to: latest)
                 return
             }
         }
@@ -1901,8 +1922,24 @@ public final class CaptionPipeline {
 
     private func canSwitchBack(answeredChecks: Int) -> Bool {
         if isBetweenSentences { return true }
+        guard answeredChecks >= switchBackAfterAnsweredChecks else { return false }
         let lineOpen = stabilizer.segments.last.map { !$0.isCommitted } ?? false
-        return answeredChecks >= switchBackAfterAnsweredChecks && !lineOpen
+        let breathing = lastSpeechAt.map { now() - $0 >= switchBackBreathSeconds } ?? true
+        return !lineOpen && breathing
+    }
+
+    /// Now, or at a breath within `switchBackBreathWaitSeconds` once enough
+    /// checks allow switching without a quiet moment. Counted in steps, not
+    /// by `now()`, which tests may hold still.
+    private func switchBackMomentCame(answeredChecks: Int) async -> Bool {
+        if canSwitchBack(answeredChecks: answeredChecks) { return true }
+        guard answeredChecks >= switchBackAfterAnsweredChecks else { return false }
+        for _ in 0..<Int(switchBackBreathWaitSeconds * 10) {
+            try? await Task.sleep(for: .milliseconds(100))
+            guard !Task.isCancelled, isCoveringForCloud, coverCanBeReplaced else { return false }
+            if canSwitchBack(answeredChecks: answeredChecks) { return true }
+        }
+        return false
     }
 
     private var isBetweenSentences: Bool {
