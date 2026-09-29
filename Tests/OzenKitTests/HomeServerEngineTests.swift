@@ -637,6 +637,17 @@ struct HomeServerCoverTests {
         #expect(captions.isCoveringForCloud)
     }
 
+    @Test("the computer's answer is remembered for less than the wait between switch-back checks, so every check really asks it")
+    func everyRecheckAsksTheComputer() {
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { _ in FakeEngine(kind: .homeServer) },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        #expect(HomeServerEngine.defaultApprovalSeconds < captions.homeServerRecheckSeconds)
+    }
+
     @Test("once the unreachable computer answers again, captions go back to it by themselves")
     func switchesBack() async {
         let server = FakeEngine(kind: .homeServer)

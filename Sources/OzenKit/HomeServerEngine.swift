@@ -37,9 +37,13 @@ public actor HomeServerEngine: TranscriptionEngine {
     /// than `approvalSeconds` is checked again: trusted the next morning,
     /// a computer that went to sleep overnight showed "Listening" for the
     /// handshake's 5 s, and what was said then was thrown away when the
-    /// phone's model took over.
+    /// phone's model took over. Shorter than the minute between switch-back
+    /// checks (`CaptionPipeline.homeServerRecheckSeconds`), so each check
+    /// really asks the computer and the restart right after one trusts a
+    /// fresh answer, not one from a check a minute before.
     private var lastHeardAt: ContinuousClock.Instant?
     private let approvalSeconds: Double
+    public static let defaultApprovalSeconds: Double = 30
     private var endSent = false
 
     public init(
@@ -52,7 +56,7 @@ public actor HomeServerEngine: TranscriptionEngine {
         pingSeconds: Double = 5,
         pongSeconds: Double = 8,
         beam: Int? = nil,
-        approvalSeconds: Double = 120
+        approvalSeconds: Double = HomeServerEngine.defaultApprovalSeconds
     ) {
         self.approvalSeconds = approvalSeconds
         self.address = address
