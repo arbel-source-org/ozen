@@ -49,18 +49,37 @@ struct CaptionLiveActivity: Widget {
                 // Named like the minimal mark: the lines themselves are
                 // only in the expanded island, so hiding it left nothing
                 // for VoiceOver to find.
-                Image(systemName: "captions.bubble.fill")
-                    .foregroundStyle(.yellow)
-                    .accessibilityLabel(context.state.appName ?? (context.state.english ? "Ozen" : "אוזן"))
+                IslandMark(state: context.state, isStale: context.isStale)
             } compactTrailing: {
                 Image(systemName: "ear")
                     .accessibilityHidden(true)
             } minimal: {
-                Image(systemName: "captions.bubble.fill")
-                    .foregroundStyle(.yellow)
-                    .accessibilityLabel(context.state.appName ?? (context.state.english ? "Ozen" : "אוזן"))
+                IslandMark(state: context.state, isStale: context.isStale)
             }
         }
+    }
+}
+
+extension CaptionActivityAttributes.ContentState {
+    /// The app sends it in its own language; a state from an older app has none.
+    var notUpdatingNote: String {
+        notUpdating ?? (english ? "Captions aren’t updating. Open Ozen." : "הכתוביות לא מתעדכנות. פתחו את אוזן.")
+    }
+}
+
+/// The small island's mark. Stopped, paused or no longer updating, it turns
+/// into an orange warning that VoiceOver reads with the note: the same
+/// yellow mark as when captions run said all was well.
+struct IslandMark: View {
+    let state: CaptionActivityAttributes.ContentState
+    let isStale: Bool
+
+    var body: some View {
+        let name = state.appName ?? (state.english ? "Ozen" : "אוזן")
+        let note = isStale ? state.notUpdatingNote : state.status
+        Image(systemName: note == nil ? "captions.bubble.fill" : "exclamationmark.bubble.fill")
+            .foregroundStyle(note == nil ? Color.yellow : Color.orange)
+            .accessibilityLabel(note.map { "\(name). \($0)" } ?? name)
     }
 }
 
@@ -102,7 +121,7 @@ struct CaptionLinesView: View {
                 // The app stopped updating the lines (iOS closed it, say):
                 // they may be long out of date, and so may a note it left
                 // ("paused for a call" with the call long over).
-                note(state.notUpdating ?? (state.english ? "Captions aren’t updating. Open Ozen." : "הכתוביות לא מתעדכנות. פתחו את אוזן."))
+                note(state.notUpdatingNote)
             } else if let status = state.status {
                 note(status)
             } else if let ageNote = state.ageNote {
