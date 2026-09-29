@@ -8,10 +8,6 @@ private struct AlertOverlay: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            // A transient banner (a doorbell, a name called) floats over
-            // the content instead of a `safeAreaInset`, which physically
-            // pushed it down: in `TypeToSpeakView` that jolted the keyboard
-            // and text editor out of place the moment a banner appeared.
             .overlay(alignment: .top) {
                 if shown != nil || shownHit != nil {
                     VStack(spacing: 8) {
