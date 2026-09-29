@@ -1,8 +1,15 @@
 import SwiftUI
 import OzenKit
 
+extension AnyTransition {
+    static func banner(from edge: Edge, reduceMotion: Bool) -> AnyTransition {
+        reduceMotion ? .opacity : .move(edge: edge).combined(with: .opacity)
+    }
+}
+
 private struct AlertOverlay: ViewModifier {
     let viewModel: LiveCaptionViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown: SoundAlert?
     @State private var shownHit: KeywordHit?
 
@@ -16,11 +23,11 @@ private struct AlertOverlay: ViewModifier {
                                 withAnimation { self.shown = nil }
                                 viewModel.dismissSoundAlert(id: shown.id)
                             }
-                            .transition(.move(edge: .top).combined(with: .opacity))
+                            .transition(.banner(from: .top, reduceMotion: reduceMotion))
                         }
                         if let shownHit {
                             KeywordHitPill(hit: shownHit, speakerName: viewModel.speakerName(for: shownHit))
-                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .transition(.banner(from: .top, reduceMotion: reduceMotion))
                         }
                     }
                     .padding(.horizontal, 16)

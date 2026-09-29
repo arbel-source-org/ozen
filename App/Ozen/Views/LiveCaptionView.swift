@@ -178,7 +178,7 @@ struct LiveCaptionView: View {
             if !isPinnedToBottom && !viewModel.segments.isEmpty {
                 jumpToLatestPill
                     .padding(.bottom, reservedBottomSpace)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .transition(.banner(from: .bottom, reduceMotion: reduceMotion))
             }
 
             hidingControlBar
@@ -217,23 +217,23 @@ struct LiveCaptionView: View {
                         withAnimation { visibleSoundAlert = nil }
                         viewModel.dismissSoundAlert(id: alert.id)
                     }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.banner(from: .top, reduceMotion: reduceMotion))
                 }
                 if let hit = visibleKeywordHit {
                     KeywordHitPill(hit: hit, speakerName: viewModel.speakerName(for: hit))
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .transition(.banner(from: .top, reduceMotion: reduceMotion))
                 }
                 if let expiresAt = installExpiryToWarn {
                     InstallExpiryBanner(expiresAt: expiresAt, now: Date(timeIntervalSince1970: awakeClock)) {
                         withAnimation { installExpiryDismissed = true }
                     }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.banner(from: .top, reduceMotion: reduceMotion))
                 }
                 if viewModel.savingTrouble.shouldShow {
                     SavingTroubleBanner {
                         withAnimation { viewModel.dismissSavingTrouble() }
                     }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.banner(from: .top, reduceMotion: reduceMotion))
                 }
                 if let title = viewModel.microphoneDrop.title {
                     MicrophoneDropBanner(title: title, detail: MicrophoneDropNotice.detail(listening: viewModel.captionsAreRunning)) {
@@ -242,13 +242,13 @@ struct LiveCaptionView: View {
                     } onDismiss: {
                         withAnimation { viewModel.dismissMicrophoneDrop() }
                     }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.banner(from: .top, reduceMotion: reduceMotion))
                 }
                 if let notice = battery.notice {
                     BatteryBanner(notice: notice) {
                         withAnimation { battery.dismiss() }
                     }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(.banner(from: .top, reduceMotion: reduceMotion))
                 }
                 awayJumpButton
             }
@@ -779,7 +779,7 @@ struct LiveCaptionView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(theme.chrome)
-            .transition(.move(edge: .top).combined(with: .opacity))
+            .transition(.banner(from: .top, reduceMotion: reduceMotion))
         }
     }
 
