@@ -95,6 +95,17 @@ struct BackgroundAlertPolicyTests {
         #expect(cut.dropLast().hasSuffix("מילה"))
     }
 
+    @Test("the same sound shares one cooldown in English too, where its two labels read differently")
+    func synonymSoundsShareCooldownInEnglish() {
+        Localization.$override.withValue(.english) {
+            var policy = BackgroundAlertPolicy(cooldownSeconds: 30)
+            #expect(policy.notification(for: sound("telephone_bell_ringing"), appIsActive: false, now: 0) != nil)
+            #expect(policy.notification(for: sound("ringtone"), appIsActive: false, now: 5) == nil)
+            #expect(policy.notification(for: sound("boiling"), appIsActive: false, now: 5) != nil)
+            #expect(policy.notification(for: sound("whistling"), appIsActive: false, now: 10) == nil)
+        }
+    }
+
     @Test("notification bodies are in English when the app is")
     func englishWording() {
         Localization.$override.withValue(.english) {

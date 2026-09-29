@@ -50,12 +50,11 @@ public struct BackgroundAlertPolicy: Sendable, Equatable {
         guard alert.event.importance == .critical || !quietHours.isQuiet(now: now, utcOffsetSeconds: utcOffsetSeconds) else {
             return nil
         }
-        // By name, not identifier: two classifier labels the catalog shows
-        // as the exact same sound (see SoundEventPolicy.evaluate, which
-        // keys its own cooldown the same way) must share this cooldown
-        // too, or the classifier flipping labels for one ongoing sound
-        // notifies about it twice.
-        let key = "sound-\(alert.event.name)"
+        // By the same key as SoundEventPolicy's own cooldown, not the
+        // identifier or the name: two classifier labels for one sound (a
+        // ringtone and a phone ringing) must share it, or the classifier
+        // flipping labels notifies twice. The names only match in Hebrew.
+        let key = "sound-\(alert.event.cooldownKey)"
         guard shouldNotify(key: key, appIsActive: appIsActive, now: now) else { return nil }
         let urgent = alert.event.importance == .critical
         return AlertNotificationContent(
