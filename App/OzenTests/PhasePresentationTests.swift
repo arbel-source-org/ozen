@@ -275,6 +275,16 @@ struct ScreenWordingTests {
         #expect(steps[3].text.contains("\u{2068}Ozen - pair a phone\u{2069}"))
     }
 
+    @Test("with saving switched off, the note under the switch does not say conversations are saved")
+    func savingFooterFollowsTheSwitch() {
+        let on = HistoryView.savingFooter(saving: true, size: "2 MB", retention: .forever)
+        let off = HistoryView.savingFooter(saving: false, size: "2 MB", retention: .forever)
+        #expect(on.hasPrefix("השיחות נשמרות"))
+        #expect(off.hasPrefix("שיחות חדשות לא נשמרות"))
+        #expect(on.contains("2 MB") && off.contains("2 MB"))
+        #expect(HistoryView.savingFooter(saving: false, size: "2 MB", retention: .month).hasSuffix("נשמרות תמיד."))
+    }
+
     @Test("every auto-delete choice has its own name")
     func retentionNames() {
         let names = HistoryRetention.allCases.map(HistoryView.name(for:))

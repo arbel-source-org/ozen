@@ -35,14 +35,17 @@ struct HistoryView: View {
                 }
             }
         } footer: {
-            Text(savingFooter)
+            Text(Self.savingFooter(saving: viewModel.saveHistory, size: ModelManagerView.format(bytes: totalSize), retention: viewModel.historyRetention))
         }
     }
 
-    private var savingFooter: String {
-        let size = ModelManagerView.format(bytes: totalSize)
-        let base = tr("השיחות נשמרות בטלפון הזה (%1), וגם בגיבוי שלו ל-iCloud או למחשב כשהגיבוי פועל. אפשר למחוק אותן בכל רגע.", "Conversations are saved on this phone (%1), and in its iCloud or computer backup when that is on. They can be deleted anytime.", args: ["\(size)"])
-        guard viewModel.historyRetention != .forever else { return base }
+    /// Right under the switch, so with the switch off it must not say
+    /// conversations are being saved.
+    static func savingFooter(saving: Bool, size: String, retention: HistoryRetention) -> String {
+        let base = saving
+            ? tr("השיחות נשמרות בטלפון הזה (%1), וגם בגיבוי שלו ל-iCloud או למחשב כשהגיבוי פועל. אפשר למחוק אותן בכל רגע.", "Conversations are saved on this phone (%1), and in its iCloud or computer backup when that is on. They can be deleted anytime.", args: ["\(size)"])
+            : tr("שיחות חדשות לא נשמרות. השיחות שכבר נשמרו נשארות בטלפון הזה (%1), וגם בגיבוי שלו ל-iCloud או למחשב כשהגיבוי פועל. אפשר למחוק אותן בכל רגע.", "New conversations are not being saved. Those saved before stay on this phone (%1), and in its iCloud or computer backup when that is on. They can be deleted anytime.", args: ["\(size)"])
+        guard retention != .forever else { return base }
         return base + tr(" שיחות עם שורה מסומנת או עם שם נשמרות תמיד.", " Conversations with a starred line or a name are always kept.")
     }
 
