@@ -414,7 +414,7 @@ private struct ConversationSummarySection: View {
             }
 
             if stats.wordsPerMinute > 0 {
-                LabeledContent(tr("קצב דיבור", "Speaking pace"), value: tr("%1 מילים לדקה", "%1 words per minute", args: ["\(Int(stats.wordsPerMinute.rounded()))"]))
+                LabeledContent(tr("קצב דיבור", "Speaking pace"), value: ConversationStats.paceText(stats.wordsPerMinute))
             }
             LabeledContent(tr("חילופי דוברים", "Speaker turns"), value: "\(stats.totalTurns)")
             if let longest = stats.longestTurn, stats.speakers.count > 1 {

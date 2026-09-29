@@ -257,6 +257,10 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    public static func paceText(_ wordsPerMinute: Double) -> String {
+        tr("%1 לדקה", "%1 per minute", args: ["\(wordsText(Int(wordsPerMinute.rounded())))"])
+    }
+
     private static func englishWordsText(_ count: Int) -> String {
         switch count {
         case 0: return "no words"

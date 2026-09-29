@@ -47,6 +47,28 @@ struct PluralizationTests {
         }
     }
 
+    @Test("Speaking pace takes the word's form from the number")
+    func speakingPace() {
+        let expected: [(UILanguage, Double, String)] = [
+            (.hebrew, 120, "120 מילים לדקה"),
+            (.english, 120, "120 words per minute"),
+            (.russian, 101, "101 слово в минуту"),
+            (.russian, 102, "102 слова в минуту"),
+            (.russian, 105, "105 слов в минуту"),
+            (.ukrainian, 122, "122 слова за хвилину"),
+            (.ukrainian, 125, "125 слів за хвилину"),
+            (.arabic, 104, "104 كلمات في الدقيقة"),
+            (.arabic, 120, "120 كلمة في الدقيقة"),
+            (.german, 120, "120 Wörter pro Minute"),
+            (.chineseSimplified, 120, "每分钟 120 字"),
+        ]
+        for (language, pace, text) in expected {
+            Localization.$override.withValue(language) {
+                #expect(ConversationStats.paceText(pace) == text, "\(language) \(pace)")
+            }
+        }
+    }
+
     @Test("French treats zero the same as one, unlike everything else")
     func frenchEdgeNumbers() {
         Localization.$override.withValue(.french) {
