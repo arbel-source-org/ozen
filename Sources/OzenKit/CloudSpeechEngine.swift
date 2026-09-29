@@ -7,9 +7,12 @@ import Foundation
 /// While someone is still talking, the sentence so far goes out again
 /// every couple of seconds so words appear as they are said; the request
 /// after the pause is the one that stays. A live request that fails on a
-/// weak connection is simply skipped, a final one gets a second try, and
-/// what was already on screen is kept rather than lost. A key problem, or
-/// several failures in a row, end the stream so the screen can say why.
+/// weak connection is simply skipped. A final one gets a second try at
+/// once, then the same audio (with whatever was said since) is sent again
+/// after a growing pause, up to `failuresBeforeStopping` rounds: up to
+/// eight uploads of one sentence. What was already on screen is kept
+/// rather than lost. A key problem, or that many failed rounds in a row,
+/// end the stream so the screen can say why.
 public actor CloudSpeechEngine: TranscriptionEngine {
     public nonisolated let kind: TranscriptionEngineKind = .cloud
 
