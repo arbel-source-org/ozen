@@ -1631,6 +1631,10 @@ public final class LiveCaptionViewModel {
             for index in settings.speakerProfiles.indices where settings.speakerProfiles[index].name == oldName {
                 settings.speakerProfiles[index].name = name
             }
+            // Each saved print listens as a voice of its own: only the tapped
+            // one was renamed, and lines matched to the person's other prints
+            // kept the old spelling while the saved list showed the new one.
+            pipeline.renameSpeakers(named: oldName, to: name)
         } else {
             settings.speakerProfiles.append(SpeakerProfile(name: name, embedding: centroid))
         }

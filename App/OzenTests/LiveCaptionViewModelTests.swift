@@ -1792,6 +1792,32 @@ struct LiveCaptionViewModelDeleteConversationTests {
         #expect(viewModel.settings.speakerProfiles.map(\.name).sorted() == ["Dana", "Ruti", "Ruti"])
     }
 
+    @Test("fixing a name's spelling from one line relabels every voice print of that person on screen, not only the one tapped")
+    func spellingFixReachesEveryPrint() async throws {
+        let engine = FakeEngine()
+        let audio = FakeAudioCapturer()
+        let pipeline = CaptionPipeline(audio: audio, engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ozen-rename-\(UUID())", isDirectory: true)
+        let viewModel = LiveCaptionViewModel(
+            settingsStore: SettingsStore(fileURL: directory.appendingPathComponent("settings.json")),
+            pipeline: pipeline,
+            historyStore: TranscriptHistoryStore(directoryURL: directory.appendingPathComponent("history", isDirectory: true))
+        )
+        await viewModel.start()
+        audio.push([Float](repeating: 0.5, count: 24_000))
+        #expect(await eventually { pipeline.speakerClusters.count == 1 })
+        await say("שלום", at: Date().timeIntervalSince1970, into: engine, until: viewModel, count: 1)
+        viewModel.nameSpeaker(of: viewModel.segments[0], name: "Dana")
+        #expect(viewModel.enroll(name: "Dana", samples: [Float](repeating: 0.5, count: 96_000)))
+        #expect(pipeline.speakerClusters.filter { $0.name == "Dana" }.count == 2)
+
+        viewModel.nameSpeaker(of: viewModel.segments[0], name: "Danna")
+
+        #expect(viewModel.settings.speakerProfiles.map(\.name) == ["Danna", "Danna"])
+        #expect(pipeline.speakerClusters.filter { $0.name == "Dana" }.isEmpty)
+        #expect(pipeline.speakerClusters.filter { $0.name == "Danna" }.count == 2)
+    }
+
     @Test("delete all also retires the conversation in progress")
     func deleteAllIncludesLive() async throws {
         let (viewModel, engine, history) = makeViewModel()
