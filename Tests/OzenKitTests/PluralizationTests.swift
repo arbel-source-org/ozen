@@ -170,6 +170,28 @@ struct PluralizationTests {
         }
     }
 
+    @Test("Russian and Ukrainian \"a minute ago\" and \"an hour ago\" take the form that follows \"ago\"")
+    func slavicAgoCase() {
+        let expected: [(UILanguage, Int, String)] = [
+            (.russian, 1, "1 минуту назад"),
+            (.russian, 21, "21 минуту назад"),
+            (.russian, 3, "3 минуты назад"),
+            (.russian, 11, "11 минут назад"),
+            (.russian, 60, "1 час назад"),
+            (.ukrainian, 1, "1 хвилину тому"),
+            (.ukrainian, 31, "31 хвилину тому"),
+            (.ukrainian, 4, "4 хвилини тому"),
+            (.ukrainian, 60, "1 годину тому"),
+            (.ukrainian, 120, "2 години тому"),
+            (.ukrainian, 300, "5 годин тому"),
+        ]
+        for (language, minutes, text) in expected {
+            Localization.$override.withValue(language) {
+                #expect(HebrewTime.minutesAgo(minutes) == text, "\(language) \(minutes)")
+            }
+        }
+    }
+
     @Test("no function leaks a Hebrew word into another language's text")
     func noHebrewLeak() {
         for language in UILanguage.allCases where language != .hebrew {

@@ -238,13 +238,19 @@ public enum HebrewTime {
     }
 
     /// Arabic's dual takes a different ending after "قبل" ("ago") than it
-    /// does standing alone, so the two-count case is looked up separately
-    /// here instead of through `TimeUnitWord`.
+    /// does standing alone, and so do the Russian and Ukrainian feminine
+    /// singulars after "назад"/"тому" ("1 минуту назад", "1 годину тому"),
+    /// so those are looked up separately here instead of through
+    /// `TimeUnitWord`.
     private static func agoPhrase(_ count: Int, unit: TimeUnit, in language: UILanguage) -> String {
         let category = pluralCategory(for: count, in: language)
         let word: String
         if language == .arabic, category == .two {
             word = unit == .minute ? "دقيقتين" : "ساعتين"
+        } else if language == .russian, category == .one, unit == .minute {
+            word = "минуту"
+        } else if language == .ukrainian, category == .one {
+            word = unit == .minute ? "хвилину" : "годину"
         } else {
             word = unit == .minute ? TimeUnitWord.minute(category, in: language) : TimeUnitWord.hour(category, in: language)
         }
