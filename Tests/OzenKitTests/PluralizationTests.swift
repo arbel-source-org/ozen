@@ -69,6 +69,22 @@ struct PluralizationTests {
         }
     }
 
+    @Test("a voice sample's recording progress is read out with the right word form")
+    func secondsSpoken() {
+        let expected: [(UILanguage, Int, String)] = [
+            (.hebrew, 1, "שנייה אחת"), (.hebrew, 2, "שתי שניות"), (.hebrew, 7, "7 שניות"),
+            (.english, 1, "1 second"), (.english, 7, "7 seconds"),
+            (.russian, 1, "1 секунда"), (.russian, 3, "3 секунды"), (.russian, 7, "7 секунд"),
+            (.arabic, 1, "ثانية"), (.arabic, 5, "5 ثوانٍ"),
+            (.german, 1, "1 Sekunde"), (.german, 7, "7 Sekunden"),
+        ]
+        for (language, count, text) in expected {
+            Localization.$override.withValue(language) {
+                #expect(ConversationStats.secondsText(count) == text, "\(language) \(count)")
+            }
+        }
+    }
+
     @Test("French treats zero the same as one, unlike everything else")
     func frenchEdgeNumbers() {
         Localization.$override.withValue(.french) {

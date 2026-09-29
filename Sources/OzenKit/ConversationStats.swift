@@ -257,6 +257,24 @@ public struct ConversationStats: Sendable, Equatable {
         }
     }
 
+    /// "one second", "two seconds", "7 seconds", as VoiceOver reads a
+    /// voice sample's recording progress.
+    public static func secondsText(_ count: Int) -> String {
+        switch Localization.language {
+        case .english: return count == 1 ? "1 second" : "\(count) seconds"
+        case .hebrew: break
+        default:
+            let language = Localization.language
+            let category = pluralCategory(for: count, in: language)
+            return countedPhrase(count, word: TimeUnitWord.second(category, in: language), omitNumeral: omitsNumeral(category, in: language))
+        }
+        switch count {
+        case 1: return "שנייה אחת"
+        case 2: return "שתי שניות"
+        default: return "\(count) שניות"
+        }
+    }
+
     public static func paceText(_ wordsPerMinute: Double) -> String {
         tr("%1 לדקה", "%1 per minute", args: ["\(wordsText(Int(wordsPerMinute.rounded())))"])
     }

@@ -27,7 +27,7 @@ struct SpeakerEnrollmentView: View {
                         ProgressView(value: progress) {
                             Text(tr("מקליט… %1/%2 שניות", "Recording… %1/%2 seconds", args: ["\(Int(progress * targetSeconds))", "\(Int(targetSeconds))"]))
                         }
-                        .accessibilityValue(tr("%1 שניות", "%1 seconds", args: ["\(Int(progress * targetSeconds))"]))
+                        .accessibilityValue(ConversationStats.secondsText(Int(progress * targetSeconds)))
                         LevelMeter(level: viewModel.inputLevel, isActive: true)
                         Text(tr("בקשו מהאדם לדבר בטבעיות, במרחק רגיל מהמיקרופון שנבחר. אם הפס לא זז כשמדברים, המיקרופון לא שומע. הכתוביות מושהות בזמן ההקלטה.", "Ask the person to speak naturally, at a normal distance from the selected microphone. If the bar doesn’t move while speaking, the microphone isn’t hearing anything. Captions are paused during recording."))
                             .font(.footnote)

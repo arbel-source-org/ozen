@@ -94,6 +94,46 @@ enum TimeUnitWord {
         }
     }
 
+    static func second(_ category: PluralCategory, in language: UILanguage) -> String {
+        switch language {
+        case .russian:
+            switch category {
+            case .one: return "секунда"
+            case .few: return "секунды"
+            default: return "секунд"
+            }
+        case .ukrainian:
+            switch category {
+            case .one: return "секунда"
+            case .few: return "секунди"
+            default: return "секунд"
+            }
+        case .arabic:
+            switch category {
+            case .one: return "ثانية"
+            case .two: return "ثانيتان"
+            case .few: return "ثوانٍ"
+            default: return "ثانية"
+            }
+        case .french:
+            return category == .one ? "seconde" : "secondes"
+        case .spanish:
+            return category == .one ? "segundo" : "segundos"
+        case .german:
+            return category == .one ? "Sekunde" : "Sekunden"
+        case .portuguese:
+            return category == .one ? "segundo" : "segundos"
+        case .hindi:
+            return "सेकंड"
+        case .amharic:
+            return "ሰከንድ"
+        case .chineseSimplified:
+            return "秒"
+        case .hebrew, .english:
+            return category == .one ? "second" : "seconds"
+        }
+    }
+
     static func hour(_ category: PluralCategory, in language: UILanguage) -> String {
         switch language {
         case .russian:
