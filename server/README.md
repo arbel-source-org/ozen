@@ -56,7 +56,7 @@ the first time) keeps starting it that way without asking again. The log is
   re-run only prints a warning); by hand: Settings → Network & internet → Wi-Fi (or
   Ethernet) → your network → Network profile type → Private network.
 - **Models won't load.** `C:\ozen\server.log` says so in plain words ("could
-  not load the speech models on the graphics card") and the server tries
+  not load or run the speech models on the graphics card") and the server tries
   again every minute. Close games or other programs using the card, or update
   the NVIDIA driver.
 

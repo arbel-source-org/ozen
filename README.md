@@ -173,7 +173,7 @@ things, for Hebrew conversation, entirely on-device.
   talks, so it doesn't caption itself, and come back on their own. A
   full-screen pad in huge letters lets someone type to her where captions
   can't keep up, or turns what she typed upside down for the person facing
-  her to read. "Write to me" (kitvu li) opens it straight from Siri or the Action button.
+  her to read. Siri opens it straight away with "kitvu li be-Ozen" ("write to me in Ozen") in Hebrew or "Big text in Ozen" in English, and so can the Action button.
 - **Names and words list.** Family names, the doctor, the medicines.
   Both engines are primed with the list (Apple's recognizer via
   contextual strings, Whisper via a decoder prompt; on a long list,
@@ -253,8 +253,9 @@ things, for Hebrew conversation, entirely on-device.
   short of memory and captions are off, the app lets go of the loaded
   model first, so it is less likely to be the app iOS ends.
 - **Captions on the lock screen.** While captions run, the newest two
-  lines show on the lock screen and in the Dynamic Island as a Live
-  Activity, the top line always saying who is talking, so the last sentence can
+  lines show on the lock screen as a Live Activity (the Dynamic Island
+  shows the newest one when it is opened), each saying who is talking when
+  speaker names are on and the voice is known, so the last sentence can
   be read without unlocking the phone. A call or a failure keeps it there
   and says why the lines stopped; if iOS closes the app it says the lines
   aren't updating rather than showing an old sentence as new, and after a
@@ -290,7 +291,7 @@ things, for Hebrew conversation, entirely on-device.
   screen, until a word is added or it's turned down.
 - **Siri and Shortcuts.** "Hey Siri, start captions in Ozen" (hey Siri,
   hatchel ktuviyot be-Ozen), "Stop captions" (atzor ktuviyot),
-  and "Say in Ozen ..." (tagid be-Ozen ...) to have the phone say something aloud.
+  and, to have the phone say something aloud, "tagid be-Ozen" in Hebrew or "Say with Ozen" in English; Siri then asks what to say.
   Each also in the feminine (hatchili, itzri, tagidi).
 - **A start button in Control Center** (iOS 18): "Start captions" (hatchalat
   ktuviyot) opens Ozen and starts listening in one press. It can also

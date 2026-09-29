@@ -39,7 +39,8 @@ computer backup when that is on.
 | "Not enough free space on the phone" (ein maspik makom panuy ba-telefon) | Not enough room for the model. It says how much to free. | Free space (Settings → General → iPhone Storage), then open Ozen again and it starts by itself. Or tap to pick a smaller model, or switch to Apple's engine, which needs no download. |
 | "Downloading the model failed" (horadat ha-model nichshela) | The download failed, usually a dead connection. | It retries by itself for a while. Check the internet, then tap to try again. |
 | "Loading the model failed" (te'inat ha-model nichshela) | The model is on the phone but didn't load. | Tap to try again. If it keeps failing, pick a smaller model in Settings. |
-| "Loading the model / almost ready" (to'en et ha-model / kim'at mukhan) | Starting up. The first time can take a minute or two. | Wait. |
+| "Setting the model up for this phone" (matim et ha-model la-telefon ha-ze) | The first time a model loads on this phone, iOS prepares it for the phone's chip. It takes a few minutes, once per model, and the very first model also needs the internet once. This is also what the home computer's backup does the first time it takes over. | Keep the app open and wait; it doesn't happen again for this model. |
+| "Loading the model / almost ready" (to'en et ha-model / kim'at mukhan) | Starting up. | Wait a few seconds. |
 | "The microphone isn't responding" (ha-mikrofon lo megiv) | Audio stopped arriving (a Bluetooth microphone reconnecting, often). | It restarts by itself. If it keeps coming back, choose the microphone again with the microphone button at the bottom (bottom right in Hebrew, bottom left in English). |
 | "No microphone found" (lo nimtza mikrofon) | No microphone is available at all. | Reconnect the microphone, then tap. |
 | "No microphone access" (ein gisha la-mikrofon) | Microphone permission was turned off for Ozen. | Tap it: it opens iOS Settings. Turn Microphone on. |
@@ -55,7 +56,7 @@ computer backup when that is on.
 | It says | What it means | What to do |
 | --- | --- | --- |
 | "Connected" with a time in ms | The computer answered and took the code. | Nothing. |
-| "No answer from the computer" | The phone can't reach it: it is off, asleep, not on the internet, or (at home) Windows treats the Wi-Fi as a public network. | Wake or turn on the computer. At home, see "When the phone can't reach it" in `server/README.md`. Captions carry on from the phone's own model meanwhile if its backup is downloaded (Settings → Home computer → "Download a backup to the phone"); without it they wait for the computer, and the status line says "Tap to add a backup on the phone". |
+| "No answer from the computer" | The phone can't reach it: it is off, asleep, not on the internet, or (at home) Windows treats the Wi-Fi as a public network. | Wake or turn on the computer. At home, see "When the phone can't reach it" in `server/README.md`. Captions carry on from the phone's own model meanwhile if its backup is downloaded (Settings → Home computer → "Download a backup to the phone"); without it they wait for the computer, and the status line says "Tap to add a backup on the phone". The first time the backup takes over, the phone spends a few minutes setting the model up ("Setting the model up for this phone") and needs the internet for that once. |
 | "The computer answered but didn't accept the code" | The code on the phone isn't the one in `C:\ozen\pairing-code` (setup was run on a new computer, or the code was typed wrong). | Scan the QR code again from "Ozen - pair a phone" in the computer's Start menu. |
 
 ## Sound alerts at night
@@ -180,11 +181,15 @@ the same.
   Try the phone's own microphone to confirm.
 - **A small question mark next to a line.** The engine wasn't sure it heard
   that line right. Holding the line offers to ask the speaker to repeat it.
-- **No phone notifications when the screen is off.** Settings → Notifications (hatra'ot) shows
-  a red warning if notifications are blocked for Ozen in iOS, with a button
+- **No phone notifications when the screen is off.** In Settings → Alerts (hatra'ot),
+  "Alert on phone when the screen is off" has to be on; under it, a red
+  warning shows if notifications are blocked for Ozen in iOS, with a button
   to fix it. If there's no warning, tap "Test that an alert arrives when the phone is locked" (livdok she-hatra'a magi'a k'she-ha-telefon na'ul)
   and lock the phone: a sample doorbell alert arrives within 10 seconds. If
   it doesn't, a Focus mode or Scheduled Summary in iOS is holding it back.
+  If the test arrives but real alerts don't, check "Quiet hours" (sha'ot
+  shketot) just below: during those hours only urgent sounds like a siren
+  send a notification (the test ignores quiet hours).
 - **The doorbell rang and no alert came at all.** First the report's
   `alerts:` line: `sounds false` means sound alerts are off, `from critical`
   means only alarms and sirens alert, `fainter` counts sounds set to alert
@@ -243,5 +248,5 @@ Two days before, the caption screen says when ("Ozen will stop opening
 tomorrow at 07:24" (Ozen tafsik lehipatach machar be-sha'a 07:24)), and a
 notification repeats it the day before; Settings → About (odot) and
 Diagnostics show the exact date under "Install valid until" (ha-hatkana tkefa ad).
-See [sideloading-from-linux.md](sideloading-from-linux.md) for the command that
-refreshes it.
+See "Refreshing" in [sideloading-from-linux.md](sideloading-from-linux.md) for how
+to refresh it.

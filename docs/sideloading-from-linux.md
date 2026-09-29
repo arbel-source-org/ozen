@@ -116,8 +116,8 @@ installing many different apps with it.
 
 Then on the phone: Settings → General → VPN & Device Management → trust the
 developer certificate; Settings → Privacy & Security → Developer Mode → on
-(the phone restarts). The app expires after 7 days on a free Apple ID; run the
-same command again to refresh it (a paid developer account removes the limit).
+(the phone restarts). The app expires after 7 days on a free Apple ID; see Refreshing below (a
+paid developer account removes the limit).
 
 ## Refreshing
 
