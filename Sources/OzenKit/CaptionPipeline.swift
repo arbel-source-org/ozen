@@ -1910,7 +1910,10 @@ public final class CaptionPipeline {
                 guard await server.checkAvailability(languageCode: chosen.languageCode) == .available,
                       !Task.isCancelled, !self.systemInterrupted, !self.isRecordingVoice,
                       case .failed(let still) = self.phase, still == failure
-                else { continue }
+                else {
+                    if await self.coverWithReadyBackup(chosen, after: failure) { return }
+                    continue
+                }
                 self.logEvent(.note("the home computer answers again, starting captions"))
                 self.homeServerRecheck = nil
                 self.recovery.reset()
@@ -1918,6 +1921,23 @@ public final class CaptionPipeline {
                 return
             }
         }
+    }
+
+    /// The phone's backup can finish downloading while captions wait for
+    /// the computer (Settings, Home computer), and its row then says the
+    /// phone carries on by itself: it takes over here instead of the wait
+    /// going on until the computer answers or someone taps Retry.
+    private func coverWithReadyBackup(_ chosen: AppSettings, after failure: PipelineFailure) async -> Bool {
+        guard let onPhone = CloudCover.phoneSettings(replacing: chosen, after: failure),
+              await probeEngine(for: onPhone).pendingDownloadMegabytes() == nil,
+              !Task.isCancelled, !systemInterrupted, !isRecordingVoice,
+              case .failed(let still) = phase, still == failure
+        else { return false }
+        logEvent(.note("the phone's backup is ready, starting captions on it"))
+        homeServerRecheck = nil
+        recovery.reset()
+        await coverForCloud(with: onPhone, after: failure, retryIfNotCovered: false)
+        return true
     }
 
     private func cancelScheduledRetry() {
