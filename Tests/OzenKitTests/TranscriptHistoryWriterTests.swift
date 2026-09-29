@@ -414,8 +414,8 @@ struct TranscriptHistoryWriterTests {
         #expect(saved.segments[0].isStarred)
     }
 
-    @Test("a line starred only in the version still waiting for room is unstarred by the next tap, not starred on the older file")
-    func unstarOnRefusedConversation() throws {
+    @Test("a star tapped in History follows the conversation as History shows it, the file on disk, and the waiting version takes the same state")
+    func starFollowsHistoryWhileWaiting() throws {
         let (store, dir) = makeStore()
         defer {
             try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
@@ -431,9 +431,46 @@ struct TranscriptHistoryWriterTests {
         writer.saveNow(later)
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
 
-        #expect(writer.toggleStarNow(sessionID: early.id, segmentID: early.segments[0].id) == false)
-        #expect(store.load(id: early.id)?.segments[0].isStarred == false)
+        #expect(writer.toggleStarNow(sessionID: early.id, segmentID: early.segments[0].id) == true)
+        #expect(store.load(id: early.id)?.segments[0].isStarred == true)
         #expect(store.load(id: early.id)?.endedAt == 200)
+        #expect(writer.lastFailure == nil)
+    }
+
+    @Test("a name given to a conversation the disk refused before it was ever written is kept when it is written")
+    func renameRefusedConversation() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-title"))
+        let evening = record(id: UUID(), lines: 2, ended: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(evening)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+
+        writer.renameNow(id: evening.id, title: "ארוחת ערב")
+        #expect(store.load(id: evening.id)?.title == "ארוחת ערב")
+        #expect(writer.lastFailure == nil)
+    }
+
+    @Test("deleting the one conversation the disk refused takes the saving warning away with it")
+    func deletingRefusedConversationClearsWarning() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-deleted"))
+        let refused = record(id: UUID(), lines: 2, ended: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(refused)
+        #expect(writer.lastFailure != nil)
+
+        try writer.deleteNow(id: refused.id)
         #expect(writer.lastFailure == nil)
     }
 

@@ -74,10 +74,19 @@ public final class TranscriptHistoryWriter: Sendable {
     /// Names a conversation in the same queue as the saves, so an autosave
     /// that already read the old summary can't land after the new name
     /// and drop it.
+    ///
+    /// A version still waiting for room takes the name too: never written
+    /// before, it had no file for the name to go into, and it was written
+    /// later without one.
     public func renameNow(id: UUID, title: String) {
         queue.sync { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             lastWritten.record = nil
             failure.capture { try store.rename(id: id, title: title) }
+            if var waiting = pendingSaves.records[id] {
+                let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                waiting.title = trimmed.isEmpty ? nil : trimmed
+                pendingSaves.records[id] = waiting
+            }
             Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure)
         }
     }
@@ -90,7 +99,9 @@ public final class TranscriptHistoryWriter: Sendable {
             pendingSaves.renameSpeaker(from: oldName, to: newName)
             pendingRenames.list.append((oldName, newName))
             failure.capture { try Self.runRenames(pendingRenames, store: store) }
-            Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure)
+            if Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure) {
+                failure.clear()
+            }
             finished?()
         }
     }
@@ -149,25 +160,22 @@ public final class TranscriptHistoryWriter: Sendable {
     /// saved.
     ///
     /// A newer version of the conversation still waiting for room takes the
-    /// star instead: starring the older file on disk was undone when the
-    /// waiting one was written over it.
+    /// same state: starring only the older file on disk was undone when the
+    /// waiting one was written over it. The tap follows the file, which is
+    /// what History shows; a line only the waiting version has follows that.
     @discardableResult
     public func toggleStarNow(sessionID: UUID, segmentID: UUID) -> Bool? {
         queue.sync { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             lastWritten.record = nil
             var result: Bool?
+            failure.capture { result = try store.toggleStar(segmentID: segmentID, inSession: sessionID) }
             if var waiting = pendingSaves.records[sessionID],
                let index = waiting.segments.firstIndex(where: { $0.id == segmentID }) {
-                waiting.segments[index].isStarred.toggle()
+                waiting.segments[index].isStarred = result ?? !waiting.segments[index].isStarred
                 pendingSaves.records[sessionID] = waiting
                 result = waiting.segments[index].isStarred
-                if Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure) {
-                    failure.clear()
-                }
-            } else {
-                failure.capture { result = try store.toggleStar(segmentID: segmentID, inSession: sessionID) }
-                Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure)
             }
+            Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure)
             return result
         }
     }
@@ -175,19 +183,27 @@ public final class TranscriptHistoryWriter: Sendable {
     /// Deletes a conversation after any autosave of it already queued, so
     /// that autosave can't write it back a moment after it was deleted.
     public func deleteNow(id: UUID) throws {
-        try queue.sync { [store, lastWritten, pendingSaves] in
+        try queue.sync { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             lastWritten.record = nil
             pendingSaves.records[id] = nil
             try store.delete(id: id)
+            // Deleting the one conversation that could not be written left
+            // the warning up until the next save, while captions were stopped
+            // for good.
+            if pendingSaves.records.isEmpty, pendingRenames.list.isEmpty {
+                failure.clear()
+            }
         }
     }
 
     /// Deletes every conversation, after the saves already queued.
     public func deleteAllNow() throws {
-        try queue.sync { [store, lastWritten, pendingSaves] in
+        try queue.sync { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             lastWritten.record = nil
             pendingSaves.records.removeAll()
             try store.deleteAll()
+            pendingRenames.list.removeAll()
+            failure.clear()
         }
     }
 
