@@ -1328,6 +1328,9 @@ struct LiveCaptionView: View {
     /// pad would silently fail to appear, so whatever is open closes first.
     private func presentBigText() {
         viewModel.isShowingBigText = false
+        // Already open: someone is writing on it, and a second press of the
+        // Action button mustn't wipe what they have written so far.
+        guard !showingBigText else { return }
         // Opened from Siri or the Action button, the pad is for someone new;
         // what the last person wrote on it is not theirs to read.
         bigText = ""
