@@ -95,10 +95,19 @@ writes each finished line. On a 2080 Ti that cut mistakes by about 15% with a
 TV loud in the room or the speaker across it, for about 0.4 s more per
 finished line.
 
-A line in which a voice detector hears almost no voice (under 5% of it) is
-skipped before the model sees it: kitchen clatter and a TV room hum turned
-into about ten invented lines a minute, and none with the check, with no
-change on real speech. `--speech-gate 0` turns it off.
+A line in which a voice detector hears almost no voice (under 5% of it, and
+less than a fifth of a second in all) is skipped before the model sees it:
+kitchen clatter and a TV room hum turned into about ten invented lines a
+minute, and none with the check, with no change on real speech. On 225
+recordings of household sounds and noise it skipped 210; without it, the
+full model wrote "toda raba" (thank you) on 139 of them. `--speech-gate 0`
+turns it off.
+
+The phone's names list goes to the model twice, as a prompt and as
+hotwords, and each copy is limited to about 100 tokens (two dozen names or
+so, from the top of the list): the names share the model's context with
+the caption itself, and with 60 names 98 of 120 test sentences came back
+cut short.
 
 Finished lines are written with beam 5 (`--beam`), live words with beam 1: on
 the 2080 Ti that cut conversation mistakes from 8.9% to 8.3% for about 0.15 s
