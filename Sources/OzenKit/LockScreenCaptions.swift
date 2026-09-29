@@ -76,7 +76,10 @@ public enum LockScreenCaptions {
         return picked.enumerated().map { offset, segment in
             let speaker = speakers[offset]
             let isNewest = offset == picked.count - 1
-            let budget = (isNewest ? textSize.newestLineMaximumCharacters + bonus : textSize.earlierLineMaximumCharacters)
+            var budget = (isNewest ? textSize.newestLineMaximumCharacters + bonus : textSize.earlierLineMaximumCharacters)
+            if isNewest, speaker != nil {
+                budget = min(budget, textSize.newestLineCapacityWithName)
+            }
             let room = lineRoom(budget: budget, speaker: speaker)
             return LockScreenCaptionLine(
                 speaker: speaker,
@@ -287,6 +290,17 @@ public enum LockScreenTextSize: String, Sendable, Equatable, Codable {
         switch self {
         case .regular: return 80
         case .large: return 60
+        }
+    }
+
+    /// What the widget's newest line holds at full size: three rows of
+    /// about 30 (or 23) characters. The widget cuts a longer one from the
+    /// front, so a line that starts with a speaker's name is kept to this,
+    /// or the name went first and the words read as the line above's.
+    public var newestLineCapacityWithName: Int {
+        switch self {
+        case .regular: return 90
+        case .large: return 69
         }
     }
 

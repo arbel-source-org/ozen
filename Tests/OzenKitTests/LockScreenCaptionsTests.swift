@@ -108,6 +108,19 @@ struct LockScreenCaptionsTests {
         #expect(plain(short[1].text).count > plain(full[1].text).count)
     }
 
+    @Test("a newest line with a name never outgrows the widget's three rows, so the name at its head is not cut off")
+    func namedNewestLineKeepsItsName() {
+        let long = (1...40).map { "word\($0)" }.joined(separator: " ")
+        for (size, threeRows) in [(LockScreenTextSize.regular, 3 * 30), (.large, 3 * 23)] {
+            let lines = LockScreenCaptions.lines(from: [line("hi", speaker: 1), line(long, speaker: 2)], textSize: size, name: names)
+            #expect(lines[1].speaker == "Speaker 2")
+            #expect(plain(lines[1].text).count + "Speaker 2: ".count <= threeRows, "\(size)")
+            #expect(lines[1].text.hasSuffix("word40"))
+        }
+        let unnamed = LockScreenCaptions.lines(from: [line("hi"), line(long)]) { _ in nil }
+        #expect(plain(unnamed[1].text).count > 3 * 30)
+    }
+
     @Test("large lock screen text keeps fewer characters, and follows the caption size in the app")
     func largeText() {
         let long = (1...40).map { "word\($0)" }.joined(separator: " ")
