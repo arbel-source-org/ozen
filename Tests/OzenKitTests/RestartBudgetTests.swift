@@ -3,7 +3,6 @@ import Testing
 
 @Suite("Restarting something that keeps failing")
 struct RestartBudgetTests {
-    /// Asks `budget` at each of `times` in order, returning its answers.
     private func answers(_ budget: inout RestartBudget, at times: [Double]) -> [Bool] {
         times.map { budget.spend(at: $0) }
     }
@@ -17,9 +16,16 @@ struct RestartBudgetTests {
     @Test("a bad patch early in the evening doesn't use up restarts for good")
     func recoversAfterTheWindow() {
         var budget = RestartBudget(limit: 5, windowSeconds: 600)
-        // Refusals aren't counted, so the first attempts age out on time.
         #expect(answers(&budget, at: [0, 1, 2, 3, 4, 300, 600, 601, 601.5])
             == [true, true, true, true, true, false, true, true, false])
+    }
+
+    @Test("a rough patch of a few seconds doesn't spend every restart at once")
+    func spacedAttempts() {
+        var budget = RestartBudget(limit: 5, windowSeconds: 600, minimumSpacingSeconds: 15)
+        let patch = stride(from: 0.0, through: 2.0, by: 0.05).map { $0 }
+        #expect(answers(&budget, at: patch).filter { $0 }.count == 1)
+        #expect(answers(&budget, at: [14.9, 15, 20, 30]) == [false, true, false, true])
     }
 
     @Test("a clock that jumped backwards doesn't block restarts")

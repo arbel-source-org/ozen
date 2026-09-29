@@ -33,9 +33,13 @@ public struct SoundAnalysisDetector: SoundEventDetecting {
 
     /// How many times a failed classifier is set up again in any ten
     /// minutes. Past that it's left alone until the oldest attempt is ten
-    /// minutes old, then tried again (see `RestartBudget`).
+    /// minutes old, then tried again (see `RestartBudget`). The attempts
+    /// are spaced out: asked with every chunk of audio, about 23 a second,
+    /// all five went in a fifth of a second and a two-second rough patch
+    /// left the smoke alarm unheard for ten minutes.
     static let maximumRestarts = 5
     static let restartWindowSeconds: TimeInterval = 600
+    static let restartSpacingSeconds: TimeInterval = 15
 
     public func observations(audio: AsyncStream<[Float]>) -> AsyncStream<SoundObservation> {
         let forwardingConfidence = forwardingConfidence
@@ -50,7 +54,7 @@ public struct SoundAnalysisDetector: SoundEventDetecting {
                 // conversation; a new analyzer picks up from the next chunk,
                 // so a doorbell later in the evening still gets through.
                 var session = Self.makeSession(format: format, continuation: continuation, forwardingConfidence: forwardingConfidence, windowSeconds: windowSeconds)
-                var budget = RestartBudget(limit: Self.maximumRestarts, windowSeconds: Self.restartWindowSeconds)
+                var budget = RestartBudget(limit: Self.maximumRestarts, windowSeconds: Self.restartWindowSeconds, minimumSpacingSeconds: Self.restartSpacingSeconds)
                 var framePosition: AVAudioFramePosition = 0
                 for await chunk in audio {
                     if Task.isCancelled { break }
