@@ -192,6 +192,22 @@ struct PluralizationTests {
         }
     }
 
+    @Test("\"the conversation from 5 minutes ago was saved\" takes the ago phrase whole, with no second preposition")
+    func savedConversationAgo() {
+        let expected: [UILanguage: String] = [
+            .hebrew: "השיחה מלפני 5 דקות נשמרה",
+            .english: "The conversation from 5 minutes ago was saved",
+            .french: "La conversation d’il y a 5 minutes a été enregistrée",
+            .german: "Das Gespräch von vor 5 Minuten wurde gespeichert",
+            .spanish: "Se guardó la conversación de hace 5 minutos",
+            .amharic: "ውይይቱ ከ5 ደቂቃ በፊት ተቀምጧል",
+        ]
+        for (language, text) in expected {
+            let ago = Localization.$override.withValue(language) { HebrewTime.minutesAgo(5) }
+            #expect(tr("השיחה מ%1 נשמרה", "The conversation from %1 was saved", args: ["\(ago)"], in: language) == text, "\(language)")
+        }
+    }
+
     @Test("no function leaks a Hebrew word into another language's text")
     func noHebrewLeak() {
         for language in UILanguage.allCases where language != .hebrew {
