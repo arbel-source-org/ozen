@@ -545,6 +545,20 @@ struct LiveCaptionViewModelAlertTests {
         #expect(history.listSummaries().first { $0.id == first.id }?.endedAt == secondEnd)
     }
 
+    @Test("during a phone call captions are not running, though the phase still says listening")
+    func callMeansCaptionsAreNotRunning() async {
+        let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
+        let engine = FakeEngine()
+        let pipeline = CaptionPipeline(audio: FakeAudioCapturer(), engineFactory: { _ in engine }, embedder: FakeEmbedder())
+        let viewModel = LiveCaptionViewModel(settingsStore: store, pipeline: pipeline, historyStore: TranscriptHistoryStore(directoryURL: temporaryURL("history")))
+        await viewModel.start()
+        #expect(viewModel.captionsAreRunning)
+        viewModel.systemInterruptionChanged(began: true)
+        #expect(viewModel.phase.isListening)
+        #expect(!viewModel.captionsAreRunning)
+        #expect(!MicrophoneDropNotice.detail(listening: viewModel.captionsAreRunning).contains("ממשיכות"))
+    }
+
     @Test("a low-memory warning saves what was said since the last autosave, before iOS may end the app")
     func memoryWarningSaves() async {
         let store = SettingsStore(fileURL: temporaryURL("vm").appendingPathExtension("json"))
