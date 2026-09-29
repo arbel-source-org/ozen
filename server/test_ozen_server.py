@@ -48,6 +48,38 @@ class Beam(unittest.TestCase):
         self.assertEqual(t.model.beams, [2, 5, 1])
 
 
+class BrokenGPU:
+    def transcribe(self, audio, **kw):
+        raise RuntimeError("CUDA error: an illegal memory access was encountered")
+
+
+class Restart(unittest.TestCase):
+    def test_passes_the_voice_gate_drops_do_not_hide_a_broken_card(self):
+        t = S.Transcriber.__new__(S.Transcriber)
+        t.model = t.final_model = BrokenGPU()
+        t.beam, t.context, t.speech_gate = 5, 0, 0.05
+        t.failures, t.failures_before_exit = 0, 3
+        exits = []
+        speech = np.full(1600, 0.1, dtype=np.float32)
+        noise = np.zeros(1600, dtype=np.float32)
+        real_gate, real_exit, real_shutdown = S.lacks_voice, S.os._exit, S.logging.shutdown
+        S.lacks_voice = lambda audio, gate: not audio.any()
+        S.os._exit = exits.append
+        S.logging.shutdown = lambda: None
+        try:
+            async def evening():
+                t.lock = asyncio.Lock()
+                for audio in (speech, noise, speech, noise, speech):
+                    try:
+                        await t.transcribe(audio, "he", None, True)
+                    except RuntimeError:
+                        pass
+            asyncio.run(evening())
+        finally:
+            S.lacks_voice, S.os._exit, S.logging.shutdown = real_gate, real_exit, real_shutdown
+        self.assertEqual(exits, [3])
+
+
 class SlowGPU:
     """Stands in for the Transcriber: each pass takes a while, as on a GPU."""
     context = False

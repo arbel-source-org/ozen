@@ -230,6 +230,7 @@ class Transcriber:
             else (lambda text: len(text) // 2)
         self.failures = 0
         self.failures_before_exit = 3
+        self.model_ran = False
 
     async def transcribe(self, audio, language, prompt, final, hotwords=None, gate=True, beam=None):
         async with self.lock:
@@ -245,10 +246,15 @@ class Transcriber:
                     logging.shutdown()
                     os._exit(3)
                 raise
-            self.failures = 0
+            # Only a pass that reached the model says the card works: noise
+            # the voice gate drops never touches it, and resetting on those
+            # kept a broken card below the limit in a noisy room for good.
+            if self.model_ran:
+                self.failures = 0
             return result
 
     def _run(self, audio, language, prompt, final, hotwords=None, gate=True, beam=None):
+        self.model_ran = False
         if gate and self.speech_gate and lacks_voice(audio, self.speech_gate):
             return "", None, []
         model = self.final_model if final else self.model
@@ -282,6 +288,7 @@ class Transcriber:
         confidence = None
         if logprobs:
             confidence = min(max(math.exp(sum(logprobs) / len(logprobs)), 0.0), 1.0)
+        self.model_ran = True
         return text, confidence, pieces
 
 
