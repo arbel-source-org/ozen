@@ -1184,6 +1184,16 @@ public final class CaptionPipeline {
 
     var speakerSimilarityThreshold: Float { clusterer.similarityThreshold }
 
+    /// The phone's model chosen while captions come from the home computer
+    /// or the cloud. A cover loads the phone's model from these settings:
+    /// it asked for the one set when captions started, which the backup
+    /// download may never have fetched, and a model still to download is
+    /// never started behind her back, so captions stopped instead.
+    public func setWhisperModelVariant(_ variant: String) {
+        activeSettings?.whisperModelVariant = variant
+        coveredSettings?.whisperModelVariant = variant
+    }
+
     public func setSoundAlertPreferences(_ preferences: SoundAlertPreferences) {
         soundPolicy.preferences = preferences
         activeSettings?.soundAlerts = preferences

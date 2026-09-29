@@ -918,6 +918,8 @@ public final class LiveCaptionViewModel {
         persist()
         if settings.engine == .whisperKit {
             await restartIfRunning()
+        } else {
+            pipeline.setWhisperModelVariant(variant)
         }
     }
 

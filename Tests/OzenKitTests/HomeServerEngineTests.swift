@@ -713,6 +713,37 @@ struct HomeServerCoverTests {
         #expect(phonesBuilt.value == 1)
     }
 
+    private final class Variants: @unchecked Sendable {
+        private let lock = NSLock()
+        private var list: [String] = []
+        func add(_ variant: String) { lock.withLock { list.append(variant) } }
+        var all: [String] { lock.withLock { list } }
+    }
+
+    @Test("a phone model chosen while the home computer captions is the one a later cover loads")
+    func coverUsesModelChosenMeanwhile() async {
+        let server = FakeEngine(kind: .homeServer)
+        let phone = FakeEngine(kind: .whisperKit)
+        let variants = Variants()
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { settings in
+                if settings.engine == .homeServer { return server }
+                variants.add(settings.whisperModelVariant)
+                return phone
+            },
+            embedder: FakeEmbedder(),
+            recovery: .disabled
+        )
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+        captions.setWhisperModelVariant("small")
+        server.availability = .unavailable(.homeServerUnreachable, "asleep")
+        server.endStream(throwing: EngineUnavailability(kind: .homeServerUnreachable, detail: "asleep"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        #expect(variants.all == ["small"])
+    }
+
     @Test("a refused code is left for a person to fix, not asked again and again")
     func refusedCodeIsNotPolled() async {
         let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerRejected, "wrong code"))
