@@ -362,6 +362,17 @@ class Reports(unittest.TestCase):
         finally:
             os.umask(previous)
 
+    def test_a_report_is_kept_even_where_permissions_cannot_be_changed(self):
+        import os
+        import tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as folder:
+            reports = os.path.join(folder, "reports")
+            with mock.patch.object(S, "REPORTS_DIR", reports), mock.patch("os.chmod", side_effect=PermissionError("locked")):
+                name = S.save_report("line one", "Ozen 0.2")
+            with open(os.path.join(reports, name), encoding="utf-8") as f:
+                self.assertIn("line one", f.read())
+
 
 if __name__ == "__main__":
     unittest.main()

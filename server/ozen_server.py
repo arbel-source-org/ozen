@@ -39,6 +39,7 @@ Protocol, version 1. Text frames are JSON, binary frames are audio.
 """
 import argparse
 import asyncio
+import contextlib
 import hmac
 import json
 import logging
@@ -467,8 +468,11 @@ def save_report(text, client):
     only the newest 50 are kept."""
     # Reports hold the conversation's lines: on a shared Linux machine the
     # default permissions let every other account read them.
+    # A folder these permissions can't be set on (another account's) keeps
+    # its old ones: the report must still be saved.
     os.makedirs(REPORTS_DIR, mode=0o700, exist_ok=True)
-    os.chmod(REPORTS_DIR, 0o700)
+    with contextlib.suppress(OSError):
+        os.chmod(REPORTS_DIR, 0o700)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     name, n = stamp + ".txt", 1
     while os.path.exists(os.path.join(REPORTS_DIR, name)):

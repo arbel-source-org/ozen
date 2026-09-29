@@ -74,6 +74,12 @@ class PairingPage(unittest.TestCase):
             self.make_page(folder)
             self.assertEqual(os.stat(out).st_mode & 0o777, 0o600)
 
+    def test_a_page_whose_permissions_cannot_be_changed_is_still_made(self):
+        with tempfile.TemporaryDirectory() as folder, mock.patch("os.chmod", side_effect=PermissionError("locked")):
+            out = self.make_page(folder)
+            with open(out, encoding="utf-8") as f:
+                self.assertIn("example-code-123", f.read())
+
 
 class CodeFile(unittest.TestCase):
     def test_a_code_saved_again_by_notepad_loses_its_byte_order_mark(self):

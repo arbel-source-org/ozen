@@ -1,4 +1,5 @@
 import argparse
+import contextlib
 import html
 import io
 import json
@@ -56,7 +57,8 @@ def read_code(path):
 def write_private(path, text):
     with open(path, "w", encoding="utf-8", opener=lambda name, flags: os.open(name, flags, 0o600)) as f:
         f.write(text)
-    os.chmod(path, 0o600)
+    with contextlib.suppress(OSError):
+        os.chmod(path, 0o600)
 
 
 def main():
