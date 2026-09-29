@@ -653,6 +653,34 @@ struct HomeServerCoverTests {
         #expect(!captions.isCoveringForCloud)
     }
 
+    @Test("a computer that answers while a voice sample records starts captions after the recording, without cutting it short")
+    func computerAnswersDuringVoiceSample() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 819
+        let audio = FakeAudioCapturer()
+        let captions = CaptionPipeline(
+            audio: audio,
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: [])
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { server.prepareCount >= 2 && captions.scheduledRetry == nil })
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(captions.phase.failure?.engineUnavailability?.kind == .homeServerUnreachable)
+
+        let recording = Task { await captions.captureEnrollmentSamples(seconds: 1) }
+        #expect(await eventually { captions.isRecordingVoice })
+        server.availability = .available
+        try? await Task.sleep(for: .milliseconds(300))
+        audio.push([Float](repeating: 0.1, count: 16_000))
+        let sample = await recording.value
+        #expect(sample.count == 16_000)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .homeServer })
+    }
+
     private final class Built: @unchecked Sendable {
         private let lock = NSLock()
         private var count = 0

@@ -1574,7 +1574,7 @@ public final class CaptionPipeline {
     /// left captions stopped with the computer or cloud healthy, because
     /// the checks waited for listening and a retry covers again.
     private var coverCanBeReplaced: Bool {
-        if case .failed = phase { return true }
+        if case .failed = phase { return !isRecordingVoice }
         return phase == .listening
     }
 
@@ -1744,10 +1744,14 @@ public final class CaptionPipeline {
                 guard let seconds = self?.homeServerRecheckSeconds else { return }
                 try? await Task.sleep(for: .seconds(seconds))
                 guard !Task.isCancelled, let self, case .failed(let current) = self.phase, current == failure else { return }
-                guard !self.systemInterrupted else { continue }
+                // A voice sample recording holds the microphone: the retry
+                // would stop its capture and then not start, and this wait
+                // would be over. It waits for the recording instead.
+                guard !self.systemInterrupted, !self.isRecordingVoice else { continue }
                 let server = self.cachedEngine(for: chosen)
                 guard await server.checkAvailability(languageCode: chosen.languageCode) == .available,
-                      !Task.isCancelled, !self.systemInterrupted, case .failed(let still) = self.phase, still == failure
+                      !Task.isCancelled, !self.systemInterrupted, !self.isRecordingVoice,
+                      case .failed(let still) = self.phase, still == failure
                 else { continue }
                 self.logEvent(.note("the home computer answers again, starting captions"))
                 self.homeServerRecheck = nil
