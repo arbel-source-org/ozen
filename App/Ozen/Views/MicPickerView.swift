@@ -39,9 +39,9 @@ struct MicPickerView: View {
                     // keeps the peak-hold tick from whichever mic was
                     // selected before, showing a false-confidence reading
                     // for the newly selected one until it decays away.
-                    LevelMeter(level: viewModel.inputLevel, isActive: viewModel.isListening)
+                    LevelMeter(level: viewModel.inputLevel, isActive: viewModel.captionsAreRunning)
                         .id(viewModel.selectedInputUID)
-                    if viewModel.isListening {
+                    if viewModel.captionsAreRunning {
                         Text(tr("דברו ותראו את הפס זז. אם הוא לא זז, המיקרופון שנבחר לא שומע.", "Speak and watch the bar move. If it doesn’t move, the selected microphone isn’t hearing anything."))
                             .font(.footnote)
                             .foregroundStyle(.secondary)

@@ -811,10 +811,12 @@ struct LiveCaptionView: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(viewModel.isListening ? tr("מקשיב.", "Listening.") : tr("הכתוביות יופיעו כאן.", "Captions will appear here."))
+            // Not while a call holds the microphone: the phase stays on
+            // listening, but nothing is being heard.
+            Text(viewModel.captionsAreRunning ? tr("מקשיב.", "Listening.") : tr("הכתוביות יופיעו כאן.", "Captions will appear here."))
                 .font(.system(size: liveDisplay.fontSize, weight: .medium))
                 .foregroundStyle(theme.text)
-            Text(viewModel.isListening
+            Text(viewModel.captionsAreRunning
                  ? tr("כשמישהו ידבר, המילים יופיעו כאן בזמן אמת. השאירו אצבע על שורה כדי לסמן אותה כחשובה או לתת שם לדובר, וצבטו בשתי אצבעות כדי להגדיל או להקטין את הטקסט.", "When someone talks, the words will appear here in real time. Press and hold a line to mark it as important or name the speaker, and pinch with two fingers to make the text bigger or smaller.")
                  : tr("אפשר לבחור מיקרופון בכפתור למטה מימין ולשנות מנוע תמלול בהגדרות.", "You can choose a microphone with the microphone button at the bottom, and change the transcription engine in Settings."))
                 .font(.system(size: max(17, liveDisplay.fontSize * 0.6)))
