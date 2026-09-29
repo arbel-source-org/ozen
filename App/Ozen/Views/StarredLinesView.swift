@@ -54,7 +54,7 @@ struct StarredLinesView: View {
                                 }
                                 .contextMenu {
                                     Button {
-                                        UIPasteboard.general.string = line.segment.text
+                                        UIPasteboard.general.string = CaptionLayout.copiedText(line.segment.text)
                                     } label: {
                                         Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
                                     }

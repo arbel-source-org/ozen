@@ -107,6 +107,14 @@ struct CaptionLayoutNumberDirectionTests {
         let shown = CaptionLayout.displayText("תתקשרי 050 123 4567 או +972-3-1234567 מחר")
         #expect(PhoneNumbers.matches(in: shown).map(\.dialable) == ["0501234567", "+97231234567"])
     }
+
+    @Test("a copied line keeps its phone number left to right when pasted into a Hebrew chat, and plain words are copied as said")
+    func copiedLineKeepsNumbers() {
+        #expect(CaptionLayout.copiedText("תתקשרי 050 123 4567 מחר") == "תתקשרי " + open + "050 123 4567" + close + " מחר")
+        #expect(CaptionLayout.copiedText("לקופה *2700") == "לקופה " + open + "*2700" + close)
+        #expect(CaptionLayout.copiedText("בשעה 10:30, 3 כדורים") == "בשעה 10:30, 3 כדורים")
+        #expect(PhoneNumbers.matches(in: CaptionLayout.copiedText("תתקשרי 050 123 4567")).map(\.dialable) == ["0501234567"])
+    }
 }
 
 @Suite("CaptionLayout speaker labels")

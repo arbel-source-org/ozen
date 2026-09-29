@@ -142,7 +142,7 @@ struct HistoryDetailView: View {
     /// A phone number or an address said, to paste somewhere else.
     private func copyButton(_ text: String) -> some View {
         Button {
-            UIPasteboard.general.string = text
+            UIPasteboard.general.string = CaptionLayout.copiedText(text)
         } label: {
             Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
         }

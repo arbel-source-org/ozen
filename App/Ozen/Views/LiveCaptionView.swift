@@ -604,7 +604,7 @@ struct LiveCaptionView: View {
                 Label(tr("תיקון מילה למילון", "Fix a word for next time"), systemImage: "text.badge.checkmark")
             }
             Button {
-                UIPasteboard.general.string = segment.text
+                UIPasteboard.general.string = CaptionLayout.copiedText(segment.text)
             } label: {
                 Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
             }
@@ -639,7 +639,7 @@ struct LiveCaptionView: View {
                 fixingWordFromSegment = segment
             }
             Button(tr("העתקה", "Copy")) {
-                UIPasteboard.general.string = segment.text
+                UIPasteboard.general.string = CaptionLayout.copiedText(segment.text)
             }
             if let saved = viewModel.savedConversationID(holdingLineAt: index) {
                 Button(tr("פתיחת השיחה כולה, לשיתוף או לחיפוש", "Open the whole conversation, to share or search")) {

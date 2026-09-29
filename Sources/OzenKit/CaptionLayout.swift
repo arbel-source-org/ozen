@@ -41,7 +41,8 @@ public enum CaptionLayout {
     /// nitra'e machar" followed by "OK": the words in the wrong order. Same for
     /// a line that opens with a name like "WhatsApp". The mark makes Hebrew the
     /// paragraph's direction whatever word comes first. For display only:
-    /// copied, shared and spoken text stays as recognized.
+    /// copied and shared text gets only the number isolates (copiedText),
+    /// and spoken text stays as recognized.
     public static func displayText(_ text: String, languageCode: String = "he") -> String {
         directed(readableText(text), languageCode: languageCode)
     }
@@ -57,6 +58,13 @@ public enum CaptionLayout {
     }
 
     static let rightToLeftMark = "\u{200F}"
+
+    /// A line copied to paste into a chat: the words as recognized, with
+    /// only its phone numbers and star codes isolated, as in a shared
+    /// conversation, so a Hebrew chat doesn't turn "050 123 4567" around.
+    public static func copiedText(_ text: String) -> String {
+        isolatingNumbers(text)
+    }
 
     /// A number is read left to right inside Hebrew too, but the spaces,
     /// "*" and "+" in "050 123 4567", "*2700" or "+972-3-1234567" have no
