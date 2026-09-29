@@ -40,13 +40,17 @@ public final class TranscriptHistoryWriter: Sendable {
     /// saying how it went.
     public func saveInBackground(_ record: TranscriptSessionRecord, finished: (@Sendable () -> Void)? = nil) {
         queue.async { [store, failure, lastWritten, pendingRenames, pendingSaves] in
+            var saved = true
             if lastWritten.record != record {
-                let saved = failure.capture { try store.save(record) }
+                saved = failure.capture { try store.save(record) }
                 lastWritten.record = saved ? record : nil
                 pendingSaves.records[record.id] = saved ? nil : record
             }
-            Self.retry(pendingSaves, other: record.id, store: store, failure: failure)
-            Self.retry(pendingRenames, store: store, failure: failure)
+            // Unchanged, this one wasn't written again, so nothing cleared
+            // the error of a waiting one that has now gone through.
+            if Self.catchUp(pendingSaves, other: record.id, pendingRenames, store: store, failure: failure), saved {
+                failure.clear()
+            }
             finished?()
         }
     }
@@ -63,8 +67,7 @@ public final class TranscriptHistoryWriter: Sendable {
             let saved = failure.capture { try store.save(record, updateSearchCaches: false) }
             lastWritten.record = saved ? record : nil
             pendingSaves.records[record.id] = saved ? nil : record
-            Self.retry(pendingSaves, other: record.id, store: store, failure: failure)
-            Self.retry(pendingRenames, store: store, failure: failure)
+            Self.catchUp(pendingSaves, other: record.id, pendingRenames, store: store, failure: failure)
         }
     }
 
@@ -72,9 +75,10 @@ public final class TranscriptHistoryWriter: Sendable {
     /// that already read the old summary can't land after the new name
     /// and drop it.
     public func renameNow(id: UUID, title: String) {
-        queue.sync { [store, failure, lastWritten] in
+        queue.sync { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             lastWritten.record = nil
             failure.capture { try store.rename(id: id, title: title) }
+            Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure)
         }
     }
 
@@ -86,6 +90,7 @@ public final class TranscriptHistoryWriter: Sendable {
             pendingSaves.renameSpeaker(from: oldName, to: newName)
             pendingRenames.list.append((oldName, newName))
             failure.capture { try Self.runRenames(pendingRenames, store: store) }
+            Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure)
             finished?()
         }
     }
@@ -109,7 +114,7 @@ public final class TranscriptHistoryWriter: Sendable {
     /// and the warning with it, though the refused one was never written.
     /// It stays waiting instead, is tried after every save of another
     /// conversation, and until it is written its error is the one reported.
-    private static func retry(_ pending: PendingSaves, other current: UUID, store: TranscriptHistoryStore, failure: FailureBox) {
+    private static func retry(_ pending: PendingSaves, other current: UUID?, store: TranscriptHistoryStore, failure: FailureBox) {
         for (id, record) in pending.records where id != current {
             do {
                 try store.save(record)
@@ -118,6 +123,17 @@ public final class TranscriptHistoryWriter: Sendable {
                 failure.record(String(describing: error))
             }
         }
+    }
+
+    /// Tries again everything the disk refused before, after any write:
+    /// a star or a rename that worked used to clear the error, and the
+    /// warning with it, while a conversation was still waiting. Says
+    /// whether nothing is left waiting.
+    @discardableResult
+    private static func catchUp(_ saves: PendingSaves, other current: UUID?, _ renames: PendingRenames, store: TranscriptHistoryStore, failure: FailureBox) -> Bool {
+        retry(saves, other: current, store: store, failure: failure)
+        retry(renames, store: store, failure: failure)
+        return saves.records.isEmpty && renames.list.isEmpty
     }
 
     /// The waiting renames, oldest first; one refused stops the rest.
@@ -131,12 +147,27 @@ public final class TranscriptHistoryWriter: Sendable {
     /// Stars or unstars a line of a saved conversation, in order with the
     /// saves already queued. Nil when the line wasn't found or couldn't be
     /// saved.
+    ///
+    /// A newer version of the conversation still waiting for room takes the
+    /// star instead: starring the older file on disk was undone when the
+    /// waiting one was written over it.
     @discardableResult
     public func toggleStarNow(sessionID: UUID, segmentID: UUID) -> Bool? {
-        queue.sync { [store, failure, lastWritten] in
+        queue.sync { [store, failure, lastWritten, pendingRenames, pendingSaves] in
             lastWritten.record = nil
             var result: Bool?
-            failure.capture { result = try store.toggleStar(segmentID: segmentID, inSession: sessionID) }
+            if var waiting = pendingSaves.records[sessionID],
+               let index = waiting.segments.firstIndex(where: { $0.id == segmentID }) {
+                waiting.segments[index].isStarred.toggle()
+                pendingSaves.records[sessionID] = waiting
+                result = waiting.segments[index].isStarred
+                if Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure) {
+                    failure.clear()
+                }
+            } else {
+                failure.capture { result = try store.toggleStar(segmentID: segmentID, inSession: sessionID) }
+                Self.catchUp(pendingSaves, other: nil, pendingRenames, store: store, failure: failure)
+            }
             return result
         }
     }
@@ -191,6 +222,12 @@ private final class FailureBox: @unchecked Sendable {
     func record(_ error: String) {
         lock.lock()
         stored = error
+        lock.unlock()
+    }
+
+    func clear() {
+        lock.lock()
+        stored = nil
         lock.unlock()
     }
 

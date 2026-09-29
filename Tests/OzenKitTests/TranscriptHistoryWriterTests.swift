@@ -387,4 +387,94 @@ struct TranscriptHistoryWriterTests {
         #expect(store.load(id: evening.id) == nil)
         #expect(writer.lastFailure == nil)
     }
+
+    @Test("a star put on a conversation still waiting for room is kept when the waiting version is written")
+    func starOnRefusedConversationKept() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-star"))
+        let early = record(id: UUID(), lines: 2, ended: false)
+        writer.saveNow(early)
+        var later = early
+        later.segments += record(id: early.id, lines: 2, ended: true).segments
+        later.endedAt = 200
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(later)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+
+        let starred = writer.toggleStarNow(sessionID: early.id, segmentID: early.segments[0].id)
+        writer.saveNow(record(id: UUID(), lines: 1, ended: false))
+
+        #expect(starred == true)
+        let saved = try #require(store.load(id: early.id))
+        #expect(saved.segments.count == 4)
+        #expect(saved.segments[0].isStarred)
+    }
+
+    @Test("a line starred only in the version still waiting for room is unstarred by the next tap, not starred on the older file")
+    func unstarOnRefusedConversation() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-unstar"))
+        let early = record(id: UUID(), lines: 2, ended: false)
+        writer.saveNow(early)
+        var later = early
+        later.segments[0].isStarred = true
+        later.endedAt = 200
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(later)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+
+        #expect(writer.toggleStarNow(sessionID: early.id, segmentID: early.segments[0].id) == false)
+        #expect(store.load(id: early.id)?.segments[0].isStarred == false)
+        #expect(store.load(id: early.id)?.endedAt == 200)
+        #expect(writer.lastFailure == nil)
+    }
+
+    @Test("a rename that works does not clear the warning while a refused conversation still waits")
+    func warningStaysWhileRefusedWaits() throws {
+        let (store, dir) = makeStore()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: dir.path)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-warning"))
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: dir.path)
+        writer.saveNow(record(id: UUID(), lines: 3, ended: true))
+        #expect(writer.lastFailure != nil)
+
+        writer.renameNow(id: UUID(), title: "ארוחת ערב")
+        #expect(writer.lastFailure != nil)
+        writer.renameSpeakerInBackground(from: "Avi", to: "Aviv")
+        writer.waitUntilIdle()
+        #expect(writer.lastFailure != nil)
+    }
+
+    @Test("once a waiting conversation is written, the warning goes even if the one on screen hasn't changed")
+    func warningClearsWhenRefusedWritten() throws {
+        let (store, dir) = makeStore()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let writer = TranscriptHistoryWriter(store: store, queue: DispatchQueue(label: "test.refused-clears"))
+        let refused = record(id: UUID(), lines: 3, ended: true)
+        let blocker = dir.appendingPathComponent("\(refused.id.uuidString).json", isDirectory: true)
+        try FileManager.default.createDirectory(at: blocker, withIntermediateDirectories: true)
+        writer.saveNow(refused)
+        let onScreen = record(id: UUID(), lines: 1, ended: false)
+        writer.saveInBackground(onScreen)
+        writer.waitUntilIdle()
+        #expect(writer.lastFailure != nil)
+
+        try FileManager.default.removeItem(at: blocker)
+        writer.saveInBackground(onScreen)
+        writer.waitUntilIdle()
+        #expect(store.load(id: refused.id)?.segments.count == 3)
+        #expect(writer.lastFailure == nil)
+    }
 }
