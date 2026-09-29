@@ -208,6 +208,19 @@ struct PluralizationTests {
         }
     }
 
+    @Test("counts put into Russian, Ukrainian and Arabic sentences agree with the number")
+    func countsInTranslatedSentences() {
+        #expect(tr("%1 אחוז", "%1 percent", args: ["21"], in: .russian) == "21%")
+        #expect(tr("%1 אחוז", "%1 percent", args: ["2"], in: .ukrainian) == "2%")
+        #expect(tr("הסוללה ב-%1 אחוזים", "Battery at %1 percent", args: ["21"], in: .russian) == "Батарея на 21%")
+        #expect(tr("הסוללה ב-%1 אחוזים", "Battery at %1 percent", args: ["2"], in: .ukrainian) == "Батарея на 2%")
+        #expect(tr("הקלטה ושמירה (%1 שניות)", "Record and save (%1 seconds)", args: ["30"], in: .arabic) == "تسجيل وحفظ (30 ثانية)")
+        let twoRecordings = RecordingImport.Result(added: ["Savta": 2])
+        #expect(Localization.$override.withValue(.russian) { twoRecordings.summary }.contains("Savta (записей: 2)"))
+        #expect(Localization.$override.withValue(.ukrainian) { twoRecordings.summary }.contains("Savta (записів: 2)"))
+        #expect(Localization.$override.withValue(.arabic) { twoRecordings.summary }.contains("Savta (عدد التسجيلات: 2)"))
+    }
+
     @Test("no function leaks a Hebrew word into another language's text")
     func noHebrewLeak() {
         for language in UILanguage.allCases where language != .hebrew {
