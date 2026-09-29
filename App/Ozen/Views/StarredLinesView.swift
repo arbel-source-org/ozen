@@ -52,13 +52,8 @@ struct StarredLinesView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .environment(\.layoutDirection, .rightToLeft)
                                 }
-                                .contextMenu {
-                                    Button {
-                                        UIPasteboard.general.string = CaptionLayout.copiedText(line.segment.text)
-                                    } label: {
-                                        Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
-                                    }
-                                }
+                                .contextMenu { copyButton(line.segment.text) }
+                                .accessibilityActions { copyButton(line.segment.text) }
                             }
                         } header: {
                             Text(HistoryDays.heading(startedAt: group.startedAt))
@@ -83,6 +78,14 @@ struct StarredLinesView: View {
             }
         }
         .task { await load() }
+    }
+
+    private func copyButton(_ text: String) -> some View {
+        Button {
+            UIPasteboard.general.string = CaptionLayout.copiedText(text)
+        } label: {
+            Label(tr("העתקה", "Copy"), systemImage: "doc.on.doc")
+        }
     }
 
     private func load() async {
