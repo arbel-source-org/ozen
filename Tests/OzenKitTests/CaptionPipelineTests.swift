@@ -2241,6 +2241,22 @@ struct CaptionPipelineAlertHookTests {
         detector.push(SoundObservation(identifier: "door_bell", confidence: 0.95, timestamp: 1_000))
         #expect(await eventually { raised == ["door_bell"] })
     }
+
+    @Test("a smoke alarm also scored as an alarm clock is one notification, not a second one naming the clock")
+    func weakerLabelOfOneReadingNotForwarded() async {
+        let detector = FakeSoundDetector()
+        let (pipeline, _, _) = makePipeline(soundDetector: detector)
+        var raised: [String] = []
+        pipeline.onSoundAlert = { raised.append($0.event.identifier) }
+        await pipeline.start(settings: .default)
+        detector.push(SoundObservation(identifier: "smoke_detector", confidence: 0.95, timestamp: 1_000))
+        detector.push(SoundObservation(identifier: "alarm_clock", confidence: 0.7, timestamp: 1_000))
+        #expect(await eventually { pipeline.soundAlerts.count == 2 })
+        #expect(raised == ["smoke_detector"])
+
+        detector.push(SoundObservation(identifier: "door_bell", confidence: 0.9, timestamp: 1_030))
+        #expect(await eventually { raised == ["smoke_detector", "door_bell"] })
+    }
 }
 
 @Suite("CaptionPipeline speaker detection ignores silence")

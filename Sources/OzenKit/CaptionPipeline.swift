@@ -153,8 +153,10 @@ public final class CaptionPipeline {
     /// When the preparation progress on screen was last replaced.
     @ObservationIgnored private var progressShownAt: TimeInterval = -.infinity
     @ObservationIgnored private var downloadEstimator = DownloadEstimator()
-    /// Called for every new sound alert, e.g. to post a notification while
-    /// the app isn't on screen.
+    /// Called for every new sound alert the screen takes up, e.g. to post a
+    /// notification while the app isn't on screen: not for a weaker label
+    /// of the same reading, so a smoke alarm also scored as an alarm clock
+    /// is one notification, not a second naming the clock.
     public var onSoundAlert: ((SoundAlert) -> Void)?
     /// Called with the fresh keyword hits in a line, and the line itself.
     public var onKeywordHits: (([KeywordHit], TranscriptSegment) -> Void)?
@@ -850,8 +852,8 @@ public final class CaptionPipeline {
         if !weakerInSameReading {
             screenSoundAlert = alert
             screenSoundAlertRaisedAt = now()
+            onSoundAlert?(alert)
         }
-        onSoundAlert?(alert)
         if soundAlerts.count > Self.maxSoundAlerts {
             soundAlerts.removeFirst(soundAlerts.count - Self.maxSoundAlerts)
         }
