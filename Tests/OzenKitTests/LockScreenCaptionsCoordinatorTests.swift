@@ -287,6 +287,21 @@ struct LockScreenCaptionsCoordinatorTests {
         #expect(display.ends == 1)
     }
 
+    @Test("a failure the app is already bringing back says captions are starting, not to open the app")
+    func recoveringSaysStarting() async {
+        let (coordinator, display, captions) = make()
+        captions.texts = ["good morning"]
+        coordinator.refresh()
+        let failed = PipelinePhase.failed(PipelineFailure(kind: .transcriptionStopped, detail: ""))
+        captions.situation.phase = failed
+        captions.situation.recoveringByItself = true
+        coordinator.refresh()
+        #expect(display.shown.last?.status == LockScreenCaptions.presence(phase: .startingAudio, interruptedByCall: false, pausedForSpeech: false).status)
+        captions.situation.recoveringByItself = false
+        coordinator.refresh()
+        #expect(display.shown.last?.status == LockScreenCaptions.presence(phase: failed, interruptedByCall: false, pausedForSpeech: false).status)
+    }
+
     @Test("a call arriving after 15+ quiet minutes doesn't bring the already-cleared stale line back")
     func callAfterLongQuietStaysCleared() async {
         let (coordinator, display, captions) = make()

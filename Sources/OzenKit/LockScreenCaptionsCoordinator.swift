@@ -37,13 +37,17 @@ public final class LockScreenCaptionsCoordinator {
         public var pausedForSpeech: Bool
         /// The caption text size in the app (see `LockScreenTextSize`).
         public var captionSize: Double
+        /// A failure the app is already bringing back by itself (see
+        /// `CaptionPipeline.isRecoveringByItself`).
+        public var recoveringByItself: Bool
 
-        public init(enabled: Bool, phase: PipelinePhase, interruptedByCall: Bool, pausedForSpeech: Bool, captionSize: Double) {
+        public init(enabled: Bool, phase: PipelinePhase, interruptedByCall: Bool, pausedForSpeech: Bool, captionSize: Double, recoveringByItself: Bool = false) {
             self.enabled = enabled
             self.phase = phase
             self.interruptedByCall = interruptedByCall
             self.pausedForSpeech = pausedForSpeech
             self.captionSize = captionSize
+            self.recoveringByItself = recoveringByItself
         }
     }
 
@@ -120,7 +124,8 @@ public final class LockScreenCaptionsCoordinator {
         let presence = LockScreenCaptions.presence(
             phase: situation.phase,
             interruptedByCall: situation.interruptedByCall,
-            pausedForSpeech: situation.pausedForSpeech
+            pausedForSpeech: situation.pausedForSpeech,
+            recoveringByItself: situation.recoveringByItself
         )
         guard situation.enabled, presence.keep else {
             stop()

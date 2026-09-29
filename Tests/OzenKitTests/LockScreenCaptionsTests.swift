@@ -299,6 +299,7 @@ struct LockScreenPresenceTests {
             #expect(LockScreenCaptions.presence(phase: .listening, interruptedByCall: true, pausedForSpeech: false).status == "Captions paused for a call")
             #expect(LockScreenCaptions.presence(phase: .startingAudio, interruptedByCall: false, pausedForSpeech: false).status == "Captions starting…")
             #expect(LockScreenCaptions.presence(phase: .failed(failure), interruptedByCall: false, pausedForSpeech: false).status == "Captions stopped. Open Ozen.")
+            #expect(LockScreenCaptions.presence(phase: .failed(failure), interruptedByCall: false, pausedForSpeech: false, recoveringByItself: true) == (true, "Captions starting…"))
             #expect(LockScreenCaptions.presence(phase: .paused, interruptedByCall: false, pausedForSpeech: true).status == "The phone is talking")
         }
     }

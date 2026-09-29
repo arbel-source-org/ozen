@@ -113,7 +113,8 @@ the same.
   two). The button at the top, "What was said
   meanwhile" (ma she-ne'emar beinta'yim), scrolls up to it.
 - **Captions on the lock screen.** The newest lines show there while
-  captions run, and stay (saying "Captions paused for a call" or "Captions
+  captions run, and stay (saying "Captions paused for a call", "Captions
+  starting" while the app brings them back by itself, or "Captions
   stopped") when something interrupts them; under such a note a line
   said more than a minute ago is left off. After a minute with nothing
   said, only the newest line stays, with "said N minutes ago" (ne'emar

@@ -329,11 +329,14 @@ extension LockScreenCaptions {
     /// it away (she did that, looking at the app); a failure, a call, or
     /// captions still starting keep it, saying so, since those can come
     /// back with the phone still in her pocket and iOS won't let the app
-    /// start a new one from there.
+    /// start a new one from there. A failure the app is already bringing
+    /// back (a retry lined up, the phone's model taking over) says they are
+    /// starting: "open Ozen" would send her to the app for nothing.
     public static func presence(
         phase: PipelinePhase,
         interruptedByCall: Bool,
-        pausedForSpeech: Bool
+        pausedForSpeech: Bool,
+        recoveringByItself: Bool = false
     ) -> (keep: Bool, status: String?) {
         if interruptedByCall {
             return (true, tr("הכתוביות מושהות בגלל שיחה", "Captions paused for a call"))
@@ -342,6 +345,8 @@ extension LockScreenCaptions {
         case .listening:
             return (true, nil)
         case .requestingMicrophonePermission, .preparingEngine, .startingAudio:
+            return (true, tr("הכתוביות מתחילות…", "Captions starting…"))
+        case .failed where recoveringByItself:
             return (true, tr("הכתוביות מתחילות…", "Captions starting…"))
         case .failed:
             return (true, tr("הכתוביות נעצרו. פתחו את אוזן.", "Captions stopped. Open Ozen."))

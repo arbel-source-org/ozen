@@ -255,7 +255,8 @@ public final class LiveCaptionViewModel {
                         phase: self.pipeline.phase,
                         interruptedByCall: self.isInterruptedBySystem,
                         pausedForSpeech: self.captionsHeldForSpeech,
-                        captionSize: self.settings.display.fontSize
+                        captionSize: self.settings.display.fontSize,
+                        recoveringByItself: self.pipeline.isRecoveringByItself
                     )
                 },
                 lines: { [weak self] count, textSize in
