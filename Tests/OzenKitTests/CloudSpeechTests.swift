@@ -101,6 +101,8 @@ struct CloudSpeechTests {
         }
         let finished = try CloudSpeech.transcript(from: reply(200, #"{"choices":[{"finish_reason":"stop","message":{"role":"assistant","content":""}}]}"#))
         #expect(finished == "")
+        let emptyErrorField = try CloudSpeech.transcript(from: reply(200, #"{"choices":[{"error":null,"finish_reason":"stop","message":{"role":"assistant","content":"A: שלום"}}]}"#))
+        #expect(emptyErrorField == "A: שלום")
     }
 
     @Test("what each refusal means")
