@@ -657,6 +657,9 @@ public final class CaptionPipeline {
     public func setKeywordAlerts(_ alerts: [KeywordAlert]) {
         keywordMatcher = KeywordAlertMatcher(alerts: alerts)
         activeSettings?.keywordAlerts = alerts
+        // Switching back from a cover starts again from what was covered:
+        // without this, a word added meanwhile stopped firing.
+        coveredSettings?.keywordAlerts = alerts
         keywordDeduplicator.forgetAll()
         let userVocabulary = activeSettings?.vocabulary ?? []
         Task { [weak self] in
@@ -1300,6 +1303,7 @@ public final class CaptionPipeline {
     public func setVocabulary(_ terms: [String]) async {
         let cleaned = VocabularyHints.normalized(terms)
         activeSettings?.vocabulary = cleaned
+        coveredSettings?.vocabulary = cleaned
         guard let currentEngine, phase.isListening || phase == .paused else { return }
         await currentEngine.setVocabulary(primedVocabulary(userVocabulary: cleaned))
     }
@@ -1488,6 +1492,7 @@ public final class CaptionPipeline {
     /// The Settings switch for downloading over cellular changed.
     public func setAllowCellularModelDownload(_ allowed: Bool) async {
         activeSettings?.allowCellularModelDownload = allowed
+        coveredSettings?.allowCellularModelDownload = allowed
         guard allowed, isWaitingForWiFi else { return }
         await retry()
     }

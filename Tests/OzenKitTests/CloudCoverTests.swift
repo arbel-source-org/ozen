@@ -184,6 +184,27 @@ struct CloudCoverTests {
         #expect(captions.coverReason == nil)
     }
 
+    @Test("an alert word or a name added while the phone's model covers is still there after switching back")
+    func changesDuringCoverSurviveSwitchBack() async {
+        let cloud = FakeEngine(kind: .cloud)
+        let phone = FakeEngine(kind: .whisperKit)
+        let captions = pipeline(cloud: cloud, phone: phone)
+        captions.cloudRecheckSeconds = 1
+        captions.homeServerSwitchBackQuietSeconds = 0
+        await captions.start(settings: cloudSettings)
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        cloud.endStream(throwing: EngineUnavailability(kind: .noInternet, detail: "connection lost"))
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+
+        captions.setKeywordAlerts([KeywordAlert(phrase: "Ruti", isEnabled: true)])
+        await captions.setVocabulary(["Avi"])
+
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .cloud })
+        #expect(captions.activeSettings?.keywordAlerts.map(\.phrase) == ["Ruti"])
+        #expect(captions.activeSettings?.vocabulary == ["Avi"])
+        captions.stop()
+    }
+
     @Test("a connection that keeps dropping right after switching back is tried less and less often; a drop after a good stretch starts over")
     func flappingCloudBacksOff() async {
         let cloud = FakeEngine(kind: .cloud)
