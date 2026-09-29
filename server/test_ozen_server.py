@@ -200,6 +200,28 @@ class PromptBudget(unittest.TestCase):
     def test_a_short_list_is_kept_whole(self):
         self.assertEqual(S.front_terms(["a", "b"], lambda text: len(text), 200), ["a", "b"])
 
+    def test_a_long_names_list_leaves_the_caption_half_of_the_context(self):
+        # Prompt and hotwords share Whisper's 448 tokens with the caption; a
+        # 60-name list filled 422 of them and cut 98 of 120 short sentences.
+        class Tokens:
+            context = False
+
+            @staticmethod
+            def count_tokens(text):
+                return len(text.split())
+
+        names = [f"name{i}" for i in range(300)]
+        session = S.Session(Socket(), Tokens(), "he", names, live_interval=0.3)
+        prompt, hotwords = session.prompt(), session.hotwords()
+        self.assertTrue(hotwords.startswith("name0, name1,"))
+        self.assertTrue(prompt.startswith("name0, name1,"))
+        self.assertLessEqual(Tokens.count_tokens(prompt) + Tokens.count_tokens(" " + hotwords), 448 - 224)
+
+    def test_no_names_sends_no_prompt_and_no_hotwords(self):
+        session = S.Session(Socket(), SlowGPU(0.1), "he", [], live_interval=0.3)
+        self.assertIsNone(session.prompt())
+        self.assertIsNone(session.hotwords())
+
 
 if __name__ == "__main__":
     unittest.main()

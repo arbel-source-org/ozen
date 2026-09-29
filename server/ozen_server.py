@@ -141,8 +141,13 @@ SPEECH_OPTIONS = VadOptions(min_silence_duration_ms=100, speech_pad_ms=0)
 
 MIN_VOICE_SECONDS = 0.2
 LOAD_RETRY_SECONDS = 60
-# Under Whisper's 223-token prompt half, with room for the model's own tokens.
-PROMPT_TOKENS = 200
+# The names go to the model twice, as the prompt and as hotwords, and
+# Whisper reads both and the caption out of one 448-token context. A
+# 28 s line can take 220 tokens by itself, so each copy of the names
+# gets half of the rest. At 200 for the prompt alone (hotwords uncut),
+# 60 names filled 422 tokens and cut 98 of 120 short FLEURS sentences
+# (WER 20% -> 70%, accuracy night bench 2026-09-29).
+NAMES_TOKENS = 100
 
 
 def voice_samples(audio):
@@ -330,10 +335,16 @@ class Session:
                 self.last_speech_end = start + i + len(piece)
         self.changed.set()
 
+    def names(self):
+        return front_terms(self.vocabulary, self.t.count_tokens, NAMES_TOKENS) if self.vocabulary else []
+
+    def hotwords(self):
+        return ", ".join(self.names()) or None
+
     def prompt(self):
         parts = []
         if self.vocabulary:
-            parts.append(", ".join(front_terms(self.vocabulary, self.t.count_tokens, PROMPT_TOKENS)) + ".")
+            parts.append(", ".join(self.names()) + ".")
         if self.t.context and self.previous_text:
             parts.append(self.previous_text[-200:])
         return " ".join(parts) or None
@@ -381,7 +392,7 @@ class Session:
                 self.final_lag_seconds.append(max(0, total - end_speech - pause) / R)
             started = time.monotonic()
             text, confidence, pieces = await self.t.transcribe(
-                window.copy(), self.language, self.prompt(), final, ", ".join(self.vocabulary) or None,
+                window.copy(), self.language, self.prompt(), final, self.hotwords(),
                 beam=self.beam)
             if final:
                 self.final_seconds.append(time.monotonic() - started)
