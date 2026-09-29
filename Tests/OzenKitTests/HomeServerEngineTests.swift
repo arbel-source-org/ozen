@@ -866,6 +866,30 @@ struct HomeServerCoverTests {
         #expect(captions.activeSettings?.preferredInputUID == "lapel")
     }
 
+    @Test("a backup that turns out not ready at the last check leaves the wait running, and it takes over once ready")
+    func backupNotReadyAtTheLastCheckKeepsWaiting() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 819
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: [])
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { server.prepareCount >= 2 && captions.scheduledRetry == nil })
+
+        var checks = 0
+        phone.duringPendingDownloadCheck = {
+            checks += 1
+            phone.pendingDownload = checks == 2 ? 819 : nil
+        }
+        #expect(await eventually { checks >= 2 })
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+    }
+
     @Test("a computer that answers while a voice sample records starts captions after the recording, without cutting it short")
     func computerAnswersDuringVoiceSample() async {
         let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
