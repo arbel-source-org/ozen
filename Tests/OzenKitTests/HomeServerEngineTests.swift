@@ -814,6 +814,58 @@ struct HomeServerCoverTests {
         #expect(phone.vocabularySeen.last?.contains("Dvora") == true)
     }
 
+    @Test("a name added while the wait is asking the computer reaches the backup that takes over on that same pass")
+    func namesAddedDuringACheck() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 819
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: [])
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { server.prepareCount >= 2 && captions.scheduledRetry == nil })
+        let gate = PrepareGate()
+        server.prepareGate = gate
+        let asked = server.prepareCount
+        #expect(await eventually { server.prepareCount > asked })
+
+        await captions.setVocabulary(["Dvora"])
+        phone.pendingDownload = nil
+        await gate.open()
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        #expect(phone.vocabularySeen.last?.contains("Dvora") == true)
+    }
+
+    @Test("a microphone picked while the backup's download is checked is the one the backup starts with")
+    func microphonePickedDuringTheLastCheck() async {
+        let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))
+        let phone = FakeEngine(kind: .whisperKit)
+        phone.pendingDownload = 819
+        let captions = CaptionPipeline(
+            audio: FakeAudioCapturer(),
+            engineFactory: { $0.engine == .homeServer ? server : phone },
+            embedder: FakeEmbedder(),
+            recovery: AutoRecoveryPolicy(glitchDelays: [0.01], downloadDelays: [])
+        )
+        captions.homeServerRecheckSeconds = 0.05
+        await captions.start(settings: serverSettings)
+        #expect(await eventually { server.prepareCount >= 2 && captions.scheduledRetry == nil })
+
+        var picked = false
+        phone.duringPendingDownloadCheck = {
+            guard !picked else { return }
+            picked = true
+            _ = captions.selectInput(uid: "lapel")
+            phone.pendingDownload = nil
+        }
+        #expect(await eventually { captions.phase == .listening && captions.activeEngineKind == .whisperKit })
+        #expect(captions.activeSettings?.preferredInputUID == "lapel")
+    }
+
     @Test("a computer that answers while a voice sample records starts captions after the recording, without cutting it short")
     func computerAnswersDuringVoiceSample() async {
         let server = FakeEngine(kind: .homeServer, availability: .unavailable(.homeServerUnreachable, "asleep"))

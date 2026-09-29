@@ -1710,15 +1710,24 @@ public final class CaptionPipeline {
         let engine = cachedEngine(for: settings)
         let needsDownload = await engine.pendingDownloadMegabytes() != nil
         guard case .failed(let current) = phase, current == failure else { return }
-        guard !needsDownload else {
-            if retryIfNotCovered { scheduleAutoRecovery(for: failure) }
+        // Read again after the check: a name added or a microphone picked
+        // during it reached `activeSettings`, not the copy made before it.
+        // A different model picked meanwhile is not the one checked.
+        var onPhone = activeSettings ?? settings
+        onPhone.engine = settings.engine
+        guard !needsDownload, engineCacheKey(onPhone) == engineCacheKey(settings) else {
+            if retryIfNotCovered {
+                scheduleAutoRecovery(for: failure)
+            } else {
+                waitForHomeServer(after: failure)
+            }
             return
         }
         logEvent(.note("cloud unavailable, the phone's own model took over"))
         nextStartCoversCloud = true
         coverReason = failure.engineUnavailability?.kind
         coveredSettings = activeSettings
-        await start(settings: settings)
+        await start(settings: onPhone)
         if coverReason == .homeServerUnreachable, coveredSettings?.engine == .homeServer {
             if let back = homeServerSwitchedBackAt, back.duration(to: .now) < .seconds(homeServerFlapWindowSeconds) {
                 homeServerFlaps = min(homeServerFlaps + 1, 4)
@@ -1994,7 +2003,7 @@ public final class CaptionPipeline {
                       !Task.isCancelled, !self.systemInterrupted, !self.isRecordingVoice,
                       case .failed(let still) = self.phase, still == failure
                 else {
-                    if await self.coverWithReadyBackup(chosen, after: failure) { return }
+                    if await self.coverWithReadyBackup(after: failure) { return }
                     continue
                 }
                 self.logEvent(.note("the home computer answers again, starting captions"))
@@ -2010,8 +2019,9 @@ public final class CaptionPipeline {
     /// the computer (Settings, Home computer), and its row then says the
     /// phone carries on by itself: it takes over here instead of the wait
     /// going on until the computer answers or someone taps Retry.
-    private func coverWithReadyBackup(_ chosen: AppSettings, after failure: PipelineFailure) async -> Bool {
-        guard let onPhone = CloudCover.phoneSettings(replacing: chosen, after: failure),
+    private func coverWithReadyBackup(after failure: PipelineFailure) async -> Bool {
+        guard let chosen = activeSettings, chosen.engine == .homeServer,
+              let onPhone = CloudCover.phoneSettings(replacing: chosen, after: failure),
               await probeEngine(for: onPhone).pendingDownloadMegabytes() == nil,
               !Task.isCancelled, !systemInterrupted, !isRecordingVoice,
               case .failed(let still) = phase, still == failure
